@@ -3,6 +3,45 @@ public class GrieslsHaus
     public string name;
     public int hausnummer;
 
+    private List<IRaum> raeume = new List<IRaum>();
+
+    public GrieslsHaus()
+    {
+        raeume.Add(new Raum());
+        raeume.Add(new Raum());
+        raeume.Add(new Raum());
+        raeume.Add(new Raum());
+        raeume.Add(new Bad());
+    }
+
+    public void RaumHinzufuegen(IRaum raum)
+    {
+        raeume.Add(raum);
+    }
+
+    public void RaumUmbenennen(int index, string neuerName)
+    {
+        if (index >= 0 && index < raeume.Count)
+        {
+            raeume[index].Name = neuerName;
+        }
+    }
+
+    // Summe des Wasserverbrauchs [m³/h] aller Räume mit Wasseranschluss
+    public double WasserverbrauchRaeume()
+    {
+        double summe = 0;
+        foreach (IRaum raum in raeume)
+        {
+            if (raum is Bad)
+            {
+                summe = summe + ((Bad)raum).Wasserverbrauch;
+            }
+        }
+        
+        return summe;
+    }
+
     private const double GrundStromA = 2.0;
     private const double WasserM3proH = 0.5;
     private const double HeizungKW = 5.0;

@@ -7,8 +7,25 @@ house2.name = "GrieslHaus2";
 house2.hausnummer = 2;
 object objh = house1;
 
+house1.RaumUmbenennen(0, "Wohnzimmer");
+house1.RaumUmbenennen(1, "Schlafzimmer");
+house1.RaumUmbenennen(2, "Küche");
+house1.RaumUmbenennen(3, "Badezimmer");
+
+Raum arbeitszimmer = new Raum();
+arbeitszimmer.Name = "Arbeitszimmer";
+house1.RaumHinzufuegen(arbeitszimmer);
+
+Bad gaestebad = new Bad();
+gaestebad.Name = "Gästebad";
+gaestebad.WasserAn = true;
+house1.RaumHinzufuegen(gaestebad);
+Console.WriteLine($"Wasserverbrauch der Räume: {house1.WasserverbrauchRaeume()} m³/h");
+
+
+
 house1.HauptstromAn = true;
-house1.Wasserverbrauch = 1.0;
+
 if (house1.Stromverbrauch > 0)
 {
     Console.WriteLine("Stromverbrauch ist größer als 0");
