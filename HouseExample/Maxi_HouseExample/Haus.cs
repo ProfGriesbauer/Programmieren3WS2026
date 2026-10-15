@@ -24,6 +24,8 @@ public class Haus
         Bad = new Bad(() => WasserAn);
         Wohnzimmer = new Wohnzimmer(() => HeizungAn);
         Sauna = new Sauna(() => HeizungAn);
+        WohnzimmerFenster = new Fenster();
+        Haustuer = new Tuer();
     }
 
     public double StromverbrauchAmpere => _strom;
@@ -32,6 +34,8 @@ public class Haus
     public Bad Bad { get; }
     public Wohnzimmer Wohnzimmer { get; }
     public Sauna Sauna { get; }
+    public Fenster WohnzimmerFenster { get; }
+    public Tuer Haustuer { get; }
 
     public bool WasserAn
     {
