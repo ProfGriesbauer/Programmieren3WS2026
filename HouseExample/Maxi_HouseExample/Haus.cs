@@ -26,6 +26,10 @@ public class Haus
         Sauna = new Sauna(() => HeizungAn);
         WohnzimmerFenster = new Fenster();
         Haustuer = new Tuer();
+        Garagentor = new Garagentor();
+        Jalousie = new Jalousie();
+        GartenWasseranschluss = new Wasseranschluss(() => WasserAn);
+        Klimaanlage = new Klimaanlage(() => HauptstromschalterAn);
     }
 
     public double StromverbrauchAmpere => _strom;
@@ -36,6 +40,10 @@ public class Haus
     public Sauna Sauna { get; }
     public Fenster WohnzimmerFenster { get; }
     public Tuer Haustuer { get; }
+    public Garagentor Garagentor { get; }
+    public Jalousie Jalousie { get; }
+    public Wasseranschluss GartenWasseranschluss { get; }
+    public Klimaanlage Klimaanlage { get; }
 
     public bool WasserAn
     {
@@ -46,7 +54,10 @@ public class Haus
             _wasser = value ? _wasserNormal : 0;
 
             if (!value)
+            {
                 Bad.Ausschalten();
+                GartenWasseranschluss.Ausschalten();
+            }
         }
     }
 
@@ -78,7 +89,10 @@ public class Haus
             _strom = value ? _stromNormal : 0;
 
             if (!value)
+            {
                 HeizungAn = false;
+                Klimaanlage.Ausschalten();
+            }
         }
     }
 
