@@ -25,12 +25,23 @@ public class House
 
         foreach (Room room in Rooms)
         {
-            Console.WriteLine($"- {room.Name} (Etage {room.Floor})");
+            string adjacentInfo = room.AdjacentTo is null ? "" : $", neben {room.AdjacentTo.Name}";
+            Console.WriteLine($"- {room.Name} (Etage {room.Floor}{adjacentInfo})");
         }
 
         if (Garden is not null)
         {
             Console.WriteLine($"Garten: {Garden.AreaInSquareMeters} m²");
+
+            if (Garden.Pool is not null)
+            {
+                Console.WriteLine($"- Pool: {Garden.Pool.AreaInSquareMeters} m²");
+            }
+
+            foreach (Tree tree in Garden.Trees)
+            {
+                Console.WriteLine($"- Baum: {tree.Name}");
+            }
         }
 
         if (Garage is not null)
