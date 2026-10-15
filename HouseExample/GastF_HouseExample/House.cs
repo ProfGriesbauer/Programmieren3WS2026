@@ -50,16 +50,26 @@ public abstract class House
         var assignedWaterPercentage = roomConfigurations
             .Where(configuration => configuration.IsWet)
             .Sum(configuration => configuration.WaterConsumptionPercentage);
+
+        if (assignedWaterPercentage > 100)
+        {
+            throw new ArgumentException(
+                "Der gesamte Wasserverbrauch der Nassräume darf 100 Prozent nicht überschreiten.");
+        }
+
         restWaterConsumption = waterConsumption *
             Math.Max(0, 100 - assignedWaterPercentage) / 100;
 
-        foreach (var roomConfiguration in roomConfigurations)
+        for (var roomNumber = 0; roomNumber < roomConfigurations.Count; roomNumber++)
         {
+            var roomConfiguration = roomConfigurations[roomNumber];
             var roomWaterConsumption = roomConfiguration.IsWet
                 ? waterConsumption * roomConfiguration.WaterConsumptionPercentage / 100
                 : 0;
 
-            rooms.Add(CreateRoom(roomConfiguration, roomWaterConsumption));
+            var room = CreateRoom(roomConfiguration, roomWaterConsumption);
+            ((Raum)room).RoomNumber = roomNumber + 1;
+            rooms.Add(room);
         }
     }
 
