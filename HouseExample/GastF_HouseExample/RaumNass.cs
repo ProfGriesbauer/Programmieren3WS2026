@@ -4,11 +4,13 @@ public class RaumNass : Raum, HouseExample.Interfaces.IRaumNass
 
     public RaumNass(double waterConsumption = 0)
     {
+        WaterConsumption = waterConsumption;
+
         if (waterConsumption < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(waterConsumption));
+            Console.WriteLine("Fehlermeldung: Der Wasserverbrauch darf nicht negativ sein.");
+            WaterConsumption = 0;
+            return;
         }
-
-        WaterConsumption = waterConsumption;
     }
 }

@@ -2,6 +2,10 @@ public static class AusgabeHelper
 {
     public static void Ausgabe(ExampleHouse haus)
     {
+        if (haus.HasErrors)
+        {
+            return;
+        }
         Console.WriteLine($"Stromverbrauch: {haus.ElectricityConsumption} A");
         Console.WriteLine($"Wasserverbrauch: {haus.WaterConsumption} m³/h");
         if (haus.RestWaterConsumption > 0)

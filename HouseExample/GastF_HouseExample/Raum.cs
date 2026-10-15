@@ -2,6 +2,7 @@ public abstract class Raum : HouseExample.Interfaces.IRaum
 {
     private bool lightOn;
     private double temperature;
+    internal bool HasError { get; private set; }
     internal int RoomNumber { get; set; }
 
     public bool LightOn
@@ -23,8 +24,10 @@ public abstract class Raum : HouseExample.Interfaces.IRaum
         {
             if (value && this is not HouseExample.Interfaces.IRaumJalousie)
             {
-                throw new InvalidOperationException(
+                Console.WriteLine(
                     $"Raum {RoomNumber} hat keine Jalousie, die heruntergefahren werden kann.");
+                HasError = true;
+                return;
             }
 
             blindDown = value;

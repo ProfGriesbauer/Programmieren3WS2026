@@ -1,12 +1,13 @@
 public abstract class House
 {
-    private readonly List<HouseExample.Interfaces.IRaum> rooms;
-    private readonly double electricityConsumptionWhenOn;
-    private readonly double waterConsumptionWhenOn;
-    private readonly double heatingPowerWhenOn;
-    private readonly double restWaterConsumption;
+    private readonly List<HouseExample.Interfaces.IRaum> rooms = [];
+    private double electricityConsumptionWhenOn;
+    private double waterConsumptionWhenOn;
+    private double heatingPowerWhenOn;
+    private double restWaterConsumption;
     private bool heatingOn;
     private bool mainPowerOn;
+    private bool hasConfigurationError;
 
     public House(
         double electricityConsumption,
@@ -14,47 +15,62 @@ public abstract class House
         double heatingPower,
         IReadOnlyList<RoomConfiguration> roomConfigurations)
     {
+        electricityConsumptionWhenOn = electricityConsumption;
+        waterConsumptionWhenOn = waterConsumption;
+        heatingPowerWhenOn = heatingPower;
+
         if (electricityConsumption < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(electricityConsumption));
+            Console.WriteLine("Fehlermeldung: Der Stromverbrauch darf nicht negativ sein.");
+            electricityConsumptionWhenOn = 0;
+            hasConfigurationError = true;
+            return;
         }
 
         if (waterConsumption < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(waterConsumption));
+            Console.WriteLine("Fehlermeldung: Der Wasserverbrauch darf nicht negativ sein.");
+            hasConfigurationError = true;
+            return;
         }
 
         if (heatingPower < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(heatingPower));
+            Console.WriteLine("Fehlermeldung: Die Heizleistung darf nicht negativ sein.");
+            hasConfigurationError = true;
+            return;
         }
 
         if (roomConfigurations is null)
         {
-            throw new ArgumentNullException(nameof(roomConfigurations));
+            Console.WriteLine("Fehlermeldung: Es wurden keine Raumkonfigurationen angegeben.");
+            hasConfigurationError = true;
+            return;
         }
 
         if (roomConfigurations.Any(configuration =>
                 configuration.WaterConsumptionPercentage < 0 ||
                 configuration.WaterConsumptionPercentage > 100))
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(roomConfigurations),
-                "Der Wasserverbrauchsanteil muss zwischen 0 und 100 Prozent liegen.");
+            Console.WriteLine(
+                "Fehlermeldung: Der Wasserverbrauchsanteil muss zwischen 0 und 100 Prozent liegen.");
+            hasConfigurationError = true;
+            return;
         }
 
         electricityConsumptionWhenOn = electricityConsumption;
         waterConsumptionWhenOn = waterConsumption;
         heatingPowerWhenOn = heatingPower;
-        rooms = [];
         var assignedWaterPercentage = roomConfigurations
             .Where(configuration => configuration.IsWet)
             .Sum(configuration => configuration.WaterConsumptionPercentage);
 
         if (assignedWaterPercentage > 100)
         {
-            throw new ArgumentException(
-                "Der gesamte Wasserverbrauch der Nassräume darf 100 Prozent nicht überschreiten.");
+            Console.WriteLine(
+                "Fehlermeldung: Der gesamte Wasserverbrauch der Nassräume darf 100 Prozent nicht überschreiten.");
+            hasConfigurationError = true;
+            return;
         }
 
         restWaterConsumption = waterConsumption *
@@ -87,6 +103,9 @@ public abstract class House
     }
 
     public IReadOnlyList<HouseExample.Interfaces.IRaum> Rooms => rooms;
+
+    public bool HasErrors =>
+        hasConfigurationError || rooms.Any(room => ((Raum)room).HasError);
 
     public double ElectricityConsumption =>
         mainPowerOn ? electricityConsumptionWhenOn : 0;
@@ -122,7 +141,8 @@ public abstract class House
     {
         if (duration < TimeSpan.Zero)
         {
-            throw new ArgumentOutOfRangeException(nameof(duration));
+            Console.WriteLine("Fehlermeldung: Die Dauer darf nicht negativ sein.");
+            return 0;
         }
 
         return waterConsumptionWhenOn * duration.TotalHours;
