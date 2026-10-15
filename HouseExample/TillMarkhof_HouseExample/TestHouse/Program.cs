@@ -6,16 +6,15 @@ namespace TillMarkhof.HouseExample
     {
         static void Main(string[] args)
         {
-            // Haus erstellen
-            var meinHaus = new Haus("Hauptstraße", 42, 120.5m);
+            var haus = new Haus(10m, 0.1m, 5m);
+            haus.HauptstromAn = true;
+            haus.HeizungAn = true;
 
-            // Zimmer hinzufügen
-            meinHaus.AddZimmer(new Zimmer("Wohnzimmer", 30.0m));
-            meinHaus.AddZimmer(new Zimmer("Schlafzimmer", 20.0m));
-            meinHaus.AddZimmer(new Zimmer("Küche", 15.5m));
-
-            // Klingel testen
-            meinHaus.Klingel();
+            Console.WriteLine($"Hauptstrom: {(haus.HauptstromAn ? "An" : "Aus")}");
+            Console.WriteLine($"Stromverbrauch: {haus.Stromverbrauch} A");
+            Console.WriteLine($"Heizung: {(haus.HeizungAn ? "An" : "Aus")}");
+            Console.WriteLine($"Heizungsleistung: {haus.Heizungsleistung} kW");
+            Console.WriteLine($"Wasserverbrauch nach 2 Stunden: {haus.BerechneWassermenge(2m)} m³");
         }
     }
 }
