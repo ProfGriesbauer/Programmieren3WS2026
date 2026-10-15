@@ -5,7 +5,7 @@ var haus = new ExampleHouse(
     roomConfigurations:
     [
         new RoomConfiguration(IsWet: false, HasBlinds: true),
-        new RoomConfiguration(IsWet: true, HasBlinds: false, WaterConsumptionPercentage: 80),
+        new RoomConfiguration(IsWet: true, HasBlinds: false, WaterConsumptionPercentage: 60),
         new RoomConfiguration(IsWet: true, HasBlinds: true, WaterConsumptionPercentage: 30),
         new RoomConfiguration(IsWet: false, HasBlinds: false),
     ]);
