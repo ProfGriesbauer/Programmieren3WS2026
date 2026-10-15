@@ -1,0 +1,17 @@
+﻿House myHouse = new House("Musterstraße 12", 2);
+Room kitchen = new Room("Küche", 1);
+myHouse.AddRoom(kitchen);
+myHouse.AddRoom(new Room("Abstellkammer", 1, kitchen));
+myHouse.AddRoom(new Room("Bad", 1));
+myHouse.AddRoom(new Room("Schlafzimmer", 2));
+myHouse.AddRoom(new Room("Kinderzimmer 1", 2));
+myHouse.AddRoom(new Room("Kinderzimmer 2", 2));
+myHouse.AddRoom(new Room("Kinderzimmer 3", 2));
+myHouse.Garden = new Garden(120);
+myHouse.Garden.Pool = new Pool(50);
+myHouse.Garden.AddTree(new Tree("Apfelbaum"));
+myHouse.Garden.AddTree(new Tree("Eiche"));
+myHouse.Garden.AddTree(new Tree("Ahorn"));
+myHouse.Garage = new Garage(4);
+myHouse.Attic = new Attic(false);
+myHouse.PrintInfo();
