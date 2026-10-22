@@ -1,36 +1,44 @@
 {
-  "version": 4,
+  "version": 3,
   "targets": {
-    "net6.0-windows": {}
+    "net6.0-windows7.0": {}
   },
   "libraries": {},
   "projectFileDependencyGroups": {
-    "net6.0-windows": []
+    "net6.0-windows7.0": []
   },
   "packageFolders": {
-    "C:\\Users\\kolbs\\.nuget\\packages\\": {}
+    "C:\\Users\\griesbaj\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\kolbs\\Documents\\Hochschule_Kempten\\3.Semester\\Programmieren_3\\Programmieren3WS2026\\OOPGames\\OOPGames\\OOPGames.csproj",
+      "projectUniqueName": "C:\\JosefData\\Programmieren3Graffel\\Programmieren3Live2026\\Programmieren3WS2026\\OOPGames\\OOPGames\\OOPGames.csproj",
       "projectName": "OOPGames",
-      "projectPath": "C:\\Users\\kolbs\\Documents\\Hochschule_Kempten\\3.Semester\\Programmieren_3\\Programmieren3WS2026\\OOPGames\\OOPGames\\OOPGames.csproj",
-      "packagesPath": "C:\\Users\\kolbs\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\kolbs\\Documents\\Hochschule_Kempten\\3.Semester\\Programmieren_3\\Programmieren3WS2026\\OOPGames\\OOPGames\\obj\\",
+      "projectPath": "C:\\JosefData\\Programmieren3Graffel\\Programmieren3Live2026\\Programmieren3WS2026\\OOPGames\\OOPGames\\OOPGames.csproj",
+      "packagesPath": "C:\\Users\\griesbaj\\.nuget\\packages\\",
+      "outputPath": "C:\\JosefData\\Programmieren3Graffel\\Programmieren3Live2026\\Programmieren3WS2026\\OOPGames\\OOPGames\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\kolbs\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\griesbaj\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Beckhoff.Offline.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net6.0-windows"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\ProgramData\\Beckhoff\\NuGetPackages": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net6.0-windows": {
-          "framework": "net6.0-windows7.0",
+        "net6.0-windows7.0": {
           "targetAlias": "net6.0-windows",
           "projectReferences": {}
         }
@@ -39,17 +47,10 @@
         "warnAsError": [
           "NU1605"
         ]
-      },
-      "restoreAuditProperties": {
-        "enableAudit": "true",
-        "auditLevel": "low",
-        "auditMode": "direct"
-      },
-      "SdkAnalysisLevel": "10.0.400"
+      }
     },
     "frameworks": {
-      "net6.0-windows": {
-        "framework": "net6.0-windows7.0",
+      "net6.0-windows7.0": {
         "targetAlias": "net6.0-windows",
         "imports": [
           "net461",
@@ -62,24 +63,6 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
-        "downloadDependencies": [
-          {
-            "name": "Microsoft.AspNetCore.App.Ref",
-            "version": "[6.0.36, 6.0.36]"
-          },
-          {
-            "name": "Microsoft.NETCore.App.Host.win-x64",
-            "version": "[6.0.36, 6.0.36]"
-          },
-          {
-            "name": "Microsoft.NETCore.App.Ref",
-            "version": "[6.0.36, 6.0.36]"
-          },
-          {
-            "name": "Microsoft.WindowsDesktop.App.Ref",
-            "version": "[6.0.36, 6.0.36]"
-          }
-        ],
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"
@@ -88,7 +71,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.100\\RuntimeIdentifierGraph.json"
       }
     }
   }

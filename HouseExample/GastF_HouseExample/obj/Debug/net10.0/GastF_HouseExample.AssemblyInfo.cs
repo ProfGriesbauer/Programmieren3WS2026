@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GastF_HouseExample")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e2594d2de173555e3f00619f1f75cf8c199cad6e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
 [assembly: System.Reflection.AssemblyProductAttribute("GastF_HouseExample")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GastF_HouseExample")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
