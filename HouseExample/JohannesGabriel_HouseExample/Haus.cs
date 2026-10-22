@@ -3,7 +3,7 @@ public class Haus
     private readonly double stromverbrauch;
     private readonly double wasserverbrauch;
     private readonly double heizungsleistung;
-    private readonly List<IRaum> räume = [];
+    private readonly List<IRaum> raeume = [];
     private bool heizungAn;
     private bool hauptstromschalterAn;
 
@@ -30,11 +30,11 @@ public class Haus
 
         for (var i = 0; i < 4; i++)
         {
-            räume.Add(new Raum());
+            raeume.Add(new Raum());
         }
     }
 
-    public IReadOnlyList<IRaum> Räume => räume;
+    public IReadOnlyList<IRaum> Raeume => raeume;
 
     public double Stromverbrauch => hauptstromschalterAn ? stromverbrauch : 0;
 
