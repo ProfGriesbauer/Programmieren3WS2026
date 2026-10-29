@@ -36,3 +36,19 @@ pushe jetzt
 ```
 
 Ergebnis: Push des lokalen Branches `master` zu `origin` angefordert.
+
+### Prompt 5
+
+```text
+warum kann das git nicht?
+```
+
+Ergebnis: Der Push-Fehler wird anhand der Git-Authentifizierungsmeldung erklärt.
+
+### Prompt 6
+
+```text
+pushe
+```
+
+Ergebnis: Push des lokalen `master` zu `origin` erneut versucht.
