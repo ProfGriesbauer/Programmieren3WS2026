@@ -35,3 +35,24 @@
 > arbeite mit den vorhandenen interfacec weiter
 
 **Ergebnis:** Bestehende Framework- und 4-Gewinnt-Interfaces werden unverändert verwendet.
+
+## 2026-10-29 – Copilot SDK in VS Code (Modell: in der Sitzung nicht ausgewiesen)
+
+**Prompt:**
+> Räume mir bitte meine letzten commits auf und strukture die von mir erstellten datein nach den anforderungen
+
+**Ergebnis:** Lokale Historie bereinigt, Dateien mit Gruppenpräfix eingeordnet und Arbeitsgrenze für Agenten dokumentiert.
+
+## 2026-10-29 – Copilot SDK in VS Code (Modell: in der Sitzung nicht ausgewiesen)
+
+**Prompt:**
+> kanst du bitte die liste der promts aktualisiren und dan das projekt auf git puschen und pullen
+
+**Ergebnis:** Prompt-Liste aktualisiert. Ein bereits gestarteter Pull hatte einen Registrierungs-Konflikt; dieser wurde im folgenden Schritt durch Beibehalten aller Gruppenregistrierungen aufgelöst.
+
+## 2026-10-29 – Copilot SDK in VS Code (Modell: in der Sitzung nicht ausgewiesen)
+
+**Prompt:**
+> kanst du bitte auf git pusche un pullen un d die konflikte beheben
+
+**Ergebnis:** Den Merge-Konflikt im Registrierungsblock aufgelöst und die Änderungen beider Merge-Seiten beibehalten; anschließend Build, Pull-Status und Push geprüft.
