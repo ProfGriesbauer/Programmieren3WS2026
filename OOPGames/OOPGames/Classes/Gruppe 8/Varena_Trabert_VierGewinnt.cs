@@ -630,7 +630,8 @@ namespace OOPGames
         {
             I4GWFeld connectFourField = field as I4GWFeld;
             if (connectFourField == null || _playerNumber < 1 || _playerNumber > 2
-                || G8_VierGewinntLogic.Winner(connectFourField) > 0)
+                || G8_VierGewinntLogic.Winner(connectFourField) > 0
+                || G8_VierGewinntLogic.IsFull(connectFourField))
             {
                 return null;
             }
@@ -672,6 +673,13 @@ namespace OOPGames
 
     public sealed class G8_VierGewinntComputerPlayer : IComputerGamePlayer
     {
+        private const int SearchDepth = 6;
+        private const int WinScore = 100000;
+        private static readonly int[] PreferredColumns = { 3, 2, 4, 1, 5, 0, 6 };
+        private static readonly int[,] Directions =
+        {
+            { 0, 1 }, { 1, 0 }, { 1, 1 }, { 1, -1 }
+        };
         private int _playerNumber;
 
         public string Name { get { return "Gruppe 8 Vier Gewinnt Computer Player"; } }
@@ -703,41 +711,266 @@ namespace OOPGames
                 return null;
             }
 
-            if (G8_VierGewinntLogic.IsFull(connectFourField))
-            {
-                return null;
-            }
-
             WaitForComputerMove();
 
-            int opponent = _playerNumber == 1 ? 2 : 1;
-            int[] preferredColumns = { 3, 2, 4, 1, 5, 0, 6 };
-
-            foreach (int column in preferredColumns)
+            int[,] board = CopyField(connectFourField);
+            int bestScore = int.MinValue;
+            int bestColumn = -1;
+            int equallyGoodMoves = 0;
+            foreach (int column in PreferredColumns)
             {
-                if (WinsAfterDrop(connectFourField, column, _playerNumber))
+                int row = FreeRow(board, column);
+                if (row < 0)
                 {
-                    return CreateMove(connectFourField, column);
+                    continue;
+                }
+
+                board[row, column] = _playerNumber;
+                int score = Search(board, SearchDepth - 1, OpponentOf(_playerNumber),
+                    int.MinValue, int.MaxValue);
+                board[row, column] = 0;
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestColumn = column;
+                    equallyGoodMoves = 1;
+                }
+                else if (score == bestScore)
+                {
+                    equallyGoodMoves++;
+                    if (Random.Shared.Next(equallyGoodMoves) == 0)
+                    {
+                        bestColumn = column;
+                    }
                 }
             }
 
-            foreach (int column in preferredColumns)
+            return bestColumn < 0
+                ? null
+                : (IPlayMove)new G8_VierGewinntMove(
+                    G8_VierGewinntLogic.FreeRow(connectFourField, bestColumn),
+                    bestColumn,
+                    _playerNumber);
+        }
+
+        private int Search(int[,] board, int depth, int currentPlayer, int alpha, int beta)
+        {
+            int winner = Winner(board);
+            if (winner == _playerNumber)
             {
-                if (WinsAfterDrop(connectFourField, column, opponent))
+                return WinScore + depth;
+            }
+
+            if (winner == OpponentOf(_playerNumber))
+            {
+                return -WinScore - depth;
+            }
+
+            if (depth == 0 || IsFull(board))
+            {
+                return Evaluate(board);
+            }
+
+            bool maximizing = currentPlayer == _playerNumber;
+            int bestScore = maximizing ? int.MinValue : int.MaxValue;
+            foreach (int column in PreferredColumns)
+            {
+                int row = FreeRow(board, column);
+                if (row < 0)
                 {
-                    return CreateMove(connectFourField, column);
+                    continue;
+                }
+
+                board[row, column] = currentPlayer;
+                int score = Search(board, depth - 1, OpponentOf(currentPlayer), alpha, beta);
+                board[row, column] = 0;
+
+                if (maximizing)
+                {
+                    bestScore = Math.Max(bestScore, score);
+                    alpha = Math.Max(alpha, bestScore);
+                }
+                else
+                {
+                    bestScore = Math.Min(bestScore, score);
+                    beta = Math.Min(beta, bestScore);
+                }
+
+                if (beta <= alpha)
+                {
+                    break;
                 }
             }
 
-            foreach (int column in preferredColumns)
+            return bestScore;
+        }
+
+        private int Evaluate(int[,] board)
+        {
+            int score = 0;
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
             {
-                if (G8_VierGewinntLogic.FreeRow(connectFourField, column) >= 0)
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
                 {
-                    return CreateMove(connectFourField, column);
+                    int player = board[row, column];
+                    int centerValue = 3 - Math.Abs(3 - column);
+                    if (player == _playerNumber)
+                    {
+                        score += centerValue * 4;
+                    }
+                    else if (player == OpponentOf(_playerNumber))
+                    {
+                        score -= centerValue * 4;
+                    }
                 }
             }
 
-            return null;
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        int rowStep = Directions[direction, 0];
+                        int columnStep = Directions[direction, 1];
+                        int endRow = row + 3 * rowStep;
+                        int endColumn = column + 3 * columnStep;
+                        if (!IsInside(endRow, endColumn))
+                        {
+                            continue;
+                        }
+
+                        int ownPieces = 0;
+                        int opponentPieces = 0;
+                        for (int offset = 0; offset < 4; offset++)
+                        {
+                            int player = board[row + offset * rowStep, column + offset * columnStep];
+                            if (player == _playerNumber)
+                            {
+                                ownPieces++;
+                            }
+                            else if (player == OpponentOf(_playerNumber))
+                            {
+                                opponentPieces++;
+                            }
+                        }
+
+                        if (opponentPieces == 0)
+                        {
+                            score += WindowValue(ownPieces);
+                        }
+                        else if (ownPieces == 0)
+                        {
+                            score -= WindowValue(opponentPieces) * 2;
+                        }
+                    }
+                }
+            }
+
+            return score;
+        }
+
+        private static int WindowValue(int pieces)
+        {
+            switch (pieces)
+            {
+                case 1:
+                    return 2;
+                case 2:
+                    return 12;
+                case 3:
+                    return 80;
+                default:
+                    return 0;
+            }
+        }
+
+        private static int[,] CopyField(I4GWFeld field)
+        {
+            int[,] board = new int[G8_VierGewinntLogic.Rows, G8_VierGewinntLogic.Columns];
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    board[row, column] = field[row, column];
+                }
+            }
+
+            return board;
+        }
+
+        private static int FreeRow(int[,] board, int column)
+        {
+            for (int row = G8_VierGewinntLogic.Rows - 1; row >= 0; row--)
+            {
+                if (board[row, column] == 0)
+                {
+                    return row;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool IsFull(int[,] board)
+        {
+            for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+            {
+                if (FreeRow(board, column) >= 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static int Winner(int[,] board)
+        {
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    int player = board[row, column];
+                    if (player == 0)
+                    {
+                        continue;
+                    }
+
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        int rowStep = Directions[direction, 0];
+                        int columnStep = Directions[direction, 1];
+                        int endRow = row + 3 * rowStep;
+                        int endColumn = column + 3 * columnStep;
+                        if (!IsInside(endRow, endColumn))
+                        {
+                            continue;
+                        }
+
+                        if (board[row + rowStep, column + columnStep] == player
+                            && board[row + 2 * rowStep, column + 2 * columnStep] == player
+                            && board[endRow, endColumn] == player)
+                        {
+                            return player;
+                        }
+                    }
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool IsInside(int row, int column)
+        {
+            return row >= 0 && row < G8_VierGewinntLogic.Rows
+                && column >= 0 && column < G8_VierGewinntLogic.Columns;
+        }
+
+        private static int OpponentOf(int player)
+        {
+            return player == 1 ? 2 : 1;
         }
 
         private static void WaitForComputerMove()
@@ -766,31 +999,5 @@ namespace OOPGames
             Dispatcher.PushFrame(frame);
         }
 
-        private G8_VierGewinntMove CreateMove(I4GWFeld field, int column)
-        {
-            return new G8_VierGewinntMove(
-                G8_VierGewinntLogic.FreeRow(field, column), column, _playerNumber);
-        }
-
-        private static bool WinsAfterDrop(I4GWFeld field, int column, int player)
-        {
-            int row = G8_VierGewinntLogic.FreeRow(field, column);
-            if (row < 0)
-            {
-                return false;
-            }
-
-            G8_VierGewinntField copy = new G8_VierGewinntField();
-            for (int currentRow = 0; currentRow < G8_VierGewinntLogic.Rows; currentRow++)
-            {
-                for (int currentColumn = 0; currentColumn < G8_VierGewinntLogic.Columns; currentColumn++)
-                {
-                    copy[currentRow, currentColumn] = field[currentRow, currentColumn];
-                }
-            }
-
-            copy[row, column] = player;
-            return G8_VierGewinntLogic.Winner(copy) == player;
-        }
     }
 }

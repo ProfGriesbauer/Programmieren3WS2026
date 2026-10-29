@@ -22,7 +22,7 @@ namespace OOPGames
         public int Player { get; private set; }
     }
 
-    public sealed class FG_ConnectFourField : IFG_ConnectFourField
+    public sealed class FG_ConnectFourField : I4GWFeld
     {
         public const int Rows = 6;
         public const int Columns = 7;
@@ -52,7 +52,7 @@ namespace OOPGames
 
         public bool CanBePaintedBy(IPaintGame painter)
         {
-            return painter is FG_ConnectFourPaint;
+            return painter is FG_ConnectFourPaint || painter is IG10_Painter;
         }
 
         internal void ClearMoveHistory()
@@ -66,7 +66,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class FG_ConnectFourMove : IFG_ConnectFourMove
+    public sealed class FG_ConnectFourMove : I4GWMove
     {
         public FG_ConnectFourMove(int column, int playerNumber)
         {
@@ -79,13 +79,12 @@ namespace OOPGames
         public int PlayerNumber { get; private set; }
     }
 
-    public sealed class FG_ConnectFourRules : IFG_ConnectFourRules
+    public sealed class FG_ConnectFourRules : IGameRules
     {
         private readonly FG_ConnectFourField _field = new FG_ConnectFourField();
 
         public string Name { get { return "FG Vier gewinnt Regeln"; } }
         public IGameField CurrentField { get { return _field; } }
-        public IFG_ConnectFourField ConnectFourField { get { return _field; } }
 
         public bool MovesPossible
         {
@@ -122,14 +121,13 @@ namespace OOPGames
 
         public void DoMove(IPlayMove move)
         {
-            DoConnectFourMove(move as IFG_ConnectFourMove);
-        }
+            I4GWMove connectFourMove = move as I4GWMove;
+            if (connectFourMove == null)
+            {
+                return;
+            }
 
-        public void DoConnectFourMove(IFG_ConnectFourMove move)
-        {
-            FG_ConnectFourMove connectFourMove = move as FG_ConnectFourMove;
-            if (connectFourMove == null ||
-                connectFourMove.PlayerNumber < 1 ||
+            if (connectFourMove.PlayerNumber < 1 ||
                 connectFourMove.PlayerNumber > 2 ||
                 connectFourMove.Column < 0 ||
                 connectFourMove.Column >= FG_ConnectFourField.Columns ||
@@ -184,7 +182,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class FG_ConnectFourPaint : IPaintGame2, IFG_ConnectFourPaint
+    public sealed class FG_ConnectFourPaint : IPaintGame2
     {
         private const double Padding = 10;
         private const double BoardBorderWidth = 8;
@@ -234,11 +232,6 @@ namespace OOPGames
             _animationField = field;
             StartAnimationIfNeeded(field);
             DrawField(canvas, field);
-        }
-
-        public void PaintConnectFourField(Canvas canvas, IFG_ConnectFourField currentField)
-        {
-            PaintGameField(canvas, currentField);
         }
 
         public void TickPaintGameField(Canvas canvas, IGameField currentField)
@@ -459,7 +452,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class FG_ConnectFourHumanPlayer : IFG_HumanConnectFourPlayer
+    public sealed class FG_ConnectFourHumanPlayer : IHumanGamePlayer
     {
         private int _playerNumber;
 
@@ -473,7 +466,7 @@ namespace OOPGames
 
         public bool CanBeRuledBy(IGameRules rules)
         {
-            return rules is FG_ConnectFourRules;
+            return rules != null && rules.CurrentField is I4GWFeld;
         }
 
         public IGamePlayer Clone()
@@ -485,19 +478,13 @@ namespace OOPGames
 
         public IPlayMove GetMove(IMoveSelection selection, IGameField field)
         {
-            FG_ConnectFourField connectFourField = field as FG_ConnectFourField;
-            return GetMove(selection, connectFourField);
-        }
-
-        public IFG_ConnectFourMove GetMove(IMoveSelection selection, IFG_ConnectFourField field)
-        {
             if (FG_ConnectFourPaint.IsAnyAnimating)
             {
                 return null;
             }
 
             IClickSelection click = selection as IClickSelection;
-            FG_ConnectFourField connectFourField = field as FG_ConnectFourField;
+            I4GWFeld connectFourField = field as I4GWFeld;
             if (click == null || connectFourField == null)
             {
                 return null;
@@ -516,7 +503,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class FG_ConnectFourComputerPlayer : IFG_ComputerConnectFourPlayer
+    public sealed class FG_ConnectFourComputerPlayer : IComputerGamePlayer
     {
         private const int SearchDepth = 4;
         private static readonly Random Random = new Random();
@@ -532,7 +519,7 @@ namespace OOPGames
 
         public bool CanBeRuledBy(IGameRules rules)
         {
-            return rules is FG_ConnectFourRules;
+            return rules != null && rules.CurrentField is I4GWFeld;
         }
 
         public IGamePlayer Clone()
@@ -544,13 +531,7 @@ namespace OOPGames
 
         public IPlayMove GetMove(IGameField field)
         {
-            FG_ConnectFourField connectFourField = field as FG_ConnectFourField;
-            return GetMove(connectFourField);
-        }
-
-        public IFG_ConnectFourMove GetMove(IFG_ConnectFourField field)
-        {
-            FG_ConnectFourField connectFourField = field as FG_ConnectFourField;
+            I4GWFeld connectFourField = field as I4GWFeld;
             if (connectFourField == null || _playerNumber < 1)
             {
                 return null;
@@ -596,7 +577,7 @@ namespace OOPGames
         }
 
         private int Minimax(
-            FG_ConnectFourField field,
+            I4GWFeld field,
             int depth,
             int player,
             bool maximizing,
@@ -652,7 +633,7 @@ namespace OOPGames
             return bestScore;
         }
 
-        private int Evaluate(FG_ConnectFourField field)
+        private int Evaluate(I4GWFeld field)
         {
             int opponent = _playerNumber == 1 ? 2 : 1;
             int score = 0;
@@ -680,7 +661,7 @@ namespace OOPGames
         }
 
         private int ScoreWindow(
-            FG_ConnectFourField field,
+            I4GWFeld field,
             int row,
             int column,
             int rowStep,
@@ -741,7 +722,7 @@ namespace OOPGames
             return 0;
         }
 
-        private List<int> GetAvailableColumns(FG_ConnectFourField field)
+        private List<int> GetAvailableColumns(I4GWFeld field)
         {
             List<int> columns = new List<int>();
             for (int column = 0; column < FG_ConnectFourField.Columns; column++)
@@ -755,7 +736,7 @@ namespace OOPGames
             return columns;
         }
 
-        private int GetLandingRow(FG_ConnectFourField field, int column)
+        private int GetLandingRow(I4GWFeld field, int column)
         {
             if (column < 0 || column >= FG_ConnectFourField.Columns)
             {
@@ -773,7 +754,7 @@ namespace OOPGames
             return -1;
         }
 
-        private bool HasWon(FG_ConnectFourField field, int row, int column, int player)
+        private bool HasWon(I4GWFeld field, int row, int column, int player)
         {
             return Count(field, row, column, 0, 1, player) +
                        Count(field, row, column, 0, -1, player) - 1 >= 4 ||
@@ -785,7 +766,7 @@ namespace OOPGames
         }
 
         private int Count(
-            FG_ConnectFourField field,
+            I4GWFeld field,
             int row,
             int column,
             int rowStep,
