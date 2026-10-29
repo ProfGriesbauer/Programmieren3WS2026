@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Projektanforderungen OOPGames – Kurzfassung</title>
+<style>
+  @page { size: A4; margin: 15mm 16mm 14mm 16mm; }
+  body { font-family: "Segoe UI", Calibri, Arial, sans-serif; font-size: 9.8pt; line-height: 1.38; color: #1a1a1a; }
+  h1 { font-size: 16pt; margin: 0; color: #0b3d6e; }
+  .sub { color: #555; margin: 0 0 3mm 0; font-size: 9.5pt; }
+  h2 { font-size: 11.5pt; color: #fff; background: #0b3d6e; padding: 1mm 2.5mm; margin: 4mm 0 1.5mm 0; border-radius: 2px; page-break-after: avoid; }
+  p { margin: 1mm 0; }
+  ul { margin: 0.5mm 0 1mm 0; padding-left: 5mm; }
+  li { margin: 0.6mm 0; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 8.8pt; background: #f1f3f5; padding: 0 0.8mm; border-radius: 2px; }
+  .box { border-left: 4px solid #c0392b; background: #fbeeee; padding: 1.5mm 3mm; margin: 2mm 0; page-break-inside: avoid; }
+  .muss { font-weight: 600; color: #c0392b; }
+  .small { font-size: 8.5pt; color: #555; margin-top: 3mm; }
+</style>
+</head>
+<body>
+
+<h1>Projektanforderungen OOPGames – Kurzfassung</h1>
+<div class="sub">Programmieren 3 · Wintersemester 2026/27 · Josef Griesbauer · ausführliche Fassung: <code>Projektanforderungen_OOPGames.pdf</code></div>
+
+<p>Alle Gruppen arbeiten am WPF-Framework <code>OOPGames</code> (C#, .NET 6). Jedes Spiel besteht aus den austauschbaren Rollen
+<strong>Painter</strong> (<code>IPaintGame</code>), <strong>Rules</strong> (<code>IGameRules</code>, <code>IGameField</code>) und
+<strong>Player</strong> (<code>IHumanGamePlayer</code>, <code>IComputerGamePlayer</code>). Die Kompatibilität wird über
+<code>CanBePaintedBy</code> / <code>CanBeRuledBy</code> immer gegen <em>Interfaces</em> geprüft – Muster: Beispiel <code>X_Griesbauer</code>.</p>
+
+<h2>Generelle Anforderungen</h2>
+<ul>
+  <li><strong>Eigene Verzeichnisse:</strong> Jede Gruppe arbeitet ausschließlich in <code>Classes/&lt;Gruppe&gt;/</code> und <code>Interfaces/&lt;Gruppe&gt;/</code>
+      (analog <code>X_Griesbauer</code>). Dateien: <code>Vorname_Nachname_&lt;Inhalt&gt;.cs</code>; Klassen/Interfaces mit Gruppenpräfix; eindeutige <code>Name</code>-Properties.
+      Außerhalb davon ist nur das Registrieren der eigenen Klassen im Block <code>//REGISTER YOUR CLASSES HERE</code> in <code>MainWindow.xaml.cs</code> erlaubt.</li>
+  <li><strong>Jedes Teammitglied committet und pusht selbst</strong> (eigener GitHub-Account) – die Historie zeigt die Aufteilung im Team.
+      Kleine Commits mit aussagekräftigen Messages; vor dem Push <code>git pull</code> und <code>dotnet build</code>; kein <code>--force</code>, keine fremden Dateien, kein <code>bin/</code>/<code>obj/</code>.</li>
+  <li><strong>Prompts dokumentieren:</strong> Für <span class="muss">jeden Studierenden</span> eine eigene Datei <code>Vorname_Nachname_Prompts.md</code> im Hauptverzeichnis
+      der Gruppe (<code>Classes/&lt;Gruppe&gt;/</code>) mit <span class="muss">jedem</span> Prompt im Wortlaut, Datum, Werkzeug/Modell und kurzem Ergebnisvermerk.</li>
+  <li><strong>Pläne dokumentieren:</strong> Alle Pläne (vom Agenten erzeugt oder eigene) als Markdown in <code>Classes/&lt;Gruppe&gt;/Plans/</code>.
+      Prompts und Pläne werden zusammen mit dem zugehörigen Code committet.</li>
+</ul>
+<div class="box">
+  <strong>Framework-Dateien sind tabu – auch für Agenten.</strong>
+  Die Basis-Interfaces in <code>Interfaces/</code>, <code>Classes/OOPGames.cs</code>, <code>MainWindow.*</code> (außer Registrierung), <code>App.*</code>,
+  <code>.csproj</code>/<code>.sln</code>, <code>.vscode/</code>, <code>X_Griesbauer</code> und fremde Gruppenordner werden nicht verändert.
+  Ist eine Framework-Erweiterung nötig, <span class="muss">MUSS</span> sie vorab mit dem Dozenten abgeklärt werden. Der Agent ist entsprechend anzuweisen
+  („Ändere nur Dateien in Classes/&lt;Gruppe&gt;/ und Interfaces/&lt;Gruppe&gt;/; ist eine Framework-Änderung nötig, brich ab und beschreibe sie.“);
+  vor jedem Commit mit <code>git status</code>/<code>git diff</code> prüfen.
+</div>
+
+<h2>Anforderung 1: Vier gewinnt – kompatibel über alle Gruppen</h2>
+<ul>
+  <li>Jede Gruppe implementiert <strong>Painter, Rules (mit Spielfeld), Human-Player und Computer-Player</strong>.
+      <span class="muss">Jede</span> Kombination aus Komponenten <em>aller</em> Gruppen muss im Hauptfenster funktionieren.</li>
+  <li>Grundlage ist ein <strong>gemeinsamer Satz Vier-gewinnt-Interfaces</strong> (z. B. <code>Interfaces/C4_Gemeinsam/</code>: <code>IC4_Field</code>,
+      <code>IC4_Move : IColumnMove</code>, <code>IC4_Rules</code>, <code>IC4_Painter</code>, <code>IC4_HumanPlayer</code>, <code>IC4_ComputerPlayer</code>),
+      von allen Gruppen gemeinsam erarbeitet (je eine Vertretung), vom Dozenten freigegeben und danach eingefroren.
+      Teil der Vereinbarung: Feldgröße, Indexkonventionen, Zeichengeometrie (für die Klick-Umrechnung).</li>
+  <li>Programmiert wird <span class="muss">nur gegen die gemeinsamen Interfaces</span> – nie gegen konkrete Klassen (auch nicht die eigenen).</li>
+  <li>Rules weisen ungültige Züge ab und erkennen Sieg (waagerecht, senkrecht, diagonal) und Unentschieden; Human-Player liefert bei ungültiger Eingabe <code>null</code>;
+      Computer-Player spielt immer gültig und mindestens „gewinnen, wenn möglich – sonst blockieren“.</li>
+  <li><strong>Nachweis:</strong> Test mit mindestens drei anderen Gruppen, dokumentiert als Kompatibilitätsmatrix; Fehler in fremden Komponenten als Issue melden, nicht selbst ändern.</li>
+</ul>
+
+<h2>Anforderung 2: Eigenes komplexes Spiel</h2>
+<ul>
+  <li>Jede Gruppe entwickelt mit Hilfe von Agenten ein <strong>eigenes, komplexes bzw. innovatives Spiel</strong>; Kompatibilität mit anderen Gruppen ist nicht nötig.
+      Erwartet wird deutlich mehr als ein einfacher Brettspielklon (z. B. Echtzeit über <code>IGameRules2</code>/<code>IPaintGame2</code>, starker KI-Gegner, Levels/Phasen).</li>
+  <li>Spielkonzept (eine Seite in <code>Plans/</code>) <strong>vor Beginn</strong> dem Dozenten vorstellen.</li>
+  <li><span class="muss">Harte Vorgabe:</span> Das Spiel läuft vollständig im vorgegebenen Framework – Auswahl und Start über das Hauptfenster, Eingaben nur über
+      Klick-/Tasten-Selections, Zeichnen nur auf das übergebene Canvas, kein eigenes Fenster oder eigene Hauptschleife.
+      Framework-Erweiterungen nur nach Absprache (siehe oben).</li>
+  <li>Sauberer OO-Entwurf; das Team muss <strong>den gesamten Code erklären können</strong>, auch den agentisch erzeugten.</li>
+  <li><strong>Teamarbeit nach SCRUM</strong>, dokumentiert in <code>Classes/&lt;Gruppe&gt;/Scrum/</code> (oder GitHub Issues/Projects):
+      Product Owner und Scrum Master benannt, Product Backlog mit User Stories, Sprints (1–2 Wochen) mit Sprintziel und Verantwortlichen je Aufgabe,
+      Kurzprotokolle der Abstimmungen, Review und Retrospektive je Sprint. Backlog, Prompt-Dateien, Pläne und Commits müssen zusammenpassen;
+      jedes Mitglied hat einen substanziellen, sichtbaren Anteil.</li>
+</ul>
+
+<p class="small">Termine für Konzeptvorstellung, Zwischenstände und Abnahme werden in der Vorlesung bekanntgegeben. Bei Unklarheiten gilt: vorher fragen.</p>
+
+</body>
+</html>

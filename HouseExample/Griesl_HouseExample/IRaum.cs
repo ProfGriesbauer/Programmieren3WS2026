@@ -1,4 +1,4 @@
-public interface IRaum
+public interface IRaum : ISerialisierbar
 {
     string Name { get; set; }
     bool LichtAn { get; set; }
