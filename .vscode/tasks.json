@@ -19,7 +19,7 @@
             "command": "dotnet",
             "args": [
                 "build",
-                "${workspaceFolder}/HouseExample/HouseExample/HouseExample.csproj",
+                "${workspaceFolder}/HouseExample/kolbs_HouseExample/HouseExample.csproj",
                 "-c",
                 "Debug"
             ],

@@ -16,9 +16,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-house",
-            "program": "${workspaceFolder}/HouseExample/HouseExample/bin/Debug/net6.0/HouseExample.dll",
+            "program": "${workspaceFolder}/HouseExample/kolbs_HouseExample/bin/Debug/net10.0/HouseExample.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/HouseExample/HouseExample",
+            "cwd": "${workspaceFolder}/HouseExample/kolbs_HouseExample",
             "stopAtEntry": false
         },
         {
