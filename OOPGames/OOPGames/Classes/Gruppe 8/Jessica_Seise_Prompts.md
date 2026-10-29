@@ -99,4 +99,4 @@ Ergebnis: Das Prompt-Protokoll wurde aus `Classes/Gruppe 8/Plans` direkt nach `C
 pushe nun den aktuellen stand
 ```
 
-Ergebnis: Der Remote-Stand wurde vor dem Push per Fast-Forward aktualisiert. Commit und Push warten noch auf die lokale Git-Autoridentität.
+Ergebnis: Der Remote-Stand wurde vor dem Push per Fast-Forward aktualisiert und das Prompt-Protokoll in Commit `91e369f` gespeichert. Der Push scheiterte, weil keine GitHub-Anmeldung verfügbar war.
