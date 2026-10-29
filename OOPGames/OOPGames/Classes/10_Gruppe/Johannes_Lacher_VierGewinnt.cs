@@ -116,22 +116,61 @@ namespace OOPGames
         }
     }
 
-    //Default board geometry of the group 10 painter. Also used by the group 10 human player for painters
-    //of other groups, as long as no shared geometry has been agreed on.
-    public static class G10_VierGewinntLayout
+    //Board geometry of the group 10 painter: position of the top left corner of the board and size of one cell
+    public class G10_VierGewinntLayout
     {
-        public const int Left = 20;
-        public const int Top = 80;
-        public const int Cell = 50;
+        //Space above the board for the header text and the column numbers
+        const double HeaderHeight = 45;
+        const double Margin = 10;
+        const double MinCell = 20;
 
-        public static int ColumnAt(int x, int y)
+        double _Left;
+        double _Top;
+        double _Cell;
+
+        public G10_VierGewinntLayout(double left, double top, double cell)
         {
-            if (x < Left)
+            _Left = left;
+            _Top = top;
+            _Cell = cell;
+        }
+
+        //Fixed layout used as long as the canvas size is unknown. Also used by the group 10 human player
+        //for painters of other groups, as long as no shared geometry has been agreed on.
+        public static readonly G10_VierGewinntLayout Default = new G10_VierGewinntLayout(20, 80, 50);
+
+        //Largest board that fits into the canvas, horizontally centered below the header
+        public static G10_VierGewinntLayout FromCanvasSize(double width, double height)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                return Default;
+            }
+
+            double cell = Math.Min((width - 2 * Margin) / G10_VierGewinntLogic.Columns,
+                                   (height - HeaderHeight - Margin) / G10_VierGewinntLogic.Rows);
+            cell = Math.Max(cell, MinCell);
+            double left = Math.Max(0, (width - G10_VierGewinntLogic.Columns * cell) / 2);
+            return new G10_VierGewinntLayout(left, HeaderHeight, cell);
+        }
+
+        public double Left { get { return _Left; } }
+
+        public double Top { get { return _Top; } }
+
+        public double Cell { get { return _Cell; } }
+
+        //Distance between the edge of a cell and its hole or disc
+        public double Inset { get { return _Cell * 0.1; } }
+
+        public int ColumnAt(int x, int y)
+        {
+            if (x < _Left)
             {
                 return -1;
             }
 
-            int column = (x - Left) / Cell;
+            int column = (int)((x - _Left) / _Cell);
             return column < G10_VierGewinntLogic.Columns ? column : -1;
         }
     }
@@ -342,11 +381,11 @@ namespace OOPGames
     //Implements IPaintGame2 so that moves made via keyboard are painted as well
     public class G10_VierGewinntPaint : IG10_Painter, IPaintGame2
     {
-        const int Left = G10_VierGewinntLayout.Left;
-        const int Top = G10_VierGewinntLayout.Top;
-        const int Cell = G10_VierGewinntLayout.Cell;
         const int Rows = G10_VierGewinntLogic.Rows;
         const int Columns = G10_VierGewinntLogic.Columns;
+
+        //Layout of the last painting, recomputed from the canvas size every time; ColumnAt uses the same layout
+        G10_VierGewinntLayout _Layout = G10_VierGewinntLayout.Default;
 
         public string Name { get { return "10 Lacher VierGewinnt Painter"; } }
 
@@ -365,13 +404,21 @@ namespace OOPGames
 
         public int ColumnAt(int x, int y)
         {
-            return G10_VierGewinntLayout.ColumnAt(x, y);
+            return _Layout.ColumnAt(x, y);
         }
 
         void PaintVierGewinntField(Canvas canvas, I4GWFeld currentField)
         {
             canvas.Children.Clear();
             canvas.Background = Brushes.White;
+            //A disc starting above the board must not be drawn outside the canvas
+            canvas.ClipToBounds = true;
+
+            _Layout = G10_VierGewinntLayout.FromCanvasSize(canvas.ActualWidth, canvas.ActualHeight);
+            double left = _Layout.Left;
+            double top = _Layout.Top;
+            double cell = _Layout.Cell;
+            double inset = _Layout.Inset;
 
             //Instead of the board, show why the selected players do not fit the rules owning this field
             IGameRules rules = OOPGamesManager.Singleton.ActiveRules;
@@ -380,10 +427,10 @@ namespace OOPGames
                 List<string> problems = G10_VierGewinntCompatibility.Problems(rules, OOPGamesManager.Singleton.ActivePlayers);
                 if (problems.Count > 0)
                 {
-                    AddText(canvas, "Ungültige Kombination, bitte andere Player wählen:", Left, 0, 14);
+                    AddText(canvas, "Ungültige Kombination, bitte andere Player wählen:", 10, 0, 14);
                     for (int i = 0; i < problems.Count; i++)
                     {
-                        AddText(canvas, problems[i], Left, 25 + i * 20, 12);
+                        AddText(canvas, problems[i], 10, 25 + i * 20, 12);
                     }
                     return;
                 }
@@ -401,11 +448,13 @@ namespace OOPGames
             {
                 header = "Unentschieden!";
             }
-            AddText(canvas, header, Left, 0, 14);
+            AddText(canvas, header, left, 0, 14);
 
+            //Column numbers grow with the board, but stay inside the space above it
+            double labelSize = Math.Min(18, Math.Max(10, cell * 0.3));
             for (int c = 0; c < Columns; c++)
             {
-                AddText(canvas, (c + 1).ToString(), Left + c * Cell + Cell / 2 - 4, Top - 20, 14);
+                AddText(canvas, (c + 1).ToString(), left + c * cell + cell / 2 - labelSize * 0.3, top - labelSize - 6, labelSize);
             }
 
             //Falling discs only exist for group 10 fields; fields of other groups are painted without animation
@@ -433,13 +482,13 @@ namespace OOPGames
             }
 
             GeometryGroup boardShape = new GeometryGroup() { FillRule = FillRule.EvenOdd };
-            boardShape.Children.Add(new RectangleGeometry(new Rect(Left, Top, Columns * Cell, Rows * Cell), 8, 8));
+            boardShape.Children.Add(new RectangleGeometry(new Rect(left, top, Columns * cell, Rows * cell), cell * 0.16, cell * 0.16));
             for (int r = 0; r < Rows; r++)
             {
                 for (int c = 0; c < Columns; c++)
                 {
-                    Point center = new Point(Left + c * Cell + Cell / 2.0, Top + r * Cell + Cell / 2.0);
-                    boardShape.Children.Add(new EllipseGeometry(center, Cell / 2.0 - 5, Cell / 2.0 - 5));
+                    Point center = new Point(left + c * cell + cell / 2, top + r * cell + cell / 2);
+                    boardShape.Children.Add(new EllipseGeometry(center, cell / 2 - inset, cell / 2 - inset));
                 }
             }
             canvas.Children.Add(new Path() { Data = boardShape, Fill = Brushes.RoyalBlue, Stroke = Brushes.DarkBlue, StrokeThickness = 1 });
@@ -448,16 +497,18 @@ namespace OOPGames
         //row may be fractional while the disc is falling
         void AddDisc(Canvas canvas, double row, int column, int playerNumber)
         {
+            double cell = _Layout.Cell;
+            double inset = _Layout.Inset;
             Ellipse disc = new Ellipse()
             {
-                Width = Cell - 10,
-                Height = Cell - 10,
+                Width = cell - 2 * inset,
+                Height = cell - 2 * inset,
                 Fill = playerNumber == 1 ? Brushes.Red : Brushes.Gold,
                 Stroke = playerNumber == 1 ? Brushes.DarkRed : Brushes.DarkGoldenrod,
-                StrokeThickness = 2
+                StrokeThickness = Math.Max(1, cell * 0.04)
             };
-            Canvas.SetLeft(disc, Left + column * Cell + 5);
-            Canvas.SetTop(disc, Top + row * Cell + 5);
+            Canvas.SetLeft(disc, _Layout.Left + column * cell + inset);
+            Canvas.SetTop(disc, _Layout.Top + row * cell + inset);
             canvas.Children.Add(disc);
         }
 
@@ -517,7 +568,7 @@ namespace OOPGames
                 IG10_Painter painter = OOPGamesManager.Singleton.ActivePainter as IG10_Painter;
                 column = painter != null
                     ? painter.ColumnAt(sel.XClickPos, sel.YClickPos)
-                    : G10_VierGewinntLayout.ColumnAt(sel.XClickPos, sel.YClickPos);
+                    : G10_VierGewinntLayout.Default.ColumnAt(sel.XClickPos, sel.YClickPos);
             }
             else if (selection is IKeySelection)
             {
