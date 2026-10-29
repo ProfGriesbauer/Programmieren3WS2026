@@ -76,3 +76,19 @@ pushe das
 ```
 
 Ergebnis: Gruppe-8-Änderungen in Commit `38e6115` gepusht; nach Integration neuer Remote-Commits war der Push erfolgreich.
+
+### Prompt 10
+
+```text
+entferne das aufleuchten der Spalte nach Auswahl, mache dafür eine Animation am Ende des Spiels, die zeigt, welcher SPieler gewonnen hat. Mittig in großer Schrift der Gewinner des Spiels und drumherum eine Konfettiexplosion. die Anmination dauert 5s
+```
+
+Ergebnis: Spalten-Aufleuchten entfernt. Nach Abschluss der Fallanimation erscheint fünf Sekunden lang eine zentrierte Gewinneranzeige mit animierter Konfettiexplosion.
+
+### Prompt 11
+
+```text
+pushe das
+```
+
+Ergebnis: Push der Gewinneranimation und des aktualisierten Prompt-Protokolls angefordert.
