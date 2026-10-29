@@ -75,4 +75,4 @@ Ergebnis: Nur die Spielklassen und das Prompt-Protokoll im Ordner `Classes/Grupp
 pushe das
 ```
 
-Ergebnis: Push der Gruppe-8-Änderungen angefordert.
+Ergebnis: Gruppe-8-Änderungen in Commit `38e6115` gepusht; nach Integration neuer Remote-Commits war der Push erfolgreich.
