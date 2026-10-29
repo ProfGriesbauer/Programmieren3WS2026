@@ -51,4 +51,4 @@ Ergebnis: Der Push-Fehler wird anhand der Git-Authentifizierungsmeldung erklärt
 pushe
 ```
 
-Ergebnis: Push des lokalen `master` zu `origin` erneut versucht.
+Ergebnis: Der erste Push wurde wegen neuer Remote-Commits abgelehnt. Nach dem Merge der Remote-Änderungen wurde `master` erfolgreich gepusht.
