@@ -50,6 +50,10 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new G8_VierGewinntComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new FG_ConnectFourHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new FG_ConnectFourComputerPlayer());
+            OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_4GWPainter());
+            OOPGamesManager.Singleton.RegisterRules(new Gruppe2_4GWRules());
+            OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_4GWHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_4GWComputerPlayer());
 
             InitializeComponent();
             PaintList.ItemsSource = OOPGamesManager.Singleton.Painters;
