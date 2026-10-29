@@ -92,6 +92,30 @@ namespace OOPGames
         }
     }
 
+    //Checks a player/rules combination with the framework's own CanBeRuledBy, which MainWindow never calls itself
+    public static class G10_VierGewinntCompatibility
+    {
+        //Returns one description per player that cannot be ruled by the given rules (empty list = combination is fine)
+        public static List<string> Problems(IGameRules rules, IEnumerable<IGamePlayer> players)
+        {
+            List<string> problems = new List<string>();
+            if (rules == null)
+            {
+                return problems;
+            }
+
+            foreach (IGamePlayer player in players)
+            {
+                if (!player.CanBeRuledBy(rules))
+                {
+                    problems.Add("Player " + player.PlayerNumber + " (" + player.Name + ") passt nicht zu \"" + rules.Name + "\"");
+                }
+            }
+
+            return problems;
+        }
+    }
+
     //Default board geometry of the group 10 painter. Also used by the group 10 human player for painters
     //of other groups, as long as no shared geometry has been agreed on.
     public static class G10_VierGewinntLayout
@@ -256,12 +280,18 @@ namespace OOPGames
         //Player 1 starts, then the players alternate
         int _NextPlayer = 1;
 
+        //False if a selected player cannot be ruled by these rules (set at every game start)
+        bool _PlayersFit = true;
+
         public string Name { get { return "10 Lacher VierGewinnt Rules"; } }
 
         public IGameField CurrentField { get { return _Field; } }
 
-        //No more moves after a win or on a full field (draw)
-        public bool MovesPossible { get { return G10_VierGewinntLogic.Winner(_Field) < 0 && !G10_VierGewinntLogic.IsFull(_Field); } }
+        //No moves with unfitting players, after a win or on a full field (draw)
+        public bool MovesPossible
+        {
+            get { return _PlayersFit && G10_VierGewinntLogic.Winner(_Field) < 0 && !G10_VierGewinntLogic.IsFull(_Field); }
+        }
 
         public void ClearField()
         {
@@ -269,8 +299,12 @@ namespace OOPGames
             _NextPlayer = 1;
         }
 
+        //MainWindow registers the active players before this call. An unfitting player (e.g. a TicTacToe player)
+        //never returns a move; for a computer player MainWindow's DoComputerMoves loop would then never end.
+        //Blocking all moves prevents that; the group 10 painter shows the reason.
         public void StartedGameCall()
         {
+            _PlayersFit = G10_VierGewinntCompatibility.Problems(this, OOPGamesManager.Singleton.ActivePlayers).Count == 0;
         }
 
         public void TickGameCall()
@@ -338,6 +372,22 @@ namespace OOPGames
         {
             canvas.Children.Clear();
             canvas.Background = Brushes.White;
+
+            //Instead of the board, show why the selected players do not fit the rules owning this field
+            IGameRules rules = OOPGamesManager.Singleton.ActiveRules;
+            if (rules != null && rules.CurrentField == currentField)
+            {
+                List<string> problems = G10_VierGewinntCompatibility.Problems(rules, OOPGamesManager.Singleton.ActivePlayers);
+                if (problems.Count > 0)
+                {
+                    AddText(canvas, "Ungültige Kombination, bitte andere Player wählen:", Left, 0, 14);
+                    for (int i = 0; i < problems.Count; i++)
+                    {
+                        AddText(canvas, problems[i], Left, 25 + i * 20, 12);
+                    }
+                    return;
+                }
+            }
 
             //The result is only shown once all discs have landed
             bool animating = currentField is IG10_AnimatedFeld && ((IG10_AnimatedFeld)currentField).IsAnimating;
