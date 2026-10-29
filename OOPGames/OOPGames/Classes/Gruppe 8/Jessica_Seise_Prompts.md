@@ -116,3 +116,27 @@ pushe nun nochmal
 ```
 
 Ergebnis: Neue Remote-Commits wurden integriert, die drei lokalen Commits auf den aktuellen Remote-Stand rebased und anschließend erfolgreich nach `origin/master` gepusht.
+
+### Prompt 15
+
+```text
+ändere in unserem spiel gruppe 8 die ki sodass diese schwieriger ist und nicht bei jedem spiel die selbe vorgehensweise nutzt
+```
+
+Ergebnis: Die bestehende Gruppe-8-KI wurde durch eine Alpha-Beta-Suche, taktische Stellungsbewertung und zufällige Auswahl zwischen gleichwertigen Zügen verstärkt.
+
+### Prompt 16
+
+```text
+speichere das in das varena trabert spiel mit hinein sodass wir nur ein spiel haben
+```
+
+Ergebnis: Die stärkere KI wurde in `G8_VierGewinntComputerPlayer` in `Varena_Trabert_VierGewinnt.cs` integriert. Die separate KI-Datei wurde entfernt und die bestehende Spielregistrierung wiederhergestellt.
+
+### Prompt 17
+
+```text
+pushe den aktuellen stand
+```
+
+Ergebnis: Das Projekt wurde gebaut und die Änderungen am Gruppe-8-Spiel sowie dieses Prompt-Protokoll wurden auf `origin/master` gepusht.
