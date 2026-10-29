@@ -208,13 +208,27 @@ namespace OOPGames
     {
         private static readonly Brush PlayerOneBrush = new SolidColorBrush(Color.FromRgb(30, 144, 255));
         private static readonly Brush PlayerTwoBrush = new SolidColorBrush(Color.FromRgb(255, 105, 180));
-        private const double ColumnFlashMilliseconds = 160;
         private const double DropMilliseconds = 400;
+        private const double CelebrationMilliseconds = 5000;
+        private const int ConfettiCount = 100;
+        private static readonly Color[] ConfettiColors =
+        {
+            Colors.Gold,
+            Colors.Lime,
+            Colors.DeepPink,
+            Colors.DodgerBlue,
+            Colors.Orange,
+            Colors.Violet
+        };
 
         private readonly Queue<AnimatedMove> _queuedMoves = new Queue<AnimatedMove>();
         private readonly int[,] _displayedCells = new int[G8_VierGewinntLogic.Rows, G8_VierGewinntLogic.Columns];
+        private readonly List<ConfettiPiece> _confetti = new List<ConfettiPiece>();
+        private readonly Random _random = new Random();
         private int[,] _lastObservedCells;
         private AnimatedMove _activeMove;
+        private int _celebrationWinner;
+        private DateTime _celebrationStartedAt;
         private bool _hasObservedField;
 
         public string Name { get { return "Gruppe 8 Vier Gewinnt Painter"; } }
@@ -229,7 +243,10 @@ namespace OOPGames
             }
 
             ObserveField(field);
-            AdvanceAnimations(DateTime.UtcNow);
+            DateTime now = DateTime.UtcNow;
+            AdvanceAnimations(now);
+            int winner = G8_VierGewinntLogic.Winner(field);
+            UpdateCelebration(winner, now);
 
             canvas.Children.Clear();
             canvas.Background = Brushes.White;
@@ -284,15 +301,10 @@ namespace OOPGames
                 }
             }
 
-            DrawActiveMove(canvas, DateTime.UtcNow);
+            DrawActiveMove(canvas, now);
+            DrawWinnerCelebration(canvas, now);
 
-            int winner = G8_VierGewinntLogic.Winner(field);
-            if (winner > 0)
-            {
-                AddText(canvas, "Spieler " + winner + " hat gewonnen!",
-                    G8_VierGewinntLayout.Left, 30, 14);
-            }
-            else if (G8_VierGewinntLogic.IsFull(field))
+            if (winner <= 0 && G8_VierGewinntLogic.IsFull(field))
             {
                 AddText(canvas, "Unentschieden!",
                     G8_VierGewinntLayout.Left, 30, 14);
@@ -372,7 +384,7 @@ namespace OOPGames
                 }
 
                 double elapsedMilliseconds = (now - _activeMove.StartedAt).TotalMilliseconds;
-                if (elapsedMilliseconds < ColumnFlashMilliseconds + DropMilliseconds)
+                if (elapsedMilliseconds < DropMilliseconds)
                 {
                     return;
                 }
@@ -390,26 +402,7 @@ namespace OOPGames
             }
 
             double elapsedMilliseconds = (now - _activeMove.StartedAt).TotalMilliseconds;
-            if (elapsedMilliseconds < ColumnFlashMilliseconds)
-            {
-                Rectangle highlight = new Rectangle
-                {
-                    Width = G8_VierGewinntLayout.Cell,
-                    Height = G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.Cell,
-                    Fill = new SolidColorBrush(Color.FromArgb(65, 255, 255, 0)),
-                    Stroke = Brushes.Yellow,
-                    StrokeThickness = 3,
-                    IsHitTestVisible = false
-                };
-                Canvas.SetLeft(highlight, G8_VierGewinntLayout.Left
-                    + _activeMove.Column * G8_VierGewinntLayout.Cell);
-                Canvas.SetTop(highlight, G8_VierGewinntLayout.Top);
-                canvas.Children.Add(highlight);
-                return;
-            }
-
-            double progress = Math.Min(1,
-                (elapsedMilliseconds - ColumnFlashMilliseconds) / DropMilliseconds);
+            double progress = Math.Min(1, elapsedMilliseconds / DropMilliseconds);
             double diameter = G8_VierGewinntLayout.Cell - 10;
             double startTop = G8_VierGewinntLayout.Top - diameter;
             double destinationTop = G8_VierGewinntLayout.Top
@@ -427,6 +420,100 @@ namespace OOPGames
                 + _activeMove.Column * G8_VierGewinntLayout.Cell + 5);
             Canvas.SetTop(fallingDisc, startTop + (destinationTop - startTop) * progress);
             canvas.Children.Add(fallingDisc);
+        }
+
+        private void UpdateCelebration(int winner, DateTime now)
+        {
+            if (winner <= 0)
+            {
+                _celebrationWinner = 0;
+                _confetti.Clear();
+                return;
+            }
+
+            if (_activeMove != null || _queuedMoves.Count > 0 || _celebrationWinner == winner)
+            {
+                return;
+            }
+
+            _celebrationWinner = winner;
+            _celebrationStartedAt = now;
+            _confetti.Clear();
+
+            double centerX = G8_VierGewinntLayout.Left
+                + G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.Cell / 2.0;
+            double centerY = G8_VierGewinntLayout.Top
+                + G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.Cell / 2.0;
+            for (int i = 0; i < ConfettiCount; i++)
+            {
+                double angle = _random.NextDouble() * Math.PI * 2;
+                double speed = 70 + _random.NextDouble() * 210;
+                _confetti.Add(new ConfettiPiece(
+                    centerX,
+                    centerY,
+                    Math.Cos(angle) * speed,
+                    Math.Sin(angle) * speed - 70,
+                    180 + _random.NextDouble() * 100,
+                    5 + _random.NextDouble() * 7,
+                    ConfettiColors[_random.Next(ConfettiColors.Length)],
+                    _random.NextDouble() * 360));
+            }
+        }
+
+        private void DrawWinnerCelebration(Canvas canvas, DateTime now)
+        {
+            if (_celebrationWinner <= 0)
+            {
+                return;
+            }
+
+            double elapsedSeconds = (now - _celebrationStartedAt).TotalSeconds;
+            if (elapsedSeconds < 0 || elapsedSeconds >= CelebrationMilliseconds / 1000)
+            {
+                return;
+            }
+
+            double progress = elapsedSeconds / (CelebrationMilliseconds / 1000);
+            foreach (ConfettiPiece piece in _confetti)
+            {
+                double x = piece.OriginX + piece.VelocityX * elapsedSeconds;
+                double y = piece.OriginY + piece.VelocityY * elapsedSeconds
+                    + 0.5 * piece.Gravity * elapsedSeconds * elapsedSeconds;
+                double size = piece.Size;
+                byte alpha = (byte)(255 * Math.Max(0, 1 - progress * 0.45));
+                Rectangle confetti = new Rectangle
+                {
+                    Width = size,
+                    Height = size * 0.65,
+                    Fill = new SolidColorBrush(Color.FromArgb(alpha,
+                        piece.Color.R, piece.Color.G, piece.Color.B)),
+                    IsHitTestVisible = false,
+                    RenderTransform = new RotateTransform(
+                        piece.InitialRotation + elapsedSeconds * 300, size / 2, size / 2)
+                };
+                Canvas.SetLeft(confetti, x);
+                Canvas.SetTop(confetti, y);
+                canvas.Children.Add(confetti);
+            }
+
+            TextBlock winnerText = new TextBlock
+            {
+                Text = "Spieler " + _celebrationWinner + " hat gewonnen!",
+                Width = G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.Cell - 20,
+                FontSize = 30,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.Gold,
+                Background = new SolidColorBrush(Color.FromArgb(220, 20, 20, 20)),
+                Padding = new Thickness(8),
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(winnerText, G8_VierGewinntLayout.Left + 10);
+            Canvas.SetTop(winnerText,
+                G8_VierGewinntLayout.Top
+                + G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.Cell / 2.0 - 35);
+            canvas.Children.Add(winnerText);
         }
 
         private static int[,] CaptureField(I4GWFeld field)
@@ -467,6 +554,38 @@ namespace OOPGames
             internal int Column { get; private set; }
             internal int PlayerNumber { get; private set; }
             internal DateTime StartedAt { get; set; }
+        }
+
+        private sealed class ConfettiPiece
+        {
+            internal ConfettiPiece(
+                double originX,
+                double originY,
+                double velocityX,
+                double velocityY,
+                double gravity,
+                double size,
+                Color color,
+                double initialRotation)
+            {
+                OriginX = originX;
+                OriginY = originY;
+                VelocityX = velocityX;
+                VelocityY = velocityY;
+                Gravity = gravity;
+                Size = size;
+                Color = color;
+                InitialRotation = initialRotation;
+            }
+
+            internal double OriginX { get; private set; }
+            internal double OriginY { get; private set; }
+            internal double VelocityX { get; private set; }
+            internal double VelocityY { get; private set; }
+            internal double Gravity { get; private set; }
+            internal double Size { get; private set; }
+            internal Color Color { get; private set; }
+            internal double InitialRotation { get; private set; }
         }
 
         private static void AddText(Canvas canvas, string text, double left, double top, double fontSize)
