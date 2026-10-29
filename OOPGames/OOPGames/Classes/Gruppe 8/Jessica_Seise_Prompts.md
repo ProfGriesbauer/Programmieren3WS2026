@@ -1,4 +1,4 @@
-# Jessica Seise – Prompt-Protokoll
+i# Jessica Seise – Prompt-Protokoll
 
 Werkzeug: Copilot SDK in VS Code
 Modell: im Chat nicht angezeigt
@@ -100,3 +100,11 @@ pushe nun den aktuellen stand
 ```
 
 Ergebnis: Der Remote-Stand wurde vor dem Push per Fast-Forward aktualisiert und das Prompt-Protokoll in Commit `91e369f` gespeichert. Der Push scheiterte, weil keine GitHub-Anmeldung verfügbar war.
+
+### Prompt 13
+
+```text
+wie komm ich ins terminal
+```
+
+Ergebnis: Der Weg zum integrierten Terminal in VS Code und der dort auszuführende Push-Befehl wurden erklärt.
