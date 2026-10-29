@@ -52,7 +52,7 @@ namespace OOPGames
 
         public bool CanBePaintedBy(IPaintGame painter)
         {
-            return painter is FG_ConnectFourPaint;
+            return painter is FG_ConnectFourPaint || painter is IG10_Painter;
         }
 
         internal void ClearMoveHistory()
@@ -121,16 +121,16 @@ namespace OOPGames
 
         public void DoMove(IPlayMove move)
         {
-            DoConnectFourMove(move as I4GWMove);
-        }
+            I4GWMove connectFourMove = move as I4GWMove;
+            if (connectFourMove == null)
+            {
+                return;
+            }
 
-        private void DoConnectFourMove(I4GWMove move)
-        {
-            if (move == null ||
-                move.PlayerNumber < 1 ||
-                move.PlayerNumber > 2 ||
-                move.Column < 0 ||
-                move.Column >= FG_ConnectFourField.Columns ||
+            if (connectFourMove.PlayerNumber < 1 ||
+                connectFourMove.PlayerNumber > 2 ||
+                connectFourMove.Column < 0 ||
+                connectFourMove.Column >= FG_ConnectFourField.Columns ||
                 CheckIfPLayerWon() > 0)
             {
                 return;
@@ -138,10 +138,10 @@ namespace OOPGames
 
             for (int row = FG_ConnectFourField.Rows - 1; row >= 0; row--)
             {
-                if (_field[row, move.Column] == 0)
+                if (_field[row, connectFourMove.Column] == 0)
                 {
-                    _field[row, move.Column] = move.PlayerNumber;
-                    _field.AddPlayedMove(row, move.Column, move.PlayerNumber);
+                    _field[row, connectFourMove.Column] = connectFourMove.PlayerNumber;
+                    _field.AddPlayedMove(row, connectFourMove.Column, connectFourMove.PlayerNumber);
                     return;
                 }
             }
