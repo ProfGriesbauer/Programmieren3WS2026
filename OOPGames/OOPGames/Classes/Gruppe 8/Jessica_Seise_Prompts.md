@@ -108,3 +108,11 @@ wie komm ich ins terminal
 ```
 
 Ergebnis: Der Weg zum integrierten Terminal in VS Code und der dort auszuführende Push-Befehl wurden erklärt.
+
+### Prompt 14
+
+```text
+pushe nun nochmal
+```
+
+Ergebnis: Neue Remote-Commits wurden integriert, die drei lokalen Commits auf den aktuellen Remote-Stand rebased und anschließend erfolgreich nach `origin/master` gepusht.
