@@ -6,34 +6,34 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
-    internal static class Gruppe2_4GWKonstanten
+    internal static class Gruppe2_ConnectFourConstants
     {
-        public const int Zeilen = 6;
-        public const int Spalten = 7;
-        public const int Zellgroesse = 40;
+        public const int Rows = 6;
+        public const int Columns = 7;
+        public const int CellSize = 40;
     }
 
-    public class Gruppe2_4GWFeld : I4GWFeld
+    public class Gruppe2_ConnectFourField : I4GWFeld
     {
-        private readonly int[,] _felder =
-            new int[Gruppe2_4GWKonstanten.Zeilen, Gruppe2_4GWKonstanten.Spalten];
+        private readonly int[,] _cells =
+            new int[Gruppe2_ConnectFourConstants.Rows, Gruppe2_ConnectFourConstants.Columns];
 
-        public int this[int zeile, int spalte]
+        public int this[int row, int column]
         {
             get
             {
-                if (!IstGueltigesFeld(zeile, spalte))
+                if (!IsValidCell(row, column))
                 {
                     return -1;
                 }
 
-                return _felder[zeile, spalte];
+                return _cells[row, column];
             }
             set
             {
-                if (IstGueltigesFeld(zeile, spalte))
+                if (IsValidCell(row, column))
                 {
-                    _felder[zeile, spalte] = value;
+                    _cells[row, column] = value;
                 }
             }
         }
@@ -43,22 +43,21 @@ namespace OOPGames
             return painter != null;
         }
 
-        private static bool IstGueltigesFeld(int zeile, int spalte)
+        private static bool IsValidCell(int row, int column)
         {
-            return zeile >= 0 && zeile < Gruppe2_4GWKonstanten.Zeilen
-                && spalte >= 0 && spalte < Gruppe2_4GWKonstanten.Spalten;
+            return row >= 0 && row < Gruppe2_ConnectFourConstants.Rows
+                && column >= 0 && column < Gruppe2_ConnectFourConstants.Columns;
         }
     }
 
-    public class Gruppe2_4GWMove : I4GWMove
+    public class Gruppe2_ConnectFourMove : I4GWMove
     {
-        public Gruppe2_4GWMove(int zeile, int spalte, int spielerNummer)
+        public Gruppe2_ConnectFourMove(int row, int column, int playerNumber)
         {
-            Row = zeile;
-            Column = spalte;
-            PlayerNumber = spielerNummer;
+            Row = row;
+            Column = column;
+            PlayerNumber = playerNumber;
         }
-        //vllt noch ändern unnötiger Schritt in einer Sprache schreiben und bleiben 
 
         public int Row { get; }
 
@@ -67,15 +66,15 @@ namespace OOPGames
         public int PlayerNumber { get; }
     }
 
-    public class Gruppe2_4GWRules : IGameRules
+    public class Gruppe2_ConnectFourRules : IGameRules
     {
-        private readonly I4GWFeld _feld = new Gruppe2_4GWFeld();
+        private readonly I4GWFeld _field = new Gruppe2_ConnectFourField();
 
-        public string Name { get { return "Gruppe 2 - Vier gewinnt Regeln"; } }
+        public string Name { get { return "Group 2 - Connect Four Rules"; } }
 
-        public I4GWFeld VierGewinntFeld { get { return _feld; } }
+        public I4GWFeld ConnectFourField { get { return _field; } }
 
-        public IGameField CurrentField { get { return _feld; } }
+        public IGameField CurrentField { get { return _field; } }
 
         public bool MovesPossible
         {
@@ -86,9 +85,9 @@ namespace OOPGames
                     return false;
                 }
 
-                for (int spalte = 0; spalte < Gruppe2_4GWKonstanten.Spalten; spalte++)
+                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
-                    if (Gruppe2_4GWLogik.FindeEinwurfzeile(_feld, spalte) >= 0)
+                    if (Gruppe2_ConnectFourLogic.FindAvailableRow(_field, column) >= 0)
                     {
                         return true;
                     }
@@ -100,49 +99,48 @@ namespace OOPGames
 
         public void DoMove(IPlayMove move)
         {
-            if (!(move is I4GWMove vierGewinntMove)
-                || vierGewinntMove.PlayerNumber < 1
-                || vierGewinntMove.PlayerNumber > 2
+            if (!(move is I4GWMove connectFourMove)
+                || connectFourMove.PlayerNumber < 1
+                || connectFourMove.PlayerNumber > 2
                 || CheckIfPLayerWon() > 0)
             {
                 return;
             }
 
-            int einwurfzeile = Gruppe2_4GWLogik.FindeEinwurfzeile(_feld, vierGewinntMove.Column);
-            if (einwurfzeile < 0 || vierGewinntMove.Row != einwurfzeile)
+            int availableRow = Gruppe2_ConnectFourLogic.FindAvailableRow(_field, connectFourMove.Column);
+            if (availableRow < 0 || connectFourMove.Row != availableRow)
             {
                 return;
             }
 
-            _feld[einwurfzeile, vierGewinntMove.Column] = vierGewinntMove.PlayerNumber;
+            _field[availableRow, connectFourMove.Column] = connectFourMove.PlayerNumber;
         }
 
         public void ClearField()
         {
-            for (int zeile = 0; zeile < Gruppe2_4GWKonstanten.Zeilen; zeile++)
+            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
             {
-                for (int spalte = 0; spalte < Gruppe2_4GWKonstanten.Spalten; spalte++)
+                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
-                    _feld[zeile, spalte] = 0;
+                    _field[row, column] = 0;
                 }
             }
         }
 
         public int CheckIfPLayerWon()
         {
-            return Gruppe2_4GWLogik.FindeGewinner(_feld);
+            return Gruppe2_ConnectFourLogic.FindWinner(_field);
         }
 
         public bool IsDraw
         {
             get { return !MovesPossible && CheckIfPLayerWon() < 0; }
         }
-
     }
 
-    internal static class Gruppe2_4GWLogik
+    internal static class Gruppe2_ConnectFourLogic
     {
-        private static readonly int[,] Richtungen =
+        private static readonly int[,] Directions =
         {
             { 0, 1 },
             { 1, 0 },
@@ -150,17 +148,17 @@ namespace OOPGames
             { 1, -1 }
         };
 
-        public static bool VerbindetVier(I4GWFeld feld, int zeile, int spalte, int spielerNummer)
+        public static bool ConnectsFour(I4GWFeld field, int row, int column, int playerNumber)
         {
-            for (int richtung = 0; richtung < Richtungen.GetLength(0); richtung++)
+            for (int direction = 0; direction < Directions.GetLength(0); direction++)
             {
-                int zeilenSchritt = Richtungen[richtung, 0];
-                int spaltenSchritt = Richtungen[richtung, 1];
-                int anzahl = 1
-                    + ZaehleRichtung(feld, zeile, spalte, zeilenSchritt, spaltenSchritt, spielerNummer)
-                    + ZaehleRichtung(feld, zeile, spalte, -zeilenSchritt, -spaltenSchritt, spielerNummer);
+                int rowStep = Directions[direction, 0];
+                int columnStep = Directions[direction, 1];
+                int count = 1
+                    + CountDirection(field, row, column, rowStep, columnStep, playerNumber)
+                    + CountDirection(field, row, column, -rowStep, -columnStep, playerNumber);
 
-                if (anzahl >= 4)
+                if (count >= 4)
                 {
                     return true;
                 }
@@ -169,17 +167,17 @@ namespace OOPGames
             return false;
         }
 
-        public static int FindeGewinner(I4GWFeld feld)
+        public static int FindWinner(I4GWFeld field)
         {
-            for (int zeile = 0; zeile < Gruppe2_4GWKonstanten.Zeilen; zeile++)
+            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
             {
-                for (int spalte = 0; spalte < Gruppe2_4GWKonstanten.Spalten; spalte++)
+                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
-                    int spielerNummer = feld[zeile, spalte];
-                    if (spielerNummer > 0
-                        && VerbindetVier(feld, zeile, spalte, spielerNummer))
+                    int playerNumber = field[row, column];
+                    if (playerNumber > 0
+                        && ConnectsFour(field, row, column, playerNumber))
                     {
-                        return spielerNummer;
+                        return playerNumber;
                     }
                 }
             }
@@ -187,58 +185,58 @@ namespace OOPGames
             return -1;
         }
 
-        public static int FindeEinwurfzeile(I4GWFeld feld, int spalte)
+        public static int FindAvailableRow(I4GWFeld field, int column)
         {
-            if (spalte < 0 || spalte >= Gruppe2_4GWKonstanten.Spalten)
+            if (column < 0 || column >= Gruppe2_ConnectFourConstants.Columns)
             {
                 return -1;
             }
 
-            for (int zeile = Gruppe2_4GWKonstanten.Zeilen - 1; zeile >= 0; zeile--)
+            for (int row = Gruppe2_ConnectFourConstants.Rows - 1; row >= 0; row--)
             {
-                if (feld[zeile, spalte] == 0)
+                if (field[row, column] == 0)
                 {
-                    return zeile;
+                    return row;
                 }
             }
 
             return -1;
         }
 
-        private static int ZaehleRichtung(
-            I4GWFeld feld,
-            int zeile,
-            int spalte,
-            int zeilenSchritt,
-            int spaltenSchritt,
-            int spielerNummer)
+        private static int CountDirection(
+            I4GWFeld field,
+            int row,
+            int column,
+            int rowStep,
+            int columnStep,
+            int playerNumber)
         {
-            int anzahl = 0;
-            int aktuelleZeile = zeile + zeilenSchritt;
-            int aktuelleSpalte = spalte + spaltenSchritt;
+            int count = 0;
+            int currentRow = row + rowStep;
+            int currentColumn = column + columnStep;
 
-            while (aktuelleZeile >= 0
-                && aktuelleZeile < Gruppe2_4GWKonstanten.Zeilen
-                && aktuelleSpalte >= 0
-                && aktuelleSpalte < Gruppe2_4GWKonstanten.Spalten
-                && feld[aktuelleZeile, aktuelleSpalte] == spielerNummer)
+            while (currentRow >= 0
+                && currentRow < Gruppe2_ConnectFourConstants.Rows
+                && currentColumn >= 0
+                && currentColumn < Gruppe2_ConnectFourConstants.Columns
+                && field[currentRow, currentColumn] == playerNumber)
             {
-                anzahl++;
-                aktuelleZeile += zeilenSchritt;
-                aktuelleSpalte += spaltenSchritt;
+                count++;
+                currentRow += rowStep;
+                currentColumn += columnStep;
             }
 
-            return anzahl;
+            return count;
         }
     }
 
-    public class Gruppe2_4GWPainter : IPaintGame
+    public class Gruppe2_ConnectFourPainter : IPaintGame
     {
-        public string Name { get { return "Gruppe 2 - Vier gewinnt Painter"; } }
+        public string Name { get { return "Group 2 - Connect Four Painter"; } }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
-            if (canvas == null || !(currentField is I4GWFeld feld))
+            if (canvas == null || !(currentField is I4GWFeld field))
             {
                 return;
             }
@@ -246,57 +244,57 @@ namespace OOPGames
             canvas.Children.Clear();
             canvas.Background = Brushes.White;
 
-            int breite = Gruppe2_4GWKonstanten.Spalten * Gruppe2_4GWKonstanten.Zellgroesse;
-            int hoehe = Gruppe2_4GWKonstanten.Zeilen * Gruppe2_4GWKonstanten.Zellgroesse;
-            Rectangle spielbrett = new Rectangle
+            int width = Gruppe2_ConnectFourConstants.Columns * Gruppe2_ConnectFourConstants.CellSize;
+            int height = Gruppe2_ConnectFourConstants.Rows * Gruppe2_ConnectFourConstants.CellSize;
+            Rectangle board = new Rectangle
             {
-                Width = breite,
-                Height = hoehe,
+                Width = width,
+                Height = height,
                 Fill = Brushes.RoyalBlue
             };
-            canvas.Children.Add(spielbrett);
+            canvas.Children.Add(board);
 
-            for (int zeile = 0; zeile < Gruppe2_4GWKonstanten.Zeilen; zeile++)
+            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
             {
-                for (int spalte = 0; spalte < Gruppe2_4GWKonstanten.Spalten; spalte++)
+                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
-                    Ellipse stein = new Ellipse
+                    Ellipse piece = new Ellipse
                     {
-                        Width = Gruppe2_4GWKonstanten.Zellgroesse - 8,
-                        Height = Gruppe2_4GWKonstanten.Zellgroesse - 8,
-                        Fill = FarbeFuerSpieler(feld[zeile, spalte])
+                        Width = Gruppe2_ConnectFourConstants.CellSize - 8,
+                        Height = Gruppe2_ConnectFourConstants.CellSize - 8,
+                        Fill = GetPlayerBrush(field[row, column])
                     };
-                    Canvas.SetLeft(stein, spalte * Gruppe2_4GWKonstanten.Zellgroesse + 4);
-                    Canvas.SetTop(stein, zeile * Gruppe2_4GWKonstanten.Zellgroesse + 4);
-                    canvas.Children.Add(stein);
+                    Canvas.SetLeft(piece, column * Gruppe2_ConnectFourConstants.CellSize + 4);
+                    Canvas.SetTop(piece, row * Gruppe2_ConnectFourConstants.CellSize + 4);
+                    canvas.Children.Add(piece);
                 }
             }
 
-            if (IstUnentschieden(feld))
+            if (IsDraw(field))
             {
-                TextBlock unentschieden = new TextBlock
+                TextBlock drawMessage = new TextBlock
                 {
-                    Text = "Unentschieden",
+                    Text = "Draw",
                     FontSize = 22,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.Black,
                     Background = Brushes.White,
                     Padding = new Thickness(8)
                 };
-                Canvas.SetLeft(unentschieden, 75);
-                Canvas.SetTop(unentschieden, 100);
-                canvas.Children.Add(unentschieden);
+                Canvas.SetLeft(drawMessage, 75);
+                Canvas.SetTop(drawMessage, 100);
+                canvas.Children.Add(drawMessage);
             }
         }
 
-        private static Brush FarbeFuerSpieler(int spielerNummer)
+        private static Brush GetPlayerBrush(int playerNumber)
         {
-            if (spielerNummer == 1)
+            if (playerNumber == 1)
             {
                 return Brushes.Red;
             }
 
-            if (spielerNummer == 2)
+            if (playerNumber == 2)
             {
                 return Brushes.Yellow;
             }
@@ -304,16 +302,16 @@ namespace OOPGames
             return Brushes.White;
         }
 
-        private static bool IstUnentschieden(I4GWFeld feld)
+        private static bool IsDraw(I4GWFeld field)
         {
-            if (Gruppe2_4GWLogik.FindeGewinner(feld) > 0)
+            if (Gruppe2_ConnectFourLogic.FindWinner(field) > 0)
             {
                 return false;
             }
 
-            for (int spalte = 0; spalte < Gruppe2_4GWKonstanten.Spalten; spalte++)
+            for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
             {
-                if (Gruppe2_4GWLogik.FindeEinwurfzeile(feld, spalte) >= 0)
+                if (Gruppe2_ConnectFourLogic.FindAvailableRow(field, column) >= 0)
                 {
                     return false;
                 }
@@ -323,24 +321,24 @@ namespace OOPGames
         }
     }
 
-    public class Gruppe2_4GWHumanPlayer : IHumanGamePlayer
+    public class Gruppe2_ConnectFourHumanPlayer : IHumanGamePlayer
     {
-        private int _spielerNummer;
+        private int _playerNumber;
 
-        public string Name { get { return "Gruppe 2 - Vier gewinnt Mensch"; } }
+        public string Name { get { return "Group 2 - Connect Four Human Player"; } }
 
-        public int PlayerNumber { get { return _spielerNummer; } }
+        public int PlayerNumber { get { return _playerNumber; } }
 
         public void SetPlayerNumber(int playerNumber)
         {
-            _spielerNummer = playerNumber;
+            _playerNumber = playerNumber;
         }
 
         public IGamePlayer Clone()
         {
-            Gruppe2_4GWHumanPlayer kopie = new Gruppe2_4GWHumanPlayer();
-            kopie.SetPlayerNumber(_spielerNummer);
-            return kopie;
+            Gruppe2_ConnectFourHumanPlayer clone = new Gruppe2_ConnectFourHumanPlayer();
+            clone.SetPlayerNumber(_playerNumber);
+            return clone;
         }
 
         public bool CanBeRuledBy(IGameRules rules)
@@ -350,48 +348,48 @@ namespace OOPGames
 
         public IPlayMove GetMove(IMoveSelection selection, IGameField field)
         {
-            if (!(selection is IClickSelection klick)
-                || !(field is I4GWFeld vierGewinntFeld)
-                || _spielerNummer < 1
-                || _spielerNummer > 2
-                || klick.XClickPos < 0
-                || klick.XClickPos >= Gruppe2_4GWKonstanten.Spalten * Gruppe2_4GWKonstanten.Zellgroesse
-                || klick.YClickPos < 0
-                || klick.YClickPos >= Gruppe2_4GWKonstanten.Zeilen * Gruppe2_4GWKonstanten.Zellgroesse)
+            if (!(selection is IClickSelection click)
+                || !(field is I4GWFeld connectFourField)
+                || _playerNumber < 1
+                || _playerNumber > 2
+                || click.XClickPos < 0
+                || click.XClickPos >= Gruppe2_ConnectFourConstants.Columns * Gruppe2_ConnectFourConstants.CellSize
+                || click.YClickPos < 0
+                || click.YClickPos >= Gruppe2_ConnectFourConstants.Rows * Gruppe2_ConnectFourConstants.CellSize)
             {
                 return null;
             }
 
-            int spalte = klick.XClickPos / Gruppe2_4GWKonstanten.Zellgroesse;
-            int zeile = Gruppe2_4GWLogik.FindeEinwurfzeile(vierGewinntFeld, spalte);
-            if (zeile < 0)
+            int column = click.XClickPos / Gruppe2_ConnectFourConstants.CellSize;
+            int row = Gruppe2_ConnectFourLogic.FindAvailableRow(connectFourField, column);
+            if (row < 0)
             {
                 return null;
             }
 
-            return new Gruppe2_4GWMove(zeile, spalte, _spielerNummer);
+            return new Gruppe2_ConnectFourMove(row, column, _playerNumber);
         }
     }
 
-    public class Gruppe2_4GWComputerPlayer : IComputerGamePlayer
+    public class Gruppe2_ConnectFourComputerPlayer : IComputerGamePlayer
     {
-        private static readonly int[] BevorzugteSpalten = { 3, 2, 4, 1, 5, 0, 6 };
-        private int _spielerNummer;
+        private static readonly int[] PreferredColumns = { 3, 2, 4, 1, 5, 0, 6 };
+        private int _playerNumber;
 
-        public string Name { get { return "Gruppe 2 - Vier gewinnt Computer"; } }
+        public string Name { get { return "Group 2 - Connect Four Computer Player"; } }
 
-        public int PlayerNumber { get { return _spielerNummer; } }
+        public int PlayerNumber { get { return _playerNumber; } }
 
         public void SetPlayerNumber(int playerNumber)
         {
-            _spielerNummer = playerNumber;
+            _playerNumber = playerNumber;
         }
 
         public IGamePlayer Clone()
         {
-            Gruppe2_4GWComputerPlayer kopie = new Gruppe2_4GWComputerPlayer();
-            kopie.SetPlayerNumber(_spielerNummer);
-            return kopie;
+            Gruppe2_ConnectFourComputerPlayer clone = new Gruppe2_ConnectFourComputerPlayer();
+            clone.SetPlayerNumber(_playerNumber);
+            return clone;
         }
 
         public bool CanBeRuledBy(IGameRules rules)
@@ -401,43 +399,43 @@ namespace OOPGames
 
         public IPlayMove GetMove(IGameField field)
         {
-            if (!(field is I4GWFeld vierGewinntFeld)
-                || _spielerNummer < 1
-                || _spielerNummer > 2
-                || Gruppe2_4GWLogik.FindeGewinner(vierGewinntFeld) > 0)
+            if (!(field is I4GWFeld connectFourField)
+                || _playerNumber < 1
+                || _playerNumber > 2
+                || Gruppe2_ConnectFourLogic.FindWinner(connectFourField) > 0)
             {
                 return null;
             }
 
-            int gegnerNummer = _spielerNummer == 1 ? 2 : 1;
-            foreach (int spalte in BevorzugteSpalten)
+            int opponentNumber = _playerNumber == 1 ? 2 : 1;
+            foreach (int column in PreferredColumns)
             {
-                int zeile = Gruppe2_4GWLogik.FindeEinwurfzeile(vierGewinntFeld, spalte);
-                if (zeile >= 0
-                    && Gruppe2_4GWLogik.VerbindetVier(
-                        vierGewinntFeld, zeile, spalte, _spielerNummer))
+                int row = Gruppe2_ConnectFourLogic.FindAvailableRow(connectFourField, column);
+                if (row >= 0
+                    && Gruppe2_ConnectFourLogic.ConnectsFour(
+                        connectFourField, row, column, _playerNumber))
                 {
-                    return new Gruppe2_4GWMove(zeile, spalte, _spielerNummer);
+                    return new Gruppe2_ConnectFourMove(row, column, _playerNumber);
                 }
             }
 
-            foreach (int spalte in BevorzugteSpalten)
+            foreach (int column in PreferredColumns)
             {
-                int zeile = Gruppe2_4GWLogik.FindeEinwurfzeile(vierGewinntFeld, spalte);
-                if (zeile >= 0
-                    && Gruppe2_4GWLogik.VerbindetVier(
-                        vierGewinntFeld, zeile, spalte, gegnerNummer))
+                int row = Gruppe2_ConnectFourLogic.FindAvailableRow(connectFourField, column);
+                if (row >= 0
+                    && Gruppe2_ConnectFourLogic.ConnectsFour(
+                        connectFourField, row, column, opponentNumber))
                 {
-                    return new Gruppe2_4GWMove(zeile, spalte, _spielerNummer);
+                    return new Gruppe2_ConnectFourMove(row, column, _playerNumber);
                 }
             }
 
-            foreach (int spalte in BevorzugteSpalten)
+            foreach (int column in PreferredColumns)
             {
-                int zeile = Gruppe2_4GWLogik.FindeEinwurfzeile(vierGewinntFeld, spalte);
-                if (zeile >= 0)
+                int row = Gruppe2_ConnectFourLogic.FindAvailableRow(connectFourField, column);
+                if (row >= 0)
                 {
-                    return new Gruppe2_4GWMove(zeile, spalte, _spielerNummer);
+                    return new Gruppe2_ConnectFourMove(row, column, _playerNumber);
                 }
             }
 
