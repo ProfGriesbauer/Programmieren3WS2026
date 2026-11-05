@@ -182,7 +182,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class FG_ConnectFourPaint : IPaintGame2
+    public sealed class FG_ConnectFourPaint : IPaintGame2, IG10_Painter
     {
         private const double Padding = 10;
         private const double BoardBorderWidth = 8;
@@ -217,6 +217,19 @@ namespace OOPGames
         public bool IsAnimating { get { return _isAnimating; } }
 
         public string Name { get { return "FG Vier gewinnt Darstellung"; } }
+
+        public int ColumnAt(int x, int y)
+        {
+            if (x < _left ||
+                x >= _left + _cellSize * FG_ConnectFourField.Columns ||
+                y < _top ||
+                y >= _top + _cellSize * FG_ConnectFourField.Rows)
+            {
+                return -1;
+            }
+
+            return (int)((x - _left) / _cellSize);
+        }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
