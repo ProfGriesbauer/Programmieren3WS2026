@@ -149,41 +149,76 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             { 1, -1 }     // diagonal nach unten links
         };
 
-        public static bool ConnectsFour(I4GWFeld field, int row, int column, int playerNumber)     //Methode, die überprüft, ob ein Spieler vier Spielsteine in einer Reihe hat. Sie überprüft alle vier Richtungen und zählt die Anzahl der aufeinanderfolgenden Spielsteine des Spielers. Wenn die Anzahl größer oder gleich 4 ist, gibt sie true zurück, sonst false.
+        public static int FindWinner(I4GWFeld field)
         {
-            for (int direction = 0; direction < Directions.GetLength(0); direction++)
-            {
-                int rowStep = Directions[direction, 0];
-                int columnStep = Directions[direction, 1];
-                int count = 1     //Zählt den aktuellen Spielstein
-                    + CountDirection(field, row, column, rowStep, columnStep, playerNumber)     //Zählt die Spielsteine in der positiven Richtung
-                    + CountDirection(field, row, column, -rowStep, -columnStep, playerNumber);     //Zählt die Spielsteine in der negativen Richtung
-
-                if (count >= 4)     //Wenn die Anzahl der aufeinanderfolgenden Spielsteine größer oder gleich 4 ist, hat der Spieler gewonnen.
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            List<WinningLine> winningLines = FindWinningLines(field);
+            return winningLines.Count > 0 ? winningLines[0].PlayerNumber : -1;
         }
 
-        public static int FindWinner(I4GWFeld field)     //Methode, die überprüft, ob ein Spieler gewonnen hat. Sie durchläuft alle Zellen des Spielbretts und ruft die Methode ConnectsFour auf, um zu überprüfen, ob ein Spieler vier Spielsteine in einer Reihe hat. Wenn ja, gibt sie die Spielerzahl zurück, sonst -1.
+        public static List<WinningLine> FindWinningLines(I4GWFeld field)
         {
+            List<WinningLine> winningLines = new List<WinningLine>();
             for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
             {
                 for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
                     int playerNumber = field[row, column];
-                    if (playerNumber > 0
-                        && ConnectsFour(field, row, column, playerNumber))     //Wenn die Zelle nicht leer ist und der Spieler vier Spielsteine in einer Reihe hat, wird die Spielerzahl zurückgegeben.
+                    if (playerNumber <= 0)
                     {
-                        return playerNumber;     //Spielerzahl wird zurückgegeben.
+                        continue;
+                    }
+
+                    for (int direction = 0; direction < Directions.GetLength(0); direction++)
+                    {
+                        int rowStep = Directions[direction, 0];
+                        int columnStep = Directions[direction, 1];
+                        int previousRow = row - rowStep;
+                        int previousColumn = column - columnStep;
+                        if (IsInsideBoard(previousRow, previousColumn)
+                            && field[previousRow, previousColumn] == playerNumber)
+                        {
+                            continue;
+                        }
+
+                        int endRow = row;
+                        int endColumn = column;
+                        int count = 1;
+                        while (IsInsideBoard(endRow + rowStep, endColumn + columnStep)
+                            && field[endRow + rowStep, endColumn + columnStep] == playerNumber)
+                        {
+                            endRow += rowStep;
+                            endColumn += columnStep;
+                            count++;
+                        }
+
+                        if (count >= 4)
+                        {
+                            winningLines.Add(new WinningLine(
+                                playerNumber, row, column, endRow, endColumn));
+                        }
                     }
                 }
             }
 
-            return -1;     //Wenn kein Spieler gewonnen hat, wird -1 zurückgegeben.
+            return winningLines;
+        }
+
+        public struct WinningLine
+        {
+            public WinningLine(int playerNumber, int startRow, int startColumn, int endRow, int endColumn)
+            {
+                PlayerNumber = playerNumber;
+                StartRow = startRow;
+                StartColumn = startColumn;
+                EndRow = endRow;
+                EndColumn = endColumn;
+            }
+
+            public int PlayerNumber { get; }
+            public int StartRow { get; }
+            public int StartColumn { get; }
+            public int EndRow { get; }
+            public int EndColumn { get; }
         }
 
         public static int FindAvailableRow(I4GWFeld field, int column)     //Methode, die die nächste verfügbare Zeile in einer Spalte findet. Sie durchläuft die Zeilen von unten nach oben und überprüft, ob die Zelle leer ist. Wenn ja, gibt sie die Zeilennummer zurück, sonst -1.
@@ -204,44 +239,19 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             return -1;
         }
 
-        private static int CountDirection(     //Methode, die die Anzahl der aufeinanderfolgenden Spielsteine eines Spielers in einer bestimmten Richtung zählt. Sie wird von der Methode ConnectsFour aufgerufen.
-            I4GWFeld field,     //Das Spielbrett, auf dem die Überprüfung durchgeführt wird
-            int row,     //Die Startzeile, von der aus die Überprüfung beginnt
-            int column,     //Die Startspalte, von der aus die Überprüfung beginnt
-            int rowStep,     //Die Zeilenänderung, die angibt, in welche Richtung die Überprüfung erfolgt (z. B. 1 für nach unten, -1 für nach oben)
-            int columnStep,     //Die Spaltenänderung, die angibt, in welche Richtung die Überprüfung erfolgt (z. B. 1 für nach rechts, -1 für nach links)
-            int playerNumber)    //Die Spielerzahl, die überprüft wird (1 oder 2)
-        
+        private static bool IsInsideBoard(int row, int column)
         {
-            int count = 0;     //Anzahl der aufeinanderfolgenden Spielsteine des Spielers wird auf 0 gesetzt, da noch keine Spielsteine gezählt wurden.
-            int currentRow = row + rowStep;     //Startpunkt für die Überprüfung in der angegebenen Richtung
-            int currentColumn = column + columnStep;     //Startpunkt für die Überprüfung in der angegebenen Richtung
-
-            while (currentRow >= 0     //Solange die aktuelle Zeile und Spalte innerhalb der Grenzen des Spielbretts liegen und die Zelle dem Spieler gehört, wird gezählt.
-                && currentRow < Gruppe2_ConnectFourConstants.Rows
-                && currentColumn >= 0
-                && currentColumn < Gruppe2_ConnectFourConstants.Columns
-                && field[currentRow, currentColumn] == playerNumber)
-            {
-                count++;     //Zählt die aufeinanderfolgenden Spielsteine des Spielers in der angegebenen Richtung
-                currentRow += rowStep;     //Bewegt sich in der angegebenen Richtung weiter, um die nächste Zelle zu überprüfen
-                currentColumn += columnStep;     //Bewegt sich in der angegebenen Richtung weiter, um die nächste Zelle zu überprüfen
-            }
-
-            return count;
+            return row >= 0
+                && row < Gruppe2_ConnectFourConstants.Rows
+                && column >= 0
+                && column < Gruppe2_ConnectFourConstants.Columns;
         }
+
     }
 
     public class Gruppe2_ConnectFourPainter : IPaintGame2, IConnectFourPainter     //Klasse, die das Spielbrett für "Vier Gewinnt" von Gruppe 2 zeichnet und die Animation fallender Spielsteine verwaltet.
     {
         private const double FallDurationMilliseconds = 300;
-        private static readonly int[,] WinningLineDirections =
-        {
-            { 0, 1 },
-            { 1, 0 },
-            { 1, 1 },
-            { 1, -1 }
-        };
         private readonly int[,] _observedCells =
             new int[Gruppe2_ConnectFourConstants.Rows, Gruppe2_ConnectFourConstants.Columns];
         private readonly Queue<FallingPiece> _pendingPieces = new Queue<FallingPiece>();
@@ -422,71 +432,26 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
 
         private static void DrawWinningLines(Canvas canvas, I4GWFeld field)
         {
-            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
+            foreach (Gruppe2_ConnectFourLogic.WinningLine line
+                in Gruppe2_ConnectFourLogic.FindWinningLines(field))
             {
-                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
+                Line winningLine = new Line
                 {
-                    int playerNumber = field[row, column];
-                    if (playerNumber <= 0)
-                    {
-                        continue;
-                    }
-
-                    for (int direction = 0; direction < WinningLineDirections.GetLength(0); direction++)
-                    {
-                        int rowStep = WinningLineDirections[direction, 0];
-                        int columnStep = WinningLineDirections[direction, 1];
-                        int previousRow = row - rowStep;
-                        int previousColumn = column - columnStep;
-                        if (IsInsideBoard(previousRow, previousColumn)
-                            && field[previousRow, previousColumn] == playerNumber)
-                        {
-                            continue;
-                        }
-
-                        int endRow = row;
-                        int endColumn = column;
-                        int count = 1;
-                        while (IsInsideBoard(endRow + rowStep, endColumn + columnStep)
-                            && field[endRow + rowStep, endColumn + columnStep] == playerNumber)
-                        {
-                            endRow += rowStep;
-                            endColumn += columnStep;
-                            count++;
-                        }
-
-                        if (count < 4)
-                        {
-                            continue;
-                        }
-
-                        Line winningLine = new Line
-                        {
-                            X1 = column * Gruppe2_ConnectFourConstants.CellSize
-                                + Gruppe2_ConnectFourConstants.CellSize / 2.0,
-                            Y1 = row * Gruppe2_ConnectFourConstants.CellSize
-                                + Gruppe2_ConnectFourConstants.CellSize / 2.0,
-                            X2 = endColumn * Gruppe2_ConnectFourConstants.CellSize
-                                + Gruppe2_ConnectFourConstants.CellSize / 2.0,
-                            Y2 = endRow * Gruppe2_ConnectFourConstants.CellSize
-                                + Gruppe2_ConnectFourConstants.CellSize / 2.0,
-                            Stroke = Brushes.Gold,
-                            StrokeThickness = 5,
-                            StrokeStartLineCap = PenLineCap.Round,
-                            StrokeEndLineCap = PenLineCap.Round
-                        };
-                        canvas.Children.Add(winningLine);
-                    }
-                }
+                    X1 = line.StartColumn * Gruppe2_ConnectFourConstants.CellSize
+                        + Gruppe2_ConnectFourConstants.CellSize / 2.0,
+                    Y1 = line.StartRow * Gruppe2_ConnectFourConstants.CellSize
+                        + Gruppe2_ConnectFourConstants.CellSize / 2.0,
+                    X2 = line.EndColumn * Gruppe2_ConnectFourConstants.CellSize
+                        + Gruppe2_ConnectFourConstants.CellSize / 2.0,
+                    Y2 = line.EndRow * Gruppe2_ConnectFourConstants.CellSize
+                        + Gruppe2_ConnectFourConstants.CellSize / 2.0,
+                    Stroke = Brushes.Gold,
+                    StrokeThickness = 5,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round
+                };
+                canvas.Children.Add(winningLine);
             }
-        }
-
-        private static bool IsInsideBoard(int row, int column)
-        {
-            return row >= 0
-                && row < Gruppe2_ConnectFourConstants.Rows
-                && column >= 0
-                && column < Gruppe2_ConnectFourConstants.Columns;
         }
 
         private bool IsPendingPiece(int row, int column)
