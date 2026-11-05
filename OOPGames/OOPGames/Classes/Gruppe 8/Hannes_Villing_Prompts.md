@@ -92,3 +92,51 @@ pushe das
 ```
 
 Ergebnis: Gewinneranimation in Commit `be153b9` gepusht. Nach dem Merge neuer Remote-Änderungen wurde auch das Prompt-Protokoll aktualisiert und gepusht.
+
+### Prompt 12
+
+```text
+gib mir ein paar ideen für komplexere Spiele, die innerhalb dieses Frameworks programmiert werden können. muss nicht mit anderen kompatibel sein aber in diesem framework programmiert werden, ohne dass dieses verändert wird
+```
+
+Ergebnis: Spielideen werden anhand der vorhandenen Framework-Funktionen wie Zugauswahl, Spielregeln, Spielfeld, Painter und Tick-Animation zusammengestellt.
+
+### Prompt 13
+
+```text
+mensch ärgere dich nicht nur eine spannendere version mit zB zusätzlichen regeln
+```
+
+Ergebnis: Vorschlag für eine erweiterte, strategischere Variante von Mensch ärgere dich nicht mit zusätzlichen Regeln.
+
+### Prompt 14
+
+```text
+starte in einem terminal die oopgames
+```
+
+Ergebnis: OOPGames konnte mit dem installierten neueren .NET-Runtime gestartet werden; das benötigte .NET-6-Runtime ist auf dem Rechner nicht installiert.
+
+### Prompt 15
+
+```text
+erklär mir was mit der dotnetversion los ist, die startet wenn ich im vscode z.B. debuggen will und fehlerhaft beendet werde
+```
+
+Ergebnis: Ursache ist die Zielversion `net6.0-windows` bei gleichzeitig fehlendem .NET-6-Runtime. Build mit dem installierten .NET-10-SDK funktioniert, aber VS Code startet die Anwendung direkt ohne Runtime-Rollforward; installiert sind nur .NET-Runtimes 8, 9 und 10.
+
+### Prompt 16
+
+```text
+stell das projekt auf ein unterstützes framework um
+```
+
+Ergebnis: OOPGames auf `net10.0-windows` umgestellt, die VS-Code-Startkonfiguration und die README angepasst.
+
+### Prompt 17
+
+```text
+pushe das
+```
+
+Ergebnis: .NET-10-Umstellung, VS-Code-Startkonfiguration, README und Prompt-Protokoll gemeinsam committed und gepusht.
