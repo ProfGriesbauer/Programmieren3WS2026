@@ -368,16 +368,12 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             {
                 for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
-                    if (IsPendingPiece(row, column))
-                    {
-                        continue;
-                    }
-
+                    int playerNumber = IsPendingPiece(row, column) ? 0 : field[row, column];
                     Ellipse piece = new Ellipse     //Erstellt eine Ellipse, die einen Spielstein darstellt. Die Breite und Höhe werden auf die Zellgröße minus 8 gesetzt, um einen kleinen Abstand zum Rand zu haben. Die Füllfarbe wird basierend auf dem Spieler gesetzt.
                     {
                         Width = Gruppe2_ConnectFourConstants.CellSize - 8,     //Setzt die Breite der Ellipse auf die Zellgröße minus 8, um einen kleinen Abstand zum Rand zu haben.
                         Height = Gruppe2_ConnectFourConstants.CellSize - 8,
-                        Fill = GetPlayerBrush(field[row, column])     //Setzt die Füllfarbe der Ellipse basierend auf dem Spieler, der die Zelle besetzt. 0 = leer, 1 = Spieler 1 (Magenta), 2 = Spieler 2 (Türkis)
+                        Fill = GetPlayerBrush(playerNumber)     //Setzt die Füllfarbe der Ellipse basierend auf dem Spieler, der die Zelle besetzt. 0 = leer, 1 = Spieler 1 (Magenta), 2 = Spieler 2 (Türkis)
                     };
                     Canvas.SetLeft(piece, column * Gruppe2_ConnectFourConstants.CellSize + 4);     //Setzt die x-Position der Ellipse basierend auf der Spalte und der Zellgröße, plus einem kleinen Abstand von 4 Pixeln zum Rand.
                     Canvas.SetTop(piece, row * Gruppe2_ConnectFourConstants.CellSize + 4);     //Setzt die y-Position der Ellipse basierend auf der Reihe und der Zellgröße, plus einem kleinen Abstand von 4 Pixeln zum Rand.
