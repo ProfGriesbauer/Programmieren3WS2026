@@ -15,4 +15,4 @@ Implementiere ein austauschbares 6x7-Vier-Gewinnt-Spiel für das OOPGames-WPF-Fr
 
 ## Validierung
 
-Build und automatisierte Schnittstellentests decken Gewinn in allen vier Richtungen, Zugablehnung, Human-/Computer-Züge, Rendering auf dem WPF-Canvas und Komponenten-Kombinationen mit Gruppe 2, Gruppe 8 und Gruppe 10 ab. Die Ergebnisse stehen in `ConnectFour_Kompatibilitaet.md`. Ein manueller interaktiver Lauf des Hauptfensters ist ergänzend sinnvoll.
+Build und automatisierte Schnittstellentests decken Zugverträge, Player, Rendering und Kombinationen mit den aktuell registrierten Gruppen ab. Die Ergebnisse und gruppenfremden Kompatibilitätsblocker stehen in `ConnectFour_Kompatibilitaet.md`. Ein manueller interaktiver Lauf des Hauptfensters ist ergänzend sinnvoll.
