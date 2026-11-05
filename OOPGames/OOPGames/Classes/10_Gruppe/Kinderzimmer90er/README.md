@@ -6,9 +6,9 @@ ueber `IGameRules2`; Eingaben werden im Spieler gepuffert und im 40-ms-Tick vera
 
 ## Steuerung
 
-- Im Zimmer: Links/Rechts waehlt ein Geraet, Enter oder Z oeffnet es.
+- Im Zimmer: A/D waehlt ein Geraet, Enter oder Z oeffnet es.
 - In der Geraeteansicht: 1/2 waehlt ein Spiel, Enter oder Z startet es.
-- Im Spiel: Pfeiltasten steuern; Esc oder X geht zur Geraeteansicht zurueck.
+- Im Spiel: WASD steuert; Esc oder X geht zur Geraeteansicht zurueck.
 - Esc oder X in der Geraeteansicht geht zurueck ins Zimmer.
 
 Die Gameboy- und Atari-Quellen aus der Aufgabenbeschreibung waren in diesem

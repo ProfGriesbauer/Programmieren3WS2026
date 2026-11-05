@@ -96,10 +96,10 @@ namespace OOPGames
             foreach (Key key in keys)
             {
                 if (key == Key.Escape || key == Key.X) { _Exit = true; continue; }
-                if (key == Key.Left) _X = Math.Max(0, _X - 1);
-                if (key == Key.Right) _X = Math.Min(19, _X + 1);
-                if (key == Key.Up) _Y = Math.Max(0, _Y - 1);
-                if (key == Key.Down) _Y = Math.Min(11, _Y + 1);
+                if (key == Key.A) _X = Math.Max(0, _X - 1);
+                if (key == Key.D) _X = Math.Min(19, _X + 1);
+                if (key == Key.W) _Y = Math.Max(0, _Y - 1);
+                if (key == Key.S) _Y = Math.Min(11, _Y + 1);
             }
 
             if (_X == _CoinX && _Y == _CoinY)
@@ -118,7 +118,7 @@ namespace OOPGames
             B5RoomDraw.Text(canvas, "SCORE " + _Score + "  BEST " + B5RoomHighscores.Get(_Title), 4, 3, 10, Colors.White);
             B5RoomDraw.Rect(canvas, _CoinX * 8 + 1, _CoinY * 7 + 22, 5, 5, Color.FromRgb(255, 220, 68));
             B5RoomDraw.Rect(canvas, _X * 8 + 1, _Y * 7 + 22, 6, 6, _Accent);
-            B5RoomDraw.Text(canvas, "ARROWS MOVE", 4, 105, 8, Colors.White);
+            B5RoomDraw.Text(canvas, "WASD MOVE", 4, 105, 8, Colors.White);
         }
     }
 
@@ -155,10 +155,10 @@ namespace OOPGames
             foreach (Key key in keys)
             {
                 if (key == Key.Escape || key == Key.X) _Exit = true;
-                if (key == Key.Up && _Direction != 2) _Direction = 0;
-                if (key == Key.Right && _Direction != 3) _Direction = 1;
-                if (key == Key.Down && _Direction != 0) _Direction = 2;
-                if (key == Key.Left && _Direction != 1) _Direction = 3;
+                if (key == Key.W && _Direction != 2) _Direction = 0;
+                if (key == Key.D && _Direction != 3) _Direction = 1;
+                if (key == Key.S && _Direction != 0) _Direction = 2;
+                if (key == Key.A && _Direction != 1) _Direction = 3;
             }
 
             if (++_Ticks % 5 != 0 || _Exit) return;
@@ -236,8 +236,8 @@ namespace OOPGames
             foreach (Key key in keys)
             {
                 if (key == Key.Escape || key == Key.X) _Exit = true;
-                if (key == Key.Up) _PaddleY = Math.Max(18, _PaddleY - 8);
-                if (key == Key.Down) _PaddleY = Math.Min(118, _PaddleY + 8);
+                if (key == Key.W) _PaddleY = Math.Max(18, _PaddleY - 8);
+                if (key == Key.S) _PaddleY = Math.Min(118, _PaddleY + 8);
             }
 
             if (_Exit) return;

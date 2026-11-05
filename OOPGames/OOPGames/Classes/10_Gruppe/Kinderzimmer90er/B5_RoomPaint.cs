@@ -304,9 +304,9 @@ namespace OOPGames
             _GameCanvas.Width = field.Device.DisplayWidth;
             _GameCanvas.Height = field.Device.DisplayHeight;
             _RoomSelection.Text = "Geraet: " + field.Device.Name + "    <  >   |   ENTER";
-            _Hint.Text = field.Phase == B5RoomPhase.Room ? "LINKS / RECHTS: Geraet waehlen     ENTER / Z: oeffnen" :
+            _Hint.Text =             field.Phase == B5RoomPhase.Room ? "A / D: Geraet waehlen     ENTER / Z: oeffnen" :
                 field.Phase == B5RoomPhase.Device ? "1 / 2: Spiel waehlen     ENTER / Z: Modul     ESC / X: zurueck" :
-                field.Phase == B5RoomPhase.Playing ? "PFEILE: steuern     ESC / X: zurueck zur Geraeteauswahl" :
+                field.Phase == B5RoomPhase.Playing ? "WASD: steuern     ESC / X: zurueck zur Geraeteauswahl" :
                 "Modul wird " + (field.Phase == B5RoomPhase.Ejecting ? "ausgeworfen" : "eingesteckt") + " ...     ESC: abbrechen";
             UpdateCartridgeAnimation(field);
             UpdateScreenLighting(field);
