@@ -196,7 +196,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class FG_ConnectFourPaint : IPaintGame2, IG10_Painter
+    public sealed class FG_ConnectFourPaint : IPaintGame2
     {
         private const double Padding = 10;
         private const double BoardBorderWidth = 8;
@@ -444,7 +444,7 @@ namespace OOPGames
                                 X2 = _left + endColumn * _cellSize + _cellSize / 2,
                                 Y2 = _top + endRow * _cellSize + _cellSize / 2,
                                 Stroke = new SolidColorBrush(Color.FromRgb(30, 100, 190)),
-                                StrokeThickness = 12,
+                                StrokeThickness = 24,
                                 StrokeStartLineCap = PenLineCap.Round,
                                 StrokeEndLineCap = PenLineCap.Round,
                                 IsHitTestVisible = false
