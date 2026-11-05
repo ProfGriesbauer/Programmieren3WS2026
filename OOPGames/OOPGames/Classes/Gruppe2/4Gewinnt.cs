@@ -232,9 +232,22 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
         }
     }
 
-    public class Gruppe2_ConnectFourPainter : IPaintGame     //Klasse, die das Spielbrett für "Vier Gewinnt" von Gruppe 2 zeichnet. Sie implementiert das IPaintGame-Interface und enthält die Logik zur Darstellung des Spielbretts auf einem Canvas.
+    public class Gruppe2_ConnectFourPainter : IConnectFourPainter     //Klasse, die das Spielbrett für "Vier gewinnt" von Gruppe 2 zeichnet. Sie implementiert das IPaintGame-Interface und enthält die Logik zur Darstellung des Spielbretts auf einem Canvas.
     {
         public string Name { get { return "Group 2 - Connect Four Painter"; } }   
+
+        public int ColumnAt(int x, int y)
+        {
+            if (x < 0
+                || x >= Gruppe2_ConnectFourConstants.Columns * Gruppe2_ConnectFourConstants.CellSize
+                || y < 0
+                || y >= Gruppe2_ConnectFourConstants.Rows * Gruppe2_ConnectFourConstants.CellSize)
+            {
+                return -1;
+            }
+
+            return x / Gruppe2_ConnectFourConstants.CellSize;
+        }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)     //Methode, die das Spielbrett auf einem Canvas zeichnet. Sie überprüft, ob das Canvas und das Spielbrett gültig sind, und zeichnet dann das Spielbrett, die Spielsteine und eine Nachricht für ein Unentschieden.
         {
@@ -356,16 +369,19 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             if (!(selection is IClickSelection click)     //Wenn die Auswahl nicht vom Typ IClickSelection ist, wird null zurückgegeben, da der menschliche Spieler nur Klicks verwenden kann.
                 || !(field is I4GWFeld connectFourField)     //Wenn das aktuelle Spielbrett nicht vom Typ I4GWFeld ist, wird null zurückgegeben, da der menschliche Spieler nur auf einem gültigen Spielbrett spielen kann.
                 || _playerNumber < 1
-                || _playerNumber > 2
-                || click.XClickPos < 0
-                || click.XClickPos >= Gruppe2_ConnectFourConstants.Columns * Gruppe2_ConnectFourConstants.CellSize     //Wenn die Klickposition außerhalb der Grenzen des Spielbretts liegt, wird null zurückgegeben, da der menschliche Spieler nur innerhalb des Spielbretts spielen kann.
-                || click.YClickPos < 0
-                || click.YClickPos >= Gruppe2_ConnectFourConstants.Rows * Gruppe2_ConnectFourConstants.CellSize)
+                || _playerNumber > 2)
             {
                 return null;
             }
 
-            int column = click.XClickPos / Gruppe2_ConnectFourConstants.CellSize;     //Berechnet die Spalte des Zuges basierend auf der Klickposition und der Zellgröße. Die Spalte wird durch ganzzahlige Division berechnet, da die Klickposition in Pixeln angegeben ist und die Zellgröße in Pixeln bekannt ist.
+            IConnectFourPainter painter =
+                OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter;
+            if (painter == null)
+            {
+                return null;
+            }
+
+            int column = painter.ColumnAt(click.XClickPos, click.YClickPos);
             int row = Gruppe2_ConnectFourLogic.FindAvailableRow(connectFourField, column);     //Findet die nächste verfügbare Zeile in der berechneten Spalte. Wenn keine freie Zeile vorhanden ist, wird -1 zurückgegeben.
             if (row < 0)     //Wenn keine freie Zeile vorhanden ist, wird null zurückgegeben, da der menschliche Spieler keinen Zug machen kann.
             {

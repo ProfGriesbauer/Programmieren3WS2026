@@ -12,4 +12,9 @@ namespace OOPGames
     public interface I4GWMove : IRowMove, IColumnMove
     {
     }
+
+    public interface IConnectFourPainter : IPaintGame
+    {
+        int ColumnAt(int x, int y);
+    }
 }
