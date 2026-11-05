@@ -140,3 +140,43 @@ pushe das
 ```
 
 Ergebnis: .NET-10-Umstellung, VS-Code-Startkonfiguration, README und Prompt-Protokoll gemeinsam committed und gepusht.
+
+### Prompt 18
+
+```text
+mach einen pull
+```
+
+Ergebnis: 15 Remote-Commits per Fast-Forward integriert. Nach Freigabe wurden die lokalen Änderungen in HouseExample-`obj`-Dateien verworfen, weil sie mit Remote-Änderungen kollidierten.
+
+### Prompt 19
+
+```text
+wo hat sich mit dem Pull was geändert
+```
+
+Ergebnis: Änderungen im Pull zusammengefasst: Connect-Four-Implementierungen und Painter erweitert, eine Painter-Schnittstelle ergänzt, Spieler-/Spielnamen angepasst sowie Prompt-Dokumentation und generierte HouseExample-Dateien aktualisiert.
+
+### Prompt 20
+
+```text
+Schreibe das Programm so um, dass die neue Schnittstelle verwendet wird. Lege die Zellengröße auf 50 fest wie in Gruppe 2
+```
+
+Ergebnis: Gruppe-8-Painter implementiert `IConnectFourPainter`; der Human Player nutzt die aktive Painter-Schnittstelle für Klicks. Die Zellengröße ist als `CellSize = 50` festgelegt.
+
+### Prompt 21
+
+```text
+Erkläre mir jetzt, was das neue Interface und die jetzige Implementierung zur Kompatibilität der Gruppen beiträgt
+```
+
+Ergebnis: Erklärt, wie `IConnectFourPainter.ColumnAt` Klickkoordinaten passend zum aktiven Painter in Spalten übersetzt, wie die Zellengröße 50 zur Gruppe 2 passt und dass vollständige Kompatibilität voraussetzt, dass beide Seiten dieselbe Schnittstelle verwenden.
+
+### Prompt 22
+
+```text
+pushe das
+```
+
+Ergebnis: Gruppe-8-Anpassung zur Verwendung von `IConnectFourPainter` mit 50-Pixel-Zellen und das aktualisierte Prompt-Protokoll gepusht.
