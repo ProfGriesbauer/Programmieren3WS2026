@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/OOPGames/OOPGames/bin/Debug/net6.0-windows/OOPGames.exe",
+            "program": "${workspaceFolder}/OOPGames/OOPGames/bin/Debug/net10.0-windows/OOPGames.exe",
             "args": [],
             "cwd": "${workspaceFolder}/OOPGames/OOPGames",
             "stopAtEntry": false

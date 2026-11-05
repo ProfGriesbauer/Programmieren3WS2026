@@ -322,7 +322,7 @@ namespace OOPGames
         //False if a selected player cannot be ruled by these rules (set at every game start)
         bool _PlayersFit = true;
 
-        public string Name { get { return "10 Lacher VierGewinnt Rules"; } }
+        public string Name { get { return "Gruppe 10 Vier Gewinnt Regeln"; } }
 
         public IGameField CurrentField { get { return _Field; } }
 
@@ -387,7 +387,7 @@ namespace OOPGames
         //Layout of the last painting, recomputed from the canvas size every time; ColumnAt uses the same layout
         G10_VierGewinntLayout _Layout = G10_VierGewinntLayout.Default;
 
-        public string Name { get { return "10 Lacher VierGewinnt Painter"; } }
+        public string Name { get { return "Gruppe 10 Vier Gewinnt Painter"; } }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
@@ -525,7 +525,7 @@ namespace OOPGames
     {
         int _PlayerNumber = 0;
 
-        public string Name { get { return "10 Lacher VierGewinnt Human Player"; } }
+        public string Name { get { return "Gruppe 10 Vier Gewinnt Human Player"; } }
 
         public int PlayerNumber { get { return _PlayerNumber; } }
 
@@ -604,7 +604,7 @@ namespace OOPGames
         int _PlayerNumber = 0;
         Random _Random = new Random();
 
-        public string Name { get { return "10 Lacher VierGewinnt Computer Player"; } }
+        public string Name { get { return "Gruppe 10 Vier Gewinnt Computer Player"; } }
 
         public int PlayerNumber { get { return _PlayerNumber; } }
 
