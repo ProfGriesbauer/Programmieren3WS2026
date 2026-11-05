@@ -188,6 +188,7 @@ namespace OOPGames
         private const double Padding = 10;
         private const double BoardBorderWidth = 8;
         private const double AnimationDurationMilliseconds = 350;
+        private const double WinningBlinkDurationMilliseconds = 300;
         private static double _cellSize = 65;
         private static double _left = Padding;
         private static double _top = Padding;
@@ -200,18 +201,10 @@ namespace OOPGames
         private int _fallingColumn;
         private int _fallingPlayer;
         private DateTime _animationStarted;
-        private readonly DispatcherTimer _animationTimer;
         private Canvas _animationCanvas;
         private I4GWFeld _animationField;
-
-        public FG_ConnectFourPaint()
-        {
-            _animationTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(16)
-            };
-            _animationTimer.Tick += AnimationTimer_Tick;
-        }
+        private bool _winningBlinkActive;
+        private DateTime _winningBlinkStarted;
 
         public static double CellSize { get { return _cellSize; } }
         public static double Left { get { return _left; } }
@@ -254,28 +247,13 @@ namespace OOPGames
 
         public void TickPaintGameField(Canvas canvas, IGameField currentField)
         {
-            if (!_isAnimating)
-            {
-                PaintGameField(canvas, currentField);
-            }
-        }
-
-        private void AnimationTimer_Tick(object sender, EventArgs e)
-        {
-            if (_animationCanvas == null || _animationField == null)
-            {
-                _animationTimer.Stop();
-                _isAnimating = false;
-                IsAnyAnimating = false;
-                return;
-            }
-
-            UpdateBoardGeometry(_animationCanvas);
-            DrawField(_animationCanvas, _animationField);
+            PaintGameField(canvas, currentField);
         }
 
         private void DrawField(Canvas canvas, I4GWFeld field)
         {
+            bool[,] winningTokens = FindWinningTokens();
+            bool blinkOn = UpdateWinningBlink(winningTokens);
             canvas.Children.Clear();
             for (int row = 0; row < FG_ConnectFourField.Rows; row++)
             {
@@ -289,7 +267,9 @@ namespace OOPGames
                     }
 
                     int player = _displayedBoard[row, column];
-                    AddToken(canvas, player, row, column);
+                    AddToken(canvas, player, row, column,
+                        null,
+                        winningTokens[row, column] && blinkOn);
                 }
             }
 
@@ -308,13 +288,11 @@ namespace OOPGames
                     _displayedBoard[_fallingRow, _fallingColumn] = _fallingPlayer;
                     _isAnimating = false;
                     IsAnyAnimating = false;
-                    _animationTimer.Stop();
                     StartAnimationIfNeeded(field);
                 }
             }
 
             AddBoardInFront(canvas);
-            DrawWinningLine(canvas);
         }
 
         private void AddToken(
@@ -322,7 +300,8 @@ namespace OOPGames
             int player,
             int row,
             int column,
-            double? top = null)
+            double? top = null,
+            bool highlighted = false)
         {
             if (player <= 0)
             {
@@ -339,8 +318,9 @@ namespace OOPGames
                 Width = Math.Max(1, _cellSize - 8),
                 Height = Math.Max(1, _cellSize - 8),
                 Fill = tokenBrush,
-                Stroke = Brushes.Black,
-                StrokeThickness = 1
+                Stroke = highlighted ? Brushes.White : Brushes.Black,
+                StrokeThickness = highlighted ? 4 : 1,
+                Opacity = 1
             };
             Canvas.SetLeft(token, _left + column * _cellSize + 4);
             Canvas.SetTop(token, top ?? _top + row * _cellSize + 4);
@@ -382,9 +362,10 @@ namespace OOPGames
             canvas.Children.Add(board);
         }
 
-        private void DrawWinningLine(Canvas canvas)
+        private bool[,] FindWinningTokens()
         {
             int[,] field = _displayedBoard;
+            bool[,] winningTokens = new bool[FG_ConnectFourField.Rows, FG_ConnectFourField.Columns];
             int[,] directions =
             {
                 { 0, 1 },
@@ -429,24 +410,54 @@ namespace OOPGames
 
                         if (isWinningLine)
                         {
-                            Line winningLine = new Line
+                            for (int step = 0; step < 4; step++)
                             {
-                                X1 = _left + column * _cellSize + _cellSize / 2,
-                                Y1 = _top + row * _cellSize + _cellSize / 2,
-                                X2 = _left + endColumn * _cellSize + _cellSize / 2,
-                                Y2 = _top + endRow * _cellSize + _cellSize / 2,
-                                Stroke = new SolidColorBrush(Color.FromRgb(30, 100, 190)),
-                                StrokeThickness = 24,
-                                StrokeStartLineCap = PenLineCap.Round,
-                                StrokeEndLineCap = PenLineCap.Round,
-                                IsHitTestVisible = false
-                            };
-                            canvas.Children.Add(winningLine);
-                            return;
+                                winningTokens[
+                                    row + rowStep * step,
+                                    column + columnStep * step] = true;
+                            }
                         }
                     }
                 }
             }
+
+            return winningTokens;
+        }
+
+        private bool UpdateWinningBlink(bool[,] winningTokens)
+        {
+            bool hasWinningTokens = false;
+            for (int row = 0; row < FG_ConnectFourField.Rows; row++)
+            {
+                for (int column = 0; column < FG_ConnectFourField.Columns; column++)
+                {
+                    if (winningTokens[row, column])
+                    {
+                        hasWinningTokens = true;
+                        break;
+                    }
+                }
+
+                if (hasWinningTokens)
+                {
+                    break;
+                }
+            }
+
+            if (!hasWinningTokens)
+            {
+                _winningBlinkActive = false;
+                return false;
+            }
+
+            if (!_winningBlinkActive)
+            {
+                _winningBlinkStarted = DateTime.UtcNow;
+                _winningBlinkActive = true;
+            }
+
+            double elapsed = (DateTime.UtcNow - _winningBlinkStarted).TotalMilliseconds;
+            return ((int)(elapsed / WinningBlinkDurationMilliseconds) % 2) == 0;
         }
 
         private void StartAnimationIfNeeded(I4GWFeld field)
@@ -455,7 +466,7 @@ namespace OOPGames
             if (_previousBoard == null)
             {
                 _previousBoard = currentField;
-                CopyField(field);
+                CopyBoard(field);
                 return;
             }
 
@@ -484,8 +495,7 @@ namespace OOPGames
                 _pendingMoves.Clear();
                 _isAnimating = false;
                 IsAnyAnimating = false;
-                _animationTimer.Stop();
-                CopyField(field);
+                CopyBoard(field);
                 _previousBoard = currentField;
                 return;
             }
@@ -518,7 +528,6 @@ namespace OOPGames
                 _animationStarted = DateTime.UtcNow;
                 _isAnimating = true;
                 IsAnyAnimating = true;
-                _animationTimer.Start();
             }
         }
 
@@ -536,7 +545,7 @@ namespace OOPGames
             return copy;
         }
 
-        private void CopyField(I4GWFeld field)
+        private void CopyBoard(I4GWFeld field)
         {
             for (int row = 0; row < FG_ConnectFourField.Rows; row++)
             {
