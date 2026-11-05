@@ -322,6 +322,7 @@ namespace OOPGames
             }
 
             AddBoardInFront(canvas);
+            DrawWinningLine(canvas);
         }
 
         private void AddToken(
@@ -387,6 +388,73 @@ namespace OOPGames
                 StrokeThickness = 2
             };
             canvas.Children.Add(board);
+        }
+
+        private void DrawWinningLine(Canvas canvas)
+        {
+            int[,] field = _renderedField;
+            int[,] directions =
+            {
+                { 0, 1 },
+                { 1, 0 },
+                { 1, 1 },
+                { 1, -1 }
+            };
+
+            for (int row = 0; row < FG_ConnectFourField.Rows; row++)
+            {
+                for (int column = 0; column < FG_ConnectFourField.Columns; column++)
+                {
+                    int player = field[row, column];
+                    if (player <= 0)
+                    {
+                        continue;
+                    }
+
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        int rowStep = directions[direction, 0];
+                        int columnStep = directions[direction, 1];
+                        int endRow = row + rowStep * 3;
+                        int endColumn = column + columnStep * 3;
+                        if (endRow < 0 ||
+                            endRow >= FG_ConnectFourField.Rows ||
+                            endColumn < 0 ||
+                            endColumn >= FG_ConnectFourField.Columns)
+                        {
+                            continue;
+                        }
+
+                        bool isWinningLine = true;
+                        for (int step = 1; step < 4; step++)
+                        {
+                            if (field[row + rowStep * step, column + columnStep * step] != player)
+                            {
+                                isWinningLine = false;
+                                break;
+                            }
+                        }
+
+                        if (isWinningLine)
+                        {
+                            Line winningLine = new Line
+                            {
+                                X1 = _left + column * _cellSize + _cellSize / 2,
+                                Y1 = _top + row * _cellSize + _cellSize / 2,
+                                X2 = _left + endColumn * _cellSize + _cellSize / 2,
+                                Y2 = _top + endRow * _cellSize + _cellSize / 2,
+                                Stroke = new SolidColorBrush(Color.FromRgb(30, 100, 190)),
+                                StrokeThickness = 12,
+                                StrokeStartLineCap = PenLineCap.Round,
+                                StrokeEndLineCap = PenLineCap.Round,
+                                IsHitTestVisible = false
+                            };
+                            canvas.Children.Add(winningLine);
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         private void StartAnimationIfNeeded(I4GWFeld field)
@@ -608,6 +676,8 @@ namespace OOPGames
                 return null;
             }
 
+            WaitForComputerMove();
+
             int opponent = _playerNumber == 1 ? 2 : 1;
             int bestScore = int.MinValue;
             List<int> bestColumns = new List<int>();
@@ -647,6 +717,32 @@ namespace OOPGames
                 GetLandingRow(connectFourField, selectedColumn),
                 selectedColumn,
                 _playerNumber);
+        }
+
+        private static void WaitForComputerMove()
+        {
+            Application application = Application.Current;
+            Dispatcher dispatcher = application == null ? null : application.Dispatcher;
+            if (dispatcher == null || !dispatcher.CheckAccess())
+            {
+                System.Threading.Thread.Sleep(500);
+                return;
+            }
+
+            DispatcherFrame frame = new DispatcherFrame();
+            DispatcherTimer timer = new DispatcherTimer(DispatcherPriority.Background, dispatcher);
+            timer.Interval = TimeSpan.FromMilliseconds(500);
+            EventHandler onTimerTick = null;
+            onTimerTick = delegate
+            {
+                timer.Stop();
+                timer.Tick -= onTimerTick;
+                frame.Continue = false;
+            };
+            timer.Tick += onTimerTick;
+            timer.Start();
+
+            Dispatcher.PushFrame(frame);
         }
 
         private int Minimax(
