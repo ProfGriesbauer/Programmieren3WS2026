@@ -13,6 +13,7 @@ namespace OOPGames
     {
     }
 
+    // Von Vier-Gewinnt-Paintern implementieren, damit Klicks passend zum Brettlayout einer Spalte zugeordnet werden.
     public interface IConnectFourPainter : IPaintGame
     {
         int ColumnAt(int x, int y);
