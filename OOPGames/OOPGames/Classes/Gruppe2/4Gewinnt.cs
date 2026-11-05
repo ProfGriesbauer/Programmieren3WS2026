@@ -135,7 +135,7 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
 
         public bool IsDraw     //Property, die überprüft, ob das Spiel unentschieden ist. Sie gibt true zurück, wenn keine Züge mehr möglich sind und kein Spieler gewonnen hat, sonst false.
         {
-            get { return !MovesPossible && CheckIfPLayerWon() < 0; }
+            get { return Gruppe2_ConnectFourLogic.IsDraw(_field); }
         }
     }
 
@@ -153,6 +153,24 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
         {
             List<WinningLine> winningLines = FindWinningLines(field);
             return winningLines.Count > 0 ? winningLines[0].PlayerNumber : -1;
+        }
+
+        public static bool IsDraw(I4GWFeld field)
+        {
+            if (FindWinner(field) > 0)
+            {
+                return false;
+            }
+
+            for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
+            {
+                if (FindAvailableRow(field, column) >= 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static List<WinningLine> FindWinningLines(I4GWFeld field)
@@ -411,9 +429,12 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
                 canvas.Children.Add(fallingPiece);
             }
 
-            DrawWinningLines(canvas, field);
+            if (_fallingPiece == null && _pendingPieces.Count == 0)
+            {
+                DrawWinningLines(canvas, field);
+            }
 
-            if (IsDraw(field))     //Wenn das Spiel unentschieden ist, wird eine Nachricht angezeigt, die den Spielern mitteilt, dass das Spiel unentschieden ist.
+            if (Gruppe2_ConnectFourLogic.IsDraw(field))     //Wenn das Spiel unentschieden ist, wird eine Nachricht angezeigt, die den Spielern mitteilt, dass das Spiel unentschieden ist.
             {
                 TextBlock drawMessage = new TextBlock     //Erstellt einen TextBlock, der die Draw-Nachricht anzeigt.
                 {
@@ -489,23 +510,6 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             return Brushes.LightGray;     //Wenn die Zelle leer ist, wird Hellgrau zurückgegeben, um anzuzeigen, dass kein Spieler die Zelle besetzt.
         }
 
-        private static bool IsDraw(I4GWFeld field)     //Methode, die überprüft, ob das Spiel unentschieden ist. Sie ruft die Methode FindWinner auf, um zu überprüfen, ob ein Spieler gewonnen hat. Wenn kein Spieler gewonnen hat und keine Züge mehr möglich sind, gibt sie true zurück, sonst false.
-        {
-            if (Gruppe2_ConnectFourLogic.FindWinner(field) > 0)     //Wenn ein Spieler gewonnen hat, kann das Spiel nicht unentschieden sein.
-            {
-                return false;
-            }
-
-            for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)     //Überprüft jede Spalte, um zu sehen, ob noch Züge möglich sind. Wenn eine Spalte noch eine freie Zelle hat, kann das Spiel nicht unentschieden sein.
-            {
-                if (Gruppe2_ConnectFourLogic.FindAvailableRow(field, column) >= 0)     //Wenn eine Spalte noch eine freie Zelle hat, kann das Spiel nicht unentschieden sein.
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
     }
 
     public class Gruppe2_ConnectFourHumanPlayer : IHumanGamePlayer     //Klasse, die einen menschlichen Spieler für das Spiel "Vier Gewinnt" von Gruppe 2 implementiert. Sie implementiert das IHumanGamePlayer-Interface und enthält die Logik zur Auswahl eines Zuges durch den Spieler.

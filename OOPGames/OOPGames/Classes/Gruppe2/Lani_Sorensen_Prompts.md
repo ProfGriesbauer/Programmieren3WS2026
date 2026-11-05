@@ -564,3 +564,45 @@ Chronological transcript of user messages and assistant replies retained for thi
 ## Assistant
 
 > Replaced the summary with a chronological export of all 109 non-empty user and assistant messages retained in the local conversation log. The transcript includes the Connect Four review conversation and subsequent follow-ups, with internal tool calls and outputs excluded. Future messages will need to be added manually.
+
+## Assistant
+
+> The transcript export contains the retained conversation through the request to ignore the summarized context. The following entries continue the conversation after that export.
+
+## User
+
+> what would be the solution for "**Draw detection is duplicated.**"
+
+## Assistant
+
+> Draw detection is duplicated between the rules’ `IsDraw` and the painter’s `IsDraw`. Both check for a winner and whether any column still has room.
+>
+> Put that check in the shared `Gruppe2_ConnectFourLogic` class, then have both callers use it. The rules’ `IsDraw` property and the painter’s draw-message check would both delegate to `Gruppe2_ConnectFourLogic.IsDraw(field)`. This keeps the painter responsible for displaying the draw, while the shared logic determines whether one exists. It also avoids coupling the painter to a particular rules instance, which matters when mixing painters and rules.
+
+## User
+
+> ok great, then implement that please
+
+## Assistant
+
+> I’ll move draw detection into the shared Connect Four logic and make both the rules and painter delegate to it, keeping the painter’s display behavior unchanged.
+
+## Assistant
+
+> Implemented in [4Gewinnt.cs](C:/Users/lania/Downloads/Programmieren3WS2026/OOPGames/OOPGames/Classes/Gruppe2/4Gewinnt.cs): draw detection now lives in `Gruppe2_ConnectFourLogic.IsDraw`. Both the rules’ `IsDraw` property and the painter’s draw-message check delegate to this method; the painter still only displays the message.
+>
+> The project builds successfully with **0 warnings and 0 errors**. `git diff --check` passes.
+
+## User
+
+> there is a small bug with the draw tool where it draws the golden line for the winner before the puck is in place. the line should appear after the puck has fallen
+
+## Assistant
+
+> I’ll trace when the painter commits a falling piece to the field and when winning lines are drawn, then delay only the line rendering until the animation for that winning move has finished.
+
+## Assistant
+
+> The painter was drawing winning lines from the updated field even while the new piece was queued or falling. I changed it to draw the lines only after `_fallingPiece` is `null` and `_pendingPieces` is empty, so the gold line appears once the piece has landed and all queued animations are complete.
+>
+> The project builds successfully with **0 warnings and 0 errors**.
