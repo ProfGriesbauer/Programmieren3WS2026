@@ -2,33 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace OOPGames
 {
-    internal sealed class FG_ConnectFourPlayedMove
-    {
-        public FG_ConnectFourPlayedMove(int row, int column, int player)
-        {
-            Row = row;
-            Column = column;
-            Player = player;
-        }
-
-        public int Row { get; private set; }
-        public int Column { get; private set; }
-        public int Player { get; private set; }
-    }
-
-    public sealed class FG_ConnectFourField : I4GWFeld
+    public sealed class FG_ConnectFourField : IFG_ConnectFourField
     {
         public const int Rows = 6;
         public const int Columns = 7;
-        private readonly int[,] _cells = new int[Rows, Columns];
-        internal List<FG_ConnectFourPlayedMove> MoveHistory { get; private set; } =
-            new List<FG_ConnectFourPlayedMove>();
+        private readonly int[,] _board = new int[Rows, Columns];
 
         public int this[int row, int column]
         {
@@ -39,13 +24,13 @@ namespace OOPGames
                     return -1;
                 }
 
-                return _cells[row, column];
+                return _board[row, column];
             }
             set
             {
                 if (row >= 0 && row < Rows && column >= 0 && column < Columns)
                 {
-                    _cells[row, column] = value;
+                    _board[row, column] = value;
                 }
             }
         }
@@ -55,26 +40,10 @@ namespace OOPGames
             return painter != null;
         }
 
-        internal void ClearMoveHistory()
-        {
-            MoveHistory.Clear();
-        }
-
-        internal void AddPlayedMove(int row, int column, int player)
-        {
-            MoveHistory.Add(new FG_ConnectFourPlayedMove(row, column, player));
-        }
     }
 
-    public sealed class FG_ConnectFourMove : I4GWMove
+    public sealed class FG_ConnectFourMove : IFG_ConnectFourMove
     {
-        public FG_ConnectFourMove(int column, int playerNumber)
-        {
-            Row = -1;
-            Column = column;
-            PlayerNumber = playerNumber;
-        }
-
         public FG_ConnectFourMove(int row, int column, int playerNumber)
         {
             Row = row;
@@ -87,12 +56,13 @@ namespace OOPGames
         public int PlayerNumber { get; private set; }
     }
 
-    public sealed class FG_ConnectFourRules : IGameRules
+    public sealed class FG_ConnectFourRules : IFG_ConnectFourRules
     {
         private readonly FG_ConnectFourField _field = new FG_ConnectFourField();
 
         public string Name { get { return "FG Vier gewinnt Regeln"; } }
         public IGameField CurrentField { get { return _field; } }
+        public IFG_ConnectFourField ConnectFourField { get { return _field; } }
 
         public bool MovesPossible
         {
@@ -117,7 +87,6 @@ namespace OOPGames
 
         public void ClearField()
         {
-            _field.ClearMoveHistory();
             for (int row = 0; row < FG_ConnectFourField.Rows; row++)
             {
                 for (int column = 0; column < FG_ConnectFourField.Columns; column++)
@@ -129,16 +98,16 @@ namespace OOPGames
 
         public void DoMove(IPlayMove move)
         {
-            I4GWMove connectFourMove = move as I4GWMove;
-            if (connectFourMove == null)
+            I4GWMove gameMove = move as I4GWMove;
+            if (gameMove == null)
             {
                 return;
             }
 
-            if (connectFourMove.PlayerNumber < 1 ||
-                connectFourMove.PlayerNumber > 2 ||
-                connectFourMove.Column < 0 ||
-                connectFourMove.Column >= FG_ConnectFourField.Columns ||
+            if (gameMove.PlayerNumber < 1 ||
+                gameMove.PlayerNumber > 2 ||
+                gameMove.Column < 0 ||
+                gameMove.Column >= FG_ConnectFourField.Columns ||
                 CheckIfPLayerWon() > 0)
             {
                 return;
@@ -146,13 +115,17 @@ namespace OOPGames
 
             for (int row = FG_ConnectFourField.Rows - 1; row >= 0; row--)
             {
-                if (_field[row, connectFourMove.Column] == 0)
+                if (_field[row, gameMove.Column] == 0)
                 {
-                    _field[row, connectFourMove.Column] = connectFourMove.PlayerNumber;
-                    _field.AddPlayedMove(row, connectFourMove.Column, connectFourMove.PlayerNumber);
+                    _field[row, gameMove.Column] = gameMove.PlayerNumber;
                     return;
                 }
             }
+        }
+
+        public void DoConnectFourMove(IFG_ConnectFourMove move)
+        {
+            DoMove(move);
         }
 
         public int CheckIfPLayerWon()
@@ -196,22 +169,36 @@ namespace OOPGames
         }
     }
 
-    public sealed class FG_ConnectFourPaint : IPaintGame2, IG10_Painter
+    public sealed class FG_ConnectFourPaint : IPaintGame2, IFG_ConnectFourPaint
     {
+        private sealed class BoardMove
+        {
+            public BoardMove(int row, int column, int player)
+            {
+                Row = row;
+                Column = column;
+                Player = player;
+            }
+
+            public int Row { get; private set; }
+            public int Column { get; private set; }
+            public int Player { get; private set; }
+        }
+
         private const double Padding = 10;
         private const double BoardBorderWidth = 8;
         private const double AnimationDurationMilliseconds = 350;
         private static double _cellSize = 65;
         private static double _left = Padding;
         private static double _top = Padding;
-        private readonly int[,] _renderedField = new int[FG_ConnectFourField.Rows, FG_ConnectFourField.Columns];
-        private int[,] _observedField;
-        private readonly Queue<FG_ConnectFourPlayedMove> _queuedMoves =
-            new Queue<FG_ConnectFourPlayedMove>();
+        private readonly int[,] _displayedBoard =
+            new int[FG_ConnectFourField.Rows, FG_ConnectFourField.Columns];
+        private int[,] _previousBoard;
+        private readonly Queue<BoardMove> _pendingMoves = new Queue<BoardMove>();
         private bool _isAnimating;
-        private int _animatedRow;
-        private int _animatedColumn;
-        private int _animatedPlayer;
+        private int _fallingRow;
+        private int _fallingColumn;
+        private int _fallingPlayer;
         private DateTime _animationStarted;
         private readonly DispatcherTimer _animationTimer;
         private Canvas _animationCanvas;
@@ -229,8 +216,6 @@ namespace OOPGames
         public static double CellSize { get { return _cellSize; } }
         public static double Left { get { return _left; } }
         public static bool IsAnyAnimating { get; private set; }
-        public bool IsAnimating { get { return _isAnimating; } }
-
         public string Name { get { return "FG Vier gewinnt Darstellung"; } }
 
         public int ColumnAt(int x, int y)
@@ -262,6 +247,11 @@ namespace OOPGames
             DrawField(canvas, field);
         }
 
+        public void PaintConnectFourField(Canvas canvas, IFG_ConnectFourField currentField)
+        {
+            PaintGameField(canvas, currentField);
+        }
+
         public void TickPaintGameField(Canvas canvas, IGameField currentField)
         {
             if (!_isAnimating)
@@ -291,12 +281,14 @@ namespace OOPGames
             {
                 for (int column = 0; column < FG_ConnectFourField.Columns; column++)
                 {
-                    if (_isAnimating && row == _animatedRow && column == _animatedColumn)
+                    if (_isAnimating &&
+                        row == _fallingRow &&
+                        column == _fallingColumn)
                     {
                         continue;
                     }
 
-                    int player = _renderedField[row, column];
+                    int player = _displayedBoard[row, column];
                     AddToken(canvas, player, row, column);
                 }
             }
@@ -307,13 +299,13 @@ namespace OOPGames
                 double progress = Math.Min(1, elapsed / AnimationDurationMilliseconds);
                 double easedProgress = 1 - Math.Pow(1 - progress, 2);
                 double startTop = _top - _cellSize + 4;
-                double targetTop = _top + _animatedRow * _cellSize + 4;
-                AddToken(canvas, _animatedPlayer, _animatedRow, _animatedColumn,
+                double targetTop = _top + _fallingRow * _cellSize + 4;
+                AddToken(canvas, _fallingPlayer, _fallingRow, _fallingColumn,
                     startTop + (targetTop - startTop) * easedProgress);
 
                 if (progress >= 1)
                 {
-                    _renderedField[_animatedRow, _animatedColumn] = _animatedPlayer;
+                    _displayedBoard[_fallingRow, _fallingColumn] = _fallingPlayer;
                     _isAnimating = false;
                     IsAnyAnimating = false;
                     _animationTimer.Stop();
@@ -322,6 +314,7 @@ namespace OOPGames
             }
 
             AddBoardInFront(canvas);
+            DrawWinningLine(canvas);
         }
 
         private void AddToken(
@@ -389,12 +382,79 @@ namespace OOPGames
             canvas.Children.Add(board);
         }
 
+        private void DrawWinningLine(Canvas canvas)
+        {
+            int[,] field = _displayedBoard;
+            int[,] directions =
+            {
+                { 0, 1 },
+                { 1, 0 },
+                { 1, 1 },
+                { 1, -1 }
+            };
+
+            for (int row = 0; row < FG_ConnectFourField.Rows; row++)
+            {
+                for (int column = 0; column < FG_ConnectFourField.Columns; column++)
+                {
+                    int player = field[row, column];
+                    if (player <= 0)
+                    {
+                        continue;
+                    }
+
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        int rowStep = directions[direction, 0];
+                        int columnStep = directions[direction, 1];
+                        int endRow = row + rowStep * 3;
+                        int endColumn = column + columnStep * 3;
+                        if (endRow < 0 ||
+                            endRow >= FG_ConnectFourField.Rows ||
+                            endColumn < 0 ||
+                            endColumn >= FG_ConnectFourField.Columns)
+                        {
+                            continue;
+                        }
+
+                        bool isWinningLine = true;
+                        for (int step = 1; step < 4; step++)
+                        {
+                            if (field[row + rowStep * step, column + columnStep * step] != player)
+                            {
+                                isWinningLine = false;
+                                break;
+                            }
+                        }
+
+                        if (isWinningLine)
+                        {
+                            Line winningLine = new Line
+                            {
+                                X1 = _left + column * _cellSize + _cellSize / 2,
+                                Y1 = _top + row * _cellSize + _cellSize / 2,
+                                X2 = _left + endColumn * _cellSize + _cellSize / 2,
+                                Y2 = _top + endRow * _cellSize + _cellSize / 2,
+                                Stroke = new SolidColorBrush(Color.FromRgb(30, 100, 190)),
+                                StrokeThickness = 24,
+                                StrokeStartLineCap = PenLineCap.Round,
+                                StrokeEndLineCap = PenLineCap.Round,
+                                IsHitTestVisible = false
+                            };
+                            canvas.Children.Add(winningLine);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
         private void StartAnimationIfNeeded(I4GWFeld field)
         {
             int[,] currentField = CaptureField(field);
-            if (_observedField == null)
+            if (_previousBoard == null)
             {
-                _observedField = currentField;
+                _previousBoard = currentField;
                 CopyField(field);
                 return;
             }
@@ -405,13 +465,13 @@ namespace OOPGames
                 for (int column = 0; column < FG_ConnectFourField.Columns; column++)
                 {
                     if (currentField[row, column] != 0 &&
-                        _observedField[row, column] != 0 &&
-                        currentField[row, column] != _observedField[row, column])
+                        _previousBoard[row, column] != 0 &&
+                        currentField[row, column] != _previousBoard[row, column])
                     {
                         requiresReset = true;
                     }
 
-                    if (_observedField[row, column] > 0 &&
+                    if (_previousBoard[row, column] > 0 &&
                         currentField[row, column] == 0)
                     {
                         requiresReset = true;
@@ -421,12 +481,12 @@ namespace OOPGames
 
             if (requiresReset)
             {
-                _queuedMoves.Clear();
+                _pendingMoves.Clear();
                 _isAnimating = false;
                 IsAnyAnimating = false;
                 _animationTimer.Stop();
                 CopyField(field);
-                _observedField = currentField;
+                _previousBoard = currentField;
                 return;
             }
 
@@ -434,27 +494,27 @@ namespace OOPGames
             {
                 for (int column = 0; column < FG_ConnectFourField.Columns; column++)
                 {
-                    if (_observedField[row, column] == 0 &&
+                    if (_previousBoard[row, column] == 0 &&
                         currentField[row, column] > 0)
                     {
-                        _queuedMoves.Enqueue(new FG_ConnectFourPlayedMove(
+                        _pendingMoves.Enqueue(new BoardMove(
                             row, column, currentField[row, column]));
                     }
                 }
             }
-            _observedField = currentField;
+            _previousBoard = currentField;
 
             if (_isAnimating)
             {
                 return;
             }
 
-            if (_queuedMoves.Count > 0)
+            if (_pendingMoves.Count > 0)
             {
-                FG_ConnectFourPlayedMove move = _queuedMoves.Dequeue();
-                _animatedRow = move.Row;
-                _animatedColumn = move.Column;
-                _animatedPlayer = move.Player;
+                BoardMove move = _pendingMoves.Dequeue();
+                _fallingRow = move.Row;
+                _fallingColumn = move.Column;
+                _fallingPlayer = move.Player;
                 _animationStarted = DateTime.UtcNow;
                 _isAnimating = true;
                 IsAnyAnimating = true;
@@ -482,7 +542,7 @@ namespace OOPGames
             {
                 for (int column = 0; column < FG_ConnectFourField.Columns; column++)
                 {
-                    _renderedField[row, column] = field[row, column];
+                    _displayedBoard[row, column] = field[row, column];
                 }
             }
         }
@@ -506,7 +566,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class FG_ConnectFourHumanPlayer : IHumanGamePlayer
+    public sealed class FG_ConnectFourHumanPlayer : IFG_HumanConnectFourPlayer
     {
         private int _playerNumber;
 
@@ -537,26 +597,70 @@ namespace OOPGames
                 return null;
             }
 
-            IClickSelection click = selection as IClickSelection;
-            I4GWFeld connectFourField = field as I4GWFeld;
-            if (click == null || connectFourField == null)
+            I4GWFeld gameField = field as I4GWFeld;
+            if (gameField == null)
             {
                 return null;
             }
 
-            int column = (int)((click.XClickPos - FG_ConnectFourPaint.Left) / FG_ConnectFourPaint.CellSize);
-            if (click.XClickPos < FG_ConnectFourPaint.Left ||
-                column < 0 ||
+            int column = GetSelectedColumn(selection);
+            if (column < 0 ||
                 column >= FG_ConnectFourField.Columns ||
-                connectFourField[0, column] != 0)
+                gameField[0, column] != 0)
             {
                 return null;
             }
 
             return new FG_ConnectFourMove(
-                GetLandingRow(connectFourField, column),
+                GetLandingRow(gameField, column),
                 column,
                 _playerNumber);
+        }
+
+        private static int GetSelectedColumn(IMoveSelection selection)
+        {
+            IClickSelection click = selection as IClickSelection;
+            if (click != null)
+            {
+                IConnectFourPainter painter =
+                    OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter;
+                int fallbackColumn =
+                    (int)((click.XClickPos - FG_ConnectFourPaint.Left) /
+                        FG_ConnectFourPaint.CellSize);
+                int column = painter == null
+                    ? fallbackColumn
+                    : painter.ColumnAt(click.XClickPos, click.YClickPos);
+                return column < 0 &&
+                    fallbackColumn >= 0 &&
+                    fallbackColumn < FG_ConnectFourField.Columns
+                    ? fallbackColumn
+                    : column;
+            }
+
+            IKeySelection keySelection = selection as IKeySelection;
+            if (keySelection == null)
+            {
+                return -1;
+            }
+
+            if (keySelection.Key >= Key.D1 && keySelection.Key <= Key.D7)
+            {
+                return (int)keySelection.Key - (int)Key.D1;
+            }
+
+            if (keySelection.Key >= Key.NumPad1 && keySelection.Key <= Key.NumPad7)
+            {
+                return (int)keySelection.Key - (int)Key.NumPad1;
+            }
+
+            return -1;
+        }
+
+        public IFG_ConnectFourMove GetMove(
+            IMoveSelection selection,
+            IFG_ConnectFourField field)
+        {
+            return GetMove(selection, (IGameField)field) as IFG_ConnectFourMove;
         }
 
         private int GetLandingRow(I4GWFeld field, int column)
@@ -574,7 +678,7 @@ namespace OOPGames
 
     }
 
-    public sealed class FG_ConnectFourComputerPlayer : IComputerGamePlayer
+    public sealed class FG_ConnectFourComputerPlayer : IFG_ComputerConnectFourPlayer
     {
         private const int SearchDepth = 4;
         private static readonly Random Random = new Random();
@@ -602,28 +706,30 @@ namespace OOPGames
 
         public IPlayMove GetMove(IGameField field)
         {
-            I4GWFeld connectFourField = field as I4GWFeld;
-            if (connectFourField == null || _playerNumber < 1)
+            I4GWFeld gameField = field as I4GWFeld;
+            if (gameField == null || _playerNumber < 1)
             {
                 return null;
             }
+
+            WaitForComputerMove();
 
             int opponent = _playerNumber == 1 ? 2 : 1;
             int bestScore = int.MinValue;
             List<int> bestColumns = new List<int>();
             for (int column = 0; column < FG_ConnectFourField.Columns; column++)
             {
-                int row = GetLandingRow(connectFourField, column);
+                int row = GetLandingRow(gameField, column);
                 if (row < 0)
                 {
                     continue;
                 }
 
-                connectFourField[row, column] = _playerNumber;
-                int score = HasWon(connectFourField, row, column, _playerNumber)
+                gameField[row, column] = _playerNumber;
+                int score = HasWon(gameField, row, column, _playerNumber)
                     ? 1000000
-                    : Minimax(connectFourField, SearchDepth - 1, opponent, false, int.MinValue, int.MaxValue);
-                connectFourField[row, column] = 0;
+                    : Minimax(gameField, SearchDepth - 1, opponent, false, int.MinValue, int.MaxValue);
+                gameField[row, column] = 0;
 
                 if (score > bestScore)
                 {
@@ -644,9 +750,40 @@ namespace OOPGames
 
             int selectedColumn = bestColumns[Random.Next(bestColumns.Count)];
             return new FG_ConnectFourMove(
-                GetLandingRow(connectFourField, selectedColumn),
+                GetLandingRow(gameField, selectedColumn),
                 selectedColumn,
                 _playerNumber);
+        }
+
+        public IFG_ConnectFourMove GetMove(IFG_ConnectFourField field)
+        {
+            return GetMove((IGameField)field) as IFG_ConnectFourMove;
+        }
+
+        private static void WaitForComputerMove()
+        {
+            Application application = Application.Current;
+            Dispatcher dispatcher = application == null ? null : application.Dispatcher;
+            if (dispatcher == null || !dispatcher.CheckAccess())
+            {
+                System.Threading.Thread.Sleep(500);
+                return;
+            }
+
+            DispatcherFrame frame = new DispatcherFrame();
+            DispatcherTimer timer = new DispatcherTimer(DispatcherPriority.Background, dispatcher);
+            timer.Interval = TimeSpan.FromMilliseconds(500);
+            EventHandler onTimerTick = null;
+            onTimerTick = delegate
+            {
+                timer.Stop();
+                timer.Tick -= onTimerTick;
+                frame.Continue = false;
+            };
+            timer.Tick += onTimerTick;
+            timer.Start();
+
+            Dispatcher.PushFrame(frame);
         }
 
         private int Minimax(
