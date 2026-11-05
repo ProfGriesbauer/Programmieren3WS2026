@@ -1,6 +1,6 @@
 # Kompatibilitätstests Gruppe 1
 
-Stand: 05.11.2026, aktueller `origin/master` (`b1adc94`).
+Stand: 05.11.2026. Die Peer-Komponenten wurden auf `b1adc94` geprüft; die Gruppe-1-Anpassung ist in `efcb74d` enthalten.
 
 Ein temporärer Windows-STA-Test prüft die sieben im Hauptfenster registrierten Vier-Gewinnt-Implementierungen (Gruppe 1, 2, 3/FG, 5, 8, 9 und 10). Geprüft werden Player-gegen-Rules, Human-/Computer-Züge auf fremden Feldern, jede Zugklasse gegen jede Rules-Klasse sowie alle Feld-Painter-Paare auf Annahme durch `CanBePaintedBy` und tatsächliche Ausgabe auf einem WPF-Canvas.
 
