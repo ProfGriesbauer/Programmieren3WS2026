@@ -201,8 +201,6 @@ namespace OOPGames
         private int _fallingColumn;
         private int _fallingPlayer;
         private DateTime _animationStarted;
-        private Canvas _animationCanvas;
-        private I4GWFeld _animationField;
         private bool _winningBlinkActive;
         private DateTime _winningBlinkStarted;
 
@@ -234,8 +232,6 @@ namespace OOPGames
 
             canvas.Background = Brushes.White;
             UpdateBoardGeometry(canvas);
-            _animationCanvas = canvas;
-            _animationField = field;
             StartAnimationIfNeeded(field);
             DrawField(canvas, field);
         }
@@ -780,17 +776,18 @@ namespace OOPGames
             }
 
             DispatcherFrame frame = new DispatcherFrame();
-            DispatcherTimer timer = new DispatcherTimer(DispatcherPriority.Background, dispatcher);
-            timer.Interval = TimeSpan.FromMilliseconds(500);
+            DispatcherTimer moveDelayTimer =
+                new DispatcherTimer(DispatcherPriority.Background, dispatcher);
+            moveDelayTimer.Interval = TimeSpan.FromMilliseconds(500);
             EventHandler onTimerTick = null;
             onTimerTick = delegate
             {
-                timer.Stop();
-                timer.Tick -= onTimerTick;
+                moveDelayTimer.Stop();
+                moveDelayTimer.Tick -= onTimerTick;
                 frame.Continue = false;
             };
-            timer.Tick += onTimerTick;
-            timer.Start();
+            moveDelayTimer.Tick += onTimerTick;
+            moveDelayTimer.Start();
 
             Dispatcher.PushFrame(frame);
         }
