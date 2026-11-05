@@ -4,6 +4,15 @@ Das Spiel ist ueber `B5RoomPaint`, `B5RoomRules` und `B5RoomHumanPlayer` in
 `MainWindow.xaml.cs` registriert. Die unveraenderten Framework-Interfaces laufen
 ueber `IGameRules2`; Eingaben werden im Spieler gepuffert und im 40-ms-Tick verarbeitet.
 
+## Visueller Stand
+
+Phase 1 gestaltet die Umgebung mit warmen Waenden und Licht, einem Dielenboden,
+einem geometrischen Teppich, abstrakten Postern und einer kleinen Pflanze neu.
+Raumabmessungen, Geraetepositionen, Kameras und Spielablauf bleiben erhalten;
+die Konsolengehaeuse sind ansonsten noch nicht ueberarbeitet. Die Atari-,
+Game-Boy- und Commodore-Bedienelemente werden nur waehrend eines laufenden
+Spiels in der jeweiligen Geraeteansicht eingeblendet.
+
 ## Steuerung
 
 - Im Zimmer: A/D waehlt ein Geraet, Enter oder Z oeffnet es.

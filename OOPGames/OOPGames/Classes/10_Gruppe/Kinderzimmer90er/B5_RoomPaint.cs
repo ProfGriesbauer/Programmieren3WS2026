@@ -27,7 +27,9 @@ namespace OOPGames
         readonly List<GeometryModel3D> _Screens = new List<GeometryModel3D>();
         readonly List<Border> _CardBorders = new List<Border>();
         readonly List<TextBlock> _CardTitles = new List<TextBlock>();
+        readonly Model3DGroup[] _DeviceControls = { new Model3DGroup(), new Model3DGroup(), new Model3DGroup() };
         B5RoomField _LastField;
+        Model3DGroup _VisibleControls;
         int _LastDevice = -1;
         int _LastSelected = -1;
         double _LastWidth = -1;
@@ -63,8 +65,8 @@ namespace OOPGames
                 _Camera = new PerspectiveCamera { FieldOfView = 70, NearPlaneDistance = 0.05, FarPlaneDistance = 100 };
                 _Viewport.Camera = _Camera;
                 _Scene = new Model3DGroup();
-                _Scene.Children.Add(new AmbientLight(Color.FromRgb(190, 190, 190)));
-                _Scene.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, 1)));
+                _Scene.Children.Add(new AmbientLight(Color.FromRgb(205, 190, 169)));
+                _Scene.Children.Add(new DirectionalLight(Color.FromRgb(255, 235, 207), new Vector3D(-1, -2, 1)));
                 _Viewport.Children.Add(new ModelVisual3D { Content = _Scene });
                 _Root.Children.Add(_Viewport);
                 _AnimationLayer = new Canvas { IsHitTestVisible = false };
@@ -189,10 +191,43 @@ namespace OOPGames
 
         void BuildRoom()
         {
-            AddBox(0, -0.05, 0, 10, 0.1, 6, Color.FromRgb(31, 42, 60));
-            AddBox(0, 2, -3, 10, 4, 0.1, Color.FromRgb(70, 180, 204));
-            AddBox(-5, 2, 0, 0.1, 4, 6, Color.FromRgb(58, 159, 184));
-            AddBox(0, 0.015, 0.8, 3.2, 0.02, 3.2, Color.FromRgb(125, 79, 120));
+            AddBox(0, -0.05, 0, 10, 0.1, 6, Color.FromRgb(72, 47, 35));
+            AddBox(0, 2, -3, 10, 4, 0.1, Color.FromRgb(221, 202, 174));
+            AddBox(-5, 2, 0, 0.1, 4, 6, Color.FromRgb(196, 169, 139));
+
+            for (int row = 0; row < 8; row++)
+            {
+                double z = -2.625 + row * 0.75;
+                double x = -5;
+                int plank = 0;
+                if (row % 2 != 0)
+                {
+                    AddBox(x + 0.6125, 0.01, z, 1.2, 0.018, 0.72, Color.FromRgb(103, 65, 44));
+                    x += 1.225;
+                    plank++;
+                }
+
+                while (x < 5)
+                {
+                    double width = Math.Min(2.5, 5 - x);
+                    Color wood = (row + plank) % 3 == 0 ? Color.FromRgb(119, 76, 51) :
+                        (row + plank) % 3 == 1 ? Color.FromRgb(99, 61, 43) : Color.FromRgb(110, 68, 46);
+                    AddBox(x + width / 2, 0.01, z, Math.Max(0.1, width - 0.025), 0.018, 0.72, wood);
+                    x += width;
+                    plank++;
+                }
+            }
+
+            AddBox(0, 0.015, 0.8, 3.2, 0.02, 3.2, Color.FromRgb(31, 45, 63));
+            AddBox(0, 0.029, -0.62, 2.9, 0.006, 0.1, Color.FromRgb(221, 133, 63));
+            AddBox(0, 0.029, 2.22, 2.9, 0.006, 0.1, Color.FromRgb(221, 133, 63));
+            AddBox(-1.46, 0.029, 0.8, 0.1, 0.006, 2.7, Color.FromRgb(221, 133, 63));
+            AddBox(1.46, 0.029, 0.8, 0.1, 0.006, 2.7, Color.FromRgb(221, 133, 63));
+            AddBox(0, 0.029, -0.05, 2.2, 0.006, 0.12, Color.FromRgb(196, 76, 55));
+            AddBox(0, 0.029, 0.8, 2.2, 0.006, 0.12, Color.FromRgb(225, 199, 157));
+            AddBox(0, 0.029, 1.65, 2.2, 0.006, 0.12, Color.FromRgb(196, 76, 55));
+            AddBox(-0.72, 0.029, 0.38, 0.14, 0.006, 0.62, Color.FromRgb(225, 199, 157));
+            AddBox(0.72, 0.029, 1.22, 0.14, 0.006, 0.62, Color.FromRgb(225, 199, 157));
 
             AddBox(1.8, 1.55, -2.35, 5, 0.1, 1.3, Color.FromRgb(185, 119, 62));
             AddBox(-0.2, 0.75, -2.35, 0.9, 1.5, 1.2, Color.FromRgb(168, 103, 47));
@@ -214,26 +249,66 @@ namespace OOPGames
             AddBox(-3.6, 0.65, -1.9, 0.38, 0.04, 0.22, Color.FromRgb(154, 106, 60));
             AddBox(-2.4, 0.15, -0.8, 0.12, 0.3, 0.12, Color.FromRgb(35, 35, 39));
 
-            AddBox(0.8, 1.92, -2.5, 0.36, 0.62, 0.09, Color.FromRgb(201, 198, 184));
+            AddBox(0.8, 1.92, -2.5, 0.58, 0.62, 0.09, Color.FromRgb(201, 198, 184));
             AddBox(0.8, 1.97, -2.448, 0.2, 0.18, 0.012, Color.FromRgb(107, 138, 18));
-            AddBox(0.67, 1.78, -2.44, 0.08, 0.07, 0.02, Color.FromRgb(47, 49, 45));
-            AddBox(0.92, 1.79, -2.44, 0.055, 0.055, 0.02, Color.FromRgb(155, 34, 87));
-            AddBox(1.0, 1.76, -2.44, 0.055, 0.055, 0.02, Color.FromRgb(155, 34, 87));
+            Model3DGroup gameBoyControls = _DeviceControls[(int)B5RoomDeviceKind.Gameboy];
+            AddBox(gameBoyControls, 0.67, 1.75, -2.43, 0.075, 0.23, 0.025, Color.FromRgb(38, 40, 39));
+            AddBox(gameBoyControls, 0.67, 1.75, -2.43, 0.23, 0.075, 0.025, Color.FromRgb(38, 40, 39));
+            AddBox(gameBoyControls, 0.67, 1.75, -2.414, 0.055, 0.055, 0.012, Color.FromRgb(69, 71, 68));
+            AddCylinder(gameBoyControls, 0.96, 1.77, -2.43, 0.052, 0.026, Color.FromRgb(143, 35, 75));
+            AddCylinder(gameBoyControls, 1.10, 1.73, -2.43, 0.052, 0.026, Color.FromRgb(143, 35, 75));
+            AddBox(gameBoyControls, 0.83, 1.64, -2.43, 0.09, 0.025, 0.02, Color.FromRgb(105, 103, 99));
+            AddBox(gameBoyControls, 0.98, 1.62, -2.43, 0.09, 0.025, 0.02, Color.FromRgb(105, 103, 99));
 
             AddBox(3.3, 2.03, -2.4, 0.95, 0.85, 0.85, Color.FromRgb(235, 232, 224));
             AddBox(3.3, 2.03, -1.96, 0.61, 0.47, 0.02, Color.FromRgb(26, 26, 31));
             AddBox(3.3, 1.62, -2.4, 0.6, 0.2, 0.5, Color.FromRgb(198, 195, 188));
             AddBox(2.1, 1.67, -2.0, 1.25, 0.14, 0.6, Color.FromRgb(217, 210, 187));
+            Model3DGroup commodoreControls = _DeviceControls[(int)B5RoomDeviceKind.Commodore];
             for (int row = 0; row < 4; row++)
-                for (int col = 0; col < 11; col++)
-                    AddBox(1.62 + col * 0.092, 1.755, -2.21 + row * 0.115, 0.055, 0.012, 0.06, Color.FromRgb(140, 122, 90));
+            {
+                for (int col = 0; col < 10; col++)
+                {
+                    if (row == 3 && col >= 4 && col <= 6) continue;
+                    AddBox(commodoreControls, 1.65 + col * 0.082, 1.755, -2.21 + row * 0.115, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
+                }
+            }
+            AddBox(commodoreControls, 2.06, 1.755, -1.865, 0.27, 0.018, 0.06, Color.FromRgb(64, 57, 48));
+            AddBox(commodoreControls, 2.58, 1.755, -2.095, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
+            AddBox(commodoreControls, 2.52, 1.755, -1.98, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
+            AddBox(commodoreControls, 2.64, 1.755, -1.98, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
+            AddBox(commodoreControls, 2.58, 1.755, -1.865, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
 
-            AddBox(-1.5, 2.7, -2.91, 1.3, 0.8, 0.04, Color.FromRgb(218, 147, 75));
-            AddBox(1.1, 2.6, -2.9, 1.1, 0.7, 0.04, Color.FromRgb(157, 89, 128));
+            Model3DGroup atariControls = _DeviceControls[(int)B5RoomDeviceKind.Atari];
+            AddBox(atariControls, -3.6, 0.68, -1.15, 0.48, 0.08, 0.34, Color.FromRgb(32, 31, 31));
+            AddBox(atariControls, -3.6, 0.85, -1.15, 0.075, 0.28, 0.075, Color.FromRgb(19, 19, 20));
+            AddBox(atariControls, -3.6, 1.005, -1.15, 0.16, 0.09, 0.16, Color.FromRgb(12, 12, 13));
+            AddBox(atariControls, -3.32, 0.745, -1.15, 0.09, 0.04, 0.09, Color.FromRgb(201, 49, 39));
+
+            AddBox(-1.5, 2.7, -2.91, 1.3, 0.8, 0.04, Color.FromRgb(38, 57, 78));
+            AddBox(-1.5, 2.48, -2.884, 1.04, 0.07, 0.012, Color.FromRgb(221, 117, 67));
+            AddBox(-1.5, 2.57, -2.884, 1.04, 0.07, 0.012, Color.FromRgb(196, 76, 55));
+            AddBox(-1.5, 2.66, -2.884, 1.04, 0.07, 0.012, Color.FromRgb(225, 182, 111));
+            AddBox(-1.5, 2.91, -2.884, 0.18, 0.18, 0.012, Color.FromRgb(239, 191, 95));
+            AddBox(-1.86, 2.76, -2.884, 0.28, 0.1, 0.012, Color.FromRgb(72, 91, 105));
+            AddBox(-1.53, 2.78, -2.884, 0.34, 0.12, 0.012, Color.FromRgb(53, 75, 90));
+            AddBox(-1.18, 2.76, -2.884, 0.3, 0.1, 0.012, Color.FromRgb(72, 91, 105));
+
+            AddBox(1.1, 2.6, -2.9, 1.1, 0.7, 0.04, Color.FromRgb(222, 194, 151));
+            AddBox(0.72, 2.6, -2.872, 0.1, 0.5, 0.012, Color.FromRgb(38, 57, 78));
+            AddBox(1.18, 2.42, -2.872, 0.6, 0.08, 0.012, Color.FromRgb(196, 76, 55));
+            AddBox(0.98, 2.68, -2.872, 0.18, 0.18, 0.012, Color.FromRgb(221, 133, 63));
+            AddBox(1.42, 2.77, -2.872, 0.18, 0.18, 0.012, Color.FromRgb(38, 57, 78));
             AddBox(0.6, 2.3, -2.75, 3.2, 0.08, 0.35, Color.FromRgb(107, 74, 54));
             AddBox(0.6, 3.0, -2.75, 3.2, 0.08, 0.35, Color.FromRgb(107, 74, 54));
             for (int i = 0; i < 6; i++)
                 AddBox(-0.75 + i * 0.52, 2.58, -2.73, 0.3, 0.42, 0.24, Color.FromRgb((byte)(90 + i * 21), (byte)(119 + i * 12), (byte)(170 - i * 13)));
+
+            AddBox(-4.35, 0.13, 1.55, 0.42, 0.24, 0.42, Color.FromRgb(174, 91, 59));
+            AddBox(-4.35, 0.31, 1.55, 0.34, 0.08, 0.34, Color.FromRgb(103, 65, 44));
+            AddBox(-4.35, 0.52, 1.55, 0.07, 0.42, 0.07, Color.FromRgb(68, 104, 57));
+            AddBox(-4.52, 0.58, 1.55, 0.3, 0.1, 0.12, Color.FromRgb(76, 122, 64));
+            AddBox(-4.18, 0.68, 1.55, 0.12, 0.1, 0.3, Color.FromRgb(89, 136, 70));
 
             _Highlights.Clear();
             _Highlights.Add(AddBox(-3.6, 0.14, -1.8, 1.4, 0.025, 0.9, Color.FromArgb(0, 255, 213, 92)));
@@ -242,6 +317,11 @@ namespace OOPGames
         }
 
         GeometryModel3D AddBox(double x, double y, double z, double width, double height, double depth, Color color)
+        {
+            return AddBox(_Scene, x, y, z, width, height, depth, color);
+        }
+
+        GeometryModel3D AddBox(Model3DGroup parent, double x, double y, double z, double width, double height, double depth, Color color)
         {
             double x0 = x - width / 2, x1 = x + width / 2;
             double y0 = y - height / 2, y1 = y + height / 2;
@@ -270,8 +350,50 @@ namespace OOPGames
             }
             DiffuseMaterial material = new DiffuseMaterial(new SolidColorBrush(color));
             GeometryModel3D model = new GeometryModel3D(mesh, material) { BackMaterial = material };
-            _Scene.Children.Add(model);
+            parent.Children.Add(model);
             return model;
+        }
+
+        void AddCylinder(Model3DGroup parent, double x, double y, double z, double radius, double depth, Color color)
+        {
+            const int segments = 16;
+            MeshGeometry3D mesh = new MeshGeometry3D();
+            double frontZ = z + depth / 2;
+            double backZ = z - depth / 2;
+            Point3D frontCenter = new Point3D(x, y, frontZ);
+            Point3D backCenter = new Point3D(x, y, backZ);
+            for (int i = 0; i < segments; i++)
+            {
+                double angle0 = 2 * Math.PI * i / segments;
+                double angle1 = 2 * Math.PI * (i + 1) / segments;
+                Point3D front0 = new Point3D(x + radius * Math.Cos(angle0), y + radius * Math.Sin(angle0), frontZ);
+                Point3D front1 = new Point3D(x + radius * Math.Cos(angle1), y + radius * Math.Sin(angle1), frontZ);
+                Point3D back0 = new Point3D(front0.X, front0.Y, backZ);
+                Point3D back1 = new Point3D(front1.X, front1.Y, backZ);
+
+                AddTriangle(mesh, frontCenter, front0, front1, new Vector3D(0, 0, 1));
+                AddTriangle(mesh, backCenter, back1, back0, new Vector3D(0, 0, -1));
+                Vector3D sideNormal = new Vector3D(Math.Cos((angle0 + angle1) / 2), Math.Sin((angle0 + angle1) / 2), 0);
+                AddTriangle(mesh, front0, back0, back1, sideNormal);
+                AddTriangle(mesh, front0, back1, front1, sideNormal);
+            }
+
+            DiffuseMaterial material = new DiffuseMaterial(new SolidColorBrush(color));
+            parent.Children.Add(new GeometryModel3D(mesh, material) { BackMaterial = material });
+        }
+
+        static void AddTriangle(MeshGeometry3D mesh, Point3D a, Point3D b, Point3D c, Vector3D normal)
+        {
+            int start = mesh.Positions.Count;
+            mesh.Positions.Add(a);
+            mesh.Positions.Add(b);
+            mesh.Positions.Add(c);
+            mesh.Normals.Add(normal);
+            mesh.Normals.Add(normal);
+            mesh.Normals.Add(normal);
+            mesh.TriangleIndices.Add(start);
+            mesh.TriangleIndices.Add(start + 1);
+            mesh.TriangleIndices.Add(start + 2);
         }
 
         void AddDisplayQuad(double x, double y, double z, double width, double height)
@@ -297,6 +419,7 @@ namespace OOPGames
         void UpdateInterface(B5RoomField field)
         {
             bool deviceView = field.Phase != B5RoomPhase.Room;
+            UpdateDeviceControls(field);
             _Sidebar.Visibility = deviceView ? Visibility.Visible : Visibility.Collapsed;
             _RoomSelection.Visibility = field.Phase == B5RoomPhase.Room ? Visibility.Visible : Visibility.Collapsed;
             _GameFrame.Visibility = field.Phase == B5RoomPhase.Playing || field.ShowTitle ? Visibility.Visible : Visibility.Collapsed;
@@ -380,6 +503,18 @@ namespace OOPGames
                 _Highlights[i].Material = material;
                 _Highlights[i].BackMaterial = material;
             }
+        }
+
+        void UpdateDeviceControls(B5RoomField field)
+        {
+            Model3DGroup controls = field.Phase == B5RoomPhase.Playing
+                ? _DeviceControls[(int)field.Device.Kind]
+                : null;
+            if (_VisibleControls == controls) return;
+
+            if (_VisibleControls != null) _Scene.Children.Remove(_VisibleControls);
+            _VisibleControls = controls;
+            if (_VisibleControls != null) _Scene.Children.Add(_VisibleControls);
         }
 
         void SizeGameFrame(B5RoomField field)
