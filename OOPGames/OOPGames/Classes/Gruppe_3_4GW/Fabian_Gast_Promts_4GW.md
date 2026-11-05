@@ -2,7 +2,7 @@
 
 Gesammelte Benutzer-Prompts aus den zugänglichen Copilot-Sitzungen, chronologisch sortiert.
 
-Anzahl der Prompts: 80
+Anzahl der Prompts: 85
 
 ## 1. 22.10.2026 08:38:51
 
@@ -472,13 +472,43 @@ ist es möglich, alle timer durch den globalen zuersetzen?
 Kannst du mir die Promts aus den anderen sessions in ein Fabian_Gast_Promts_4GW.md schreiben?
 ```
 
-## 79. 05.11.2026 09:52:54
+## 79. 05.11.2026 09:51:43
+
+```text
+passe die anzahl der promts an
+```
+
+## 80. 05.11.2026 09:52:54
 
 ```text
 passe die anzahl der promts an, ändere zudem die nummerirung bei dem promts
 ```
 
-## 80. 05.11.2026 09:57:24
+## 81. 05.11.2026 09:57:24
+
+```text
+update die .md Datei, indem du nur die Promts, welche neu hinzugekommen sind hinzufügst
+```
+
+## 82. 05.11.2026 10:02:18
+
+```text
+was lässt sich an meinem code noch optimieren?
+```
+
+## 83. 05.11.2026 10:04:27
+
+```text
+führe 1-4 und 6 durch
+```
+
+## 84. 05.11.2026 10:12:03
+
+```text
+Teile die Datei, wie in 7 beschrieben auf
+```
+
+## 85. 05.11.2026 10:14:13
 
 ```text
 update die .md Datei, indem du nur die Promts, welche neu hinzugekommen sind hinzufügst
