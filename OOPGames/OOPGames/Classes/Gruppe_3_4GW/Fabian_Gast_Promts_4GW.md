@@ -2,7 +2,7 @@
 
 Gesammelte Benutzer-Prompts aus den zugänglichen Copilot-Sitzungen, chronologisch sortiert.
 
-Anzahl der Prompts: 85
+Anzahl der Prompts: 89
 
 ## 1. 22.10.2026 08:38:51
 
@@ -509,6 +509,30 @@ Teile die Datei, wie in 7 beschrieben auf
 ```
 
 ## 85. 05.11.2026 10:14:13
+
+```text
+update die .md Datei, indem du nur die Promts, welche neu hinzugekommen sind hinzufügst
+```
+
+## 86. 05.11.2026 10:19:13
+
+```text
+was kann ich sonst noch optimieren?
+```
+
+## 87. 05.11.2026 10:22:51
+
+```text
+Führe alle optimierungen durch, ausser 3, da der Augenmerk des projektes ja die kompabilität der unterschiedlichen player painter usw ist und somit meine painter, player usw auch mit anderen playern usw spielbar sein sollen
+```
+
+## 88. 05.11.2026 10:28:18
+
+```text
+jetzt ist nach der fallanimation der stein kurz weg, kannst du das ändern?
+```
+
+## 89. 05.11.2026 10:30:06
 
 ```text
 update die .md Datei, indem du nur die Promts, welche neu hinzugekommen sind hinzufügst

@@ -1,39 +1,41 @@
 using System;
 using System.Collections.Generic;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Shapes;
 
 namespace OOPGames
 {
     public sealed class FG_ConnectFourComputerPlayer : IFG_ComputerConnectFourPlayer
     {
         private const int SearchDepth = 4;
+        private const int WinningScore = 1000000;
+        private const int CenterColumnBonus = 4;
+        private const int ThreeTokenScore = 80;
+        private const int TwoTokenScore = 12;
+        private const int OpponentThreeTokenPenalty = -100;
+        private const int OpponentTwoTokenPenalty = -15;
+        private static readonly int[] PreferredColumns = { 3, 2, 4, 1, 5, 0, 6 };
         private static readonly Random Random = new Random();
         private int _playerNumber;
-    
+
         public string Name { get { return "FG Computer Vier gewinnt"; } }
         public int PlayerNumber { get { return _playerNumber; } }
-    
+
         public void SetPlayerNumber(int playerNumber)
         {
             _playerNumber = playerNumber;
         }
-    
+
         public bool CanBeRuledBy(IGameRules rules)
         {
             return rules != null && rules.CurrentField is I4GWFeld;
         }
-    
+
         public IGamePlayer Clone()
         {
             FG_ConnectFourComputerPlayer clone = new FG_ConnectFourComputerPlayer();
             clone.SetPlayerNumber(_playerNumber);
             return clone;
         }
-    
+
         public IPlayMove GetMove(IGameField field)
         {
             I4GWFeld gameField = field as I4GWFeld;
@@ -41,7 +43,7 @@ namespace OOPGames
             {
                 return null;
             }
-    
+
             int opponent = _playerNumber == 1 ? 2 : 1;
             int bestScore = int.MinValue;
             List<int> bestColumns = new List<int>();
@@ -52,13 +54,14 @@ namespace OOPGames
                 {
                     continue;
                 }
-    
+
                 gameField[row, column] = _playerNumber;
-                int score = HasWon(gameField, row, column, _playerNumber)
-                    ? 1000000
+                int score = FG_ConnectFourBoardLogic.HasWinningLine(
+                    gameField, row, column, _playerNumber)
+                    ? WinningScore
                     : Minimax(gameField, SearchDepth - 1, opponent, false, int.MinValue, int.MaxValue);
                 gameField[row, column] = 0;
-    
+
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -70,24 +73,24 @@ namespace OOPGames
                     bestColumns.Add(column);
                 }
             }
-    
+
             if (bestColumns.Count == 0)
             {
                 return null;
             }
-    
+
             int selectedColumn = bestColumns[Random.Next(bestColumns.Count)];
             return new FG_ConnectFourMove(
                 FG_ConnectFourBoardLogic.GetLandingRow(gameField, selectedColumn),
                 selectedColumn,
                 _playerNumber);
         }
-    
+
         public IFG_ConnectFourMove GetMove(IFG_ConnectFourField field)
         {
             return GetMove((IGameField)field) as IFG_ConnectFourMove;
         }
-    
+
         private int Minimax(
             I4GWFeld field,
             int depth,
@@ -100,31 +103,33 @@ namespace OOPGames
             {
                 return Evaluate(field);
             }
-    
+
             List<int> columns = GetAvailableColumns(field);
             if (columns.Count == 0)
             {
                 return 0;
             }
-    
+
             int bestScore = maximizing ? int.MinValue : int.MaxValue;
             foreach (int column in columns)
             {
                 int row = FG_ConnectFourBoardLogic.GetLandingRow(field, column);
                 field[row, column] = player;
                 int score;
-                if (HasWon(field, row, column, player))
+                if (FG_ConnectFourBoardLogic.HasWinningLine(field, row, column, player))
                 {
-                    score = maximizing ? 1000000 + depth : -1000000 - depth;
+                    score = maximizing
+                        ? WinningScore + depth
+                        : -WinningScore - depth;
                 }
                 else
                 {
                     int nextPlayer = player == 1 ? 2 : 1;
                     score = Minimax(field, depth - 1, nextPlayer, !maximizing, alpha, beta);
                 }
-    
+
                 field[row, column] = 0;
-    
+
                 if (maximizing)
                 {
                     bestScore = Math.Max(bestScore, score);
@@ -135,29 +140,29 @@ namespace OOPGames
                     bestScore = Math.Min(bestScore, score);
                     beta = Math.Min(beta, bestScore);
                 }
-    
+
                 if (beta <= alpha)
                 {
                     break;
                 }
             }
-    
+
             return bestScore;
         }
-    
+
         private int Evaluate(I4GWFeld field)
         {
             int opponent = _playerNumber == 1 ? 2 : 1;
             int score = 0;
-    
+
             for (int row = 0; row < FG_ConnectFourField.Rows; row++)
             {
                 if (field[row, FG_ConnectFourField.Columns / 2] == _playerNumber)
                 {
-                    score += 4;
+                    score += CenterColumnBonus;
                 }
             }
-    
+
             for (int row = 0; row < FG_ConnectFourField.Rows; row++)
             {
                 for (int column = 0; column < FG_ConnectFourField.Columns; column++)
@@ -168,10 +173,10 @@ namespace OOPGames
                     score += ScoreWindow(field, row, column, 1, -1, _playerNumber, opponent);
                 }
             }
-    
+
             return score;
         }
-    
+
         private int ScoreWindow(
             I4GWFeld field,
             int row,
@@ -184,8 +189,8 @@ namespace OOPGames
             int playerCount = 0;
             int opponentCount = 0;
             int emptyCount = 0;
-    
-            for (int index = 0; index < 4; index++)
+
+            for (int index = 0; index < FG_ConnectFourBoardLogic.WinLength; index++)
             {
                 int nextRow = row + rowStep * index;
                 int nextColumn = column + columnStep * index;
@@ -196,7 +201,7 @@ namespace OOPGames
                 {
                     return 0;
                 }
-    
+
                 int value = field[nextRow, nextColumn];
                 if (value == player)
                 {
@@ -215,81 +220,51 @@ namespace OOPGames
                     return 0;
                 }
             }
-    
-            if (playerCount == 4)
+
+            if (playerCount == FG_ConnectFourBoardLogic.WinLength)
             {
-                return 1000000;
+                return WinningScore;
             }
-            if (opponentCount == 4)
+            if (opponentCount == FG_ConnectFourBoardLogic.WinLength)
             {
-                return -1000000;
+                return -WinningScore;
             }
             if (playerCount == 3 && emptyCount == 1)
             {
-                return 80;
+                return ThreeTokenScore;
             }
             if (playerCount == 2 && emptyCount == 2)
             {
-                return 12;
+                return TwoTokenScore;
             }
             if (opponentCount == 3 && emptyCount == 1)
             {
-                return -100;
+                return OpponentThreeTokenPenalty;
             }
             if (opponentCount == 2 && emptyCount == 2)
             {
-                return -15;
+                return OpponentTwoTokenPenalty;
             }
-    
+
             return 0;
         }
-    
+
         private List<int> GetAvailableColumns(I4GWFeld field)
         {
             List<int> columns = new List<int>();
-            for (int column = 0; column < FG_ConnectFourField.Columns; column++)
+            for (int preferredColumn = 0;
+                 preferredColumn < PreferredColumns.Length;
+                 preferredColumn++)
             {
+                int column = PreferredColumns[preferredColumn];
                 if (field[0, column] == 0)
                 {
                     columns.Add(column);
                 }
             }
-    
+
             return columns;
         }
-    
-        private bool HasWon(I4GWFeld field, int row, int column, int player)
-        {
-            return Count(field, row, column, 0, 1, player) +
-                       Count(field, row, column, 0, -1, player) - 1 >= 4 ||
-                   Count(field, row, column, 1, 0, player) >= 4 ||
-                   Count(field, row, column, 1, 1, player) +
-                       Count(field, row, column, -1, -1, player) - 1 >= 4 ||
-                   Count(field, row, column, 1, -1, player) +
-                       Count(field, row, column, -1, 1, player) - 1 >= 4;
-        }
-    
-        private int Count(
-            I4GWFeld field,
-            int row,
-            int column,
-            int rowStep,
-            int columnStep,
-            int player)
-        {
-            int count = 0;
-            while (row >= 0 &&
-                   row < FG_ConnectFourField.Rows &&
-                   column >= 0 &&
-                   column < FG_ConnectFourField.Columns &&
-                   field[row, column] == player)
-            {
-                count++;
-                row += rowStep;
-                column += columnStep;
-            }
-    
-            return count;
-        }
+
     }
 }
