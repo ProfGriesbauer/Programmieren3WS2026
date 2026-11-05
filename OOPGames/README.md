@@ -6,7 +6,7 @@ SDK style so that it works with recent .NET versions.
 
 ## Requirements
 
-- .NET SDK 6.0 or newer installed
+- .NET 10 SDK installed
 - Windows machine (WPF apps require Windows)
 
 ## Building and running

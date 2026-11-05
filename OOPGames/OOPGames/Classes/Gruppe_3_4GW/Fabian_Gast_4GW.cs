@@ -52,7 +52,7 @@ namespace OOPGames
 
         public bool CanBePaintedBy(IPaintGame painter)
         {
-            return painter is FG_ConnectFourPaint || painter is IG10_Painter;
+            return painter != null;
         }
 
         internal void ClearMoveHistory()
@@ -70,11 +70,19 @@ namespace OOPGames
     {
         public FG_ConnectFourMove(int column, int playerNumber)
         {
+            Row = -1;
             Column = column;
             PlayerNumber = playerNumber;
         }
 
-        public int Row { get { return -1; } }
+        public FG_ConnectFourMove(int row, int column, int playerNumber)
+        {
+            Row = row;
+            Column = column;
+            PlayerNumber = playerNumber;
+        }
+
+        public int Row { get; private set; }
         public int Column { get; private set; }
         public int PlayerNumber { get; private set; }
     }
@@ -172,7 +180,13 @@ namespace OOPGames
         {
             for (int index = 1; index < 4; index++)
             {
-                if (_field[row + rowStep * index, column + columnStep * index] != player)
+                int nextRow = row + rowStep * index;
+                int nextColumn = column + columnStep * index;
+                if (nextRow < 0 ||
+                    nextRow >= FG_ConnectFourField.Rows ||
+                    nextColumn < 0 ||
+                    nextColumn >= FG_ConnectFourField.Columns ||
+                    _field[nextRow, nextColumn] != player)
                 {
                     return false;
                 }
@@ -191,16 +205,17 @@ namespace OOPGames
         private static double _left = Padding;
         private static double _top = Padding;
         private readonly int[,] _renderedField = new int[FG_ConnectFourField.Rows, FG_ConnectFourField.Columns];
-        private bool _hasSnapshot;
+        private int[,] _observedField;
+        private readonly Queue<FG_ConnectFourPlayedMove> _queuedMoves =
+            new Queue<FG_ConnectFourPlayedMove>();
         private bool _isAnimating;
         private int _animatedRow;
         private int _animatedColumn;
         private int _animatedPlayer;
         private DateTime _animationStarted;
-        private int _nextMoveIndex;
         private readonly DispatcherTimer _animationTimer;
         private Canvas _animationCanvas;
-        private FG_ConnectFourField _animationField;
+        private I4GWFeld _animationField;
 
         public FG_ConnectFourPaint()
         {
@@ -233,7 +248,7 @@ namespace OOPGames
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
-            FG_ConnectFourField field = currentField as FG_ConnectFourField;
+            I4GWFeld field = currentField as I4GWFeld;
             if (field == null)
             {
                 return;
@@ -269,7 +284,7 @@ namespace OOPGames
             DrawField(_animationCanvas, _animationField);
         }
 
-        private void DrawField(Canvas canvas, FG_ConnectFourField field)
+        private void DrawField(Canvas canvas, I4GWFeld field)
         {
             canvas.Children.Clear();
             for (int row = 0; row < FG_ConnectFourField.Rows; row++)
@@ -281,9 +296,7 @@ namespace OOPGames
                         continue;
                     }
 
-                    int player = _isAnimating
-                        ? _renderedField[row, column]
-                        : field[row, column];
+                    int player = _renderedField[row, column];
                     AddToken(canvas, player, row, column);
                 }
             }
@@ -301,7 +314,6 @@ namespace OOPGames
                 if (progress >= 1)
                 {
                     _renderedField[_animatedRow, _animatedColumn] = _animatedPlayer;
-                    _nextMoveIndex++;
                     _isAnimating = false;
                     IsAnyAnimating = false;
                     _animationTimer.Stop();
@@ -377,32 +389,69 @@ namespace OOPGames
             canvas.Children.Add(board);
         }
 
-        private void StartAnimationIfNeeded(FG_ConnectFourField field)
+        private void StartAnimationIfNeeded(I4GWFeld field)
         {
-            if (field.MoveHistory.Count == 0)
+            int[,] currentField = CaptureField(field);
+            if (_observedField == null)
             {
-                _animationTimer.Stop();
-                _isAnimating = false;
-                IsAnyAnimating = false;
-                _nextMoveIndex = 0;
-                _hasSnapshot = false;
-            }
-
-            if (!_hasSnapshot)
-            {
+                _observedField = currentField;
                 CopyField(field);
-                _hasSnapshot = true;
                 return;
             }
+
+            bool requiresReset = false;
+            for (int row = 0; row < FG_ConnectFourField.Rows; row++)
+            {
+                for (int column = 0; column < FG_ConnectFourField.Columns; column++)
+                {
+                    if (currentField[row, column] != 0 &&
+                        _observedField[row, column] != 0 &&
+                        currentField[row, column] != _observedField[row, column])
+                    {
+                        requiresReset = true;
+                    }
+
+                    if (_observedField[row, column] > 0 &&
+                        currentField[row, column] == 0)
+                    {
+                        requiresReset = true;
+                    }
+                }
+            }
+
+            if (requiresReset)
+            {
+                _queuedMoves.Clear();
+                _isAnimating = false;
+                IsAnyAnimating = false;
+                _animationTimer.Stop();
+                CopyField(field);
+                _observedField = currentField;
+                return;
+            }
+
+            for (int row = 0; row < FG_ConnectFourField.Rows; row++)
+            {
+                for (int column = 0; column < FG_ConnectFourField.Columns; column++)
+                {
+                    if (_observedField[row, column] == 0 &&
+                        currentField[row, column] > 0)
+                    {
+                        _queuedMoves.Enqueue(new FG_ConnectFourPlayedMove(
+                            row, column, currentField[row, column]));
+                    }
+                }
+            }
+            _observedField = currentField;
 
             if (_isAnimating)
             {
                 return;
             }
 
-            if (_nextMoveIndex < field.MoveHistory.Count)
+            if (_queuedMoves.Count > 0)
             {
-                FG_ConnectFourPlayedMove move = field.MoveHistory[_nextMoveIndex];
+                FG_ConnectFourPlayedMove move = _queuedMoves.Dequeue();
                 _animatedRow = move.Row;
                 _animatedColumn = move.Column;
                 _animatedPlayer = move.Player;
@@ -410,32 +459,24 @@ namespace OOPGames
                 _isAnimating = true;
                 IsAnyAnimating = true;
                 _animationTimer.Start();
-                return;
-            }
-
-            if (!HasSameField(field))
-            {
-                CopyField(field);
             }
         }
 
-        private bool HasSameField(FG_ConnectFourField field)
+        private int[,] CaptureField(I4GWFeld field)
         {
+            int[,] copy = new int[FG_ConnectFourField.Rows, FG_ConnectFourField.Columns];
             for (int row = 0; row < FG_ConnectFourField.Rows; row++)
             {
                 for (int column = 0; column < FG_ConnectFourField.Columns; column++)
                 {
-                    if (_renderedField[row, column] != field[row, column])
-                    {
-                        return false;
-                    }
+                    copy[row, column] = field[row, column];
                 }
             }
 
-            return true;
+            return copy;
         }
 
-        private void CopyField(FG_ConnectFourField field)
+        private void CopyField(I4GWFeld field)
         {
             for (int row = 0; row < FG_ConnectFourField.Rows; row++)
             {
@@ -512,8 +553,25 @@ namespace OOPGames
                 return null;
             }
 
-            return new FG_ConnectFourMove(column, _playerNumber);
+            return new FG_ConnectFourMove(
+                GetLandingRow(connectFourField, column),
+                column,
+                _playerNumber);
         }
+
+        private int GetLandingRow(I4GWFeld field, int column)
+        {
+            for (int row = FG_ConnectFourField.Rows - 1; row >= 0; row--)
+            {
+                if (field[row, column] == 0)
+                {
+                    return row;
+                }
+            }
+
+            return -1;
+        }
+
     }
 
     public sealed class FG_ConnectFourComputerPlayer : IComputerGamePlayer
@@ -584,8 +642,10 @@ namespace OOPGames
                 return null;
             }
 
+            int selectedColumn = bestColumns[Random.Next(bestColumns.Count)];
             return new FG_ConnectFourMove(
-                bestColumns[Random.Next(bestColumns.Count)],
+                GetLandingRow(connectFourField, selectedColumn),
+                selectedColumn,
                 _playerNumber);
         }
 
@@ -688,7 +748,17 @@ namespace OOPGames
 
             for (int index = 0; index < 4; index++)
             {
-                int value = field[row + rowStep * index, column + columnStep * index];
+                int nextRow = row + rowStep * index;
+                int nextColumn = column + columnStep * index;
+                if (nextRow < 0 ||
+                    nextRow >= FG_ConnectFourField.Rows ||
+                    nextColumn < 0 ||
+                    nextColumn >= FG_ConnectFourField.Columns)
+                {
+                    return 0;
+                }
+
+                int value = field[nextRow, nextColumn];
                 if (value == player)
                 {
                     playerCount++;
@@ -787,7 +857,11 @@ namespace OOPGames
             int player)
         {
             int count = 0;
-            while (field[row, column] == player)
+            while (row >= 0 &&
+                   row < FG_ConnectFourField.Rows &&
+                   column >= 0 &&
+                   column < FG_ConnectFourField.Columns &&
+                   field[row, column] == player)
             {
                 count++;
                 row += rowStep;
