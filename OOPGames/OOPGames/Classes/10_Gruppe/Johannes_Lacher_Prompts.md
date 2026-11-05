@@ -201,3 +201,49 @@ Werkzeug: Claude Code (VS-Code-Erweiterung), Modell: Claude Opus 5.5 (`claude-op
 > rename our players, fields and so on to follow gruppe 8s naming scheme (no last name just group number)
 
 **Ergebnis:** übernommen – `Name`-Texte auf „Gruppe 10 Vier Gewinnt …“ geändert (Commit „Update player and game names (Gruppe 10)“).
+
+## 2026-11-05 – Claude Code (Modell: Claude Opus 5.5)
+
+### 37
+**Prompt:**
+> Before starting with the second game, lets discuss the branch structure: Feature branches or only one branch for our group? All other groups will develop in the same repo#
+
+**Ergebnis:** übernommen – Vergleich „nur Gruppenbranch“ vs. „Gruppenbranch + Feature-Branches“ mit Empfehlung (Präfix im Branchnamen, kein Squash-Merge, `master` per Merge statt Rebase einholen, Vier-gewinnt-Fixes weiter auf `master`).
+
+### 38
+**Prompt:**
+> Lets use one group branch for now
+
+**Ergebnis:** übernommen – lokalen `master` mit `origin/master` zusammengeführt und Branch `gruppe10` angelegt; Build ohne Compilerfehler geprüft.
+
+### 39
+**Prompt:**
+> Now lets discuss the spec for the second game:
+> Basic idea: the player has the choice between multiple retro game consoles (pc, atari, gameboy). the location is a 3d room from the 90ies. when a console is selected the user can choose different games. the game should open full screen. the games will be chosen later.
+> create a md file which documents the spec and future changes to it.
+
+**Ergebnis:** übernommen – Spezifikation `Plans/2026-11-05_Johannes_Lacher_Spielkonzept_RetroKinderzimmer.md` mit Anforderungen, Framework-Rahmenbedingungen, Abgleich mit dem Prototyp, offenen Fragen und Änderungshistorie erstellt.
+
+### 40
+**Prompt:**
+> adjust the plan to the prototype: Lets go with the Commodore
+
+**Ergebnis:** übernommen – Spezifikation auf Version 0.2: F2 nennt Commodore statt PC, Abweichung und offene Frage zum PC entfernt, Eintrag in der Änderungshistorie.
+
+### 41
+**Prompt:**
+> below the canvas there should be the "Tastenkreuz" of the gameboy so it can also be controlled with a mouse
+
+**Ergebnis:** übernommen – Spezifikation auf Version 0.3: neue Anforderung F8 (klickbares Gameboy-Steuerkreuz im unteren Teil des Canvas), F5 angepasst, Hinweis auf nur MouseDown/KeyDown im Framework, Architekturhinweis und offene Frage zu A/B/Start/Select ergänzt.
+
+### 42
+**Prompt:**
+> yes, a/b and start/select should be clickable to
+
+**Ergebnis:** übernommen – Spezifikation auf Version 0.4: F8 um A, B, Start und Select erweitert (sichtbar ab Gerätewahl), Tastenbelegung als Tabelle, offene Frage zur Maussteuerung auf Zimmer und Atari/Commodore eingegrenzt.
+
+### 43
+**Prompt:**
+> mouse control would be great but is not a hard requirement
+
+**Ergebnis:** übernommen – Spezifikation auf Version 0.5: Maussteuerung im Zimmer und bei Atari/Commodore als optionale Anforderung F9 aufgenommen, zugehörige offene Frage entfernt.
