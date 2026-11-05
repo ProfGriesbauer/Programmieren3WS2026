@@ -30,7 +30,7 @@ namespace OOPGames
             public int PlayerNumber { get; }
         }
 
-        public string Name { get { return "Group 2 - Connect Four Painter"; } }   
+        public string Name { get { return "Gruppe 2 - 4G Painter"; } }   
 
         public int ColumnAt(int x, int y)
         {

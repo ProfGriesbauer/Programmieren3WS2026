@@ -4,7 +4,7 @@ namespace OOPGames
     {
         private readonly I4GWFeld _field = new Gruppe2_ConnectFourField();     //Instanz des Spielbretts, das als private Variable erzeugt wird.
 
-        public string Name { get { return "Group 2 - Connect Four Rules"; } }     //Name der Regelklasse, die im Spiel angezeigt wird
+        public string Name { get { return "Gruppe 2 - 4G Rules"; } }     //Name der Regelklasse, die im Spiel angezeigt wird
 
         public I4GWFeld ConnectFourField { get { return _field; } }     //Property, die das Spielbrett zurückgibt. Sie ist vom Typ I4GWFeld, sodass sie von anderen Klassen verwendet werden kann, die das Interface implementieren.
 

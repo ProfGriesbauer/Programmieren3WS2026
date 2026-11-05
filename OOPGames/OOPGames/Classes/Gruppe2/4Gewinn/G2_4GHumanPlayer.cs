@@ -4,7 +4,7 @@ namespace OOPGames
     {
         private int _playerNumber;     //private Variable, die die Spielerzahl speichert (1 oder 2). Sie wird durch die Methode SetPlayerNumber gesetzt und durch die Property PlayerNumber zurückgegeben.
 
-        public string Name { get { return "Group 2 - Connect Four Human Player"; } }     //Name der Spielerklasse, die im Spiel angezeigt wird
+        public string Name { get { return "Gruppe 2 - 4G Human Player"; } }     //Name der Spielerklasse, die im Spiel angezeigt wird
 
         public int PlayerNumber { get { return _playerNumber; } }     //Property, die die Spielerzahl zurückgibt. Sie ist vom Typ int, sodass sie von anderen Klassen verwendet werden kann, die das Interface implementieren.
 
