@@ -75,7 +75,8 @@ namespace OOPGames
                 BuildInterface();
                 BuildRoom();
                 AddDisplayQuad(-3.6, 1.62, -1.268, 1.1, 0.82);
-                AddDisplayQuad(0.8, 1.97, -2.435, 0.2, 0.18);
+                Point3D gameBoyScreen = B5GameBoyModel.ScreenCenter;
+                AddDisplayQuad(gameBoyScreen.X, gameBoyScreen.Y, gameBoyScreen.Z, B5GameBoyModel.ScreenWidth, B5GameBoyModel.ScreenHeight);
                 AddDisplayQuad(3.3, 2.03, -1.945, 0.6, 0.46);
                 canvas.Children.Clear();
                 canvas.Children.Add(_Root);
@@ -249,16 +250,7 @@ namespace OOPGames
             AddBox(-3.6, 0.65, -1.9, 0.38, 0.04, 0.22, Color.FromRgb(154, 106, 60));
             AddBox(-2.4, 0.15, -0.8, 0.12, 0.3, 0.12, Color.FromRgb(35, 35, 39));
 
-            AddBox(0.8, 1.92, -2.5, 0.58, 0.62, 0.09, Color.FromRgb(201, 198, 184));
-            AddBox(0.8, 1.97, -2.448, 0.2, 0.18, 0.012, Color.FromRgb(107, 138, 18));
-            Model3DGroup gameBoyControls = _DeviceControls[(int)B5RoomDeviceKind.Gameboy];
-            AddBox(gameBoyControls, 0.67, 1.75, -2.43, 0.075, 0.23, 0.025, Color.FromRgb(38, 40, 39));
-            AddBox(gameBoyControls, 0.67, 1.75, -2.43, 0.23, 0.075, 0.025, Color.FromRgb(38, 40, 39));
-            AddBox(gameBoyControls, 0.67, 1.75, -2.414, 0.055, 0.055, 0.012, Color.FromRgb(69, 71, 68));
-            AddCylinder(gameBoyControls, 0.96, 1.77, -2.43, 0.052, 0.026, Color.FromRgb(143, 35, 75));
-            AddCylinder(gameBoyControls, 1.10, 1.73, -2.43, 0.052, 0.026, Color.FromRgb(143, 35, 75));
-            AddBox(gameBoyControls, 0.83, 1.64, -2.43, 0.09, 0.025, 0.02, Color.FromRgb(105, 103, 99));
-            AddBox(gameBoyControls, 0.98, 1.62, -2.43, 0.09, 0.025, 0.02, Color.FromRgb(105, 103, 99));
+            B5GameBoyModel.Build(_Scene);
 
             AddBox(3.3, 2.03, -2.4, 0.95, 0.85, 0.85, Color.FromRgb(235, 232, 224));
             AddBox(3.3, 2.03, -1.96, 0.61, 0.47, 0.02, Color.FromRgb(26, 26, 31));
@@ -301,8 +293,7 @@ namespace OOPGames
             AddBox(1.42, 2.77, -2.872, 0.18, 0.18, 0.012, Color.FromRgb(38, 57, 78));
             AddBox(0.6, 2.3, -2.75, 3.2, 0.08, 0.35, Color.FromRgb(107, 74, 54));
             AddBox(0.6, 3.0, -2.75, 3.2, 0.08, 0.35, Color.FromRgb(107, 74, 54));
-            for (int i = 0; i < 6; i++)
-                AddBox(-0.75 + i * 0.52, 2.58, -2.73, 0.3, 0.42, 0.24, Color.FromRgb((byte)(90 + i * 21), (byte)(119 + i * 12), (byte)(170 - i * 13)));
+            BuildBooks();
 
             AddBox(-4.35, 0.13, 1.55, 0.42, 0.24, 0.42, Color.FromRgb(174, 91, 59));
             AddBox(-4.35, 0.31, 1.55, 0.34, 0.08, 0.34, Color.FromRgb(103, 65, 44));
@@ -314,6 +305,39 @@ namespace OOPGames
             _Highlights.Add(AddBox(-3.6, 0.14, -1.8, 1.4, 0.025, 0.9, Color.FromArgb(0, 255, 213, 92)));
             _Highlights.Add(AddBox(0.8, 1.625, -2.5, 0.55, 0.02, 0.34, Color.FromArgb(0, 255, 213, 92)));
             _Highlights.Add(AddBox(2.8, 1.62, -2.1, 1.5, 0.02, 0.85, Color.FromArgb(0, 255, 213, 92)));
+        }
+
+        // Books stand on the top surface of the lower shelf (y = 2.34), flush with the back of the shelf.
+        void BuildBooks()
+        {
+            const double shelfTop = 2.34;
+            const double backZ = -2.90;
+            Color[] colors =
+            {
+                Color.FromRgb(158, 58, 52), Color.FromRgb(52, 86, 140), Color.FromRgb(76, 122, 74),
+                Color.FromRgb(214, 168, 70), Color.FromRgb(96, 66, 120), Color.FromRgb(196, 112, 62),
+                Color.FromRgb(60, 110, 116)
+            };
+            double[] widths = { 0.05, 0.07, 0.045, 0.06, 0.08, 0.05, 0.065, 0.045, 0.07, 0.055, 0.06, 0.05 };
+            double[] heights = { 0.30, 0.34, 0.27, 0.32, 0.36, 0.29, 0.33, 0.26, 0.35, 0.30, 0.31, 0.28 };
+            double[] depths = { 0.22, 0.24, 0.2, 0.23, 0.25, 0.21, 0.24, 0.2, 0.24, 0.22, 0.23, 0.21 };
+
+            double x = -0.85;
+            for (int i = 0; i < widths.Length; i++)
+            {
+                AddBox(x + widths[i] / 2, shelfTop + heights[i] / 2, backZ + depths[i] / 2, widths[i], heights[i], depths[i], colors[i % colors.Length]);
+                x += widths[i] + 0.004;
+            }
+
+            // A short stack lying flat at the right end of the shelf.
+            double stackY = shelfTop;
+            double[] stackHeights = { 0.05, 0.04, 0.06 };
+            double[] stackWidths = { 0.30, 0.26, 0.28 };
+            for (int i = 0; i < stackHeights.Length; i++)
+            {
+                AddBox(1.7 + (i % 2) * 0.015, stackY + stackHeights[i] / 2, backZ + 0.12, stackWidths[i], stackHeights[i], 0.22, colors[(i * 2 + 1) % colors.Length]);
+                stackY += stackHeights[i];
+            }
         }
 
         GeometryModel3D AddBox(double x, double y, double z, double width, double height, double depth, Color color)
@@ -352,48 +376,6 @@ namespace OOPGames
             GeometryModel3D model = new GeometryModel3D(mesh, material) { BackMaterial = material };
             parent.Children.Add(model);
             return model;
-        }
-
-        void AddCylinder(Model3DGroup parent, double x, double y, double z, double radius, double depth, Color color)
-        {
-            const int segments = 16;
-            MeshGeometry3D mesh = new MeshGeometry3D();
-            double frontZ = z + depth / 2;
-            double backZ = z - depth / 2;
-            Point3D frontCenter = new Point3D(x, y, frontZ);
-            Point3D backCenter = new Point3D(x, y, backZ);
-            for (int i = 0; i < segments; i++)
-            {
-                double angle0 = 2 * Math.PI * i / segments;
-                double angle1 = 2 * Math.PI * (i + 1) / segments;
-                Point3D front0 = new Point3D(x + radius * Math.Cos(angle0), y + radius * Math.Sin(angle0), frontZ);
-                Point3D front1 = new Point3D(x + radius * Math.Cos(angle1), y + radius * Math.Sin(angle1), frontZ);
-                Point3D back0 = new Point3D(front0.X, front0.Y, backZ);
-                Point3D back1 = new Point3D(front1.X, front1.Y, backZ);
-
-                AddTriangle(mesh, frontCenter, front0, front1, new Vector3D(0, 0, 1));
-                AddTriangle(mesh, backCenter, back1, back0, new Vector3D(0, 0, -1));
-                Vector3D sideNormal = new Vector3D(Math.Cos((angle0 + angle1) / 2), Math.Sin((angle0 + angle1) / 2), 0);
-                AddTriangle(mesh, front0, back0, back1, sideNormal);
-                AddTriangle(mesh, front0, back1, front1, sideNormal);
-            }
-
-            DiffuseMaterial material = new DiffuseMaterial(new SolidColorBrush(color));
-            parent.Children.Add(new GeometryModel3D(mesh, material) { BackMaterial = material });
-        }
-
-        static void AddTriangle(MeshGeometry3D mesh, Point3D a, Point3D b, Point3D c, Vector3D normal)
-        {
-            int start = mesh.Positions.Count;
-            mesh.Positions.Add(a);
-            mesh.Positions.Add(b);
-            mesh.Positions.Add(c);
-            mesh.Normals.Add(normal);
-            mesh.Normals.Add(normal);
-            mesh.Normals.Add(normal);
-            mesh.TriangleIndices.Add(start);
-            mesh.TriangleIndices.Add(start + 1);
-            mesh.TriangleIndices.Add(start + 2);
         }
 
         void AddDisplayQuad(double x, double y, double z, double width, double height)
@@ -650,8 +632,8 @@ namespace OOPGames
             }
             else if (field.Device.Kind == B5RoomDeviceKind.Gameboy)
             {
-                target = field.Phase == B5RoomPhase.Playing ? new Point3D(0.8, 2.0, -2.48) : new Point3D(0.8, 1.95, -2.5);
-                distance = field.Phase == B5RoomPhase.Playing ? 1.3 : 1.8; azimuth = 0.2; polar = 1.4;
+                target = field.Phase == B5RoomPhase.Playing ? B5GameBoyModel.ScreenCenter : B5GameBoyModel.Center;
+                distance = field.Phase == B5RoomPhase.Playing ? 1.3 : 1.05; azimuth = 0.2; polar = 1.4;
             }
             else
             {

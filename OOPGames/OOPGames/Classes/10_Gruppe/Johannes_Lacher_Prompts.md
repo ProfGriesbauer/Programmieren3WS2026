@@ -247,3 +247,21 @@ Werkzeug: Claude Code (VS-Code-Erweiterung), Modell: Claude Opus 5.5 (`claude-op
 > mouse control would be great but is not a hard requirement
 
 **Ergebnis:** übernommen – Spezifikation auf Version 0.5: Maussteuerung im Zimmer und bei Atari/Commodore als optionale Anforderung F9 aufgenommen, zugehörige offene Frage entfernt.
+
+### 44
+**Prompt:**
+> refine the gameboys 3d model. add keys and adjust the base shape
+
+**Ergebnis:** übernommen – Gameboy-Modell nach `Kinderzimmer90er/B5_GameBoyModel.cs` ausgelagert (Maße des echten DMG-01, 90 × 148 × 32 mm): Gehäuse mit großer abgerundeter Ecke unten rechts, Displayrahmen mit Streifen, Batterie-LED und Beschriftungen, Steuerkreuz, A/B, Start/Select und Lautsprecherschlitze; Tasten sind jetzt immer sichtbar (vorher nur im Spiel). `B5_RoomPaint.cs` ruft das Modell auf und übernimmt Bildschirm- und Kameraposition daraus; ungenutzte Hilfsmethoden `AddCylinder`/`AddTriangle` entfernt. Ergebnis per Offscreen-Rendering geprüft.
+
+### 45
+**Prompt:**
+> zoom a bit closer to the gameboy so the details can be seen
+
+**Ergebnis:** übernommen – Kameraabstand in der Geräteansicht des Gameboys von 1,8 auf 1,05 verringert (`B5_RoomPaint.cs`, `UpdateCamera`); per Offscreen-Rendering geprüft, das Modell bleibt links der Spieleliste.
+
+### 46
+**Prompt:**
+> fix the book shelf: the books are floating and are unproportional
+
+**Ergebnis:** übernommen – Bücher in `B5_RoomPaint.cs` neu aufgebaut (`BuildBooks`): schmale Bücher mit unterschiedlicher Höhe, Breite und Tiefe stehen exakt auf der Regaloberkante (y = 2,34, vorher 3 cm darüber) bündig zur Rückwand, dazu ein flach liegender Bücherstapel am rechten Ende. Per Offscreen-Rendering geprüft. Modell: Claude Sonnet 5.5 (Wechsel per /model).
