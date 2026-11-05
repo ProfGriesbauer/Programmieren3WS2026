@@ -609,14 +609,12 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
                 return null;
             }
 
-            int[,] board = new int[     //Erstellt ein zweidimensionales Array, das das Spielbrett für die Berechnung des besten Zuges speichert ohne das echte Spielbrett zu verändern. Die Größe des Arrays entspricht der Anzahl der Reihen und Spalten des Spielbretts.
-                Gruppe2_ConnectFourConstants.Rows,
-                Gruppe2_ConnectFourConstants.Columns];
-            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)     //Kopiert den aktuellen Zustand des Spielbretts in das Array, um die Berechnung des besten Zuges zu ermöglichen.
+            I4GWFeld board = new Gruppe2_ConnectFourField();
+            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)     //Kopiert das aktuelle Spielbrett in die separate Simulation.
             {
-                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)    
+                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
-                    board[row, column] = connectFourField[row, column];     
+                    board[row, column] = connectFourField[row, column];
                 }
             }
 
@@ -627,14 +625,14 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
 
             foreach (int column in PreferredColumns)     //
             {
-                int row = FindAvailableRow(board, column);     //Findet die nächste verfügbare Zeile in der aktuellen Spalte. Wenn keine freie Zeile vorhanden ist, wird -1 zurückgegeben.
+                int row = Gruppe2_ConnectFourLogic.FindAvailableRow(board, column);     //Findet die nächste verfügbare Zeile in der aktuellen Spalte. Wenn keine freie Zeile vorhanden ist, wird -1 zurückgegeben.
                 if (row < 0)
                 {
                     continue;
                 }
 
                 board[row, column] = _playerNumber;     //Setzt die Spielerzahl des Computer-Spielers in die gefundene freie Zelle, um den Zug zu simulieren und die Punktzahl zu berechnen.
-                int score = ConnectsFour(board, row, column, _playerNumber)
+                int score = Gruppe2_ConnectFourLogic.FindWinner(board) == _playerNumber
                     ? WinScore + SearchDepth     //Wenn der Computer-Spieler einen Gewinnzug gefunden hat, wird die Punktzahl auf WinScore + SearchDepth gesetzt, um sicherzustellen, dass der Gewinnzug immer gewählt wird.
                     : Search(board, SearchDepth - 1, opponentNumber, _playerNumber, alpha, int.MaxValue);     //Wenn kein Gewinnzug gefunden wurde, wird die Punktzahl durch den Aufruf der Search-Methode berechnet, die den Minimax-Algorithmus mit Alpha-Beta-Pruning implementiert. Die Suche wird um eine Tiefe reduziert, da der aktuelle Zug bereits simuliert wurde.
                 board[row, column] = 0;     //Setzt die Zelle wieder auf 0 (leer), um den simulierten Zug rückgängig zu machen und das Spielbrett für die nächste Spalte vorzubereiten.
@@ -648,14 +646,16 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
                 alpha = Math.Max(alpha, bestScore);     //Aktualisiert den Alpha-Wert für das Alpha-Beta-Pruning, um die Suche effizienter zu gestalten und unnötige Berechnungen zu vermeiden.
             }
 
-            int bestRow = bestColumn >= 0 ? FindAvailableRow(board, bestColumn) : -1;     //Findet die nächste verfügbare Zeile in der besten Spalte, um den endgültigen Zug des Computer-Spielers zu bestimmen. Wenn keine beste Spalte gefunden wurde, wird -1 zurückgegeben.
+            int bestRow = bestColumn >= 0
+                ? Gruppe2_ConnectFourLogic.FindAvailableRow(board, bestColumn)
+                : -1;     //Findet die nächste verfügbare Zeile in der besten Spalte, um den endgültigen Zug des Computer-Spielers zu bestimmen. Wenn keine beste Spalte gefunden wurde, wird -1 zurückgegeben.
             return bestRow >= 0
                 ? new Gruppe2_ConnectFourMove(bestRow, bestColumn, _playerNumber)
                 : null;
         }
 
         private static int Search(     //Methode, die den Minimax-Algorithmus mit Alpha-Beta-Pruning implementiert, um die Punktzahl eines Zuges zu berechnen. Sie wird rekursiv aufgerufen, um die Punktzahl für alle möglichen Züge bis zur angegebenen Tiefe zu berechnen.
-            int[,] board,
+            I4GWFeld board,
             int depth,
             int currentPlayer,
             int computerPlayer,
@@ -673,7 +673,7 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
 
             foreach (int column in PreferredColumns)
             {
-                int row = FindAvailableRow(board, column);
+                int row = Gruppe2_ConnectFourLogic.FindAvailableRow(board, column);
                 if (row < 0)
                 {
                     continue;
@@ -683,7 +683,7 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
                 board[row, column] = currentPlayer;
 
                 int score;
-                if (ConnectsFour(board, row, column, currentPlayer))
+                if (Gruppe2_ConnectFourLogic.FindWinner(board) == currentPlayer)
                 {
                     score = currentPlayer == computerPlayer
                         ? WinScore + depth
@@ -717,11 +717,11 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             return foundMove ? bestScore : 0;
         }
 
-        private static bool HasAvailableMove(int[,] board)
+        private static bool HasAvailableMove(I4GWFeld board)
         {
             foreach (int column in PreferredColumns)
             {
-                if (FindAvailableRow(board, column) >= 0)
+                if (Gruppe2_ConnectFourLogic.FindAvailableRow(board, column) >= 0)
                 {
                     return true;
                 }
@@ -730,7 +730,7 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             return false;
         }
 
-        private static int EvaluatePosition(int[,] board, int computerPlayer)
+        private static int EvaluatePosition(I4GWFeld board, int computerPlayer)
         {
             int opponentNumber = computerPlayer == 1 ? 2 : 1;
             int score = 0;
@@ -806,50 +806,5 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             return score;
         }
 
-        private static int FindAvailableRow(int[,] board, int column)
-        {
-            for (int row = Gruppe2_ConnectFourConstants.Rows - 1; row >= 0; row--)
-            {
-                if (board[row, column] == 0)
-                {
-                    return row;
-                }
-            }
-
-            return -1;
-        }
-
-        private static bool ConnectsFour(int[,] board, int row, int column, int playerNumber)
-        {
-            for (int direction = 0; direction < SearchDirections.GetLength(0); direction++)
-            {
-                int rowStep = SearchDirections[direction, 0];
-                int columnStep = SearchDirections[direction, 1];
-                int count = 1;
-
-                for (int sign = -1; sign <= 1; sign += 2)
-                {
-                    int currentRow = row + sign * rowStep;
-                    int currentColumn = column + sign * columnStep;
-                    while (currentRow >= 0
-                        && currentRow < Gruppe2_ConnectFourConstants.Rows
-                        && currentColumn >= 0
-                        && currentColumn < Gruppe2_ConnectFourConstants.Columns
-                        && board[currentRow, currentColumn] == playerNumber)
-                    {
-                        count++;
-                        currentRow += sign * rowStep;
-                        currentColumn += sign * columnStep;
-                    }
-                }
-
-                if (count >= 4)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
     }
 }
