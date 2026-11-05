@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Controls;
+﻿using System.Windows.Controls;
 
 namespace OOPGames
 {
-    public interface IFG_ConnectFourPaint : IPaintGame
+    public interface IFG_ConnectFourPaint : IConnectFourPainter
     {
         void PaintConnectFourField(Canvas canvas, IFG_ConnectFourField currentField);
     }
