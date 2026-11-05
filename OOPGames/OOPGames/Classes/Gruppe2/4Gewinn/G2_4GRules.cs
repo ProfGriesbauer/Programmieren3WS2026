@@ -12,23 +12,7 @@ namespace OOPGames
 
         public bool MovesPossible     //Property, die überprüft, ob noch Züge möglich sind. Sie gibt true zurück, wenn es noch freie Zellen gibt und kein Spieler gewonnen hat, sonst false.
         {
-            get
-            {
-                if (CheckIfPLayerWon() > 0)
-                {
-                    return false;
-                }
-
-                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
-                {
-                    if (Gruppe2_ConnectFourLogic.FindAvailableRow(_field, column) >= 0)     //liefert die nächste freie Zeile in dieser Spalte.
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
+            get { return CheckIfPLayerWon() < 0 && Gruppe2_ConnectFourLogic.HasAvailableMove(_field); }
         }
 
         public void DoMove(IPlayMove move)     //Methode, die einen Zug ausführt. Sie überprüft, ob der Zug gültig ist und ob noch Züge möglich sind. Wenn ja, wird der Zug auf dem Spielbrett ausgeführt.

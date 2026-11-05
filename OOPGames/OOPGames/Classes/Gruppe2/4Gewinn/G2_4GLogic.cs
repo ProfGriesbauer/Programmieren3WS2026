@@ -4,41 +4,45 @@ namespace OOPGames
 {
     internal static class Gruppe2_ConnectFourLogic     //Statische Logikklasse für das Spiel "Vier Gewinnt" von Gruppe 2. Sie enthält Methoden zur Überprüfung von Gewinnern, verfügbaren Zügen und Verbindungen von vier Spielsteinen. Diese Klasse ist intern, da sie nur innerhalb des Projekts verwendet wird.
     {
-        private static readonly int[,] Directions =     //erlaubt die Überprüfung in vier Richtungen: horizontal, vertikal und diagonal. Jede Richtung wird durch ein Paar von Schritten (Zeilen- und Spaltenänderung) dargestellt.
-        {
-            { 0, 1 },     // horizontal
-            { 1, 0 },     // vertical
-            { 1, 1 },     // diagonal nach unten rechts
-            { 1, -1 }     // diagonal nach unten links
-        };
+        internal static IReadOnlyList<(int RowStep, int ColumnStep)> Directions { get; } =
+            System.Array.AsReadOnly(new (int RowStep, int ColumnStep)[]
+            {
+                (0, 1),
+                (1, 0),
+                (1, 1),
+                (1, -1)
+            });
 
         public static int FindWinner(I4GWFeld field)
         {
-            List<WinningLine> winningLines = FindWinningLines(field);
-            return winningLines.Count > 0 ? winningLines[0].PlayerNumber : -1;
+            foreach (WinningLine line in FindWinningLines(field))
+            {
+                return line.PlayerNumber;
+            }
+
+            return -1;
         }
 
         public static bool IsDraw(I4GWFeld field)
         {
-            if (FindWinner(field) > 0)
-            {
-                return false;
-            }
+            return FindWinner(field) < 0 && !HasAvailableMove(field);
+        }
 
+        public static bool HasAvailableMove(I4GWFeld field)
+        {
             for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
             {
                 if (FindAvailableRow(field, column) >= 0)
                 {
-                    return false;
+                    return true;
                 }
             }
 
-            return true;
+            return false;
         }
 
-        public static List<WinningLine> FindWinningLines(I4GWFeld field)
+        public static IEnumerable<WinningLine> FindWinningLines(I4GWFeld field)
         {
-            List<WinningLine> winningLines = new List<WinningLine>();
             for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
             {
                 for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
@@ -49,10 +53,8 @@ namespace OOPGames
                         continue;
                     }
 
-                    for (int direction = 0; direction < Directions.GetLength(0); direction++)
+                    foreach ((int rowStep, int columnStep) in Directions)
                     {
-                        int rowStep = Directions[direction, 0];
-                        int columnStep = Directions[direction, 1];
                         int previousRow = row - rowStep;
                         int previousColumn = column - columnStep;
                         if (IsInsideBoard(previousRow, previousColumn)
@@ -74,14 +76,12 @@ namespace OOPGames
 
                         if (count >= 4)
                         {
-                            winningLines.Add(new WinningLine(
-                                playerNumber, row, column, endRow, endColumn));
+                            yield return new WinningLine(
+                                playerNumber, row, column, endRow, endColumn);
                         }
                     }
                 }
             }
-
-            return winningLines;
         }
 
         public struct WinningLine

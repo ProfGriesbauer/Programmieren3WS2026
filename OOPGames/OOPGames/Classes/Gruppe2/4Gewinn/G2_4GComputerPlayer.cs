@@ -5,13 +5,6 @@ namespace OOPGames
     public class Gruppe2_ConnectFourComputerPlayer : IComputerGamePlayer     //Klasse, die einen Computer-Spieler für das Spiel "Vier Gewinnt" von Gruppe 2 implementiert. Sie implementiert das IComputerGamePlayer-Interface und enthält die Logik zur Berechnung des besten Zuges für den Computer-Spieler.
     {
         private static readonly int[] PreferredColumns = { 3, 2, 4, 1, 5, 0, 6 };     //Array, das die bevorzugte Reihenfolge der Spalten für die Suche nach dem besten Zug angibt. Die mittlere Spalte (3) wird zuerst überprüft, da sie die meisten Möglichkeiten bietet, vier Spielsteine in einer Reihe zu verbinden. Danach werden die Spalten 2 und 4 überprüft, dann 1 und 5, und schließlich 0 und 6. Diese Reihenfolge hilft dem Computer-Spieler, bessere Züge zu finden.
-        private static readonly int[,] SearchDirections =     //Array, das die Richtungen für die Suche nach vier Spielsteinen in einer Reihe angibt. Jede Richtung wird durch ein Paar von Schritten (Zeilen- und Spaltenänderung) dargestellt. Die Richtungen sind horizontal, vertikal und diagonal.
-        {
-            { 0, 1 },
-            { 1, 0 },
-            { 1, 1 },
-            { 1, -1 }
-        };
         private const int SearchDepth = 5;     //Maximale Tiefe der Suche nach dem besten Zug. Der Computer-Spieler wird bis zu 5 Züge im Voraus berechnen, um den besten Zug zu finden. Eine höhere Tiefe kann bessere Züge liefern, aber auch die Berechnungszeit erhöhen.
         private const int WinScore = 1000000;     //Punktzahl, die vergeben wird, wenn der Computer-Spieler einen Gewinnzug findet. Diese Punktzahl ist sehr hoch, um sicherzustellen, dass der Computer-Spieler immer den Gewinnzug wählt, wenn er verfügbar ist.
         private int _playerNumber;     //private Variable, die die Spielerzahl des Computer-Spielers speichert (1 oder 2). Sie wird durch die Methode SetPlayerNumber gesetzt und durch die Property PlayerNumber zurückgegeben.
@@ -102,7 +95,9 @@ namespace OOPGames
         {
             if (depth == 0)
             {
-                return HasAvailableMove(board) ? EvaluatePosition(board, computerPlayer) : 0;
+                return Gruppe2_ConnectFourLogic.HasAvailableMove(board)
+                    ? EvaluatePosition(board, computerPlayer)
+                    : 0;
             }
 
             bool foundMove = false;     //Variable, die angibt, ob ein gültiger Zug gefunden wurde. Sie wird auf false gesetzt, um anzuzeigen, dass noch kein gültiger Zug gefunden wurde.
@@ -155,19 +150,6 @@ namespace OOPGames
             return foundMove ? bestScore : 0;
         }
 
-        private static bool HasAvailableMove(I4GWFeld board)
-        {
-            foreach (int column in PreferredColumns)
-            {
-                if (Gruppe2_ConnectFourLogic.FindAvailableRow(board, column) >= 0)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private static int EvaluatePosition(I4GWFeld board, int computerPlayer)
         {
             int opponentNumber = computerPlayer == 1 ? 2 : 1;
@@ -189,10 +171,8 @@ namespace OOPGames
             {
                 for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
-                    for (int direction = 0; direction < SearchDirections.GetLength(0); direction++)
+                    foreach ((int rowStep, int columnStep) in Gruppe2_ConnectFourLogic.Directions)
                     {
-                        int rowStep = SearchDirections[direction, 0];
-                        int columnStep = SearchDirections[direction, 1];
                         int endRow = row + 3 * rowStep;
                         int endColumn = column + 3 * columnStep;
 

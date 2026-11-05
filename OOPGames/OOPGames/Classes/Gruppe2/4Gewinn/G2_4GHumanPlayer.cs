@@ -30,17 +30,22 @@ namespace OOPGames
 
         public IPlayMove GetMove(IMoveSelection selection, IGameField field)     //Methode, die den Zug des menschlichen Spielers basierend auf der Auswahl des Spielers und dem aktuellen Spielbrett zurückgibt. Sie überprüft, ob die Auswahl und das Spielbrett gültig sind, und berechnet dann die Zeile und Spalte des Zuges. Wenn der Zug gültig ist, wird ein I4GWMove-Objekt zurückgegeben, sonst null.
         {
+            return GetMove(
+                selection,
+                field,
+                OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter);
+        }
+
+        public IPlayMove GetMove(
+            IMoveSelection selection,
+            IGameField field,
+            IConnectFourPainter painter)
+        {
             if (!(selection is IClickSelection click)     //Wenn die Auswahl nicht vom Typ IClickSelection ist, wird null zurückgegeben, da der menschliche Spieler nur Klicks verwenden kann.
                 || !(field is I4GWFeld connectFourField)     //Wenn das aktuelle Spielbrett nicht vom Typ I4GWFeld ist, wird null zurückgegeben, da der menschliche Spieler nur auf einem gültigen Spielbrett spielen kann.
                 || _playerNumber < 1
-                || _playerNumber > 2)
-            {
-                return null;
-            }
-
-            IConnectFourPainter painter =
-                OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter;
-            if (painter == null)
+                || _playerNumber > 2
+                || painter == null)
             {
                 return null;
             }
