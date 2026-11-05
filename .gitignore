@@ -4,3 +4,4 @@
 *.user
 *.suo
 *.agent.md
+*.code-workspace
