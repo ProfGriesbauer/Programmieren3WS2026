@@ -606,3 +606,13 @@ Chronological transcript of user messages and assistant replies retained for thi
 > The painter was drawing winning lines from the updated field even while the new piece was queued or falling. I changed it to draw the lines only after `_fallingPiece` is `null` and `_pendingPieces` is empty, so the gold line appears once the piece has landed and all queued animations are complete.
 >
 > The project builds successfully with **0 warnings and 0 errors**.
+
+## User
+
+> now that the duplicated code has been edited, can you split the file into subfiles for better overview. the subfiles must stay in Gruppe2. please but them into a subfolder called "4Gewinn"
+
+## Assistant
+
+> Split the Gruppe2 Connect Four implementation into eight focused C# files under `Classes/Gruppe2/4Gewinn`: constants, field, move, rules, logic, painter, human player, and computer player. The original combined `4Gewinnt.cs` was removed, and the prompt history remains in the Gruppe2 folder outside the new code subfolder.
+>
+> The project builds successfully with **0 warnings and 0 errors**.
