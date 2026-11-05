@@ -232,8 +232,36 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
         }
     }
 
-    public class Gruppe2_ConnectFourPainter : IPaintGame     //Klasse, die das Spielbrett für "Vier Gewinnt" von Gruppe 2 zeichnet. Sie implementiert das IPaintGame-Interface und enthält die Logik zur Darstellung des Spielbretts auf einem Canvas.
+    public class Gruppe2_ConnectFourPainter : IPaintGame2     //Klasse, die das Spielbrett für "Vier Gewinnt" von Gruppe 2 zeichnet und die Animation fallender Spielsteine verwaltet.
     {
+        private const double FallDurationMilliseconds = 300;
+        private static readonly int[,] WinningLineDirections =
+        {
+            { 0, 1 },
+            { 1, 0 },
+            { 1, 1 },
+            { 1, -1 }
+        };
+        private readonly int[,] _observedCells =
+            new int[Gruppe2_ConnectFourConstants.Rows, Gruppe2_ConnectFourConstants.Columns];
+        private readonly Queue<FallingPiece> _pendingPieces = new Queue<FallingPiece>();
+        private FallingPiece _fallingPiece;
+        private DateTime _fallStartedAt;
+
+        private sealed class FallingPiece
+        {
+            public FallingPiece(int row, int column, int playerNumber)
+            {
+                Row = row;
+                Column = column;
+                PlayerNumber = playerNumber;
+            }
+
+            public int Row { get; }
+            public int Column { get; }
+            public int PlayerNumber { get; }
+        }
+
         public string Name { get { return "Group 2 - Connect Four Painter"; } }   
 
         public void PaintGameField(Canvas canvas, IGameField currentField)     //Methode, die das Spielbrett auf einem Canvas zeichnet. Sie überprüft, ob das Canvas und das Spielbrett gültig sind, und zeichnet dann das Spielbrett, die Spielsteine und eine Nachricht für ein Unentschieden.
@@ -243,6 +271,73 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
                 return;    //Wenn das Canvas null ist oder das aktuelle Spielbrett nicht vom Typ I4GWFeld ist, wird die Methode beendet und nichts gezeichnet.
             }
 
+            ObserveField(field);
+            DrawField(canvas, field);
+        }
+
+        public void TickPaintGameField(Canvas canvas, IGameField currentField)
+        {
+            if (canvas == null || !(currentField is I4GWFeld field))
+            {
+                return;
+            }
+
+            ObserveField(field);
+            if (_fallingPiece != null
+                && (DateTime.UtcNow - _fallStartedAt).TotalMilliseconds >= FallDurationMilliseconds)
+            {
+                _fallingPiece = null;
+            }
+
+            if (_fallingPiece == null && _pendingPieces.Count > 0)
+            {
+                _fallingPiece = _pendingPieces.Dequeue();
+                _fallStartedAt = DateTime.UtcNow;
+            }
+
+            DrawField(canvas, field);
+        }
+
+        private void ObserveField(I4GWFeld field)
+        {
+            bool hasRemovedPiece = false;
+            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
+            {
+                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
+                {
+                    if (_observedCells[row, column] != field[row, column]
+                        && field[row, column] == 0)
+                    {
+                        hasRemovedPiece = true;
+                    }
+                }
+            }
+
+            if (hasRemovedPiece)
+            {
+                _pendingPieces.Clear();
+                _fallingPiece = null;
+            }
+
+            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
+            {
+                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
+                {
+                    int playerNumber = field[row, column];
+                    if (!hasRemovedPiece
+                        && _observedCells[row, column] == 0
+                        && playerNumber > 0)
+                    {
+                        _pendingPieces.Enqueue(new FallingPiece(row, column, playerNumber));
+                    }
+
+                    _observedCells[row, column] = playerNumber;
+                }
+            }
+        }
+
+        private void DrawField(Canvas canvas, I4GWFeld field)
+        {
             canvas.Children.Clear();     //Löscht alle vorhandenen Elemente auf dem Canvas, um das Spielbrett neu zu zeichnen.
             canvas.Background = Brushes.White;     //Setzt den Hintergrund des Canvas auf Weiß, um einen sauberen Hintergrund für das Spielbrett zu haben.
 
@@ -260,6 +355,11 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
             {
                 for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
                 {
+                    if (IsPendingPiece(row, column))
+                    {
+                        continue;
+                    }
+
                     Ellipse piece = new Ellipse     //Erstellt eine Ellipse, die einen Spielstein darstellt. Die Breite und Höhe werden auf die Zellgröße minus 8 gesetzt, um einen kleinen Abstand zum Rand zu haben. Die Füllfarbe wird basierend auf dem Spieler gesetzt.
                     {
                         Width = Gruppe2_ConnectFourConstants.CellSize - 8,     //Setzt die Breite der Ellipse auf die Zellgröße minus 8, um einen kleinen Abstand zum Rand zu haben.
@@ -271,6 +371,28 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
                     canvas.Children.Add(piece);
                 }
             }
+
+            if (_fallingPiece != null)
+            {
+                double progress = Math.Min(
+                    1,
+                    (DateTime.UtcNow - _fallStartedAt).TotalMilliseconds / FallDurationMilliseconds);
+                double startTop = -Gruppe2_ConnectFourConstants.CellSize;
+                double endTop = _fallingPiece.Row * Gruppe2_ConnectFourConstants.CellSize + 4;
+                Ellipse fallingPiece = new Ellipse
+                {
+                    Width = Gruppe2_ConnectFourConstants.CellSize - 8,
+                    Height = Gruppe2_ConnectFourConstants.CellSize - 8,
+                    Fill = GetPlayerBrush(_fallingPiece.PlayerNumber)
+                };
+                Canvas.SetLeft(
+                    fallingPiece,
+                    _fallingPiece.Column * Gruppe2_ConnectFourConstants.CellSize + 4);
+                Canvas.SetTop(fallingPiece, startTop + (endTop - startTop) * progress);
+                canvas.Children.Add(fallingPiece);
+            }
+
+            DrawWinningLines(canvas, field);
 
             if (IsDraw(field))     //Wenn das Spiel unentschieden ist, wird eine Nachricht angezeigt, die den Spielern mitteilt, dass das Spiel unentschieden ist.
             {
@@ -287,6 +409,95 @@ namespace OOPGames     //Namespace für das Projekt OOPGames Damit liegen alle K
                 Canvas.SetTop(drawMessage, 100);     //Setzt die y-Position des TextBlocks auf 100 Pixel, um ihn in der Mitte des Spielbretts anzuzeigen.
                 canvas.Children.Add(drawMessage);     //Fügt den TextBlock dem Canvas hinzu, um die Draw-Nachricht anzuzeigen.
             }
+        }
+
+        private static void DrawWinningLines(Canvas canvas, I4GWFeld field)
+        {
+            for (int row = 0; row < Gruppe2_ConnectFourConstants.Rows; row++)
+            {
+                for (int column = 0; column < Gruppe2_ConnectFourConstants.Columns; column++)
+                {
+                    int playerNumber = field[row, column];
+                    if (playerNumber <= 0)
+                    {
+                        continue;
+                    }
+
+                    for (int direction = 0; direction < WinningLineDirections.GetLength(0); direction++)
+                    {
+                        int rowStep = WinningLineDirections[direction, 0];
+                        int columnStep = WinningLineDirections[direction, 1];
+                        int previousRow = row - rowStep;
+                        int previousColumn = column - columnStep;
+                        if (IsInsideBoard(previousRow, previousColumn)
+                            && field[previousRow, previousColumn] == playerNumber)
+                        {
+                            continue;
+                        }
+
+                        int endRow = row;
+                        int endColumn = column;
+                        int count = 1;
+                        while (IsInsideBoard(endRow + rowStep, endColumn + columnStep)
+                            && field[endRow + rowStep, endColumn + columnStep] == playerNumber)
+                        {
+                            endRow += rowStep;
+                            endColumn += columnStep;
+                            count++;
+                        }
+
+                        if (count < 4)
+                        {
+                            continue;
+                        }
+
+                        Line winningLine = new Line
+                        {
+                            X1 = column * Gruppe2_ConnectFourConstants.CellSize
+                                + Gruppe2_ConnectFourConstants.CellSize / 2.0,
+                            Y1 = row * Gruppe2_ConnectFourConstants.CellSize
+                                + Gruppe2_ConnectFourConstants.CellSize / 2.0,
+                            X2 = endColumn * Gruppe2_ConnectFourConstants.CellSize
+                                + Gruppe2_ConnectFourConstants.CellSize / 2.0,
+                            Y2 = endRow * Gruppe2_ConnectFourConstants.CellSize
+                                + Gruppe2_ConnectFourConstants.CellSize / 2.0,
+                            Stroke = Brushes.Gold,
+                            StrokeThickness = 5,
+                            StrokeStartLineCap = PenLineCap.Round,
+                            StrokeEndLineCap = PenLineCap.Round
+                        };
+                        canvas.Children.Add(winningLine);
+                    }
+                }
+            }
+        }
+
+        private static bool IsInsideBoard(int row, int column)
+        {
+            return row >= 0
+                && row < Gruppe2_ConnectFourConstants.Rows
+                && column >= 0
+                && column < Gruppe2_ConnectFourConstants.Columns;
+        }
+
+        private bool IsPendingPiece(int row, int column)
+        {
+            if (_fallingPiece != null
+                && _fallingPiece.Row == row
+                && _fallingPiece.Column == column)
+            {
+                return true;
+            }
+
+            foreach (FallingPiece piece in _pendingPieces)
+            {
+                if (piece.Row == row && piece.Column == column)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static Brush GetPlayerBrush(int playerNumber)     //Methode, die die Füllfarbe für einen Spielstein basierend auf der Spielerzahl zurückgibt. Spieler 1 = Magenta, Spieler 2 = Türkis, leer = Hellgrau.
