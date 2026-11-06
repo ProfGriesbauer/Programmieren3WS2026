@@ -9,7 +9,7 @@ namespace OOPGames
         private const int WinScore = 1000000;     //Punktzahl, die vergeben wird, wenn der Computer-Spieler einen Gewinnzug findet. Diese Punktzahl ist sehr hoch, um sicherzustellen, dass der Computer-Spieler immer den Gewinnzug wählt, wenn er verfügbar ist.
         private int _playerNumber;     //private Variable, die die Spielerzahl des Computer-Spielers speichert (1 oder 2). Sie wird durch die Methode SetPlayerNumber gesetzt und durch die Property PlayerNumber zurückgegeben.
 
-        public string Name { get { return "Gruppe2 - 4G Computer Player"; } }
+        public string Name { get { return "Gruppe 2 - 4G Computer Player"; } }
 
         public int PlayerNumber { get { return _playerNumber; } }     //Property, die die Spielerzahl zurückgibt. Sie ist vom Typ int, sodass sie von anderen Klassen verwendet werden kann, die das Interface implementieren.
 

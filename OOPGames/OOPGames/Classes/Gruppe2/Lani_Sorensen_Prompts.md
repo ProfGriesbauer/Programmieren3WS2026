@@ -1,6 +1,35 @@
-# Code Reviewer for Connect Four - Conversation Transcript
+# KI-Nutzung bei Vier Gewinnt (Gruppe 2)
 
-Chronological transcript of user messages and assistant replies retained for this conversation. Internal tool requests and tool outputs are not included. Future messages need to be added manually; this file does not synchronize in the background.
+## Zweck und Geltungsbereich
+
+Dieses Dokument hält die Anforderungen, Entscheidungen und Ergebnisse der KI-Unterstützung für Vier Gewinnt in Gruppe 2 fest. Der Code liegt inzwischen in einzelnen Dateien unter `Classes/Gruppe2/4Gewinn`. Für die painter-spezifische Klickzuordnung wird zusätzlich der gemeinsame Vertrag `IConnectFourPainter` in `Interfaces/4GWInterfaces.cs` verwendet.
+
+Der Gesprächsverlauf weiter unten ist ein manuell gepflegtes Archiv: interne Werkzeugaufrufe und -ausgaben sind ausgelassen, ältere Antworten können zusammengefasst sein und Verweise spiegeln teilweise den damaligen Dateistand wider. Das Dokument aktualisiert sich nicht automatisch.
+
+## Entscheidungen und geklärte Anforderungen
+
+- Ein Klick bestimmt die Spalte; die Regeln bestimmen anschließend die niedrigste freie Zeile dieser Spalte.
+- Painter müssen `IConnectFourPainter` implementieren, damit ein Spieler Klicks anhand des jeweiligen Brettlayouts zuordnen kann. Zukünftige Painter werden dadurch nicht automatisch kompatibel.
+- Die Spielregeln und gemeinsame Brettprüfungen liegen in der Gruppe-2-Logik; die KI simuliert Züge auf einem separaten `I4GWFeld`.
+- Die Animation und ihre Darstellung sollen bei Refactorings funktional erhalten bleiben; insbesondere wird die Gewinnlinie erst nach der Fallanimation gezeichnet.
+- Dateien in `Classes/Gruppe2/4Gewinn` sollten nicht ohne ausdrücklichen Wunsch umbenannt werden.
+
+## Änderungen und Prüfung
+
+- Die ursprünglich zusammengefasste Implementierung wurde in Dateien für Konstanten, Feld, Zug, Regeln, Logik, Painter, menschlichen Spieler und Computer-Spieler aufgeteilt.
+- Wiederverwendbare Prüfungen für verfügbare Züge, Gewinner und Unentschieden wurden in der gemeinsamen Logik gebündelt.
+- Der zuletzt ausgeführte Projekt-Build (`dotnet build OOPGames.csproj --no-restore`) war erfolgreich: 0 Warnungen und 0 Fehler.
+- Es wurden keine automatisierten Verhaltenstests für die Spielzüge oder Animation dokumentiert. Ein erfolgreicher Build bestätigt die Kompilierung, nicht alle Laufzeitverhalten.
+
+## Bekannte Grenzen und offene Punkte
+
+- Die framework-erforderliche Methode des menschlichen Spielers liest den aktiven Painter weiterhin über `OOPGamesManager.Singleton`; der zusätzliche overload ermöglicht explizite Übergabe, entfernt diese globale Abhängigkeit aber nicht vollständig.
+- Painter anderer Gruppen müssen den Hit-Test-Vertrag selbst implementieren, um mit dem Gruppe-2-Spieler kompatibel zu sein.
+- Für eine nachvollziehbare Historie sollten neue Einträge als datierte Prompt-/Antwort-Paare ergänzt und Änderungen sowie konkrete Build- oder Testergebnisse getrennt festgehalten werden.
+
+## Chronologischer Gesprächsverlauf
+
+Der folgende Verlauf bewahrt die verfügbaren Prompts und Antworten in zeitlicher Reihenfolge. Ältere Dateiverweise können auf die frühere, noch nicht aufgeteilte Implementierung zeigen.
 
 ## User
 
@@ -653,10 +682,6 @@ Chronological transcript of user messages and assistant replies retained for thi
 > Implemented the shared available-move check, lazy winner enumeration, and shared direction list. Added a human-player overload that accepts an `IConnectFourPainter` explicitly; the required `IHumanGamePlayer` method still reads the active painter from the manager because that interface does not provide painter context.
 >
 > No filenames were changed. The build passes with 0 warnings and 0 errors. The class/file-name mismatch and verbose comments remain style-only follow-ups.
-
-> Updated the shared logic to centralize `HasAvailableMove`, made `FindWinner` stop at the first lazily generated winning line, and shared the immutable direction list with the AI evaluator. Added a human-player overload that accepts an `IConnectFourPainter` explicitly; the framework-required interface method remains an adapter to the active painter because `IHumanGamePlayer.GetMove` does not accept a painter parameter.
->
-> No files were renamed. The project builds successfully with **0 warnings and 0 errors**.
 
 ## User
 
