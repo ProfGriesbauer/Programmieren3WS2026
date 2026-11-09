@@ -503,8 +503,8 @@ namespace OOPGames
     public sealed class G1_VierGewinntComputerPlayer : IComputerGamePlayer
     {
         private const int MaximumDepth = 12;
-        private const int MaximumNodes = 4000;
-        private const int MaximumSearchMilliseconds = 60;
+        private const int MaximumNodes = 500000;
+        private const int MaximumSearchMilliseconds = 850;
         private const int WinScore = 100000;
         private const int QuiescenceDepth = 6;
         private static readonly int[] OrderedColumns = { 3, 2, 4, 1, 5, 0, 6 };
@@ -652,7 +652,7 @@ namespace OOPGames
                 board[row, column] = _playerNumber;
                 heights[column]--;
                 int score = G1_VierGewinntLogic.WinsAt(board, row, column, _playerNumber)
-                    ? WinScore + depth
+                    ? GetWinScore(board)
                     : -Search(board, heights, _playerNumber == 1 ? 2 : 1, depth - 1, -beta, -alpha);
                 heights[column]++;
                 board[row, column] = 0;
@@ -737,7 +737,7 @@ namespace OOPGames
                 board[row, column] = player;
                 heights[column]--;
                 int score = G1_VierGewinntLogic.WinsAt(board, row, column, player)
-                    ? WinScore + depth
+                    ? GetWinScore(board)
                     : -Search(board, heights, player == 1 ? 2 : 1, depth - 1, -beta, -alpha);
                 heights[column]++;
                 board[row, column] = 0;
@@ -800,10 +800,11 @@ namespace OOPGames
                 hasLegalMove = true;
                 board[row, column] = player;
                 bool wins = G1_VierGewinntLogic.WinsAt(board, row, column, player);
+                int winScore = wins ? GetWinScore(board) : 0;
                 board[row, column] = 0;
                 if (wins)
                 {
-                    return WinScore + remainingDepth;
+                    return winScore;
                 }
 
                 board[row, column] = opponent;
@@ -838,6 +839,24 @@ namespace OOPGames
             heights[threatColumn]++;
             board[forcedRow, threatColumn] = 0;
             return score;
+        }
+
+        private static int GetWinScore(int[,] board)
+        {
+            int occupied = 0;
+            for (int row = 0; row < G1_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G1_VierGewinntLogic.Columns; column++)
+                {
+                    if (board[row, column] != 0)
+                    {
+                        occupied++;
+                    }
+                }
+            }
+
+            return WinScore + G1_VierGewinntLogic.Rows *
+                G1_VierGewinntLogic.Columns - occupied;
         }
 
         private bool VisitSearchNode()
