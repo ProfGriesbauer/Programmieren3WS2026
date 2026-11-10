@@ -2,7 +2,7 @@
 
 ## 1. Allgemeine Projektbeschreibung
 
-Wir entwickeln ein 2D-Pixel-Art-Spiel, das sich optisch und spielerisch an Pokémon Rubin/Saphir für den Game Boy Advance orientiert.
+Wir entwickeln ein 2D-Pixel-Art-Spiel, das sich optisch und spielerisch an Pokémon Rubin/Saphir für den Game Boy Advance orientiert, das aussehen soll für den character für jede laufrichtung eine eigene pixel charachter id und aussehen haben mit einem zb 90 auf 90 pixel oberfläche mit nicht durchdrängbaren wändenfür jegliche grafik soll eine option sein die austauschbar ist.
 
 Der Spieler befindet sich in einem Casino-Gebäude und kann sich dort frei bewegen. Innerhalb des Gebäudes gibt es verschiedene Spieltische, an denen unterschiedliche Casino-Spiele gegen KI-Gegner gespielt werden können.
 
