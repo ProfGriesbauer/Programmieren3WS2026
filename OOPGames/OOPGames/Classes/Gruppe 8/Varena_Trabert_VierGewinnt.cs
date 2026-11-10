@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace OOPGames
 {
@@ -90,18 +94,18 @@ namespace OOPGames
     {
         internal const int Left = 20;
         internal const int Top = 80;
-        internal const int Cell = 50;
+        internal const int CellSize = 50;
 
         internal static int ColumnAt(int x, int y)
         {
             if (x < Left || y < Top
-                || x >= Left + G8_VierGewinntLogic.Columns * Cell
-                || y >= Top + G8_VierGewinntLogic.Rows * Cell)
+                || x >= Left + G8_VierGewinntLogic.Columns * CellSize
+                || y >= Top + G8_VierGewinntLogic.Rows * CellSize)
             {
                 return -1;
             }
 
-            return (x - Left) / Cell;
+            return (x - Left) / CellSize;
         }
     }
 
@@ -200,12 +204,39 @@ namespace OOPGames
         }
     }
 
-    public sealed class G8_VierGewinntPaint : IPaintGame2
+    public sealed class G8_VierGewinntPaint : IPaintGame2, IConnectFourPainter
     {
         private static readonly Brush PlayerOneBrush = new SolidColorBrush(Color.FromRgb(30, 144, 255));
         private static readonly Brush PlayerTwoBrush = new SolidColorBrush(Color.FromRgb(255, 105, 180));
+        private const double DropMilliseconds = 400;
+        private const double CelebrationMilliseconds = 5000;
+        private const int ConfettiCount = 100;
+        private static readonly Color[] ConfettiColors =
+        {
+            Colors.Gold,
+            Colors.Lime,
+            Colors.DeepPink,
+            Colors.DodgerBlue,
+            Colors.Orange,
+            Colors.Violet
+        };
+
+        private readonly Queue<AnimatedMove> _queuedMoves = new Queue<AnimatedMove>();
+        private readonly int[,] _displayedCells = new int[G8_VierGewinntLogic.Rows, G8_VierGewinntLogic.Columns];
+        private readonly List<ConfettiPiece> _confetti = new List<ConfettiPiece>();
+        private readonly Random _random = new Random();
+        private int[,] _lastObservedCells;
+        private AnimatedMove _activeMove;
+        private int _celebrationWinner;
+        private DateTime _celebrationStartedAt;
+        private bool _hasObservedField;
 
         public string Name { get { return "Gruppe 8 Vier Gewinnt Painter"; } }
+
+        public int ColumnAt(int x, int y)
+        {
+            return G8_VierGewinntLayout.ColumnAt(x, y);
+        }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
@@ -216,6 +247,12 @@ namespace OOPGames
                 return;
             }
 
+            ObserveField(field);
+            DateTime now = DateTime.UtcNow;
+            AdvanceAnimations(now);
+            int winner = G8_VierGewinntLogic.Winner(field);
+            UpdateCelebration(winner, now);
+
             canvas.Children.Clear();
             canvas.Background = Brushes.White;
 
@@ -223,15 +260,15 @@ namespace OOPGames
             for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
             {
                 AddText(canvas, (column + 1).ToString(),
-                    G8_VierGewinntLayout.Left + column * G8_VierGewinntLayout.Cell + 20,
+                    G8_VierGewinntLayout.Left + column * G8_VierGewinntLayout.CellSize + 20,
                     G8_VierGewinntLayout.Top - 22,
                     14);
             }
 
             Rectangle board = new Rectangle
             {
-                Width = G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.Cell,
-                Height = G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.Cell,
+                Width = G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.CellSize,
+                Height = G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.CellSize,
                 Fill = Brushes.Black,
                 Stroke = Brushes.DimGray,
                 StrokeThickness = 2
@@ -244,14 +281,14 @@ namespace OOPGames
             {
                 for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
                 {
-                    int player = field[row, column];
+                    int player = _displayedCells[row, column];
                     Brush fill = player == 1 ? PlayerOneBrush
                         : player == 2 ? PlayerTwoBrush
                         : Brushes.DimGray;
                     Brush outline = player == 1 ? Brushes.Navy
                         : player == 2 ? Brushes.DeepPink
                         : Brushes.Gray;
-                    double diameter = G8_VierGewinntLayout.Cell - 10;
+                    double diameter = G8_VierGewinntLayout.CellSize - 10;
 
                     Ellipse disc = new Ellipse
                     {
@@ -262,20 +299,17 @@ namespace OOPGames
                         StrokeThickness = 2
                     };
                     Canvas.SetLeft(disc, G8_VierGewinntLayout.Left
-                        + column * G8_VierGewinntLayout.Cell + 5);
+                        + column * G8_VierGewinntLayout.CellSize + 5);
                     Canvas.SetTop(disc, G8_VierGewinntLayout.Top
-                        + row * G8_VierGewinntLayout.Cell + 5);
+                        + row * G8_VierGewinntLayout.CellSize + 5);
                     canvas.Children.Add(disc);
                 }
             }
 
-            int winner = G8_VierGewinntLogic.Winner(field);
-            if (winner > 0)
-            {
-                AddText(canvas, "Spieler " + winner + " hat gewonnen!",
-                    G8_VierGewinntLayout.Left, 30, 14);
-            }
-            else if (G8_VierGewinntLogic.IsFull(field))
+            DrawActiveMove(canvas, now);
+            DrawWinnerCelebration(canvas, now);
+
+            if (winner <= 0 && G8_VierGewinntLogic.IsFull(field))
             {
                 AddText(canvas, "Unentschieden!",
                     G8_VierGewinntLayout.Left, 30, 14);
@@ -285,6 +319,278 @@ namespace OOPGames
         public void TickPaintGameField(Canvas canvas, IGameField currentField)
         {
             PaintGameField(canvas, currentField);
+        }
+
+        private void ObserveField(I4GWFeld field)
+        {
+            int[,] currentCells = CaptureField(field);
+            if (!_hasObservedField)
+            {
+                CopyField(currentCells, _displayedCells);
+                _lastObservedCells = currentCells;
+                _hasObservedField = true;
+                return;
+            }
+
+            List<AnimatedMove> newMoves = new List<AnimatedMove>();
+            bool requiresReset = false;
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    int previousValue = _lastObservedCells[row, column];
+                    int currentValue = currentCells[row, column];
+                    if (previousValue == currentValue)
+                    {
+                        continue;
+                    }
+
+                    if (previousValue == 0 && currentValue > 0)
+                    {
+                        newMoves.Add(new AnimatedMove(row, column, currentValue));
+                    }
+                    else
+                    {
+                        requiresReset = true;
+                    }
+                }
+            }
+
+            if (requiresReset)
+            {
+                _queuedMoves.Clear();
+                _activeMove = null;
+                CopyField(currentCells, _displayedCells);
+            }
+            else
+            {
+                foreach (AnimatedMove move in newMoves)
+                {
+                    _queuedMoves.Enqueue(move);
+                }
+            }
+
+            _lastObservedCells = currentCells;
+        }
+
+        private void AdvanceAnimations(DateTime now)
+        {
+            while (true)
+            {
+                if (_activeMove == null)
+                {
+                    if (_queuedMoves.Count == 0)
+                    {
+                        return;
+                    }
+
+                    _activeMove = _queuedMoves.Dequeue();
+                    _activeMove.StartedAt = now;
+                }
+
+                double elapsedMilliseconds = (now - _activeMove.StartedAt).TotalMilliseconds;
+                if (elapsedMilliseconds < DropMilliseconds)
+                {
+                    return;
+                }
+
+                _displayedCells[_activeMove.Row, _activeMove.Column] = _activeMove.PlayerNumber;
+                _activeMove = null;
+            }
+        }
+
+        private void DrawActiveMove(Canvas canvas, DateTime now)
+        {
+            if (_activeMove == null)
+            {
+                return;
+            }
+
+            double elapsedMilliseconds = (now - _activeMove.StartedAt).TotalMilliseconds;
+            double progress = Math.Min(1, elapsedMilliseconds / DropMilliseconds);
+            double diameter = G8_VierGewinntLayout.CellSize - 10;
+            double startTop = G8_VierGewinntLayout.Top - diameter;
+            double destinationTop = G8_VierGewinntLayout.Top
+                + _activeMove.Row * G8_VierGewinntLayout.CellSize + 5;
+            Ellipse fallingDisc = new Ellipse
+            {
+                Width = diameter,
+                Height = diameter,
+                Fill = _activeMove.PlayerNumber == 1 ? PlayerOneBrush : PlayerTwoBrush,
+                Stroke = _activeMove.PlayerNumber == 1 ? Brushes.Navy : Brushes.DeepPink,
+                StrokeThickness = 2,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(fallingDisc, G8_VierGewinntLayout.Left
+                + _activeMove.Column * G8_VierGewinntLayout.CellSize + 5);
+            Canvas.SetTop(fallingDisc, startTop + (destinationTop - startTop) * progress);
+            canvas.Children.Add(fallingDisc);
+        }
+
+        private void UpdateCelebration(int winner, DateTime now)
+        {
+            if (winner <= 0)
+            {
+                _celebrationWinner = 0;
+                _confetti.Clear();
+                return;
+            }
+
+            if (_activeMove != null || _queuedMoves.Count > 0 || _celebrationWinner == winner)
+            {
+                return;
+            }
+
+            _celebrationWinner = winner;
+            _celebrationStartedAt = now;
+            _confetti.Clear();
+
+            double centerX = G8_VierGewinntLayout.Left
+                + G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.CellSize / 2.0;
+            double centerY = G8_VierGewinntLayout.Top
+                + G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.CellSize / 2.0;
+            for (int i = 0; i < ConfettiCount; i++)
+            {
+                double angle = _random.NextDouble() * Math.PI * 2;
+                double speed = 70 + _random.NextDouble() * 210;
+                _confetti.Add(new ConfettiPiece(
+                    centerX,
+                    centerY,
+                    Math.Cos(angle) * speed,
+                    Math.Sin(angle) * speed - 70,
+                    180 + _random.NextDouble() * 100,
+                    5 + _random.NextDouble() * 7,
+                    ConfettiColors[_random.Next(ConfettiColors.Length)],
+                    _random.NextDouble() * 360));
+            }
+        }
+
+        private void DrawWinnerCelebration(Canvas canvas, DateTime now)
+        {
+            if (_celebrationWinner <= 0)
+            {
+                return;
+            }
+
+            double elapsedSeconds = (now - _celebrationStartedAt).TotalSeconds;
+            if (elapsedSeconds < 0 || elapsedSeconds >= CelebrationMilliseconds / 1000)
+            {
+                return;
+            }
+
+            double progress = elapsedSeconds / (CelebrationMilliseconds / 1000);
+            foreach (ConfettiPiece piece in _confetti)
+            {
+                double x = piece.OriginX + piece.VelocityX * elapsedSeconds;
+                double y = piece.OriginY + piece.VelocityY * elapsedSeconds
+                    + 0.5 * piece.Gravity * elapsedSeconds * elapsedSeconds;
+                double size = piece.Size;
+                byte alpha = (byte)(255 * Math.Max(0, 1 - progress * 0.45));
+                Rectangle confetti = new Rectangle
+                {
+                    Width = size,
+                    Height = size * 0.65,
+                    Fill = new SolidColorBrush(Color.FromArgb(alpha,
+                        piece.Color.R, piece.Color.G, piece.Color.B)),
+                    IsHitTestVisible = false,
+                    RenderTransform = new RotateTransform(
+                        piece.InitialRotation + elapsedSeconds * 300, size / 2, size / 2)
+                };
+                Canvas.SetLeft(confetti, x);
+                Canvas.SetTop(confetti, y);
+                canvas.Children.Add(confetti);
+            }
+
+            TextBlock winnerText = new TextBlock
+            {
+                Text = "Spieler " + _celebrationWinner + " hat gewonnen!",
+                Width = G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.CellSize - 20,
+                FontSize = 30,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.Gold,
+                Background = new SolidColorBrush(Color.FromArgb(220, 20, 20, 20)),
+                Padding = new Thickness(8),
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(winnerText, G8_VierGewinntLayout.Left + 10);
+            Canvas.SetTop(winnerText,
+                G8_VierGewinntLayout.Top
+                + G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.CellSize / 2.0 - 35);
+            canvas.Children.Add(winnerText);
+        }
+
+        private static int[,] CaptureField(I4GWFeld field)
+        {
+            int[,] cells = new int[G8_VierGewinntLogic.Rows, G8_VierGewinntLogic.Columns];
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    cells[row, column] = field[row, column];
+                }
+            }
+
+            return cells;
+        }
+
+        private static void CopyField(int[,] source, int[,] destination)
+        {
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    destination[row, column] = source[row, column];
+                }
+            }
+        }
+
+        private sealed class AnimatedMove
+        {
+            internal AnimatedMove(int row, int column, int playerNumber)
+            {
+                Row = row;
+                Column = column;
+                PlayerNumber = playerNumber;
+            }
+
+            internal int Row { get; private set; }
+            internal int Column { get; private set; }
+            internal int PlayerNumber { get; private set; }
+            internal DateTime StartedAt { get; set; }
+        }
+
+        private sealed class ConfettiPiece
+        {
+            internal ConfettiPiece(
+                double originX,
+                double originY,
+                double velocityX,
+                double velocityY,
+                double gravity,
+                double size,
+                Color color,
+                double initialRotation)
+            {
+                OriginX = originX;
+                OriginY = originY;
+                VelocityX = velocityX;
+                VelocityY = velocityY;
+                Gravity = gravity;
+                Size = size;
+                Color = color;
+                InitialRotation = initialRotation;
+            }
+
+            internal double OriginX { get; private set; }
+            internal double OriginY { get; private set; }
+            internal double VelocityX { get; private set; }
+            internal double VelocityY { get; private set; }
+            internal double Gravity { get; private set; }
+            internal double Size { get; private set; }
+            internal Color Color { get; private set; }
+            internal double InitialRotation { get; private set; }
         }
 
         private static void AddText(Canvas canvas, string text, double left, double top, double fontSize)
@@ -329,7 +635,8 @@ namespace OOPGames
         {
             I4GWFeld connectFourField = field as I4GWFeld;
             if (connectFourField == null || _playerNumber < 1 || _playerNumber > 2
-                || G8_VierGewinntLogic.Winner(connectFourField) > 0)
+                || G8_VierGewinntLogic.Winner(connectFourField) > 0
+                || G8_VierGewinntLogic.IsFull(connectFourField))
             {
                 return null;
             }
@@ -338,7 +645,11 @@ namespace OOPGames
             IClickSelection click = selection as IClickSelection;
             if (click != null)
             {
-                column = G8_VierGewinntLayout.ColumnAt(click.XClickPos, click.YClickPos);
+                IConnectFourPainter painter =
+                    OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter;
+                column = painter != null
+                    ? painter.ColumnAt(click.XClickPos, click.YClickPos)
+                    : G8_VierGewinntLayout.ColumnAt(click.XClickPos, click.YClickPos);
             }
             else
             {
@@ -371,6 +682,13 @@ namespace OOPGames
 
     public sealed class G8_VierGewinntComputerPlayer : IComputerGamePlayer
     {
+        private const int SearchDepth = 6;
+        private const int WinScore = 100000;
+        private static readonly int[] PreferredColumns = { 3, 2, 4, 1, 5, 0, 6 };
+        private static readonly int[,] Directions =
+        {
+            { 0, 1 }, { 1, 0 }, { 1, 1 }, { 1, -1 }
+        };
         private int _playerNumber;
 
         public string Name { get { return "Gruppe 8 Vier Gewinnt Computer Player"; } }
@@ -402,61 +720,293 @@ namespace OOPGames
                 return null;
             }
 
-            int opponent = _playerNumber == 1 ? 2 : 1;
-            int[] preferredColumns = { 3, 2, 4, 1, 5, 0, 6 };
+            WaitForComputerMove();
 
-            foreach (int column in preferredColumns)
+            int[,] board = CopyField(connectFourField);
+            int bestScore = int.MinValue;
+            int bestColumn = -1;
+            int equallyGoodMoves = 0;
+            foreach (int column in PreferredColumns)
             {
-                if (WinsAfterDrop(connectFourField, column, _playerNumber))
+                int row = FreeRow(board, column);
+                if (row < 0)
                 {
-                    return CreateMove(connectFourField, column);
+                    continue;
+                }
+
+                board[row, column] = _playerNumber;
+                int score = Search(board, SearchDepth - 1, OpponentOf(_playerNumber),
+                    int.MinValue, int.MaxValue);
+                board[row, column] = 0;
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestColumn = column;
+                    equallyGoodMoves = 1;
+                }
+                else if (score == bestScore)
+                {
+                    equallyGoodMoves++;
+                    if (Random.Shared.Next(equallyGoodMoves) == 0)
+                    {
+                        bestColumn = column;
+                    }
                 }
             }
 
-            foreach (int column in preferredColumns)
-            {
-                if (WinsAfterDrop(connectFourField, column, opponent))
-                {
-                    return CreateMove(connectFourField, column);
-                }
-            }
-
-            foreach (int column in preferredColumns)
-            {
-                if (G8_VierGewinntLogic.FreeRow(connectFourField, column) >= 0)
-                {
-                    return CreateMove(connectFourField, column);
-                }
-            }
-
-            return null;
+            return bestColumn < 0
+                ? null
+                : (IPlayMove)new G8_VierGewinntMove(
+                    G8_VierGewinntLogic.FreeRow(connectFourField, bestColumn),
+                    bestColumn,
+                    _playerNumber);
         }
 
-        private G8_VierGewinntMove CreateMove(I4GWFeld field, int column)
+        private int Search(int[,] board, int depth, int currentPlayer, int alpha, int beta)
         {
-            return new G8_VierGewinntMove(
-                G8_VierGewinntLogic.FreeRow(field, column), column, _playerNumber);
-        }
-
-        private static bool WinsAfterDrop(I4GWFeld field, int column, int player)
-        {
-            int row = G8_VierGewinntLogic.FreeRow(field, column);
-            if (row < 0)
+            int winner = Winner(board);
+            if (winner == _playerNumber)
             {
-                return false;
+                return WinScore + depth;
             }
 
-            G8_VierGewinntField copy = new G8_VierGewinntField();
-            for (int currentRow = 0; currentRow < G8_VierGewinntLogic.Rows; currentRow++)
+            if (winner == OpponentOf(_playerNumber))
             {
-                for (int currentColumn = 0; currentColumn < G8_VierGewinntLogic.Columns; currentColumn++)
+                return -WinScore - depth;
+            }
+
+            if (depth == 0 || IsFull(board))
+            {
+                return Evaluate(board);
+            }
+
+            bool maximizing = currentPlayer == _playerNumber;
+            int bestScore = maximizing ? int.MinValue : int.MaxValue;
+            foreach (int column in PreferredColumns)
+            {
+                int row = FreeRow(board, column);
+                if (row < 0)
                 {
-                    copy[currentRow, currentColumn] = field[currentRow, currentColumn];
+                    continue;
+                }
+
+                board[row, column] = currentPlayer;
+                int score = Search(board, depth - 1, OpponentOf(currentPlayer), alpha, beta);
+                board[row, column] = 0;
+
+                if (maximizing)
+                {
+                    bestScore = Math.Max(bestScore, score);
+                    alpha = Math.Max(alpha, bestScore);
+                }
+                else
+                {
+                    bestScore = Math.Min(bestScore, score);
+                    beta = Math.Min(beta, bestScore);
+                }
+
+                if (beta <= alpha)
+                {
+                    break;
                 }
             }
 
-            copy[row, column] = player;
-            return G8_VierGewinntLogic.Winner(copy) == player;
+            return bestScore;
         }
+
+        private int Evaluate(int[,] board)
+        {
+            int score = 0;
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    int player = board[row, column];
+                    int centerValue = 3 - Math.Abs(3 - column);
+                    if (player == _playerNumber)
+                    {
+                        score += centerValue * 4;
+                    }
+                    else if (player == OpponentOf(_playerNumber))
+                    {
+                        score -= centerValue * 4;
+                    }
+                }
+            }
+
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        int rowStep = Directions[direction, 0];
+                        int columnStep = Directions[direction, 1];
+                        int endRow = row + 3 * rowStep;
+                        int endColumn = column + 3 * columnStep;
+                        if (!IsInside(endRow, endColumn))
+                        {
+                            continue;
+                        }
+
+                        int ownPieces = 0;
+                        int opponentPieces = 0;
+                        for (int offset = 0; offset < 4; offset++)
+                        {
+                            int player = board[row + offset * rowStep, column + offset * columnStep];
+                            if (player == _playerNumber)
+                            {
+                                ownPieces++;
+                            }
+                            else if (player == OpponentOf(_playerNumber))
+                            {
+                                opponentPieces++;
+                            }
+                        }
+
+                        if (opponentPieces == 0)
+                        {
+                            score += WindowValue(ownPieces);
+                        }
+                        else if (ownPieces == 0)
+                        {
+                            score -= WindowValue(opponentPieces) * 2;
+                        }
+                    }
+                }
+            }
+
+            return score;
+        }
+
+        private static int WindowValue(int pieces)
+        {
+            switch (pieces)
+            {
+                case 1:
+                    return 2;
+                case 2:
+                    return 12;
+                case 3:
+                    return 80;
+                default:
+                    return 0;
+            }
+        }
+
+        private static int[,] CopyField(I4GWFeld field)
+        {
+            int[,] board = new int[G8_VierGewinntLogic.Rows, G8_VierGewinntLogic.Columns];
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    board[row, column] = field[row, column];
+                }
+            }
+
+            return board;
+        }
+
+        private static int FreeRow(int[,] board, int column)
+        {
+            for (int row = G8_VierGewinntLogic.Rows - 1; row >= 0; row--)
+            {
+                if (board[row, column] == 0)
+                {
+                    return row;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool IsFull(int[,] board)
+        {
+            for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+            {
+                if (FreeRow(board, column) >= 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static int Winner(int[,] board)
+        {
+            for (int row = 0; row < G8_VierGewinntLogic.Rows; row++)
+            {
+                for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
+                {
+                    int player = board[row, column];
+                    if (player == 0)
+                    {
+                        continue;
+                    }
+
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        int rowStep = Directions[direction, 0];
+                        int columnStep = Directions[direction, 1];
+                        int endRow = row + 3 * rowStep;
+                        int endColumn = column + 3 * columnStep;
+                        if (!IsInside(endRow, endColumn))
+                        {
+                            continue;
+                        }
+
+                        if (board[row + rowStep, column + columnStep] == player
+                            && board[row + 2 * rowStep, column + 2 * columnStep] == player
+                            && board[endRow, endColumn] == player)
+                        {
+                            return player;
+                        }
+                    }
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool IsInside(int row, int column)
+        {
+            return row >= 0 && row < G8_VierGewinntLogic.Rows
+                && column >= 0 && column < G8_VierGewinntLogic.Columns;
+        }
+
+        private static int OpponentOf(int player)
+        {
+            return player == 1 ? 2 : 1;
+        }
+
+        private static void WaitForComputerMove()
+        {
+            Application application = Application.Current;
+            Dispatcher dispatcher = application == null ? null : application.Dispatcher;
+            if (dispatcher == null || !dispatcher.CheckAccess())
+            {
+                Thread.Sleep(500);
+                return;
+            }
+
+            DispatcherFrame frame = new DispatcherFrame();
+            DispatcherTimer timer = new DispatcherTimer(DispatcherPriority.Background, dispatcher);
+            timer.Interval = TimeSpan.FromMilliseconds(500);
+            EventHandler onTimerTick = null;
+            onTimerTick = delegate
+            {
+                timer.Stop();
+                timer.Tick -= onTimerTick;
+                frame.Continue = false;
+            };
+            timer.Tick += onTimerTick;
+            timer.Start();
+
+            Dispatcher.PushFrame(frame);
+        }
+
     }
 }

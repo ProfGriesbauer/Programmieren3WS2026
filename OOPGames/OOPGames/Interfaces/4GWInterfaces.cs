@@ -12,4 +12,10 @@ namespace OOPGames
     public interface I4GWMove : IRowMove, IColumnMove
     {
     }
+
+    // Von Vier-Gewinnt-Paintern implementieren, damit Klicks passend zum Brettlayout einer Spalte zugeordnet werden.
+    public interface IConnectFourPainter : IPaintGame
+    {
+        int ColumnAt(int x, int y);
+    }
 }
