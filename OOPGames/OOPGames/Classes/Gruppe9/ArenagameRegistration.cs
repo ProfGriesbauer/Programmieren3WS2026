@@ -16,9 +16,9 @@ namespace OOPGames
         [ModuleInitializer]
         internal static void RegisterArenaGame()
         {
-            OOPGamesManager.Singleton.RegisterPainter(new ArenaPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new PainterG9());
             OOPGamesManager.Singleton.RegisterRules(new ArenaRules());
-            OOPGamesManager.Singleton.RegisterPlayer(new ArenaPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new HumanPlayerSteering());
         }
     }
 }

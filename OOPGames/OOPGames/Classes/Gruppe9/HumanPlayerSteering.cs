@@ -10,7 +10,7 @@ using System.Windows.Shapes;
 namespace OOPGames
 {
    // Receives keyboard input from the host window and applies it to the arena field.
-    public sealed class ArenaPlayer : IHumanGamePlayer
+    public sealed class HumanPlayerSteering : IHumanGamePlayer
     {
         private int _playerNumber;
 
@@ -32,7 +32,7 @@ namespace OOPGames
         public IGamePlayer Clone()
         {
             // The framework creates a separate player instance when starting a game.
-            ArenaPlayer clone = new ArenaPlayer();
+            HumanPlayerSteering clone = new HumanPlayerSteering();
             clone.SetPlayerNumber(_playerNumber);
             return clone;
         }
