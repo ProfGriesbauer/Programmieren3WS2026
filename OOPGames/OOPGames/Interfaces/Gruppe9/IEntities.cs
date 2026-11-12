@@ -5,12 +5,14 @@ namespace OOPGames
 {
     public interface IEntities
     {
-        int HitPoints { get; set; }
-        double X { get; set; }
-        double Y { get; set; }
+        int MaxHitPoints { get; set; }
+        int CurrentHitPoints { get; set; }
+        double MaxSpeed { get; set; }
+        double currentSpeed { get; set; }
+        double PositionX { get; set; }
+        double PositionY { get; set; }
         PlayerFacing Facing { get; set; }
         bool IsMoving { get; }
-        double Speed { get; set; }
         double Size { get; }
         Brush Color { get; }
         bool IsAlive { get; }

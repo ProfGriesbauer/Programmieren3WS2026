@@ -1,15 +1,5 @@
-//P06.11.2026
-using System;
-using System.Runtime.CompilerServices;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Shapes;
-
 namespace OOPGames
 {
-   // Receives keyboard input from the host window and applies it to the arena field.
     public sealed class HumanPlayerSteering : IHumanGamePlayer
     {
         private int _playerNumber;
@@ -39,9 +29,8 @@ namespace OOPGames
 
         public IPlayMove GetMove(IMoveSelection selection, IGameField field)
         {
-            // The framework packages keyboard input and the active field into this call.
-           // Null prevents the host's turn-based logic from switching players.
            return null;
         }
+
     }
 }
