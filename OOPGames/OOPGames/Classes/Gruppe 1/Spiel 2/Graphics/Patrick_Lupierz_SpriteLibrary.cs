@@ -46,7 +46,9 @@ namespace OOPGames
             }
 
             // Erweiterung durch Denis Mock: Stadt- und Hausgrafiken bleiben zentral austauschbar.
-            bitmap = LoadFromFile(id) ?? G1C_BuiltInSprites.Create(id) ?? G1C_WorldSprites.Create(id) ?? CreateMissingSprite();
+            // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – NPC-Porträts und Aufgaben-Gegenstände
+            bitmap = LoadFromFile(id) ?? G1C_BuiltInSprites.Create(id) ?? G1C_WorldSprites.Create(id)
+                     ?? G1C_NpcSprites.Create(id, this) ?? CreateMissingSprite();
             _cache[id] = bitmap;
             return bitmap;
         }

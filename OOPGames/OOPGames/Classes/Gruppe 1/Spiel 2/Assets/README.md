@@ -32,3 +32,16 @@ Hohe Bilder (z.B. 90x135) ragen nach oben über ihre Kachel hinaus.
 
 **Weltobjekte:** `building_home`, `building_hospital`, `building_market`, `building_casino`,
 `obj_city_tree`, `obj_home_bed`, `obj_home_table`
+
+**NPC-Porträts** (Gesprächsfenster) – `portrait_<skin>_<ausdruck>`
+- skin: `dealer_red`, `dealer_green`, `dealer_blue`, `bartender`, `guest`
+- ausdruck: `neutral`, `happy`, `angry`, `sad`, `surprised`, `thoughtful`
+- Beispiel: `portrait_dealer_blue_angry.png` (Pokerprofi Max, wütend). Kopf und Oberkörper,
+  Seitenverhältnis 32:26 (z.B. 96x78 oder 128x104).
+- Eingebaut ist vorläufig eine vergrößerte Version des Front-Sprites `<skin>_down_0` mit eingezeichnetem
+  Gesichtsausdruck. **Noch benötigt:** 30 detaillierte Porträts (5 NPCs × 6 Ausdrücke), die Haare, Haut
+  und Kleidung der Figuren übernehmen (Rosa: schwarze Haare, rote Weste; Ben: braune Haare, grüne
+  Weste; Max: dunkelgraue Haare, blaue Weste; Toni: braune Haare, schwarze Weste; Lena: blonde Haare,
+  grünes Shirt).
+
+**Aufgaben-Gegenstände:** `item_glass`, `item_lost_chip`

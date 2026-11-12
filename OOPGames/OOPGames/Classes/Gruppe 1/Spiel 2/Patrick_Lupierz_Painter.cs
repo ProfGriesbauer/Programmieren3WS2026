@@ -20,6 +20,9 @@ namespace OOPGames
         private readonly G1C_Renderer _renderer;
         private readonly G1C_GameHUD _hud = new G1C_GameHUD();
         private readonly G1C_PlayerAnimation _animation = new G1C_PlayerAnimation();
+        // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Darstellung des NPC-Systems
+        private readonly G1C_ConversationView _conversationView = new G1C_ConversationView();
+        private readonly G1C_NpcOverlayView _npcOverlay = new G1C_NpcOverlayView();
 
         private BitmapSource _mapImage;
         private IG1C_WorldMap _mapImageSource;
@@ -58,6 +61,7 @@ namespace OOPGames
                 if (game.State == G1C_GameState.Dialogue) game.Dialogue.Draw(r, game.TickCount);
                 else if (game.State == G1C_GameState.Menu) game.Menu.Draw(r, game);
                 else if (game.State == G1C_GameState.Result) game.Result.Draw(r);
+                else if (game.State == G1C_GameState.Conversation) _conversationView.Draw(r, game.Npcs); // Änderung durch: Eduard Schoenfeld
             }
             else
             {
@@ -81,6 +85,10 @@ namespace OOPGames
                           (G1C_Renderer.ScreenHeight - G1C_GameHUD.Height - worldHeight) / 2;
             r.DrawBitmap(_mapImage, mapX, mapY, worldWidth, worldHeight);
 
+            // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Aufgaben-Gegenstände liegen unter den Figuren
+            bool inCasino = game.CurrentLocation == G1C_WorldLocation.Casino;
+            if (inCasino) _npcOverlay.DrawItems(r, game.Npcs, mapX, mapY, tileSize);
+
             // Objekte und Figuren nach ihrer Unterkante sortieren, damit Vordergrund richtig überdeckt
             List<KeyValuePair<double, System.Action>> drawables = new List<KeyValuePair<double, System.Action>>();
             foreach (G1C_WorldObject obj in world.Objects)
@@ -98,6 +106,13 @@ namespace OOPGames
             foreach (KeyValuePair<double, System.Action> d in drawables.OrderBy(d => d.Key))
             {
                 d.Value();
+            }
+
+            // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Sprechblasen und Aufgabenanzeige
+            if (inCasino)
+            {
+                _npcOverlay.DrawBubbles(r, game.Npcs, mapX, mapY, tileSize);
+                _npcOverlay.DrawTaskStatus(r, game.Npcs);
             }
         }
 

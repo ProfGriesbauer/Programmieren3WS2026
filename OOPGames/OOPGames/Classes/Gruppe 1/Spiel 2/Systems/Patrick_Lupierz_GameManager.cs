@@ -10,14 +10,15 @@ namespace OOPGames
     /// </summary>
     public class G1C_GameManager
     {
-        private const int BartenderGift = 500;
-        private const int BartenderLimit = 50;
+        // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Gratis-Chips des Barkeepers entfernt
+        // (Geld aus dem Nichts); stattdessen bezahlter Job über das NPC-System.
 
         private G1C_PlayerMovement _movement;
         private readonly G1C_InteractionManager _interactions;
         private readonly G1C_SceneTransitionManager _sceneTransitions;
         private readonly Random _random = new Random();
         private int _gameStartBalance;
+        private G1C_InteractionType _activeGameType; // Änderung durch: Eduard Schoenfeld – für NPC-Reaktionen
 
         public G1C_GameState State { get; private set; } = G1C_GameState.MainGame;
         public G1C_HomeWorld Home { get; } = new G1C_HomeWorld();
@@ -34,6 +35,9 @@ namespace OOPGames
         public int TickCount { get; private set; }
         public int GamesPlayed { get; private set; }
 
+        // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Charaktere, Gespräche, Aufgaben, Ruf
+        public G1C_NpcSystem Npcs { get; }
+
         // Änderung durch: Denis Mock – Ein neues Spiel startet im Zuhause.
         public G1C_GameManager()
         {
@@ -41,6 +45,7 @@ namespace OOPGames
             Player = new G1C_Player(Home.PlayerStartX, Home.PlayerStartY, G1C_Direction.Down);
             _movement = CreateMovement();
             _interactions = new G1C_InteractionManager(World);
+            Npcs = new G1C_NpcSystem(World, Money, _random); // Änderung durch: Eduard Schoenfeld
         }
 
         // Änderung durch: Denis Mock – Türhinweise richten sich nach der aktuell aktiven Welt.
@@ -61,8 +66,10 @@ namespace OOPGames
         {
             get
             {
+                // Änderung durch: Eduard Schoenfeld – Gespräche liegen über der Welt
                 return State == G1C_GameState.MainGame || State == G1C_GameState.Dialogue ||
-                       State == G1C_GameState.Menu || State == G1C_GameState.Result;
+                       State == G1C_GameState.Menu || State == G1C_GameState.Result ||
+                       State == G1C_GameState.Conversation;
             }
         }
 
@@ -92,6 +99,10 @@ namespace OOPGames
 
                 case G1C_GameState.Menu:
                     if (input.Kind == G1C_InputKind.Click || Menu.ShouldClose(input.Key)) State = G1C_GameState.MainGame;
+                    break;
+
+                case G1C_GameState.Conversation:
+                    HandleConversationInput(input);
                     break;
 
                 case G1C_GameState.Result:
@@ -145,11 +156,17 @@ namespace OOPGames
             if (target == null) return;
 
             target.OnInteract(Player);
+
+            // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026
+            // NPCs mit Charakterprofil (auch über ihren Tisch/Tresen) führen ein Gespräch mit Antwortoptionen.
+            if (Npcs.TryStartConversation(target))
+            {
+                State = G1C_GameState.Conversation;
+                return;
+            }
+
             switch (target.Interaction)
             {
-                case G1C_InteractionType.Bartender:
-                    TalkToBartender(target);
-                    break;
                 case G1C_InteractionType.Roulette:
                 case G1C_InteractionType.Blackjack:
                 case G1C_InteractionType.Poker:
@@ -163,21 +180,24 @@ namespace OOPGames
             }
         }
 
-        private void TalkToBartender(G1C_WorldObject bartender)
+        // Entwickler: Eduard Schoenfeld
+        // Aufgabe: Eingaben im Gespräch weiterleiten; nach dem Ende ggf. das gewählte Minispiel starten.
+        private void HandleConversationInput(G1C_InputEvent input)
         {
-            if (Money.Balance < BartenderLimit)
+            G1C_Conversation conversation = Npcs.Conversation;
+            if (input.Kind == G1C_InputKind.Key)
             {
-                Money.Deposit(BartenderGift);
-                OpenDialogue(bartender.Name, new[]
-                {
-                    "Oh, deine Taschen sind ja fast leer ...",
-                    "Hier, " + BartenderGift + " Chips aufs Haus. Viel Glück!"
-                }, null);
+                conversation.HandleKey(input.Key);
             }
             else
             {
-                OpenDialogue(bartender.Name, bartender.Lines, null);
+                conversation.Choose(G1C_ConversationView.OptionAt(input.X, input.Y, conversation.Options.Count));
             }
+
+            if (conversation.IsOpen) return;
+            G1C_InteractionType? game = conversation.TakeRequestedGame();
+            State = G1C_GameState.MainGame;
+            if (game.HasValue) StartMinigame(game.Value);
         }
 
         private void OpenDialogue(string speaker, string[] pages, Action onAccept)
@@ -191,6 +211,7 @@ namespace OOPGames
         private void StartMinigame(G1C_InteractionType type)
         {
             _gameStartBalance = Money.Balance;
+            _activeGameType = type; // Änderung durch: Eduard Schoenfeld
             switch (type)
             {
                 case G1C_InteractionType.Roulette:
@@ -215,6 +236,8 @@ namespace OOPGames
         private void EndMinigame()
         {
             Result.Show(ActiveGame.Name, _gameStartBalance, Money.Balance);
+            // Änderung durch: Eduard Schoenfeld – NPCs reagieren auf das tatsächliche Ergebnis
+            Npcs.OnMinigameFinished(_activeGameType, Money.Balance - _gameStartBalance);
             ActiveGame = null;
             GamesPlayed++;
             State = G1C_GameState.Result;
@@ -228,6 +251,12 @@ namespace OOPGames
             _movement.Update();
             if (State != G1C_GameState.MainGame) _movement.ClearQueue();
             if (ActiveGame != null) ActiveGame.Update();
+
+            // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – NPC-Stimmungen, Monologe, Aufgaben-Gegenstände
+            bool inCasino = CurrentLocation == G1C_WorldLocation.Casino;
+            bool exploring = State == G1C_GameState.MainGame;
+            Npcs.Update(TickCount, Player, inCasino, exploring);
+            if (inCasino && exploring && !Player.IsMoving) Npcs.TryCollectItem(Player.TileX, Player.TileY);
         }
     }
 }
