@@ -30,6 +30,8 @@ namespace OOPGames
 
         public MainWindow()
         {
+            ArenaGameRegistration.RegisterArenaGame();
+
             //REGISTER YOUR CLASSES HERE
             //Painters
             OOPGamesManager.Singleton.RegisterPainter(new X_TicTacToePaint());
