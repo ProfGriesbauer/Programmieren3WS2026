@@ -1,6 +1,6 @@
 # UML-Klassendiagramm: Spielfeld des 2D-Fabrikspiels
 
-Das Diagramm zeigt die Trennung zwischen Weltzustand, Regeln, Painter und Eingabe. `G5_KachelAnsicht` entfällt: Die interne Kachel implementiert direkt ein nur lesendes Interface. Der Spieler bekommt vom Framework nur Eingabe und Feld, daher stellt das Feld eine minimale Bildschirm-zu-Raster-Umrechnung bereit. Die gruppenspezifischen Interfaces sind mit dem Team abzustimmen.
+Das Diagramm zeigt den Ist-Stand und die offenen Erweiterungen. Durchgezogene Beziehungen gehören zur implementierten Spielfeldbasis; geplante Teamklassen und -layer sind mit `<<geplant>>` markiert. `G5_KachelAnsicht` entfällt: Die interne Kachel implementiert direkt ein nur lesendes Interface.
 
 ```mermaid
 classDiagram
@@ -41,7 +41,13 @@ classDiagram
         +Hoehe: int
         +TryGetKachelInfo(x, y, out info): bool
         +TryBildschirmZuRaster(x, y, out rasterX, out rasterY): bool
-        +RasterZuBildschirm(rasterX, rasterY): Punkt
+        +TryRasterZuBildschirm(x, y, out position): bool
+    }
+
+    class IG5_KartenansichtSteuerung {
+        <<interface>>
+        +Verschieben(deltaX, deltaY): void
+        +Zoomieren(faktor, fokusX, fokusY): void
     }
 
     class IG5_KachelInfo {
@@ -63,19 +69,19 @@ classDiagram
         -_breite: int
         -_hoehe: int
         -_kacheln: G5_Kachel[,]
-        -_gebaeudeBelegung: G5_PlatzierbaresObjekt[,]
-        -_laufbandBelegung: G5_PlatzierbaresObjekt[,]
-        -_stromnetz: G5_Stromnetz
         -_kartenansicht: G5_Kartenansicht
+        +G5_WeltSpielfeld(breite, hoehe)
         +IG5_WeltSpielfeld.Breite: int
         +IG5_WeltSpielfeld.Hoehe: int
         +IG5_WeltSpielfeld.TryGetKachelInfo(x, y, out info): bool
         +IG5_WeltSpielfeld.TryBildschirmZuRaster(x, y, out rasterX, out rasterY): bool
-        +IG5_WeltSpielfeld.RasterZuBildschirm(rasterX, rasterY): Punkt
+        +IG5_WeltSpielfeld.TryRasterZuBildschirm(x, y, out position): bool
         +IGameField.CanBePaintedBy(IPaintGame painter): bool
-        ~VerringereRohstoff(x, y, menge): bool
+        +IG5_KartenansichtSteuerung.Verschieben(deltaX, deltaY): void
+        +IG5_KartenansichtSteuerung.Zoomieren(faktor, fokusX, fokusY): void
+        ~TryReduceRohstoff(x, y, menge): bool
         ~VerschiebeAnsicht(dx, dy): void
-        ~AendereZoom(faktor, fokus): void
+        ~AendereZoom(faktor, fokusX, fokusY): void
     }
 
     class G5_Kachel {
@@ -88,20 +94,24 @@ classDiagram
     }
 
     class G5_WeltHumanPlayer {
+        <<geplant>>
         +GetMove(IMoveSelection, IGameField): IPlayMove
     }
 
     class G5_PlatzierbaresObjekt {
+        <<geplant>>
         <<abstract>>
         -_x: int
         -_y: int
     }
 
     class G5_Stromnetz {
+        <<geplant>>
         -_verbindungen: Sammlung~Verbindung~
     }
 
     class G5_WeltRules {
+        <<geplant>>
         -_feld: G5_WeltSpielfeld
         +CurrentField: IGameField
         +TickGameCall(): void
@@ -110,6 +120,7 @@ classDiagram
     }
 
     class G5_WeltPainter {
+        <<geplant>>
         +PaintGameField(Canvas canvas, IGameField field): void
         +PaintWeltField(Canvas, IG5_WeltSpielfeld): void
         +TickPaintGameField(Canvas, IGameField): void
@@ -120,8 +131,8 @@ classDiagram
         -_zoom: double
         -_verschiebungX: double
         -_verschiebungY: double
-        ~BildschirmZuRaster(x, y): Koordinate
-        ~RasterZuBildschirm(x, y): Koordinate
+        ~TryBildschirmZuRaster(x, y): bool
+        ~TryRasterZuBildschirm(x, y, out position): bool
     }
 
     class G5_Gelaendeart {
@@ -151,26 +162,30 @@ classDiagram
     IPaintGame <|-- IPaintGame2
     IGameField <|-- IG5_WeltSpielfeld
     IG5_WeltSpielfeld <|.. G5_WeltSpielfeld
+    IG5_KartenansichtSteuerung <|.. G5_WeltSpielfeld
     IG5_KachelInfo <|.. G5_Kachel
     IPaintGame2 <|-- IG5_WeltPainter
     IG5_WeltPainter <|.. G5_WeltPainter
     G5_WeltSpielfeld "1" *-- "1..*" G5_Kachel : enthält
-    G5_WeltSpielfeld "1" o-- "0..*" G5_PlatzierbaresObjekt : Gebäude-Layer
-    G5_WeltSpielfeld "1" o-- "0..*" G5_PlatzierbaresObjekt : Laufband-Layer
-    G5_WeltSpielfeld "1" *-- "1" G5_Stromnetz : Overlay
     G5_WeltSpielfeld "1" *-- "1" G5_Kartenansicht : gemeinsame Ansichtsberechnung
     G5_WeltSpielfeld ..> IG5_KachelInfo : gibt lesend zurück
     G5_WeltRules --> G5_WeltSpielfeld : verwaltet
-    G5_WeltPainter --> IG5_WeltSpielfeld : liest Feld und Zeichenkoordinaten
-    G5_WeltHumanPlayer --> IG5_WeltSpielfeld : erhält Feld und rechnet Klick um
+    G5_WeltSpielfeld ..> G5_PlatzierbaresObjekt : Belegung (offen)
+    G5_WeltSpielfeld ..> G5_Stromnetz : Overlay (offen)
+    G5_WeltPainter ..> IG5_WeltSpielfeld : liest Feld und Zeichenkoordinaten
+    G5_WeltPainter ..> IG5_KartenansichtSteuerung : steuert Ansicht
+    G5_WeltHumanPlayer ..> IG5_WeltSpielfeld : erhält Feld und rechnet Klick um
     G5_Kachel ..> G5_Gelaendeart : speichert
     G5_Kachel ..> G5_Rohstofftyp : speichert
 ```
 
 ## Hinweise zur Umsetzung
 
+- Implementiert: `G5_WeltSpielfeld`, `G5_Kachel`, `G5_Kartenansicht`, `IG5_WeltSpielfeld`, `IG5_KartenansichtSteuerung`, `IG5_KachelInfo` und `IG5_WeltPainter`.
+- Offen: Karteninitialisierung/Sicht-Radius durch die Rules, konkrete Rules, Spieler und Painter sowie Objekt-/Laufbandbelegung und Stromnetz-Overlay.
+- Die Implementierung nutzt aktuell 32 WPF-Layout-Einheiten pro Kachel und einen Zoomfaktor von 0,25 bis 4. Das Begrenzen der Ansicht am Canvas-Rand erfordert noch die sichtbare Canvas-Größe und die gewünschte Bedienung.
 - `IG5_WeltSpielfeld` zeigt nur Breite, Höhe, lesenden Kachelzugriff sowie Bildschirm-/Rasterumrechnung.
-- `RasterZuBildschirm` ist die entsprechende lesende Umrechnung für den Painter; Zoom und Verschiebung selbst bleiben privat und werden kontrolliert über die Rules geändert.
+- `TryRasterZuBildschirm` ist die entsprechende lesende Umrechnung für den Painter. `IG5_KartenansichtSteuerung` ist ein separates, schmales Befehlsinterface für Zoom und Verschiebung; es erweitert nicht den lesenden Spielfeldvertrag. Die konkrete Eingabeverdrahtung fehlt noch.
 - `G5_Kachel` ist intern und implementiert `IG5_KachelInfo`. Der Painter erhält nur das Interface und keine Arrays oder Setter; ein zusätzlicher Snapshot-Typ wäre unnötig.
 - Gelände/Hindernis, Rohstoffvorkommen, Gebäude, Laufbänder und Stromnetz sind getrennte Ebenen. Das Stromnetz wird als Overlay modelliert und überschreibt keine Geländedaten.
 - Der Rohstoff-Enum enthält die Typen aus `Anforderungen.md`; die erste Karte muss nicht alle Typen direkt verwenden.

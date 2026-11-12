@@ -4,7 +4,7 @@
 
 Das Spielfeld ist eine endliche, zweidimensionale Kachelkarte. Es speichert den Zustand der Welt, zeichnet ihn aber nicht selbst und entscheidet nicht eigenständig über Spielregeln. So bleiben Spielfeld, Painter und Rules austauschbar und die Framework-Grenzen werden eingehalten.
 
-Das Konzept orientiert sich am vorhandenen WPF-Framework OOPGames: Das Spielfeld implementiert `IGameField`; der Painter implementiert `IPaintGame` beziehungsweise bei laufender Aktualisierung `IPaintGame2`. Die Framework-Dateien und `MainWindow`-Dateien außerhalb des Registrierungsblocks bleiben unverändert. Die passenden gruppenspezifischen Spiel-Interfaces müssen vor der Implementierung mit dem Team und den Projektvorgaben abgeglichen werden.
+Das Konzept orientiert sich am vorhandenen WPF-Framework OOPGames: Das Spielfeld implementiert `IGameField`; der Painter implementiert `IPaintGame` beziehungsweise bei laufender Aktualisierung `IPaintGame2`. Die Framework-Dateien und `MainWindow`-Dateien außerhalb des Registrierungsblocks bleiben unverändert. Gruppenspezifische Verträge für teamübergreifende Komponenten müssen vor ihrer Verwendung mit dem Team und den Projektvorgaben abgeglichen werden.
 
 Das Klassendiagramm dazu liegt in [Tim_Eichert_Spielfeld_UML.md](./Tim_Eichert_Spielfeld_UML.md).
 
@@ -12,53 +12,63 @@ Das Klassendiagramm dazu liegt in [Tim_Eichert_Spielfeld_UML.md](./Tim_Eichert_S
 
 | Klasse | Aufgabe | Zuständigkeit |
 |---|---|---|
-| `G5_WeltSpielfeld` | Konkreter Weltzustand; hält Kartengröße, Kacheln und separate Belegungs-/Ansichtsdaten in privaten Feldern. Implementiert `IGameField` und `IG5_WeltSpielfeld`. | Tim |
+| `G5_WeltSpielfeld` | Implementierter Weltzustand; hält Kartengröße, Kacheln und die Kartenansicht in privaten Feldern. Implementiert `IGameField` und `IG5_WeltSpielfeld`. | Tim |
 | `G5_Kachel` | Interne Kachel-Repräsentation mit Gelände, optionalem Rohstoffvorkommen und Erkundungszustand. Implementiert `IG5_KachelInfo`, aber gibt keine Setter oder WPF-Zeichenlogik frei. | Tim |
 | `IG5_KachelInfo` | Schlanker Lesevertrag für Gelände, Rohstoff, Menge sowie erkundeten/aktuell sichtbaren Zustand. Gibt weder Arrays noch Setter frei. | Tim |
 | `IG5_WeltPainter` | Gruppenspezifisches Painter-Interface mit typisierten Zeichenmethoden; erweitert `IPaintGame2` für zeitbasierte Darstellung. | Abstimmung mit Team |
-| `G5_WeltPainter` | Zeichnet Kacheln und platzierte Objekte. Implementiert `IG5_WeltPainter`; die allgemeinen Framework-Methoden leiten auf die typisierten Methoden weiter. | Abstimmung mit Team; Darstellung gegebenenfalls Maxi |
-| `G5_Kartenansicht` | Hält Zoom und Verschiebung privat und rechnet zwischen Bildschirm- und Rasterkoordinaten um. Painter und Spieler verwenden denselben Zustand; der Spieler erhält nur die notwendige Umrechnung. | Tim/Painter gemeinsam |
-| `G5_WeltRules` | Besitzt das aktuelle Spielfeld und verarbeitet Aktionen: Abbauen, Platzieren, Entfernen, Bewegung, Sichtweite und zeitbasierte Simulation. Implementiert `IGameRules2`, wenn die vorhandenen Tick-Aufrufe genutzt werden. | Game-Logik; Abstimmung mit Maxi |
-| `G5_PlatzierbaresObjekt` | Interne Repräsentation belegbarer Weltobjekte. Der gemeinsame Vertrag mit den Gebäude- und Laufbandklassen wird mit Chris abgestimmt; er muss nicht Teil der Painter-Schnittstelle sein. | Vorab gemeinsam festlegen |
+| `G5_WeltPainter` | Konkrete Darstellung ist noch nicht implementiert. Die typisierte Schnittstelle `IG5_WeltPainter` ist vorbereitet; die Framework-Adapter und Zeichenlogik fehlen. | Maxi |
+| `G5_Kartenansicht` | Hält Zoom und Verschiebung privat und rechnet zwischen Bildschirm- und Rasterkoordinaten um. Die Leseumrechnung ist Teil von `IG5_WeltSpielfeld`; die separate `IG5_KartenansichtSteuerung` ist für Painter-Eingaben vorgesehen. | Tim/Painter gemeinsam |
+| `G5_WeltRules` | Noch nicht implementiert. Soll Feldaktionen, Sichtweite und zeitbasierte Simulation kontrollieren und das Spielfeld erzeugen. | Maxi |
+| `G5_PlatzierbaresObjekt` | Noch nicht implementiert. Der gemeinsame Vertrag mit Chris für Gebäude und Laufbänder muss vor einer Belegung im Feld abgestimmt werden. | Chris/Tim |
 
 Die Dateinamen richten sich nach den Projektvorgaben, zum Beispiel `Tim_Eichert_WeltSpielfeld.cs` und `Tim_Eichert_Kachel.cs`. Klassennamen behalten das Gruppenpräfix `G5_`.
+
+## Umsetzungsstand
+
+Implementiert sind die read-only Kachel-/Spielfeld-Interfaces, das leere Raster, Terrain-/Rohstoffdaten, Rohstoffabbau, Erkundungsstatus, Sichtbarkeit sowie Bildschirm-/Rasterumrechnung mit Zoom- und Verschiebeoperationen. Zoom und Verschieben sind über den getrennten Steuerungsvertrag `IG5_KartenansichtSteuerung` zugänglich, nicht über die lesende Spielfeldschnittstelle.
+
+Noch nicht implementiert sind der Kartenaufbau/Spawnpunkt, die Berechnung des Sicht-Radius, die Gebäude- und Laufbandbelegung, das Stromnetz-Overlay, der konkrete Painter, die Spieler-/Rules-Klassen und ihre Registrierung im erlaubten MainWindow-Block.
+
+Die Kartenansicht nutzt vorläufig 32 WPF-Layout-Einheiten pro Kachel und Zoomfaktor 0,25–4. Die Ansicht kann noch nicht an die Grenzen des Canvas geklemmt werden, da die sichtbare Canvas-Größe und die gewünschte UX mit Maxi abzustimmen sind.
 
 ## Schnittstellen und Sichtbarkeit
 
 Eine separate `G5_KachelAnsicht`-Snapshot-Klasse ist für den ersten Entwurf nicht nötig. Stattdessen implementiert die interne `G5_Kachel` ein schmales, nur lesendes Interface:
 
-- `IG5_WeltSpielfeld : IGameField` zeigt Kartenbreite/-höhe, `TryGetKachelInfo(x, y, out info)` sowie die zwei nötigen Lesetransformationen: Bildschirm- zu Rasterkoordinaten für Eingaben und Raster- zu Bildschirmkoordinaten fürs Zeichnen.
+- `IG5_WeltSpielfeld : IGameField` zeigt Kartenbreite/-höhe, `TryGetKachelInfo(x, y, out info)` sowie `TryBildschirmZuRaster(...)` und `TryRasterZuBildschirm(...)`.
 - `IG5_KachelInfo` zeigt nur Kacheldaten, die andere Komponenten benötigen, zum Beispiel Gelände, Rohstoff, Restmenge und Erkundungsstatus. Der Rückgabewert ist der Interface-Typ, nicht `G5_Kachel`.
-- Kachel-Arrays, Belegung und die `G5_Kartenansicht` bleiben intern. Es gibt keine öffentlichen Setter oder öffentlichen Array-Zugriffe.
+- `IG5_KartenansichtSteuerung` ist ein separater Befehlsvertrag mit nur `Verschieben(...)` und `Zoomieren(...)`. Der Painter kann ihn für Canvas-Eingaben verwenden; die Spielereingabe arbeitet weiterhin mit dem lesenden `IG5_WeltSpielfeld`.
+- Kachel-Array und `G5_Kartenansicht` bleiben intern. Es gibt keine öffentlichen Setter oder öffentlichen Array-Zugriffe. Belegungs- und Stromnetz-Layer sind erst nach Festlegung der Teamverträge einzubauen.
 - Platzieren und Abbauen laufen über die Rules; dafür nötige Änderungsmethoden am Spielfeld sind `internal` und kontrollieren die Änderung.
 
-Das Framework ruft beim menschlichen Spieler `GetMove(IMoveSelection selection, IGameField field)` auf. Der Spieler bekommt also weder den Painter noch dessen Kartenansicht. Er braucht aber die aktuelle Umrechnung eines Klicks in Rasterkoordinaten. Deshalb stellt `IG5_WeltSpielfeld` nur die nötigen Umrechnungsfunktionen bereit: `TryBildschirmZuRaster(...)` für den Spieler und `RasterZuBildschirm(...)` für den Painter. Das Ansichtsobjekt selbst bleibt verborgen. Änderungen an Zoom und Verschiebung laufen kontrolliert über die Rules; der Spieler kann sie nicht direkt setzen.
+Das Framework ruft beim menschlichen Spieler `GetMove(IMoveSelection selection, IGameField field)` auf. Der Spieler bekommt also weder den Painter noch das Ansichtsobjekt. Er braucht aber die aktuelle Umrechnung eines Klicks in Rasterkoordinaten. Deshalb stellt `IG5_WeltSpielfeld` nur die nötigen Umrechnungsfunktionen bereit: `TryBildschirmZuRaster(...)` für den Spieler und `TryRasterZuBildschirm(...)` für den Painter. Die Steuerbefehle liegen separat in `IG5_KartenansichtSteuerung`, damit die lesende Datenansicht keine Änderungsmethoden enthält.
 
-Das gruppenspezifische `IG5_WeltPainter : IPaintGame2` fehlt im bisherigen Entwurf und sollte ergänzt werden. Es bietet typisierte Zeichenmethoden mit `IG5_WeltSpielfeld`; `G5_WeltPainter` implementiert es. `CanBePaintedBy` prüft dann `painter is IG5_WeltPainter`, nicht den konkreten Painter-Typ.
+Das gruppenspezifische `IG5_WeltPainter : IPaintGame2` bietet typisierte Zeichenmethoden mit `IG5_WeltSpielfeld`; das Interface ist angelegt, die konkrete `G5_WeltPainter`-Implementierung fehlt noch. `CanBePaintedBy` prüft `painter is IG5_WeltPainter`, nicht den konkreten Painter-Typ.
 
 `CanBePaintedBy` ist aus Sicht des Felds benannt: „Kann dieses Feld von diesem Painter gezeichnet werden?“ Der Framework-Aufruf `CurrentField.CanBePaintedBy(_CurrentPainter)` bestätigt diese Richtung. Der Name ist nicht vertauscht und das Framework-Interface darf nicht geändert werden.
 
 Dass `G5_WeltSpielfeld` intern die Kartenansicht mitträgt, ist ein pragmatischer Kompromiss: Das Framework übergibt dem Spieler nur das Feld, keinen gemeinsamen Ansichts-/Spielkontext. Die Ansicht bleibt intern; falls später eine gemeinsame Kontext-/Injection-Lösung hinzukommt, kann sie aus dem Feld herausgezogen werden.
 
-Öffentlich ist nur, was ein anderer Baustein oder das Framework wirklich aufrufen muss. Die Spielfeldklasse kann Framework- und gruppenspezifische Mitglieder explizit implementieren. Get-only Properties eignen sich für einfache Werte; für Koordinatenabfragen passen Methoden wie `TryGetKachelInfo`. Damit sind Werte lesbar, aber nicht veränderbar.
+Öffentlich ist nur, was ein anderer Baustein oder das Framework wirklich aufrufen muss. Die Spielfeldklasse implementiert die Leseverträge explizit. Get-only Properties eignen sich für einfache Werte; für Koordinatenabfragen passen Methoden wie `TryGetKachelInfo`. Damit sind Werte lesbar, aber nicht veränderbar. Die separat gehaltene Steuerungsschnittstelle enthält nur notwendige Ansichtsaktionen.
 
 ### Datenaufteilung
 
 `G5_WeltSpielfeld` enthält intern beispielhaft:
 
 - private Felder `_breite`, `_hoehe`
-- private Arrays `_kacheln` und `_belegung`
+- privates Array `_kacheln`
 - private Ansichtsreferenz `_kartenansicht`
+- Rasterkoordinaten: `x` ist die Spalte und `y` die Zeile; intern wird mit `_kacheln[y, x]` indiziert
 - öffentliche get-only Properties `Breite` und `Hoehe` nur über die Leseschnittstelle
 - `TryGetKachelInfo(...)` für lesenden, geprüften Zugriff
 - `TryBildschirmZuRaster(...)` als lesende Eingabeumrechnung für den Spieler
-- `RasterZuBildschirm(...)` als lesende Zeichenumrechnung für den Painter
+- `TryRasterZuBildschirm(...)` als lesende Zeichenumrechnung für den Painter
 - interne kontrollierte Änderungsmethoden für die Rules
 - explizite Implementierung von `CanBePaintedBy(IPaintGame painter)`
 
-Die interne Klasse `G5_Kachel` enthält beispielhaft:
+Die interne Klasse `G5_Kachel` enthält:
 
-- `G5_Gelaendeart` (z. B. Gras, Wasser, Fels)
+- `G5_Gelaendeart` (`Begehbar` oder `Hindernis`)
 - optionalen `G5_Rohstofftyp` (z. B. Eisen, Kupfer, Kohle)
 - `RohstoffMenge` (0 bedeutet kein abbaubarer Vorrat)
 - `IstErkundet`
@@ -73,7 +83,7 @@ Gelände, Rohstoff und platzierte Objekte werden getrennt gespeichert. So kann e
 - Gelände/Hindernis und Rohstoff sind getrennte Informationen. So können normale begehbare Kacheln, Hindernisse (z. B. Felsen) und Rohstoffvorkommen unabhängig dargestellt und geprüft werden.
 - Der Rohstofftyp muss die dort genannten Vorkommen abbilden können: Holz, Eisen, Kupfer, Kohle, Kalkstein, Quarz, Schwefel, Uran, Wasser, Gas und Öl. In der ersten lauffähigen Karte können zunächst nur wenige davon vorkommen.
 - Für Sichtweite werden `IstErkundet` (bleibt nach dem Besuch erhalten) und `IstAktuellSichtbar` (liegt gerade im Sicht-Radius) getrennt behandelt. Die Rules berechnen den aktuellen Radius; der Painter liest beide Zustände.
-- Gebäude, Laufbänder und Stromnetz sollten keine einzige Belegungsmatrix teilen. Gebäude- und Laufbandbelegung müssen separat prüfbar sein; Strom kann als eigene Overlay-/Verbindungsebene über Kacheln dargestellt werden. Damit kann eine Leitung z. B. über Gelände oder Gebäude laufen, ohne die Bodenkachel zu überschreiben.
+- Gebäude, Laufbänder und Stromnetz sollten keine einzige Belegungsmatrix teilen. Gebäude- und Laufbandbelegung müssen separat prüfbar sein; Strom kann als eigene Overlay-/Verbindungsebene über Kacheln dargestellt werden. Das ist noch nicht implementiert, weil Chris' Objektvertrag und Maxis Strom-/Regellogik fehlen.
 - Zoom, Verschieben und Klick-Umrechnung gehören zur gemeinsamen Kartenansicht. Der Spieler fragt nur die Umrechnung ab; er erhält weder die Ansicht noch veränderbare Kamerawerte.
 
 ## Zusammenspiel der Komponenten
@@ -82,7 +92,7 @@ Gelände, Rohstoff und platzierte Objekte werden getrennt gespeichert. So kann e
 2. OOPGames prüft die Kompatibilität der Regeln und des Painters über die vorgesehenen Interfaces.
 3. `G5_WeltPainter` liest den Zustand aus dem Spielfeld und zeichnet ihn. Der Painter verändert keine Ressourcen und platziert keine Objekte.
 4. Die Eingabe wird in eine Spielaktion beziehungsweise einen Zug übersetzt. Die Rules prüfen, ob diese Aktion zulässig ist, und ändern erst dann den Weltzustand.
-5. Für zeitbasierte Abläufe aktualisiert `TickGameCall()` die Regeln; `TickPaintGameField()` zeichnet den aktuellen Stand. Der Spieler wandelt Klicks über `TryBildschirmZuRaster(...)` in Rasterkoordinaten um, der Painter verwendet `RasterZuBildschirm(...)` zum Zeichnen.
+5. Für zeitbasierte Abläufe aktualisiert `TickGameCall()` die Regeln; `TickPaintGameField()` zeichnet den aktuellen Stand. Der Spieler wandelt Klicks über `TryBildschirmZuRaster(...)` in Rasterkoordinaten um, der Painter verwendet `TryRasterZuBildschirm(...)` zum Zeichnen und kann Zoom/Verschiebung über den separaten Steuerungsvertrag anpassen.
 
 `IGameField` bietet im Framework nur die allgemeine Kompatibilitätsprüfung. Die benötigten Kartendaten werden über ein schmales gruppenspezifisches Interface bereitgestellt, statt den Painter von der konkreten Klasse abhängig zu machen. Dieses Interface gehört in den erlaubten Gruppenordner unter `Interfaces\gruppe 5` und sollte mit allen Teammitgliedern abgestimmt werden.
 

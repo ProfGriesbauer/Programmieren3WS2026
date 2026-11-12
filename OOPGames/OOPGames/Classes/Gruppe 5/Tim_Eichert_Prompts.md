@@ -150,3 +150,21 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > biite pull den aktuellen stand, füge meine änderungen in spielfeldkonzept prompts und das uml hi nzu und pushe das bitte
 
 - **Ergebnisvermerk:** Der aktuelle Remote-Stand wurde per Fast-Forward eingezogen. Die Anforderungen zu Ressourcen, Sichtweite und getrennten Gebäude-/Laufband-/Stromnetzebenen wurden in Spielfeldkonzept und UML übernommen; der Prompt ist in diesem Dokument protokolliert.
+
+### 2026-11-12, 10:31 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Setze das konzept nun um und sag bescheid was dir fehlt.
+
+- **Ergebnisvermerk:** Spielfeld- und Kachel-Interfaces, Kacheldatenmodell, Raster sowie Kartenkoordinaten-/Zoomlogik wurden umgesetzt. Für Zoom und Verschieben gibt es zusätzlich `IG5_KartenansichtSteuerung`, getrennt vom lesenden Spielfeldinterface. Konzept und UML wurden auf den tatsächlichen Code abgeglichen; der OOPGames-Build lief mit 0 Warnungen und 0 Fehlern. Noch offen sind die mit Chris abzustimmenden Objekt-/Laufbandverträge, Rules und Sicht-Radius, konkrete Painter-/Eingabeverdrahtung sowie Kartenlayout/Spawnpunkt.
+
+### 2026-11-12, 10:47 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> pushe miene datein
+
+- **Ergebnisvermerk:** Die Spielfeldimplementierung und die dazugehörigen Konzept-/UML-Dateien wurden geprüft und auf den Remote-Branch gepusht. Nicht zugehörige generierte `obj`-Dateien blieben außen vor. `MainWindow.xaml.cs` war unverändert und wurde nicht mitgepusht.
