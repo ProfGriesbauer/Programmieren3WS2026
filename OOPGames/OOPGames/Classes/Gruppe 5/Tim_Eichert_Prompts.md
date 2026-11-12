@@ -65,3 +65,30 @@
 > füge unter das raster bitte die spalten nummer hinzu und bei computer gegen computer spielen. Mache das so das man einstellen kann wie schnell die steine gesetzt werden, sodass nicht alles auf einmal auftaucht. Prüfe bitte welche kombinationen noch nicht kompatibel sind.
 
 - **Ergebnisvermerk:** Spaltennummern und ein Verzögerungsregler (0–1500 ms) wurden in der Gruppe-5-Spielfläche ergänzt; Computerzüge warten entsprechend der Einstellung. Geprüft: Gruppen 5/8/10 tauschen Felder und Züge zwischen Regeln und Paintern aus, Gruppe 3/FG ist wegen konkreter Klassenprüfungen nur mit den eigenen Rollen kompatibel. Die Mausgeometrien von Gruppe 5 und Gruppen 8/10 weichen voneinander ab; daher sind gruppenübergreifende Klickzüge trotz gemeinsamer Feld-/Zugtypen nicht zuverlässig.
+
+## 2026-11-05
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> erstelle für den gesamten code kommentare die erklären was in dem teil gerade passiert
+
+- **Ergebnisvermerk:** Die Spiel- und Suchlogik sowie Regeln, Darstellung, Eingabe und Computer-Spieler wurden mit erklärenden deutschen Kommentaren versehen.
+
+## 2026-11-05
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> ich habe das problem, wenn ich gegen den computer spiele, liest der glaube ich so schnell ein, dass wenn ich eine taste drücke macht er 2 kugeln da rein. löse das problem
+
+- **Ergebnisvermerk:** Wiederholte Tastaturereignisse beim Gedrückthalten einer Zahlentaste werden jetzt bis zum Loslassen ignoriert, sodass ein Tasten-Repeat nicht als weiterer Zug zählt.
+
+## 2026-11-05
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> ich habe immernoch das problenm, wenn ich eine taste kurz drücke, dass er einen zug macht, dann die ki einen zug macht und ich dann automatisch noch einen zug an der selben stelle mache.
+
+- **Ergebnisvermerk:** Zusätzlich zur Spielereingabe fängt das WPF-Preview-Keyboard-Event automatische Tastenwiederholungen vor dem `MainWindow`-Handler ab. Dadurch kann ein nach dem Computerzug eintreffendes Repeat-Ereignis keinen zweiten Spielzug mehr auslösen.

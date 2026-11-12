@@ -41,6 +41,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_SubwayPainter());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new G1_VierGewinntPaint());
             //Rules
             OOPGamesManager.Singleton.RegisterRules(new X_TicTacToeRules());
             OOPGamesManager.Singleton.RegisterRules(new G10_VierGewinntRules());
@@ -51,6 +52,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_SubwayRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
+            OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
             //Players
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeComputerPlayer());
@@ -69,6 +71,8 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWComputerPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntComputerPlayer());
 
             InitializeComponent();
             PaintList.ItemsSource = OOPGamesManager.Singleton.Painters;
