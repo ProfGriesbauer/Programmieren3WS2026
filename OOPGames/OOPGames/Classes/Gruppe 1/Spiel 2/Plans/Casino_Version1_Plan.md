@@ -41,4 +41,4 @@
 
 ## Erweiterung: Zuhause und Außenwelt
 
-Die aktuelle Version ergänzt die Casino-Innenwelt um ein Zuhause als Startszene und eine quadratische Stadtkarte. Das Casino bleibt das vorhandene Gebäude mit unveränderten Minispielen. Zuhause und Casino sind über Türfelder mit der Stadt verbunden; Krankenhaus und Supermarkt sind zunächst nicht betretbare Fassaden. Karten, Weltobjekte, Kollisionen und Übergänge sind getrennt modelliert und verwenden weiterhin die Framework-Eingaben, den 40-ms-Tick und den übergebenen Canvas.
+Die aktuelle Version ergänzt die Casino-Innenwelt um ein Zuhause als Startszene und eine quadratische 180x180-Stadtkarte mit scrollender Kamera. Straßen, Wege und Brücken überqueren einen gewundenen Fluss; eine Baum-/Wassergrenze schließt die Karte ab. Zuhause, Casino, Krankenhaus und Supermarkt besitzen Türübergänge, und Krankenhaus sowie Supermarkt haben möblierte Innenräume. Nicht kollidierende Enten, Fische, Katzen und Vögel beleben die Außenwelt. Karten, Weltobjekte, Kamera, Kollisionen, Tiere und Übergänge sind getrennt modelliert und verwenden weiterhin die Framework-Eingaben, den 40-ms-Tick und den übergebenen Canvas.

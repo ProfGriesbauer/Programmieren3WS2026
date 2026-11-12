@@ -16,6 +16,7 @@ namespace OOPGames
         private G1C_PlayerMovement _movement;
         private readonly G1C_InteractionManager _interactions;
         private readonly G1C_SceneTransitionManager _sceneTransitions;
+        private readonly G1C_ExteriorNpcRoamingSystem _exteriorNpcRoaming;
         private readonly Random _random = new Random();
         private int _gameStartBalance;
         private G1C_InteractionType _activeGameType; // Änderung durch: Eduard Schoenfeld – für NPC-Reaktionen
@@ -26,6 +27,8 @@ namespace OOPGames
         public G1C_CasinoWorld World { get; } = new G1C_CasinoWorld();
         public G1C_WorldLocation CurrentLocation { get { return _sceneTransitions.Location; } }
         public IG1C_WorldScene CurrentWorld { get { return _sceneTransitions.CurrentWorld; } }
+        public G1C_BuildingInteriorWorld Hospital { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.Hospital);
+        public G1C_BuildingInteriorWorld Market { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.Market);
         public G1C_Player Player { get; }
         public G1C_MoneyManager Money { get; } = new G1C_MoneyManager();
         public G1C_DialogueBox Dialogue { get; } = new G1C_DialogueBox();
@@ -41,11 +44,12 @@ namespace OOPGames
         // Änderung durch: Denis Mock – Ein neues Spiel startet im Zuhause.
         public G1C_GameManager()
         {
-            _sceneTransitions = new G1C_SceneTransitionManager(Home, Exterior, World);
+            _sceneTransitions = new G1C_SceneTransitionManager(Home, Exterior, World, Hospital, Market);
             Player = new G1C_Player(Home.PlayerStartX, Home.PlayerStartY, G1C_Direction.Down);
             _movement = CreateMovement();
             _interactions = new G1C_InteractionManager(World);
             Npcs = new G1C_NpcSystem(World, Money, _random); // Änderung durch: Eduard Schoenfeld
+            _exteriorNpcRoaming = new G1C_ExteriorNpcRoamingSystem(Exterior, Player, _random); // Erweiterung durch Denis Mock
         }
 
         // Änderung durch: Denis Mock – Türhinweise richten sich nach der aktuell aktiven Welt.
@@ -56,6 +60,11 @@ namespace OOPGames
                 if (State != G1C_GameState.MainGame) return "";
                 string transitionHint = _sceneTransitions.GetHint(Player);
                 if (!string.IsNullOrEmpty(transitionHint)) return transitionHint;
+                if (CurrentLocation == G1C_WorldLocation.Exterior)
+                {
+                    G1C_Npc npc = FindFacingExteriorNpc();
+                    return npc != null ? "[E] Mit " + npc.Name + " sprechen" : "";
+                }
                 return CurrentLocation == G1C_WorldLocation.Casino ? _interactions.GetHint(Player) : "";
             }
         }
@@ -77,6 +86,13 @@ namespace OOPGames
         private G1C_PlayerMovement CreateMovement()
         {
             return new G1C_PlayerMovement(Player, new G1C_CollisionManager(CurrentWorld));
+        }
+
+        // Entwickler: Denis Mock
+        private G1C_Npc FindFacingExteriorNpc()
+        {
+            if (Player.IsMoving || CurrentLocation != G1C_WorldLocation.Exterior) return null;
+            return CurrentWorld.ObjectAt(Player.FacingTileX, Player.FacingTileY) as G1C_Npc;
         }
 
         // ------------------------------------------------------------------ Eingaben
@@ -139,6 +155,7 @@ namespace OOPGames
         }
 
         // Änderung durch: Denis Mock – Türen wechseln die aktive Szene; Casinointeraktionen bleiben erhalten.
+        // Änderung durch Denis Mock: Stadtbewohner benutzen dasselbe Gesprächssystem wie Casino-NPCs.
         private void Interact()
         {
             if (Player.IsMoving) return;
@@ -147,6 +164,16 @@ namespace OOPGames
             {
                 _movement.ClearQueue();
                 _movement = CreateMovement();
+                return;
+            }
+
+            if (CurrentLocation == G1C_WorldLocation.Exterior)
+            {
+                G1C_Npc townNpc = FindFacingExteriorNpc();
+                if (townNpc == null) return;
+
+                townNpc.OnInteract(Player);
+                if (Npcs.TryStartConversation(townNpc)) State = G1C_GameState.Conversation;
                 return;
             }
 
@@ -245,6 +272,7 @@ namespace OOPGames
 
         // ------------------------------------------------------------------ Tick (alle 40 ms)
 
+        // Erweiterung durch Denis Mock: Außenwelt-NPCs laufen ausschließlich im Framework-Tick.
         public void Update()
         {
             TickCount++;
@@ -257,6 +285,11 @@ namespace OOPGames
             bool exploring = State == G1C_GameState.MainGame;
             Npcs.Update(TickCount, Player, inCasino, exploring);
             if (inCasino && exploring && !Player.IsMoving) Npcs.TryCollectItem(Player.TileX, Player.TileY);
+            if (CurrentLocation == G1C_WorldLocation.Exterior)
+            {
+                if (exploring) _exteriorNpcRoaming.Update(TickCount);
+                foreach (G1C_Animal animal in Exterior.Animals) animal.UpdateAnimation(TickCount);
+            }
         }
     }
 }

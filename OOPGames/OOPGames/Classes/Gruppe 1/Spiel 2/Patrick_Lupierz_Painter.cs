@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 
@@ -23,9 +24,10 @@ namespace OOPGames
         // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Darstellung des NPC-Systems
         private readonly G1C_ConversationView _conversationView = new G1C_ConversationView();
         private readonly G1C_NpcOverlayView _npcOverlay = new G1C_NpcOverlayView();
+        private readonly G1C_WorldCamera _camera = new G1C_WorldCamera();
 
-        private BitmapSource _mapImage;
-        private IG1C_WorldMap _mapImageSource;
+        private readonly Dictionary<IG1C_WorldMap, BitmapSource> _mapImages =
+            new Dictionary<IG1C_WorldMap, BitmapSource>();
 
         public G1C_CasinoPainter()
         {
@@ -71,19 +73,45 @@ namespace OOPGames
 
         // ------------------------------------------------------------------ Aktive Welt-Szene
 
-        // Änderung durch: Denis Mock – zeichnet die aktive Szene und zentriert auch quadratische Karten.
+        // Änderung durch Denis Mock: Außenwelt mit begrenztem Kameraausschnitt, andere Szenen weiterhin zentriert.
         private void DrawWorld(G1C_Renderer r, G1C_GameManager game)
         {
             IG1C_WorldScene world = game.CurrentWorld;
             IG1C_WorldMap map = world.Grid;
-            EnsureMapImage(map);
+            bool scrolling = game.CurrentLocation == G1C_WorldLocation.Exterior;
+            int mapPixelsPerTile = scrolling ? world.TileSize : MapPixelsPerTile;
+            BitmapSource mapImage = EnsureMapImage(map, mapPixelsPerTile);
             double tileSize = world.TileSize;
-            double worldWidth = map.Width * tileSize;
-            double worldHeight = map.Height * tileSize;
-            double mapX = (G1C_Renderer.ScreenWidth - worldWidth) / 2;
-            double mapY = G1C_GameHUD.Height +
-                          (G1C_Renderer.ScreenHeight - G1C_GameHUD.Height - worldHeight) / 2;
-            r.DrawBitmap(_mapImage, mapX, mapY, worldWidth, worldHeight);
+            double mapX;
+            double mapY;
+            double cameraPixelX = 0;
+            double cameraPixelY = 0;
+
+            if (scrolling)
+            {
+                double viewHeight = G1C_Renderer.ScreenHeight - G1C_GameHUD.Height;
+                _camera.Follow(game.Player, world, G1C_Renderer.ScreenWidth, viewHeight);
+                cameraPixelX = _camera.X * tileSize;
+                cameraPixelY = _camera.Y * tileSize;
+                int cropX = (int)System.Math.Floor(cameraPixelX);
+                int cropY = (int)System.Math.Floor(cameraPixelY);
+                int cropWidth = System.Math.Min((int)G1C_Renderer.ScreenWidth + 1, mapImage.PixelWidth - cropX);
+                int cropHeight = System.Math.Min((int)viewHeight + 1, mapImage.PixelHeight - cropY);
+                CroppedBitmap viewport = new CroppedBitmap(mapImage, new Int32Rect(cropX, cropY, cropWidth, cropHeight));
+                viewport.Freeze();
+                mapX = -(cameraPixelX - cropX);
+                mapY = G1C_GameHUD.Height - (cameraPixelY - cropY);
+                r.DrawBitmap(viewport, mapX, mapY, cropWidth, cropHeight);
+            }
+            else
+            {
+                double worldWidth = map.Width * tileSize;
+                double worldHeight = map.Height * tileSize;
+                mapX = (G1C_Renderer.ScreenWidth - worldWidth) / 2;
+                mapY = G1C_GameHUD.Height +
+                       (G1C_Renderer.ScreenHeight - G1C_GameHUD.Height - worldHeight) / 2;
+                r.DrawBitmap(mapImage, mapX, mapY, worldWidth, worldHeight);
+            }
 
             // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Aufgaben-Gegenstände liegen unter den Figuren
             bool inCasino = game.CurrentLocation == G1C_WorldLocation.Casino;
@@ -94,8 +122,12 @@ namespace OOPGames
             foreach (G1C_WorldObject obj in world.Objects)
             {
                 G1C_WorldObject o = obj;
-                drawables.Add(new KeyValuePair<double, System.Action>(o.Y + o.Height,
-                    () => DrawEntity(r, o.SpriteId, o.X, o.Y, o.Width, o.Height, tileSize, mapX, mapY)));
+                G1C_Npc npc = o as G1C_Npc;
+                double x = npc != null ? npc.VisualX : o.X;
+                double y = npc != null ? npc.VisualY : o.Y;
+                if (!IsEntityVisible(o, x, y, tileSize, mapX, mapY)) continue;
+                drawables.Add(new KeyValuePair<double, System.Action>(y + o.Height,
+                    () => DrawEntity(r, o.SpriteId, x, y, o.Width, o.Height, tileSize, mapX, mapY)));
             }
 
             G1C_Player player = game.Player;
@@ -129,21 +161,37 @@ namespace OOPGames
 
         // Entwickler: Denis Mock
         /// <summary>Setzt alle Bodenkacheln einmalig zu einem Bild zusammen (schneller als 240 Einzelbilder pro Tick).</summary>
-        private void EnsureMapImage(IG1C_WorldMap map)
+        private bool IsEntityVisible(G1C_WorldObject obj, double tileX, double tileY, double tileSize,
+                                     double mapX, double mapY)
         {
-            if (_mapImage != null && ReferenceEquals(_mapImageSource, map)) return;
+            double x = mapX + tileX * tileSize;
+            double width = obj.Width * tileSize;
+            double bottom = mapY + (tileY + obj.Height) * tileSize;
+            double height = width * _sprites.GetAspect(obj.SpriteId);
+            double top = bottom - height;
+            return x + width > 0 && x < G1C_Renderer.ScreenWidth &&
+                   bottom > G1C_GameHUD.Height && top < G1C_Renderer.ScreenHeight;
+        }
 
-            G1C_PixelCanvas canvas = new G1C_PixelCanvas(map.Width * MapPixelsPerTile, map.Height * MapPixelsPerTile);
+        // Entwickler: Denis Mock
+        /// <summary>Erstellt und speichert eine niedrig aufgel\u00f6ste Bodentextur pro Szene.</summary>
+        private BitmapSource EnsureMapImage(IG1C_WorldMap map, int pixelsPerTile)
+        {
+            BitmapSource image;
+            if (_mapImages.TryGetValue(map, out image)) return image;
+
+            G1C_PixelCanvas canvas = new G1C_PixelCanvas(map.Width * pixelsPerTile, map.Height * pixelsPerTile);
             for (int y = 0; y < map.Height; y++)
             {
                 for (int x = 0; x < map.Width; x++)
                 {
                     canvas.DrawBitmap(_sprites.Get(map.GetTileSpriteId(x, y)),
-                                      x * MapPixelsPerTile, y * MapPixelsPerTile, MapPixelsPerTile, MapPixelsPerTile);
+                                      x * pixelsPerTile, y * pixelsPerTile, pixelsPerTile, pixelsPerTile);
                 }
             }
-            _mapImage = canvas.ToBitmap();
-            _mapImageSource = map;
+            image = canvas.ToBitmap();
+            _mapImages.Add(map, image);
+            return image;
         }
     }
 }

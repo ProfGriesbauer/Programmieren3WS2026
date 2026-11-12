@@ -18,13 +18,14 @@ Der Spieler startet in seinem Zuhause und erkundet von dort eine quadratische St
 
 Das Casino enthält verschiedene Spielbereiche, NPCs und interaktive Spieltische. An diesen Tischen kann der Spieler unterschiedliche Casino-Spiele gegen KI-Gegner spielen.
 
-Das Spiel besteht aus drei verbundenen Bereichen:
+Das Spiel besteht aus verbundenen Bereichen:
 
 1. Das Zuhause als Start- und Rückkehrort.
-2. Die begehbare Stadt mit Casino, Krankenhaus, Supermarkt und weiteren erkennbaren Gebäuden.
+2. Die begehbare, 180x180 Kacheln große Stadt mit Casino, Krankenhaus, Supermarkt, weiteren Gebäuden, Fluss und Tierwelt.
 3. Das Casino-Innere mit interaktiven Minispielen, eigenständiger Spiellogik und KI-Gegnern.
+4. Ergänzende, eingerichtete Innenräume für Krankenhaus und Supermarkt.
 
-Nur Zuhause und Casino benötigen betretbare Innenräume. Weitere Gebäude dürfen zunächst als solide, nicht betretbare Fassaden dargestellt werden.
+Mindestens Zuhause und Casino benötigen betretbare Innenräume. Zusätzliche Gebäude dürfen als solide Fassaden oder mit klar abgegrenzten, eigenen Innenräumen umgesetzt werden.
 
 Das Spiel soll einen hochwertigen, zusammenhängenden Eindruck vermitteln und deutlich umfangreicher als ein einfacher Brettspielklon sein.
 
@@ -467,18 +468,30 @@ Die begehbare Spielwelt besteht aus dem Zuhause, einer quadratischen Außenwelt 
 ## 8.1 Außenwelt
 
 - Die Spielfigur startet im eigenen Zuhause und kann dieses betreten sowie verlassen.
-- Die Stadtkarte ist quadratisch, hat eine sichtbare geschlossene Außengrenze und ist an allen Kartenrändern nicht begehbar.
-- Straßen, Gassen und Wege bilden ein verbundenes Wegenetz zwischen Zuhause, Casino und Stadtbereichen.
+- Die Stadtkarte ist quadratisch und 180x180 Kacheln groß (100-fache Fläche der ursprünglichen 18x18-Karte).
+- Eine mit der Spielfigur scrollende Kamera zeigt nur einen viewportgroßen Ausschnitt, folgt flüssig und begrenzt sich an allen Kartenrändern.
+- Dichte Baumreihen und Wasser bilden eine sichtbare, geschlossene, nicht begehbare Außengrenze.
+- Straßen, Gassen, Parkwege und Brücken bilden ein verbundenes Wegenetz zwischen Zuhause, Casino und Stadtbereichen.
+- Ein gewundener Fluss mit begehbaren Ufern verläuft durch die Stadt; Brücken überqueren ihn an den Straßen und Fußwegen.
 - Mindestens Zuhause, Casino, Krankenhaus und Supermarkt müssen von außen erkennbar sein.
 - Gebäude, Mauern, Bäume und andere Hindernisse besitzen unabhängig von ihrer Grafik Kollisionen.
 - Zuhause und Casino sind betretbar und über eindeutige Türfelder wieder verlassbar.
-- Krankenhaus, Supermarkt und weitere Gebäude dürfen zunächst Fassaden ohne Innenraum sein. Ein weiterer Innenraum benötigt eine eigene Szene, Kollisionskarte und explizite Integration in die vorhandene Szenenverwaltung.
+- Krankenhaus und Supermarkt besitzen eingerichtete Innenräume mit eigenen Bodendaten, Möbelkollisionen und Türübergängen; weitere Gebäude dürfen solide Fassaden sein.
+- Enten und Fische befinden sich im oder am Wasser; Katzen und Vögel beleben Wege, Bäume und Plätze, ohne Kollisionen oder Interaktionen auszulösen.
+- Mindestens vier Stadt-NPCs sind über getrennte Bezirke der Außenwelt verteilt und bewegen sich eigenständig mit variierenden Pausen.
+- NPC-Laufwege bleiben auf begehbaren Kacheln innerhalb ihrer Bereiche, prüfen Gebäude, Dekoration, andere NPCs und den Spieler als Hindernisse und meiden Türfelder.
+- Die Stadt-NPCs sind über die Interaktionstaste ansprechbar und verwenden das vorhandene Gesprächssystem; Casino-NPC-Positionen und Casino-Interaktionen bleiben erhalten.
+- Weltkarte, Kamera, Darstellung, Kollisionen, Szenenwechsel und Tieranimation bleiben getrennt; die Karte wird effizient im niedrigen Pixelmaßstab zwischengespeichert.
 
 ## 8.2 Casino-Innenraum
 
 Das bestehende Casino bleibt als eigener Innenraum mit Eingangsbereich, Empfang, Roulette-, Poker-, Blackjack- und Spielautomatenbereichen, NPCs und Dekoration erhalten. Der Übergang aus der Stadt führt in diesen vorhandenen Innenraum; der Ausgang führt zurück an die Casino-Tür in der Außenwelt.
 
 Spieltische und Möbel müssen sinnvoll positioniert sein. Die Umgebung muss ausreichend Platz bieten und darf nicht wie ein einfacher leerer Raum wirken.
+
+## 8.3 Weitere Innenräume
+
+Krankenhaus und Supermarkt dürfen eigene kleine, ausgestattete Szenen erhalten. Jede Szene benötigt eine passende Bodentextur, eine geschlossene Außenwand, ein Ausgangsfeld, kollidierbare Einrichtung und einen eindeutigen Übergang zurück zur zugehörigen Außentür.
 
 ---
 
@@ -942,10 +955,12 @@ Die Implementierung soll in folgender Reihenfolge erfolgen.
 ## Phase 3: Zuhause, Außenwelt und Casino-Spielwelt
 
 - Begehbare Startszene im Zuhause erstellen.
-- Quadratische Außenkarte mit geschlossener Grenze, verbundenen Straßen und Gassen erstellen.
+- Quadratische 180x180 Außenkarte mit geschlossener Baum-/Wassergrenze, Fluss, Brücken und verbundenen Straßen erstellen.
+- Scrollende, begrenzte Kamera und sichtbaren Kartenausschnitt implementieren.
 - Casino, Krankenhaus, Supermarkt und weitere Stadtbereiche erkennbar darstellen.
-- Übergänge zwischen Zuhause, Stadt und vorhandenem Casino-Innenraum implementieren.
+- Übergänge zwischen Zuhause, Stadt, Casino und optionalen Gebäudeinnenräumen implementieren.
 - Begehbare Bereiche und Kollisionen für alle Szenen definieren.
+- Nicht kollidierende Tierdarstellung und tickbasierte Animation ergänzen.
 
 ## Phase 4: Spielfigur
 
@@ -955,6 +970,9 @@ Die Implementierung soll in folgender Reihenfolge erfolgen.
 - Laufanimationen integrieren.
 - Bewegung implementieren.
 - Kollisionen testen.
+- Kartengrenzen, Flussufer und Brücken testen.
+- Kamerafahrt und Randbegrenzung testen.
+- Tierdarstellung und zus\u00e4tzliche Innenraumübergänge testen.
 
 ## Phase 5: Grafiksystem
 

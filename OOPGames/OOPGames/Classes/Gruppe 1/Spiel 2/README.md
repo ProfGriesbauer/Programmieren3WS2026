@@ -2,7 +2,9 @@
 
 2D-Pixel-Art-Abenteuer im OOPGames-Framework. Die verbindlichen Entwicklungsregeln stehen in `Agents.md`.
 
-Das Spiel startet im Zuhause. Über die quadratische Stadtkarte mit geschlossener Außengrenze erreicht man das Casino. Krankenhaus und Supermarkt sind erkennbare, kollidierbare Gebäude; Zuhause und Casino besitzen betretbare Innenräume.
+Das Spiel startet im Zuhause. Die quadratische 180x180-Stadtkarte hat die 100-fache Fläche der ursprünglichen Karte und wird durch eine scrollende Kamera erkundet. Straßen und Parkwege verbinden die Stadtteile und Brücken überqueren den gewundenen Fluss. Eine dichte Baum-/Wassergrenze schließt die Welt ab.
+
+Zuhause, Casino, Krankenhaus und Supermarkt sind betretbar. Krankenhaus und Supermarkt besitzen eigene, möblierte Innenräume; weitere markante Gebäude sind von außen sichtbar und kollidierbar. Enten und Fische leben am Fluss, Katzen und Vögel beleben die Plätze und Wege. Vier Stadtbewohner patrouillieren in getrennten Bezirken und lassen sich mit **E** ansprechen. Casino-Gast Lena erscheint auch in der Stadt; Casino-NPCs und Minispiele bleiben erhalten.
 
 ## Starten
 
@@ -49,7 +51,8 @@ Außerhalb dieses Ordners wurden nur drei Registrierungszeilen im Block `//REGIS
 - `Painter.cs` – zeichnet die aktive Szene und Minispiele auf dem vom Framework übergebenen Canvas
 - `Framework/` – Rules, Field, Move, Player
 - `Systems/` – GameManager, GameState, MoneyManager, InputManager
-- `World/` – Stadt-, Haus- und Casinokarten, Objekte/NPCs, Kollision, Szenenübergänge
+- `World/` – Karten, Stadt-/Innenraumszenen, Kamera, Kollisionen und Übergänge
+- `NPC/` – Casino-Dialoge, Stadtbewohner-Patrouillen und nicht kollidierende Tierdarstellung
 - `Player/` – Spielfigur, Bewegung, Animation
 - `CasinoGames/` – Roulette, Blackjack, Poker, Slots, gemeinsame Basis, Karten
 - `AI/` – KI-Gegner (Roulette, Blackjack, Poker)

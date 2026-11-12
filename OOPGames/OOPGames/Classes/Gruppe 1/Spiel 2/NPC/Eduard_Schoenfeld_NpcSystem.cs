@@ -23,7 +23,9 @@ namespace OOPGames
             Money = money ?? throw new ArgumentNullException(nameof(money));
             Random = random ?? new Random();
 
+            // Erweiterung durch Denis Mock: Profile der Stadtbewohner im gemeinsamen Gesprächssystem.
             _characters = G1C_NpcRoster.CreateCasinoNpcs();
+            _characters.AddRange(G1C_CityNpcRoster.Create()); // Erweiterung durch Denis Mock: Gespräche mit Stadtbewohnern.
             foreach (G1C_WorldObject obj in casino.Objects)
             {
                 G1C_Npc npc = obj as G1C_Npc;
@@ -77,6 +79,7 @@ namespace OOPGames
 
         // Entwickler: Eduard Schoenfeld
         // Aufgabe: Gespräch mit dem NPC (oder dessen Tisch/Tresen) öffnen. False, wenn kein Profil existiert.
+        // Anpassung durch Denis Mock: Außenwelt-NPCs besitzen kein Casino-Sprechblasenobjekt.
         public bool TryStartConversation(G1C_WorldObject target)
         {
             G1C_NpcCharacter character = target != null ? Find(target.Name) : null;
@@ -85,7 +88,8 @@ namespace OOPGames
             G1C_InteractionType interaction = target.Interaction;
             bool offersGame = interaction == G1C_InteractionType.Roulette || interaction == G1C_InteractionType.Blackjack ||
                               interaction == G1C_InteractionType.Poker;
-            Bubbles.Remove(WorldNpcOf(character));
+            G1C_Npc worldNpc = WorldNpcOf(character);
+            if (worldNpc != null) Bubbles.Remove(worldNpc);
             Conversation.Open(character, offersGame ? interaction : (G1C_InteractionType?)null);
             return true;
         }

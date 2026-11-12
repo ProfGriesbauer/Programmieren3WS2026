@@ -6,7 +6,9 @@ namespace OOPGames
     {
         Home,
         Exterior,
-        Casino
+        Casino,
+        Hospital,
+        Market
     }
 
     public interface IG1C_WorldMap

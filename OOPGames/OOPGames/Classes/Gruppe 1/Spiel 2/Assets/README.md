@@ -14,15 +14,19 @@ Hohe Bilder (z.B. 90x135) ragen nach oben über ihre Kachel hinaus.
 - skin: `player`, `dealer_red`, `dealer_green`, `dealer_blue`, `bartender`, `guest`
 - richtung: `down`, `up`, `left`, `right` (jede Laufrichtung hat eigene Grafiken)
 - frame: `0` = stehen, `1` und `2` = Schritte
-- Beispiel: `player_left_1.png`. NPCs benutzen nur Frame `0`.
+- Beispiel: `player_left_1.png`. NPCs wechseln beim Laufen ebenfalls zwischen Frame `1` und `2`.
 
 **Casino-Kacheln:** `tile_floor`, `tile_floor_alt`, `tile_wall`, `tile_wall_face`, `tile_exit`
 
 **Außenwelt-Kacheln:** `tile_city_grass`, `tile_city_grass_alt`, `tile_city_road`,
-`tile_city_sidewalk`, `tile_city_path`, `tile_city_border`, `tile_city_home_entry`,
-`tile_city_casino_entry`
+`tile_city_sidewalk`, `tile_city_path`, `tile_city_border`, `tile_city_forest`,
+`tile_city_water`, `tile_city_water_alt`, `tile_city_bank`, `tile_city_bridge`,
+`tile_city_park`, `tile_city_home_entry`, `tile_city_casino_entry`,
+`tile_city_hospital_entry`, `tile_city_market_entry`
 
-**Zuhause-Kacheln:** `tile_home_floor`, `tile_home_floor_alt`, `tile_home_wall`, `tile_home_exit`
+**Gebäude-Innenraum-Kacheln:** `tile_home_floor`, `tile_home_floor_alt`, `tile_home_wall`,
+`tile_home_exit`, `tile_hospital_floor`, `tile_hospital_wall`, `tile_market_floor`,
+`tile_market_wall`, `tile_interior_rug`, `tile_interior_exit`
 
 **Möbel:** `obj_roulette_table`, `obj_blackjack_table`, `obj_poker_table` (je 3x2 Kacheln),
 `obj_slot_machine`, `obj_bar`, `obj_plant` (je 1 Kachel breit)
@@ -31,7 +35,14 @@ Hohe Bilder (z.B. 90x135) ragen nach oben über ihre Kachel hinaus.
 `slot_cherry`, `slot_lemon`, `slot_bell`, `slot_bar`, `slot_diamond`, `slot_seven`
 
 **Weltobjekte:** `building_home`, `building_hospital`, `building_market`, `building_casino`,
-`obj_city_tree`, `obj_home_bed`, `obj_home_table`
+`building_library`, `building_townhouse`, `building_cafe`, `building_flower_shop`,
+`building_fire_station`, `building_cinema`, `building_pavilion`, `building_warehouse`,
+`building_post`, `obj_city_tree`, `obj_home_bed`, `obj_home_table`, `obj_counter`,
+`obj_medical_bed`, `obj_clinic_cabinet`, `obj_store_shelf`, `obj_chair`
+
+**Tiere** – jeweils Frame `0` und `1` für die tickbasierte Umgebungsanimation:
+`animal_duck_0`, `animal_duck_1`, `animal_fish_0`, `animal_fish_1`,
+`animal_cat_0`, `animal_cat_1`, `animal_bird_0`, `animal_bird_1`
 
 **NPC-Porträts** (Gesprächsfenster) – `portrait_<skin>_<ausdruck>`
 - skin: `dealer_red`, `dealer_green`, `dealer_blue`, `bartender`, `guest`
