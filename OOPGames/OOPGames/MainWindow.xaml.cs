@@ -148,12 +148,32 @@ namespace OOPGames
             }
         }
 
+        private void ShowGameState()
+        {
+            if (_CurrentRules == null)
+            {
+                return;
+            }
+
+            int winner = _CurrentRules.CheckIfPLayerWon();
+            if (winner > 0)
+            {
+                Status.Text = "Player " + winner + " Won!";
+                return;
+            }
+
+            if (!_CurrentRules.MovesPossible)
+            {
+                Status.Text = "Game Over!";
+            }
+        }
+
         private void DoComputerMoves()
         {
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
             {
-                Status.Text = "Player " + winner + " Won!";
+                ShowGameState();
             }
             else
             {
@@ -173,7 +193,11 @@ namespace OOPGames
                     winner = _CurrentRules.CheckIfPLayerWon();
                     if (winner > 0)
                     {
-                        Status.Text = "Player " + winner + " Won!";
+                        ShowGameState();
+                    }
+                    else if (!_CurrentRules.MovesPossible)
+                    {
+                        ShowGameState();
                     }
                 }
             }
@@ -184,7 +208,11 @@ namespace OOPGames
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
             {
-                Status.Text = "Player " + winner + " Won!";
+                ShowGameState();
+            }
+            else if (!_CurrentRules.MovesPossible)
+            {
+                ShowGameState();
             }
             else
             {
@@ -227,7 +255,11 @@ namespace OOPGames
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
             {
-                Status.Text = "Player" + winner + " Won!";
+                ShowGameState();
+            }
+            else if (!_CurrentRules.MovesPossible)
+            {
+                ShowGameState();
             }
             else
             {
