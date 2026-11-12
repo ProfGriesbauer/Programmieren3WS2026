@@ -87,8 +87,8 @@ namespace OOPGames
             };
 
             // Offset map coordinates by the player's position to keep the camera centered.
-            double left = field.Player.X - width / 2;
-            double top = field.Player.Y - height / 2;
+            double left = field.Player.PositionX - width / 2;
+            double top = field.Player.PositionY - height / 2;
             double mapLeft = -left;
             double mapTop = -top;
 

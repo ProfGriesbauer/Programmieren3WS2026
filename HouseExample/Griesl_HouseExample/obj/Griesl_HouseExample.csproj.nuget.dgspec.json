@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj": {}
+    "C:\\Users\\tillm\\Documents\\Hochschule\\Semester 3\\Programieren3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj": {}
   },
   "projects": {
-    "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj": {
+    "C:\\Users\\tillm\\Documents\\Hochschule\\Semester 3\\Programieren3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
+        "projectUniqueName": "C:\\Users\\tillm\\Documents\\Hochschule\\Semester 3\\Programieren3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
         "projectName": "Griesl_HouseExample",
-        "projectPath": "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
-        "packagesPath": "C:\\Users\\stjogabr\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\obj\\",
+        "projectPath": "C:\\Users\\tillm\\Documents\\Hochschule\\Semester 3\\Programieren3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
+        "packagesPath": "C:\\Users\\tillm\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\tillm\\Documents\\Hochschule\\Semester 3\\Programieren3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\stjogabr\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\tillm\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net7.0"
@@ -79,7 +79,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.402\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401\\RuntimeIdentifierGraph.json"
         }
       }
     }
