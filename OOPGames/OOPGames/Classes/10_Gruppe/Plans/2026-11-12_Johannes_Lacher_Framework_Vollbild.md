@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Bereit zur Umsetzung |
-| **Version** | 0.9 |
+| **Version** | 0.11 |
 | **Branch** | `Framework` |
 | **Betroffene Dateien** | `MainWindow.xaml`, `MainWindow.xaml.cs` |
 
@@ -11,8 +11,8 @@ Gruppe 10 erweitert das gemeinsame Framework um eine Vollbild-Ansicht und behebt
 zuverlässig beim Spiel ankommen. Das Hauptfenster wird von allen Gruppen genutzt, deshalb sind die Änderungen
 **rein additiv**: keine Änderung an Interfaces, an der Registrierung oder am Spielablauf (Start, Züge, Ticks).
 
-Die Umsetzung ist in **sechs Blöcke** aufgeteilt. Jeder Block ist ein eigener Commit und hinterlässt ein
-lauffähiges Programm.
+Die Umsetzung ist in **vier Blöcke** (B2, B3, B5, B6) aufgeteilt; B1 und B4 wurden gestrichen, die Nummern
+bleiben zur Nachvollziehbarkeit erhalten. Jeder Block ist ein eigener Commit und hinterlässt ein lauffähiges Programm.
 
 ---
 
@@ -21,11 +21,15 @@ lauffähiges Programm.
 | Ansicht | Fenster | Inhalt |
 |---|---|---|
 | **Normale Ansicht** (wie heute) | normales Fenster mit Rahmen | Canvas links, Listen rechts, untere Zeile: `Start New Game`, Umschalter `[ Normale Ansicht \| Vollbild ]`, Statusfeld |
-| **Vollbild** | randlos, maximiert, verdeckt auch die Taskleiste | nur das Spiel bis an den Bildschirmrand; darüber Status oben links (nur mit Text), Hinweis oben mittig (einige Sekunden), ✕ oben rechts |
+| **Vollbild** | randlos, maximiert, verdeckt auch die Taskleiste | Spiel über die volle Breite bis an den oberen Bildschirmrand; darunter eine **Leiste über die ganze Breite** mit `Start New Game`, Umschalter und Statusfeld; Listen ausgeblendet |
 
-- **Wechsel:** Umschalter (Maus), ✕ (zurück), **F11** (beide Richtungen). **Esc** bleibt beim Spiel.
+- **Bedienleiste im Vollbild:** Die untere Zeile der normalen Ansicht bleibt im Vollbild sichtbar und reicht
+  über die ganze Breite. Sie liegt **nicht über dem Spiel**, sondern unter ihm: Das Canvas wird um die Höhe der
+  Leiste kleiner. So bleiben `Start New Game`, der Umschalter (Weg zurück) und der Status ohne Einblendungen
+  erreichbar.
+- **Wechsel:** Umschalter in der Leiste (Maus), **F11** (beide Richtungen). **Esc** bleibt beim Spiel.
 - **Zurück** stellt Größe, Position und Zustand des Fensters von vorher wieder her.
-- **Neustart** nur über `Start New Game` in der normalen Ansicht.
+- **Neustart** über `Start New Game` in beiden Ansichten.
 - **Tasten** kommen nach dem Spielstart zuverlässig beim Spiel an (Pfeile, Enter, Leertaste, Tab), unabhängig
   davon, was vorher angeklickt wurde.
 
@@ -33,36 +37,40 @@ lauffähiges Programm.
 
 | Block | Inhalt | Hängt ab von | Commit-Nachricht (Vorschlag) |
 |---|---|---|---|
-| **B1** | Absturz bei Klick ins leere Canvas beheben | – | `G10: Fix crash when clicking the canvas before a game is started` |
-| **B2** | Vollbild-Grundfunktion: Umschalter, Fensterwechsel, ✕ | – | `G10: Add fullscreen view with normal/fullscreen switch` |
+| ~~**B1**~~ | ~~Absturz bei Klick ins leere Canvas beheben~~ – gestrichen, per Klick nicht erreichbar | – | – |
+| **B2** | Vollbild-Grundfunktion: Umschalter, Fensterwechsel, Bedienleiste unten | – | `G10: Add fullscreen view with normal/fullscreen switch` |
 | **B3** | F11 schaltet die Ansicht um | B2 | `G10: Toggle fullscreen with F11` |
-| **B4** | Einblendungen im Vollbild: Status und Hinweis | B2, B3 (Hinweistext nennt F11) | `G10: Show status and hint overlays in fullscreen` |
+| ~~**B4**~~ | ~~Einblendungen im Vollbild: Status und Hinweis~~ – gestrichen, die Bedienleiste zeigt Status und Umschalter | – | – |
 | **B5** | Neu zeichnen nach Größenänderung | – (wirkt mit B2 zusammen) | `G10: Repaint the game when the canvas is resized` |
-| **B6** | Tastaturfokus auf die Spielfläche | B1 (gleiche Methode `PaintCanvas_MouseDown`) | `G10: Keep keyboard focus on the game after start` |
+| **B6** | Tastaturfokus auf die Spielfläche | – | `G10: Keep keyboard focus on the game after start` |
 
 Jeder Commit enthält den Plan bzw. die Prompt-Datei, soweit sie sich dafür geändert haben.
 
 ---
 
-## B1 – Absturz bei Klick ins leere Canvas
+## B1 – ~~Absturz bei Klick ins leere Canvas~~ (gestrichen)
 
-**Ziel:** Ein Klick ins Canvas vor dem ersten Spielstart beendet das Programm nicht mehr.
+**Gestrichen (Version 0.10).** Geplant war eine Null-Prüfung am Anfang von `PaintCanvas_MouseDown`, weil die
+Methode ohne Prüfung auf `_CurrentRules` zugreift. Der Absturz ist mit einem echten Mausklick aber **nicht
+erreichbar**:
+- `PaintCanvas` hat keinen Hintergrund. In WPF trifft ein Mausklick ein solches Element nur dort, wo etwas
+  gezeichnet ist. Vor dem ersten Spielstart ist das Canvas leer, `PaintCanvas_MouseDown` läuft also nie –
+  auch nicht im Vollbild.
+- Nach dem Spielstart ist `_CurrentRules` gesetzt; die Methode kann nicht mehr abstürzen.
 
-**Ursache:** `PaintCanvas_MouseDown` greift auf `_CurrentRules` zu, ohne auf `null` zu prüfen. Der Fehler
-besteht schon heute, wird im Vollbild aber wahrscheinlicher, weil der ganze Bildschirm Klickfläche ist.
+Belegt per Hit-Test am echten `MainWindow` (2026-11-12): leeres Canvas ohne Hintergrund → Klick trifft nichts;
+mit `Background = Transparent` → Klick trifft das Canvas. Ein erster Test hatte das Klick-Ereignis direkt
+ausgelöst und so den Hit-Test umgangen; der dort gezeigte Absturz kommt im Programm nicht vor.
 
-**Änderung (`MainWindow.xaml.cs`):** Am Anfang von `PaintCanvas_MouseDown`
-`if (_CurrentRules == null) return;` – wie bereits in `Window_KeyDown`.
-
-**Tests:**
-- Programm starten, ohne Spielstart ins Canvas klicken → kein Absturz.
-- Danach Spiel starten und ins Canvas klicken → Züge funktionieren wie bisher.
+**Folge:** Das Framework bekommt keinen Hintergrund für das Canvas (siehe B6), damit bleibt der Fall
+unerreichbar und keine Änderung nötig.
 
 ---
 
 ## B2 – Vollbild-Grundfunktion
 
-**Ziel:** Umschalten zwischen normaler Ansicht und Vollbild per Umschalter, zurück per ✕.
+**Ziel:** Umschalten zwischen normaler Ansicht und Vollbild per Umschalter. Im Vollbild bleibt die untere
+Zeile als Bedienleiste über die ganze Breite sichtbar.
 
 ### Änderungen `MainWindow.xaml`
 - Namen vergeben: äußeres Grid `RootGrid`, rechte Spalte `SideColumn`, Listenbereich `SidePanel`,
@@ -72,43 +80,69 @@ besteht schon heute, wird im Vollbild aber wahrscheinlicher, weil der ganze Bild
   `ToggleButton` (`Style="{StaticResource {x:Type ToggleButton}}"`). So ist immer genau ein Teil gedrückt,
   ein Klick auf den aktiven Teil bewirkt nichts. Kein eigenes Styling nötig, sie passen zu `Start New Game`.
   Beide `Focusable = False` (R4).
-- **Container `FullscreenLayer`** in derselben Grid-Zelle wie das Canvas, darüber gelegt, **ohne Hintergrund**
-  (R5), im Normalfall ausgeblendet. Er darf **kein Kind des Canvas** sein, weil viele Painter
-  `canvas.Children.Clear()` aufrufen und ihn sonst löschen würden.
-- **✕-Button** im `FullscreenLayer` oben rechts: klein, halbtransparent, beim Überfahren deutlich sichtbar,
-  `Focusable = False` (R4).
+- **Bedienleiste:** Die untere Zeile (`ControlRow`) steht in der linken Spalte direkt unter dem Canvas, in einer
+  eigenen Grid-Zeile mit Höhe `Auto`. Wird im Vollbild nur die rechte Spalte ausgeblendet, reicht die linke
+  Spalte – und damit die Leiste – automatisch über die ganze Breite. Das Statusfeld (Spalte `1*`) füllt den
+  Rest der Leiste. Kein zusätzliches Element nötig, keine Einblendung über dem Spiel.
 
 ### Änderungen `MainWindow.xaml.cs`
 - Feld `_IsFullscreen`. `EnterFullscreen()` und `ExitFullscreen()` tun nichts, wenn der Zustand schon aktiv
   ist (R3).
 - `EnterFullscreen()`:
-  1. Fensterzustand merken: `WindowState`, `WindowStyle`, `ResizeMode` und `RestoreBounds` (R1).
+  1. Fensterzustand merken: `WindowState`, `WindowStyle`, `ResizeMode` und Größe/Position (R1): bei einem
+     maximierten Fenster aus `RestoreBounds`, bei einem normalen Fenster so, wie es angezeigt wird
+     (`Left/Top/ActualWidth/ActualHeight`) – `RestoreBounds` lieferte bei einem angedockten (Snap) Fenster die
+     Größe von vor dem Andocken.
   2. `WindowState = Normal`, dann `WindowStyle = None`, `ResizeMode = NoResize`, dann `WindowState = Maximized`.
      Diese Reihenfolge ist nötig, damit das Fenster auch die Taskleiste verdeckt; `NoResize` blendet außerdem
-     den Größengriff unten rechts aus.
-  3. `SidePanel` und `ControlRow` ausblenden, Breite von `SideColumn` auf 0, Ränder von `RootGrid` und
-     `PaintCanvas` auf 0 (R8), `FullscreenLayer` einblenden.
+     den Größengriff unten rechts aus. **Per Test bestätigt:** Ein bereits maximiertes Fenster, das nur randlos
+     wird, bleibt so groß wie der Arbeitsbereich (1166 statt 1200 px hoch), die Taskleiste bleibt sichtbar.
+     Der kurze Zwischenschritt über `Normal` (sichtbares Flackern bei vorher maximiertem Fenster) ist daher
+     nötig.
+  3. `SidePanel` ausblenden, Breite von `SideColumn` auf 0, Ränder von `RootGrid` und `PaintCanvas` auf 0
+     (R8). `ControlRow` bleibt sichtbar.
   4. `FullscreenButton.IsChecked = true` (Umschalter synchron halten).
-- `ExitFullscreen()`: in umgekehrter Reihenfolge zurücksetzen; zuerst Position und Größe aus den gemerkten
-  `RestoreBounds`, dann den gemerkten `WindowState`. Am Ende `NormalViewButton.IsChecked = true`.
-- `Checked`-Ereignisse des Umschalters → `EnterFullscreen()` bzw. `ExitFullscreen()`; ✕-Klick →
-  `ExitFullscreen()`. Das erneute `Checked` durch das Synchronisieren endet sofort am Flag (R3).
+- `ExitFullscreen(restoreWindow)`: in umgekehrter Reihenfolge zurücksetzen; bei `restoreWindow = true` zuerst
+  die gemerkte Position und Größe, dann den gemerkten `WindowState`. Am Ende `NormalViewButton.IsChecked = true`.
+- `Checked`-Ereignisse des Umschalters → `EnterFullscreen()` bzw. `ExitFullscreen(true)`. Das erneute
+  `Checked` durch das Synchronisieren endet sofort am Flag (R3).
 - `StateChanged` des Fensters: wechselt das Fenster im Vollbild auf `Normal` (z. B. Windows-Snap), wird
-  `ExitFullscreen()` aufgerufen (R2).
+  `ExitFullscreen(false)` aufgerufen: Layout und Fensterrahmen zurück, aber die Position und Größe, die Windows
+  gerade gewählt hat, bleiben (R2).
 
 ### Randfälle in diesem Block
-R1, R2, R3, R4, R5, R8, R11, R12, R13, R14 (siehe Abschnitt 3).
+R1, R2, R3, R4, R8, R12, R13, R14, R15, R16 (siehe Abschnitt 3).
 
 ### Tests
 - Normal → Vollbild → Normal, vor und während eines laufenden Spiels (TicTacToe, Vier gewinnt, Kinderzimmer).
+- Im Vollbild: Leiste über die ganze Breite am unteren Rand, Canvas direkt darüber bis an den oberen und die
+  seitlichen Bildschirmränder, Leiste überlappt das Canvas nicht (R15).
+- `Start New Game` im Vollbild startet ein neues Spiel, das Fenster bleibt im Vollbild (R16).
 - Klicks treffen im Vollbild die richtige Spalte bzw. das richtige Feld (Vier gewinnt, TicTacToe).
 - Fenster vorher maximiert / verkleinert / verschoben → wird genau so wiederhergestellt (R1).
 - Im Vollbild Win+←, Win+↓, Minimieren über die Taskleiste und Wiederherstellen (R2).
-- Mehrfaches schnelles Umschalten, ✕ und Umschalter abwechselnd (R3).
+- Mehrfaches schnelles Umschalten (R3).
 - Umschalter zeigt nach jedem Weg zurück wieder „Normale Ansicht“ als aktiv; Klick auf den aktiven Teil
   bewirkt nichts.
-- Nach Klick auf „Vollbild“ bzw. ✕: Enter und Leertaste kommen beim Spiel an (R4, Kinderzimmer).
+- Nach Klick auf den Umschalter: Enter und Leertaste kommen beim Spiel an (R4, Kinderzimmer).
 - Fenster auf zweitem Monitor → Vollbild auf diesem Monitor.
+
+**Stand (2026-11-12): umgesetzt nach Version 0.11.** Gegenüber der ersten Umsetzung (0.10): `ControlRow`
+bleibt im Vollbild sichtbar, `FullscreenLayer` mit ✕-Button und Klick-Handler entfernt. Dazu drei Punkte aus
+einem Code-Review: Größe eines normalen Fensters wird so gemerkt, wie es angezeigt wird (R1, angedockte
+Fenster); bei Windows-Snap im Vollbild bleibt die neue Platzierung (R2); Kommentar zum nicht fokussierbaren
+Umschalter berichtigt (er nimmt den Fokus nicht weg, gibt ihn aber auch nicht ans Spiel – das macht B6).
+Testprogramm mit dem echten `MainWindow`, alle Prüfungen bestanden: randlos, maximiert, ohne Größengriff;
+Leiste über die ganze Breite am unteren Rand (1920 px, 38 px hoch), Canvas darüber 1920 × 1162 ab der
+Oberkante, keine Überlappung (R15); TicTacToe per `Start New Game` im Vollbild gestartet, Status
+„Player 1's turn!“, Fenster bleibt im Vollbild (R16); Rückkehr mit gleicher Größe und Position, auch aus
+maximiertem Fenster (R1) und für ein angedocktes Fenster (0, 0, 960 × 1100); Snap im Vollbild behält die von
+Windows gesetzte Platzierung, Minimieren und Wiederherstellen bleibt im Vollbild (R2); doppelte Aufrufe (R3);
+Umschalter nicht fokussierbar (R4); Ränder zurück auf 5 px (R8). Screenshots geprüft.
+**Bekannt bis B5:** Beim Wechsel der Ansicht zeichnen Painter ohne `IPaintGame2` erst beim nächsten Zug neu;
+bis dahin steht das alte Bild (z. B. zentriert für die alte Größe) im Canvas.
+Noch von Hand im laufenden Programm zu prüfen: echte Klicks in einem Spiel im Vollbild, echtes Windows-Snap
+(Win+←) und Win+↓, zweiter Monitor.
 
 ---
 
@@ -121,6 +155,10 @@ R1, R2, R3, R4, R5, R8, R11, R12, R13, R14 (siehe Abschnitt 3).
 `if (e.Key == Key.F11)` → je nach `_IsFullscreen` `EnterFullscreen()` oder `ExitFullscreen()`,
 `e.Handled = true`, `return`. F11 wird damit nie an das Spiel weitergegeben.
 
+**Änderung (`MainWindow.xaml`):** Tooltips an beiden Teilen des Umschalters nennen die Taste
+(„Normale Ansicht (F11)“, „Vollbild (F11)“). Da es keinen eingeblendeten Hinweis mehr gibt (B4 gestrichen),
+ist F11 so auffindbar.
+
 **Esc wird bewusst nicht genutzt** und geht wie bisher an das Spiel (Begründung in Anhang A).
 
 **Tests:**
@@ -128,40 +166,21 @@ R1, R2, R3, R4, R5, R8, R11, R12, R13, R14 (siehe Abschnitt 3).
 - F11 während eines Spiels → Wechsel; das Spiel bekommt F11 nicht.
 - Esc im Vollbild → kommt beim Spiel an (Kinderzimmer: „zurück“), Vollbild bleibt.
 - Nach F11 zeigt der Umschalter den richtigen Zustand.
+- Tooltips am Umschalter nennen F11.
 
 ---
 
-## B4 – Einblendungen im Vollbild
+## B4 – ~~Einblendungen im Vollbild~~ (gestrichen)
 
-**Ziel:** Im Vollbild sind Status und Bedienhinweis sichtbar, ohne Klicks auf das Spiel abzufangen.
+**Gestrichen (Version 0.11).** Geplant waren eine Status-Einblendung oben links, ein Hinweis „F11 oder ✕:
+Vollbild beenden“ oben mittig und ein ✕-Button oben rechts, jeweils über dem Spiel. Mit der Bedienleiste im
+Vollbild (B2) sind sie überflüssig:
+- Der **Status** steht im Statusfeld der Leiste.
+- Der **Weg zurück** ist der Umschalter in der Leiste; der ✕-Button entfällt.
+- **F11** nennen die Tooltips am Umschalter (B3).
 
-### Änderungen `MainWindow.xaml` (im `FullscreenLayer`)
-- **`StatusOverlay`** oben links: `TextBlock` in halbtransparentem `Border`, Text per Binding vom Statusfeld
-  (`{Binding Text, ElementName=Status}`). Style-Trigger: `Visibility = Collapsed`, wenn der Text leer ist.
-  `IsHitTestVisible = False` (R5), maximale Breite mit `TextTrimming` („…“) (R9). Die Stellen, die
-  `Status.Text` setzen, bleiben unverändert.
-- **`FullscreenHint`** oben mittig: „F11 oder ✕: Vollbild beenden“, `IsHitTestVisible = False` (R5).
-- Die Sichtbarkeit von `StatusOverlay` wird **nur** über den Style-Trigger gesteuert, nie direkt im Code –
-  ein direkt gesetzter Wert würde den Trigger überschreiben. Der Code blendet nur den ganzen
-  `FullscreenLayer` ein und aus.
-- Ecken: Status links, Hinweis mittig, ✕ rechts. Unten bleibt frei, weil viele Spiele dort eigene Leisten
-  zeichnen (z. B. Kinderzimmer).
-
-### Änderungen `MainWindow.xaml.cs`
-- `DispatcherTimer` für den Hinweis (einige Sekunden).
-- `EnterFullscreen()`: Hinweis einblenden, Timer neu starten (R10).
-- `ExitFullscreen()`: Hinweis sofort ausblenden, Timer stoppen (R10).
-
-### Tests
-- Status: vor dem Start (leer) unsichtbar, nach dem Start sichtbar, zeigt den „Won!“-Text; Klicks darunter
-  erreichen das Spiel (TicTacToe, Vier gewinnt).
-- Sehr langer Statustext wird mit „…“ gekürzt (Text von Hand ins Statusfeld tippen) (R9).
-- Hinweis erscheint beim Wechsel ins Vollbild und verschwindet nach einigen Sekunden.
-- Vollbild kurz verlassen und wieder betreten → Hinweis bleibt die volle Zeit sichtbar (R10).
-
-**Bekannt:** Das Framework setzt ab dem Spielstart nach jedem Zug einen Text („Player 1's turn!“), die
-Status-Einblendung ist während eines Spiels also praktisch immer sichtbar. Falls sie stört, könnte sie nach
-jeder Änderung einige Sekunden gezeigt und dann ausgeblendet werden.
+Damit verdeckt im Vollbild nichts das Spiel, und die Randfälle der Einblendungen (Klicks durchlassen, langer
+Statustext, Hinweis-Timer, ✕ verdeckt Spielanzeigen) entfallen.
 
 ---
 
@@ -203,9 +222,13 @@ Steuerelement sie selbst, kommt sie nie bei `Window_KeyDown` an. Folgen heute:
 1. `MainWindow.xaml`: `PaintCanvas` fokussierbar (`Focusable = True`, `FocusVisualStyle = {x:Null}`, damit kein
    gestrichelter Rahmen erscheint).
 2. `StartGame_Click`: am Ende den Fokus auf `PaintCanvas` legen.
-3. `PaintCanvas_MouseDown`: als Erstes den Fokus auf `PaintCanvas` legen – **vor** der Null-Prüfung aus B1,
-   damit ein Klick ins Spiel den Fokus auch zurückholt, wenn noch kein Spiel läuft. Klicks auf Elemente, die
-   ein Painter in das Canvas legt, steigen ebenfalls zum Canvas auf.
+3. `PaintCanvas_MouseDown`: als Erstes den Fokus auf `PaintCanvas` legen. Klicks auf Elemente, die ein
+   Painter in das Canvas legt, steigen ebenfalls zum Canvas auf. Ein Klick kommt nur dort an, wo der Painter
+   etwas gezeichnet oder einen Hintergrund gesetzt hat; fast alle Painter setzen `canvas.Background` (9 von
+   10 geprüften, dazu das Kinderzimmer mit einer flächendeckenden Ebene). Das Framework setzt bewusst
+   **keinen** eigenen Hintergrund für das Canvas: Klicks auf bisher leere Stellen kämen sonst bei den Spielern
+   aller Gruppen an (geändertes Klickverhalten), und `PaintCanvas_MouseDown` würde vor dem Spielstart
+   erreichbar und dort abstürzen (siehe B1).
 4. `Window_KeyDown`: wurde die Taste an ein laufendes Spiel weitergegeben, `e.Handled = true` setzen. Sonst
    verschiebt WPF bei Pfeiltasten und Tab anschließend den Fokus von der Spielfläche weg, und das nächste Enter
    startet das Spiel neu.
@@ -215,8 +238,9 @@ Steuerelement sie selbst, kommt sie nie bei `Window_KeyDown` an. Folgen heute:
    Buchstaben) auf dem Canvas. Das Spiel bekommt die Taste in beiden Fällen.
 
 **Bewusst so gelassen:** Klickt der Spieler in eine Liste oder ins Statusfeld, bekommt dieses den Fokus und die
-Tasten wirken dort. Ein Klick ins Spiel holt den Fokus zurück. Der Umschalter und ✕ sind nicht fokussierbar
-(R4) und nehmen den Fokus nie weg.
+Tasten wirken dort. Ein Klick ins Spiel holt den Fokus zurück. Der Umschalter ist nicht fokussierbar (R4) und
+nimmt den Fokus nie weg. Da `Start New Game` jetzt auch im Vollbild sichtbar ist, ist Schritt 2 (Fokus nach dem
+Start aufs Canvas) dort genauso wichtig: sonst würde Enter im Vollbild das Spiel neu starten.
 
 **Danach in Gruppe 10:** Das Kinderzimmer verschiebt den Fokus bisher selbst (`TakeKeyboardFocus` im Branch
 `gruppe10`); das wird überflüssig und kann entfernt werden.
@@ -234,20 +258,22 @@ Tasten wirken dort. Ein Klick ins Spiel holt den Fokus zurück. Der Umschalter u
 
 | # | Randfall | Behandlung | Block |
 |---|---|---|---|
-| R1 | Fenster war vor dem Vollbild maximiert, verkleinert oder verschoben | Größe und Position aus `RestoreBounds` merken (bei maximiertem Fenster liefern `Left/Top/Width/Height` die maximierten Werte); beim Zurückwechseln zuerst diese setzen, dann den gemerkten `WindowState`. | B2 |
-| R2 | Im Vollbild Windows-Snap (Win+←/→) oder Win+↓ | Sonst bliebe ein kleines, randloses Fenster im Vollbild-Layout ohne Weg zurück. `StateChanged`: wechselt das Fenster im Vollbild auf `Normal`, wird `ExitFullscreen()` aufgerufen. Minimieren und Wiederherstellen über die Taskleiste bleibt im Vollbild. | B2 |
-| R3 | Doppelte Aufrufe (✕ und F11 fast gleichzeitig, schnelles Umschalten, `Checked` durch Synchronisieren) | Flag `_IsFullscreen`; die Methoden tun nichts, wenn der Zustand schon aktiv ist. Sonst würde z. B. der Vollbild-Zustand als „vorheriger Zustand“ gemerkt. | B2 |
-| R4 | Neue Buttons behalten den Tastaturfokus | ✕ und beide Teile des Umschalters `Focusable = False`. Sonst würde nach einem Klick Enter oder Leertaste die Ansicht umschalten, statt beim Spiel anzukommen. | B2 |
-| R5 | Einblendungen fangen Klicks ab | `FullscreenLayer` ohne Hintergrund (auch nicht `Transparent`); Status und Hinweis `IsHitTestVisible = False`; nur ✕ nimmt Klicks an. | B2, B4 |
+| R1 | Fenster war vor dem Vollbild maximiert, verkleinert oder verschoben | Maximiert: Größe und Position aus `RestoreBounds` (`Left/Top/Width/Height` liefern die maximierten Werte). Normal, auch angedockt: so, wie es angezeigt wird (`RestoreBounds` lieferte die Größe von vor dem Andocken). Beim Zurückwechseln zuerst Größe und Position setzen, dann den gemerkten `WindowState`. | B2 |
+| R2 | Im Vollbild Windows-Snap (Win+←/→) oder Win+↓ | Sonst bliebe ein kleines, randloses Fenster im Vollbild-Layout. `StateChanged`: wechselt das Fenster im Vollbild auf `Normal`, wird `ExitFullscreen(false)` aufgerufen – Layout und Rahmen zurück, die von Windows gewählte Platzierung bleibt (nicht mit der alten überschreiben). Minimieren und Wiederherstellen über die Taskleiste bleibt im Vollbild. | B2 |
+| R3 | Doppelte Aufrufe (Umschalter und F11 fast gleichzeitig, schnelles Umschalten, `Checked` durch Synchronisieren) | Flag `_IsFullscreen`; die Methoden tun nichts, wenn der Zustand schon aktiv ist. Sonst würde z. B. der Vollbild-Zustand als „vorheriger Zustand“ gemerkt. | B2 |
+| R4 | Neue Buttons behalten den Tastaturfokus | Beide Teile des Umschalters `Focusable = False`. Sonst würde nach einem Klick Enter oder Leertaste die Ansicht umschalten, statt beim Spiel anzukommen. | B2 |
+| ~~R5~~ | ~~Einblendungen fangen Klicks ab~~ | Entfällt (0.11): keine Einblendungen über dem Spiel mehr. | – |
 | R6 | Neuzeichnen bei Painter mit `IPaintGame2` | Wird ausgelassen: diese Painter zeichnen ohnehin alle 40 ms, ein zusätzlicher `PaintGameField`-Aufruf kann Nebenwirkungen haben (Kamera im Kinderzimmer springt). | B5 |
 | R7 | Fremde Painter beim Neuzeichnen | Bisher wurde `PaintGameField` nur nach Zügen aufgerufen; ein Painter, der bei ungewohnter Größe eine Exception wirft, würde jetzt beim Größenändern abstürzen. Testfall mit allen registrierten Paintern; Fehler als Issue an die Gruppe. | B5 |
 | R8 | Ränder im Vollbild | `RootGrid` und `PaintCanvas` haben je 5 px Rand; im Vollbild 0, danach die gemerkten Werte. Klickkoordinaten bleiben korrekt (relativ zum Canvas). | B2 |
-| R9 | Langer Statustext | Maximale Breite, Kürzen mit „…“. | B4 |
-| R10 | Hinweis-Timer | Beim Verlassen sofort ausblenden und Timer stoppen, beim erneuten Wechsel neu starten. Sonst blendet ein alter Timer den nächsten Hinweis zu früh aus. | B4 |
-| R11 | ✕ verdeckt Anzeigen des Spiels oben rechts | Bekannte Einschränkung (z. B. Überschrift der Spieleliste im Kinderzimmer); akzeptiert, da klein und halbtransparent. | B2 |
-| R12 | Vollbild ohne laufendes Spiel | Erlaubt, Canvas leer; Spielstart nur in der normalen Ansicht. Klick ins leere Canvas: B1. | B1, B2 |
+| ~~R9~~ | ~~Langer Statustext~~ | Entfällt (0.11): das Statusfeld in der Leiste ist so breit wie bisher und scrollt wie bisher. | – |
+| ~~R10~~ | ~~Hinweis-Timer~~ | Entfällt (0.11): kein eingeblendeter Hinweis mehr. | – |
+| ~~R11~~ | ~~✕ verdeckt Anzeigen des Spiels oben rechts~~ | Entfällt (0.11): kein ✕-Button mehr. | – |
+| R12 | Vollbild ohne laufendes Spiel | Erlaubt, Canvas leer; ein Spiel lässt sich direkt im Vollbild über `Start New Game` starten. Ein Klick ins leere Canvas trifft nichts (kein Hintergrund) und löst nichts aus (siehe B1). | B2 |
 | R13 | Fenster wird im Vollbild geschlossen (Alt+F4) | Nichts zu tun; beim nächsten Start öffnet die normale Ansicht. | B2 |
 | R14 | Alt+Tab im Vollbild | Funktioniert, da das Fenster bewusst **nicht** `Topmost` ist. | B2 |
+| R15 | Leiste nimmt Platz vom Canvas | Gewollt: Das Canvas ist im Vollbild so hoch wie der Bildschirm abzüglich der Leiste (rund 45 px) und überlappt sie nicht. Painter, die `canvas.ActualHeight` nutzen, passen sich an; das Neuzeichnen übernimmt B5. Klickkoordinaten bleiben korrekt (relativ zum Canvas). | B2, B5 |
+| R16 | `Start New Game` im Vollbild | Startet wie gewohnt ein neues Spiel; das Fenster bleibt im Vollbild. Die Spielauswahl (Listen) ist im Vollbild nicht sichtbar, es wird also die zuletzt gewählte Kombination gestartet. Danach liegt der Fokus nach B6 auf dem Spiel, sonst würde Enter das Spiel erneut starten. | B2, B6 |
 
 ## 4. Auswirkungen auf andere Gruppen
 
@@ -272,12 +298,14 @@ Tasten wirken dort. Ein Klick ins Spiel holt den Fokus zurück. Der Umschalter u
 
 | Thema | Entscheidung (Version) | Verworfene Alternativen |
 |---|---|---|
-| Was ist Vollbild? | Randlos, maximiert, nur das Spiel (0.1) | Nur Listen ausblenden; nur Fenster vergrößern |
-| Zwei Buttons | Zweiteiliger Umschalter, aktiver Teil hervorgehoben (0.6) | Nur ein Button „Vollbild“ (der Button „Normale Ansicht“ wäre sonst nie klickbar) |
-| Tasten zum Wechseln | Nur F11, Esc bleibt beim Spiel (0.2) | siehe Tabelle unten |
-| Status im Vollbild | Einblendung oben links, nur mit Text (0.3) | Unten links: intuitiver, aber verdeckt Leisten der Spiele |
-| Neustart im Vollbild | Nur über die normale Ansicht (0.4) | Eigener Button im Vollbild |
-| Klick ins leere Canvas | Eigene Aufgabe B1 (0.6) | Zusammen mit dem Vollbild umsetzen |
+| Was ist Vollbild? | Randlos, maximiert, Spiel plus Bedienleiste unten (0.1, Leiste seit 0.11) | Nur Listen ausblenden; nur Fenster vergrößern; nur das Spiel ohne Leiste (bis 0.10) |
+| Bedienleiste im Vollbild | Untere Zeile bleibt sichtbar, reicht über die ganze Breite und macht das Canvas kleiner, statt darüber zu liegen (0.11) | Einblendungen über dem Spiel (Status, Hinweis, ✕; bis 0.10): verdecken Teile des Spiels und brauchen eigene Sonderfälle |
+| Zwei Buttons | Zweiteiliger Umschalter, aktiver Teil hervorgehoben (0.6); im Vollbild in der Leiste (0.11) | Nur ein Button „Vollbild“ (der Button „Normale Ansicht“ wäre sonst nie klickbar); ✕-Button über dem Spiel (bis 0.10) |
+| Tasten zum Wechseln | Nur F11, Esc bleibt beim Spiel (0.2); F11 in den Tooltips des Umschalters (0.11) | siehe Tabelle unten; eingeblendeter Hinweis (bis 0.10) |
+| Status im Vollbild | Statusfeld in der Leiste (0.11) | Einblendung oben links (0.3–0.10); unten links über dem Spiel: verdeckt Leisten der Spiele |
+| Neustart im Vollbild | `Start New Game` in der Leiste (0.11) | Nur über die normale Ansicht (0.4–0.10) |
+| Klick ins leere Canvas | Keine Änderung; per Klick nicht erreichbar (0.10, vorher eigene Aufgabe seit 0.6) | Null-Prüfung als reine Absicherung behalten |
+| Hintergrund für das Canvas | Kein eigener Hintergrund durch das Framework (0.10) | `Background = Transparent`, damit auch Klicks auf leere Stellen den Fokus holen: ändert das Klickverhalten für alle Gruppen |
 | Tastaturfokus | Variante A: Fokus auf die Spielfläche + `e.Handled` (0.7, 0.8) | siehe Tabelle unten |
 
 **Esc zum Verlassen des Vollbilds – verworfen, weil viele Spiele Esc selbst nutzen** (z. B. Kinderzimmer:
@@ -302,6 +330,8 @@ Tasten wirken dort. Ein Klick ins Spiel holt den Fokus zurück. Der Umschalter u
 
 | Version | Datum | Autor | Änderung |
 |---|---|---|---|
+| 0.11 | 2026-11-12 | Johannes Lacher | Bedienleiste im Vollbild: die untere Zeile (`Start New Game`, Umschalter, Statusfeld) bleibt sichtbar, reicht über die ganze Breite und verkleinert das Canvas statt darüber zu liegen. Neustart damit auch im Vollbild. ✕-Button und `FullscreenLayer` entfallen, B4 (Einblendungen) gestrichen, F11 über Tooltips am Umschalter (B3). R5, R9, R10, R11 entfallen, neu R15 (Leiste nimmt Platz) und R16 (`Start New Game` im Vollbild). B2-Umsetzung muss angepasst werden. |
+| 0.10 | 2026-11-12 | Johannes Lacher | B1 gestrichen: Absturz per echtem Klick nicht erreichbar (Canvas ohne Hintergrund wird vor dem Spielstart nicht getroffen; per Hit-Test belegt), Änderung zurückgenommen. B6: Abhängigkeit zu B1 entfernt, Hinweis ergänzt, dass Klicks nur auf gezeichnete Flächen ankommen und das Framework bewusst keinen Canvas-Hintergrund setzt. R12 und Anhang A angepasst. |
 | 0.9 | 2026-11-12 | Johannes Lacher | Umstrukturiert für die Umsetzung: sechs Blöcke B1–B6 mit Ziel, Änderungen, Randfällen, Tests und Commit-Nachricht; F11 (B3) vor die Einblendungen (B4) gezogen, weil der Hinweistext F11 nennt; Aufgabe A1 wird B1; Randfälle mit Block-Zuordnung; entschiedene Fragen und verworfene Alternativen in Anhang A. Inhaltlich keine Änderung. |
 | 0.8 | 2026-11-12 | Johannes Lacher | Entschieden: `e.Handled = true` für an das Spiel weitergegebene Tasten (Schritt 4); Testergebnis zur Fokusverschiebung bei Pfeiltasten und Tab ergänzt. |
 | 0.7 | 2026-11-12 | Johannes Lacher | Tastaturfokus: Ursachen beschrieben; Lösung Variante A (Fokus nach Spielstart und bei Klick ins Spiel auf das Canvas, an das Spiel weitergegebene Tasten als behandelt markieren); Alternativen B (`PreviewKeyDown`) und C (Steuerelemente nicht fokussierbar) mit Begründung verworfen. |

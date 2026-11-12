@@ -28,6 +28,16 @@ namespace OOPGames
 
         System.Windows.Threading.DispatcherTimer _PaintTimer = null;
 
+        // Fullscreen view: window settings before entering fullscreen, restored when leaving it.
+        bool _IsFullscreen = false;
+        WindowState _SavedWindowState;
+        WindowStyle _SavedWindowStyle;
+        ResizeMode _SavedResizeMode;
+        Rect _SavedBounds;
+        GridLength _SavedSideColumnWidth;
+        Thickness _SavedRootMargin;
+        Thickness _SavedCanvasMargin;
+
         public MainWindow()
         {
             //REGISTER YOUR CLASSES HERE
@@ -237,6 +247,88 @@ namespace OOPGames
                     DoComputerMoves();
                 }
             }
+        }
+
+        private void FullscreenButton_Checked(object sender, RoutedEventArgs e)
+        {
+            EnterFullscreen();
+        }
+
+        private void NormalViewButton_Checked(object sender, RoutedEventArgs e)
+        {
+            ExitFullscreen(true);
+        }
+
+        // Windows snap (Win+Left/Right) or Win+Down turn the borderless window into a normal window, which would
+        // leave the fullscreen layout in a small frameless window. Leave fullscreen, but keep the size and position
+        // Windows just chose instead of jumping back to the window from before fullscreen.
+        private void Window_StateChanged(object sender, EventArgs e)
+        {
+            if (_IsFullscreen && WindowState == WindowState.Normal)
+            {
+                ExitFullscreen(false);
+            }
+        }
+
+        private void EnterFullscreen()
+        {
+            if (_IsFullscreen) return;
+
+            _SavedWindowState = WindowState;
+            _SavedWindowStyle = WindowStyle;
+            _SavedResizeMode = ResizeMode;
+            // A maximized window reports its maximized size in Left/Top/Width/Height, so its normal size comes from
+            // RestoreBounds. A normal (possibly snapped) window is saved as it is shown: RestoreBounds would return
+            // the size from before snapping.
+            _SavedBounds = WindowState == WindowState.Maximized ? RestoreBounds : new Rect(Left, Top, ActualWidth, ActualHeight);
+            _SavedSideColumnWidth = SideColumn.Width;
+            _SavedRootMargin = RootGrid.Margin;
+            _SavedCanvasMargin = PaintCanvas.Margin;
+
+            // Normal first: only a window that is maximized after becoming borderless covers the taskbar. A window
+            // that is already maximized and only becomes borderless keeps the size of the work area.
+            // NoResize also hides the resize grip in the bottom right corner.
+            WindowState = WindowState.Normal;
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Maximized;
+
+            // The control row stays visible and spans the whole width below the game.
+            SidePanel.Visibility = Visibility.Collapsed;
+            SideColumn.Width = new GridLength(0);
+            RootGrid.Margin = new Thickness(0);
+            PaintCanvas.Margin = new Thickness(0);
+
+            // Set only after the window changes above, so that their StateChanged events are ignored.
+            _IsFullscreen = true;
+            FullscreenButton.IsChecked = true;
+        }
+
+        // restoreWindow: false when Windows itself has already placed the window (snap), which is kept.
+        private void ExitFullscreen(bool restoreWindow)
+        {
+            if (!_IsFullscreen) return;
+            // Cleared first, so that the StateChanged events below are ignored.
+            _IsFullscreen = false;
+
+            PaintCanvas.Margin = _SavedCanvasMargin;
+            RootGrid.Margin = _SavedRootMargin;
+            SideColumn.Width = _SavedSideColumnWidth;
+            SidePanel.Visibility = Visibility.Visible;
+
+            if (restoreWindow) WindowState = WindowState.Normal;
+            WindowStyle = _SavedWindowStyle;
+            ResizeMode = _SavedResizeMode;
+            if (restoreWindow)
+            {
+                Left = _SavedBounds.Left;
+                Top = _SavedBounds.Top;
+                Width = _SavedBounds.Width;
+                Height = _SavedBounds.Height;
+                WindowState = _SavedWindowState;
+            }
+
+            NormalViewButton.IsChecked = true;
         }
     }
 }

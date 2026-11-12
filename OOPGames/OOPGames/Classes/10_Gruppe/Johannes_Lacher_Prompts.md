@@ -338,3 +338,59 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > go through the plan and restructure it before implememtation. split it into logical blocks for implementation
 
 **Ergebnis:** übernommen – Plan auf Version 0.9 umstrukturiert, inhaltlich unverändert: Zielbild, Reihenfolge mit Abhängigkeiten und Commit-Nachrichten, sechs Blöcke (B1 Absturz bei Klick ins Canvas, B2 Vollbild-Grundfunktion, B3 F11, B4 Einblendungen, B5 Neuzeichnen, B6 Tastaturfokus) mit je Ziel, Änderungen, Randfällen und Tests; F11 vor die Einblendungen gezogen, weil der Hinweistext F11 nennt; Randfälle-Tabelle mit Block-Zuordnung; Entscheidungen und verworfene Alternativen in Anhang A.
+
+### 68
+**Prompt:**
+> start with the first block
+
+**Ergebnis:** verworfen – Block B1 umgesetzt: `if (_CurrentRules == null) return;` am Anfang von `PaintCanvas_MouseDown` (`MainWindow.xaml.cs`). Ein Testprogramm, das das echte `MainWindow` erzeugt und das Klick-Ereignis direkt auslöst, zeigte vorher eine `NullReferenceException` und danach keine. Später verworfen (siehe 69 und 70): Der Test umging den Hit-Test, mit einem echten Klick ist der Absturz nicht erreichbar. Die Änderung wurde zurückgenommen und nicht committet.
+
+### 69
+**Prompt:**
+> even without your fix i cant reproduce the crash. a click before a game is started should be enough right?
+
+**Ergebnis:** übernommen – Ursache gefunden und per Hit-Test am echten `MainWindow` belegt: `PaintCanvas` hat keinen Hintergrund, ein leeres Canvas wird von einem echten Mausklick nicht getroffen, `PaintCanvas_MouseDown` läuft vor dem Spielstart also nie. Nach dem Start ist `_CurrentRules` gesetzt, und fast alle Painter setzen selbst einen Hintergrund. Der Absturz aus B1 ist damit per Klick nicht erreichbar; der frühere Test hatte das Klick-Ereignis direkt ausgelöst und den Hit-Test umgangen. Entscheidung offen: B1 als defensive Prüfung behalten oder streichen.
+
+### 70
+**Prompt:**
+> drop it. update the plan as well
+
+**Ergebnis:** übernommen – B1 gestrichen (Code war bereits zurückgenommen, `MainWindow.xaml.cs` unverändert). Plan auf Version 0.10: B1 als gestrichen mit Begründung und Hit-Test-Beleg, Nummern der übrigen Blöcke beibehalten; B6 ohne Abhängigkeit zu B1 und mit Hinweis, dass Klicks nur auf gezeichnete Flächen ankommen und das Framework bewusst keinen Canvas-Hintergrund setzt; R12 und Anhang A angepasst. Eintrag 68 auf „verworfen“ korrigiert.
+
+### 71
+**Prompt:**
+> then start with B2
+
+**Ergebnis:** übernommen – Block B2 umgesetzt. `MainWindow.xaml`: Namen `RootGrid`, `SideColumn`, `SidePanel`, `ControlRow`; Umschalter „Normale Ansicht | Vollbild“ aus zwei `RadioButton`s im `ToggleButton`-Stil (nicht fokussierbar); `FullscreenLayer` ohne Hintergrund über dem Canvas mit halbtransparentem ✕-Button. `MainWindow.xaml.cs`: `EnterFullscreen`/`ExitFullscreen` mit Flag `_IsFullscreen`, Sicherung und Wiederherstellung von Fensterzustand, `RestoreBounds`, Spaltenbreite und Rändern, `StateChanged` für Windows-Snap. Testprogramm mit dem echten `MainWindow`: 63 Prüfungen bestanden (ein zunächst fehlgeschlagener Klick-Test lag am Test selbst: allgemeiner Hit-Test statt des Maus-Hit-Tests `InputHitTest`). Screenshots beider Ansichten geprüft. Stand im Plan vermerkt; noch nicht committet.
+
+### 72
+**Prompt:**
+> the tests you just ran, should we commit them as well?
+
+**Ergebnis:** übernommen – Empfehlung: nicht committen. Das SDK-Projekt `OOPGames.csproj` kompiliert alle `.cs`-Dateien unterhalb seines Ordners; die Testprogramme haben eigene `Main`-Methoden und würden den Build für alle Gruppen brechen. Ein eigenes Testprojekt neben `OOPGames/OOPGames/` (plus `.sln`) läge außerhalb der Gruppenordner und bräuchte die Freigabe des Dozenten; außerdem sind es Prüfprogramme mit echtem Fenster, keine automatisierbaren Unit-Tests. Die Ergebnisse stehen im Plan unter „Stand“ je Block. Option für später: echtes Testprojekt (z. B. MSTest) nach Rücksprache mit dem Dozenten.
+
+### 73
+**Prompt:**
+> okay. do the tests for the other changes the same way in the future
+
+**Ergebnis:** übernommen – Vorgehen als dauerhafte Regel gespeichert: Prüfung jedes Blocks mit einem Testprogramm im Scratchpad gegen die echten Klassen, Ergebnisse als „Stand“ im Plan, Testcode wird nicht committet; Eingaben so simulieren, wie WPF sie verarbeitet (`InputHitTest`, `InputManager`), und nicht abgedeckte Fälle zur Prüfung von Hand nennen.
+
+### 74
+**Prompt:**
+> add to the plan that start new game should still be visible in fullscreen. i think maybe a horizonal bar across the bottom with all the buttons and the status field makes sense. move the fullscreen button there. the horizontal bar just makes the canvas a bit smaller and does not lay on top of it
+
+**Ergebnis:** übernommen – Plan auf Version 0.11: Im Vollbild bleibt die untere Zeile (`Start New Game`, Umschalter, Statusfeld) als Leiste über die ganze Breite sichtbar und verkleinert das Canvas, statt darüber zu liegen; das ergibt sich aus dem bestehenden Layout, wenn nur die rechte Spalte ausgeblendet wird. Folgen: ✕-Button und Ebene über dem Canvas entfallen, B4 (Status- und Hinweis-Einblendung) gestrichen, F11 über Tooltips am Umschalter (B3); Randfälle R5, R9–R11 entfallen, neu R15 und R16; Zielbild, B2, B6, Anhang A angepasst. Die bisherige B2-Umsetzung ist als anzupassen markiert.
+
+### 75
+**Prompt:**
+> update B2 according to the new plan (bottom bar)
+
+(Vorher per `/code-review` acht Befunde zur ersten B2-Umsetzung.)
+
+**Ergebnis:** übernommen – B2 an Plan 0.11 angepasst: `ControlRow` bleibt im Vollbild sichtbar und reicht über die ganze Breite unter dem Canvas, `FullscreenLayer` mit ✕-Button und Klick-Handler entfernt. Aus dem Code-Review zusätzlich behoben: normales (auch angedocktes) Fenster wird so gemerkt, wie es angezeigt wird statt über `RestoreBounds`; Windows-Snap im Vollbild behält die neue Platzierung (`ExitFullscreen(false)`); irreführender Kommentar zum nicht fokussierbaren Umschalter berichtigt. Befund „Zwischenschritt über `Normal` vermeiden“ per Test widerlegt (ohne ihn bleibt die Taskleiste sichtbar). Fehlendes Neuzeichnen beim Ansichtswechsel bleibt B5, Fokus nach Klicks B6; gemerkte Konstanten (Spaltenbreite, Ränder) beibehalten. Testprogramm mit dem echten `MainWindow`: alle Prüfungen bestanden, Screenshot mit laufendem TicTacToe im Vollbild geprüft. Plan bei B2, R1 und R2 aktualisiert; noch nicht committet.
+
+### 76
+**Prompt:**
+> suggest a commit message
+
+**Ergebnis:** übernommen – Commit-Nachricht für B2 vorgeschlagen (Betreffzeile nach Plan, Text mit Ansichten, Fensterwiederherstellung, Snap-Verhalten und mitcommitteten Plan-/Prompt-Änderungen).
