@@ -187,7 +187,7 @@ namespace OOPGames
                     bool laneHasTrain = _field.MutableObstacles.Any(obstacle =>
                         obstacle.Lane == lane
                         && obstacle.Distance > 0
-                        && obstacle.Distance < 220
+                        && obstacle.Distance < 300
                         && (obstacle.Kind == Gruppe2_SubwayObstacleKind.Train
                             || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoRamp
                             || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoWagon));
@@ -199,15 +199,15 @@ namespace OOPGames
                     if (kind == Gruppe2_SubwayObstacleKind.Train)
                     {
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoRamp, lane, 150));
+                            Gruppe2_SubwayObstacleKind.CargoRamp, lane, 230));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 125));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 205));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 100));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 180));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 75));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 155));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            kind, lane, 50, _random.Next(0, 2) == 0));
+                            kind, lane, 130, _random.Next(0, 2) == 0));
                     }
                     else
                     {
@@ -366,6 +366,11 @@ namespace OOPGames
                         }
                         break;
                     case Gruppe2_SubwayObstacleKind.PlantPot:
+                        if (!airborne && !onRoof)
+                        {
+                            HitOrEnd(true, "Pflanzkuebel! Weiche aus oder springe darueber.");
+                        }
+                        break;
                     case Gruppe2_SubwayObstacleKind.Curb:
                         if (!airborne && !onRoof)
                         {
