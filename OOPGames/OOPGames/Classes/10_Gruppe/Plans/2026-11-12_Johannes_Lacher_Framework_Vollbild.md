@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Bereit zur Umsetzung |
+| **Status** | Umgesetzt (B2, B3, B5, B6); offen: Merge nach `master` |
 | **Version** | 0.11 |
 | **Branch** | `Framework` |
 | **Betroffene Dateien** | `MainWindow.xaml`, `MainWindow.xaml.cs` |
@@ -276,6 +276,20 @@ Start aufs Canvas) dort genauso wichtig: sonst würde Enter im Vollbild das Spie
 - Mehrfach Pfeiltasten und Tab drücken → Fokus bleibt auf der Spielfläche.
 - In eine Liste klicken (↑/↓ wirken dort), dann ins Spiel klicken → Tasten wirken wieder im Spiel.
 - F11 funktioniert weiterhin (B3).
+
+**Stand (2026-11-12): umgesetzt.** Abweichung vom Plan in Schritt 2: Der Fokus wird nicht ganz am Ende von
+`StartGame_Click` gesetzt, sondern nur, wenn das Spiel tatsächlich gestartet wurde (im selben Block wie
+`ClearField`/`PaintGameField`). Ohne gültige Auswahl startet kein Spiel, dann bleibt der Fokus, wo er war.
+Testprogramm mit dem echten `MainWindow`, einem Testspieler, der ankommende Tasten aufzeichnet, und Testregeln,
+die Spielstarts zählen; Ablauf wie ein Nutzer (Auswahl in den Listen, Klick auf `Start New Game`, Tasten durch
+die WPF-Eingabeverarbeitung). Vor der Änderung 9 Prüfungen fehlgeschlagen: Fokus blieb auf `Start New Game`,
+die erste Pfeiltaste schob ihn in eine Liste, ↓ und Leertaste kamen nicht beim Spiel an. Danach alle
+bestanden: Fokus nach dem Start auf dem Spiel; ↑ ↓ ← → Enter Leertaste Tab A kommen in dieser Reihenfolge an,
+kein Neustart, Listenauswahl unverändert; Fokus bleibt nach 25 Pfeil- und Tab-Drücken auf dem Spiel; in der
+Liste wirkt ↑ wie bisher, ein Klick ins Spiel holt den Fokus zurück; nach erneutem Start und im Vollbild ebenso,
+F11 weiterhin; kein gestrichelter Fokusrahmen. B2-, B3- und B5-Tests laufen weiterhin durch.
+Noch von Hand im laufenden Programm zu prüfen: echte Tastatur und Maus mit einem Spiel, das Pfeiltasten
+nutzt (z. B. Subway Surfer von Gruppe 2), und das Kinderzimmer nach dem Merge in `gruppe10`.
 
 ---
 

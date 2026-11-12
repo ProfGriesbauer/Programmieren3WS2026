@@ -155,6 +155,10 @@ namespace OOPGames
                 _CurrentRules.ClearField();
                 _CurrentPainter.PaintGameField(PaintCanvas, _CurrentRules.CurrentField);
                 DoComputerMoves();
+
+                // Keys go to the focused control first. Without this the Start button would keep the focus and
+                // take Enter and Space as another click, and a list would take the arrow keys.
+                PaintCanvas.Focus();
             }
         }
 
@@ -207,6 +211,9 @@ namespace OOPGames
 
         private void PaintCanvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            // A click into the game brings the keyboard focus back, e.g. after a click into a list.
+            PaintCanvas.Focus();
+
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
             {
@@ -263,6 +270,9 @@ namespace OOPGames
                     _CurrentPlayer is IHumanGamePlayer)
                 {
                     IPlayMove pm = ((IHumanGamePlayer)_CurrentPlayer).GetMove(new KeySelection(e.Key), _CurrentRules.CurrentField);
+                    // The key belongs to the game now. Marked as handled, so that WPF does not also use arrow keys
+                    // and Tab to move the keyboard focus away from the game to the next control.
+                    e.Handled = true;
                     if (pm != null)
                     {
                         _CurrentRules.DoMove(pm);

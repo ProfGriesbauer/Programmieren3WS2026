@@ -412,3 +412,15 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > SizeChanged should simply fire on every change. start the implementation
 
 **Ergebnis:** übernommen – Block B5 umgesetzt: `SizeChanged="PaintCanvas_SizeChanged"` am Canvas, der Handler ruft bei jeder Größenänderung (ohne Drosselung) einmal `PaintGameField` auf, wenn ein Spiel läuft, `CanBePaintedBy` passt und der Painter kein `IPaintGame2` ist; keine Änderung an Paintern, `ClipToBounds` bleibt aus. Testprogramm mit zählenden Test-Paintern: vorher 3 Prüfungen fehlgeschlagen, danach alle bestanden; alle 11 registrierten Painter ohne Exception; B2/B3 weiterhin grün. Befund: Derzeit profitiert kein registrierter Painter sichtbar (größenabhängige Painter sind `IPaintGame2` oder haben wie Gruppe 1 einen eigenen `SizeChanged`-Handler). Stand im Plan vermerkt; noch nicht committet.
+
+### 80
+**Prompt:**
+> now lets to the keyboard focus according to the plan
+
+**Ergebnis:** übernommen – Block B6 umgesetzt: `PaintCanvas` fokussierbar ohne Fokusrahmen; nach erfolgreichem Spielstart und bei jedem Klick ins Canvas bekommt es den Fokus; an das Spiel weitergegebene Tasten werden in `Window_KeyDown` als behandelt markiert. Abweichung: Fokus nur bei tatsächlich gestartetem Spiel. Testprogramm mit dem echten `MainWindow`, Testspieler und zählenden Testregeln: vorher 9 Prüfungen fehlgeschlagen, danach alle bestanden; B2, B3 und B5 weiterhin grün. Plan-Status auf „Umgesetzt“; noch nicht committet.
+
+### 81
+**Prompt:**
+> create a small test which just displays if a click or arrow key is detected on the canvas (only temporary)
+
+**Ergebnis:** übernommen (temporär, wird nicht committet) – Testspiel „G10 Eingabetest“ in `Johannes_Lacher_InputTest.cs` (Painter, Regeln, Spieler) und vier als TEMPORARY markierte Zeilen im Registrierungsblock von `MainWindow.xaml.cs`. Die Anzeige zeigt Canvas-Größe, ob das Canvas den Tastaturfokus hat, Zähler für Klicks, Pfeiltasten und andere Tasten sowie die letzten 12 Eingaben. Per Testprogramm geprüft (Klick, ←, ↑, Enter werden angezeigt, Fokus „ja“).
