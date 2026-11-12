@@ -188,12 +188,142 @@ Modell: In der Sitzung nicht ausgewiesen
 
 ---
 
+## 15. Subway-Surfer-Spiel entwerfen und implementieren
+
+**Datum:** 05.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> Programmierung eines neuen Spiels in SubwaySurver Optik mit folgenden Regeln: Subway Surver
+> → Framework darf nicht verändert werden, nur erweitert werden, nach Rücksprache
+> → Gleise
+> → Mensch der Wegläuft → Frau
+> → Mensch der Fängt → Bahnwärter
+> → Hindernisse (Züge, Schranken, Blumentöpfe)
+> → Belohnungen (Surfboard, Geschwindigkeitsboost, Münzen)
+> → Scoreboard
+> → 3D Optik
+> → Ebene muss implementiert werden, damit Dimensionen dargestellt werden können
+> Regeln:
+> - links/rechts, hoch/runter
+> - rollen, wenn runter
+> - hüpfen, wenn hoch
+> - es gibt 3 Gleise
+> - ein Weg muss immer frei sein zum weiterlaufen
+> - fällt runter wenn Zug zu ende ist und er auf ihm drauf war
+> - wenn frontal gegen Hindernisse gelaufen wird, ist Spiel zu ende
+> - Züge fahren einem entgegen, andere bleiben starr
+> - Mit höherem Score wird Spiel schneller
+> - Münzen können gesammelt werden
+> - wenn Hindernis nur leicht berührt wird, verringert sich Abstand zu dem Wärter
+> - wenn kein Hindernis berührt wird, ist Wärter nicht im Spielfeld/Sichtfeld
+> - Boxen mit Upgrades können gesammelt werden
+> - Magnet, Stern für doppelte Münzzahl, Surfboard, Hüpfstange, Jetpack für Boost und Sicherheit
+> - Pfeiltasten für Steuerung
+> - Hindernisse: Züge, Absperrgitter, Büsche, Bordsteine mit Gehweg, Züge mit offener Güterklappe zum hochlaufen, Ampeln (zwischen den gleisen), Brücke mit Mittelpeiler
+> - 3 Ebenen: Bahngleis, Dach vom Zug, Luft (Hüpfstab, Jetpack)
+> - Hindernisse tauchen Zufällig in der Spielebene auf
+> - Bahnwärter springt automatisch hinter Figur her
+> - Figur ist weiblich
+>
+> Hindernisse:
+> Absperrgitter: groß: nur drunter, mit rollen → springebene ist gesperrt (so hoch wie Zug, vom boden weg fehlt die größe vom kleinen Absperrgitter)
+> klein: drunter und drüber
+> Züge: nur passierbar durch ausweichen, oder oben auf dem Dach laufen
+> auf das Dach kommt man durch aufgeklappte Gütertore
+> Büsche: können überhüpft werden, links/rechts vorbei → gleich hoch wie kleine Absperrung
+> Bordstein mit Gehweg: halbe Höhe von Busch, man kann drauf laufen → hochhüpfen
+> Brücke mit Mittelpfeiler: durch links/rechts ausweichen
+> Ampeln: stehen zwischen den gleisen, Hindernis bei Gleiswechsel
+
+**Ergebnisvermerk:** Ein Subway-Surfer-artiger Echtzeit-Runner wurde als Erweiterung des vorhandenen WPF-Frameworks implementiert und registriert. Spielkonzept und Code wurden in eigenen Gruppe-2-Dateien abgelegt.
+
+## 16. Subway-Surfer-Code in eigener C#-Datei speichern
+
+**Datum:** 05.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> kannst du das in eine neue .cs datei speichern und nicht in die .md datei von Stefanie und die .md datei soll wieder hergestellt werden so wie sie davor war ohne die Programmierung von subwaySurver
+
+**Ergebnisvermerk:** Die Spielimplementierung wurde in einer eigenen `.cs`-Datei abgelegt; der Subway-Surfer-Abschnitt wurde aus Stefanies Prompt-Datei entfernt.
+
+## 17. Optik, Gleisabstände und Sprung-/Rollfunktion verbessern
+
+**Datum:** 05.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> kannst du die optik und das layout so ändern, das es ungefähr so aussieht wie in dem bild, zudem sind die gleise zu nah aneinander, können die äußeren mit einem sichtbaren abstand zum mittleren implementiert werden zudem funktioniert die hüpf und roll funktion noch nicht
+
+**Ergebnisvermerk:** Perspektivische Stadt- und Gleisdarstellung sowie die Abstände der Spuren wurden überarbeitet; Sprung und Rollen erhielten sichtbare Animationen.
+
+## 18. Tastatursteuerung für Springen und Rollen
+
+**Datum:** 05.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> sobald ich hüpfen oder rollen will, kann ich einen player im menü auswählen und nicht mehr in meinem spielfeld hüpfen, wie kann man das lösen, soll man andere tastenkombinationen wählen oder kannst du das im code implementieren das das hüfen und rollen dauerhaft funktioniert?
+
+**Ergebnisvermerk:** Zusätzlich zu den Pfeiltasten wurde WASD als alternative Steuerung ergänzt: A/D wechseln die Spur, W springt und S rollt.
+
+## 19. Programm lässt sich nicht mehr laden
+
+**Datum:** 05.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> ich kann jetzt das programm nichtmehr laden, woran liegt das ?
+
+**Ergebnisvermerk:** Die ausführbare Datei war während eines Builds durch eine laufende Programm-Instanz gesperrt. Nach deren Beendigung wurde das Projekt regulär erfolgreich gebaut.
+
+## 20. SmartScreen-Warnung
+
+**Datum:** 12.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> welche richtlinie wird durchbrochen bei dem smart screen damit ich die datei nicht öffnen kann
+
+**Ergebnisvermerk:** Es wurde erklärt, dass eine SmartScreen-Warnung üblicherweise auf fehlende Signatur oder Reputation hinweist und nicht notwendigerweise auf einen Richtlinienverstoß im Quellcode.
+
+## 21. Programm digital signieren
+
+**Datum:** 12.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> kannst du digital signieren
+
+**Ergebnisvermerk:** Auf dem Rechner war kein gültiges Code-Signing-Zertifikat mit privatem Schlüssel vorhanden; daher konnte die ausführbare Datei nicht signiert werden.
+
+## 22. Änderungen committen
+
+**Datum:** 12.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> kannst du comitten
+
+**Ergebnisvermerk:** Die Subway-Surfer-Implementierung wurde mit Commit `f395367` committet.
+
+## 23. Remote-Änderungen pullen und lokale Änderungen pushen
+
+**Datum:** 12.11.2026
+**Werkzeug/Modell:** Copilot SDK in VS Code / Modell nicht ausgewiesen
+**Prompt im Wortlaut:**
+
+> kannst du alle änderungen pullen und dann meine pushen
+
+**Ergebnisvermerk:** Die Remote-Änderungen wurden integriert und zusammen mit dem Subway-Surfer-Commit gepusht. Eine bestehende lokale Änderung an einer entfernten Datei wurde sicher im Stash aufbewahrt.
+
 # Sitzung vom 19.11.2026
 
 Werkzeug: Claude Code (VS Code-Erweiterung)
 Modell: Claude Opus 5.5 (claude-opus-5-5)
 
-## 15. Framework-Grenze und Prompt-Dokumentation
+## 24. Framework-Grenze und Prompt-Dokumentation
 
 **Datum:** 19.11.2026
 **Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
@@ -212,7 +342,7 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 
 **Ergebnisvermerk:** Regeln bestätigt und dauerhaft gespeichert, Dokumentation fortgeführt. Code wurde nicht geändert.
 
-## 16. Umlaute korrigieren und Datei verschieben
+## 25. Umlaute korrigieren und Datei verschieben
 
 **Datum:** 19.11.2026
 **Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
@@ -229,7 +359,7 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 
 **Ergebnisvermerk:** Datei repariert und in das Hauptverzeichnis der Gruppe verschoben. Kein Code geändert, kein Framework-Eingriff.
 
-## 17. Commit, Pull und Push
+## 26. Commit, Pull und Push
 
 **Datum:** 19.11.2026
 **Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
