@@ -21,7 +21,7 @@ namespace OOPGames
         private const double ZoomStep = 0.1;
 
         // The field owns the current player instance.
-        public PlayerCharacter Player { get; private set; }
+        public IEntities Player { get; private set; }
         public bool IsGameStarted { get; private set; }
         public double ZoomLevel { get; private set; } = 1.0;
 
@@ -52,7 +52,7 @@ namespace OOPGames
         public bool CanBePaintedBy(IPaintGame painter)
         {
             // The arena field has a matching painter that knows its layout.
-            return painter is ArenaPainter;
+            return painter is PainterG9;
         }
 
         public void UpdatePlayerPosition()

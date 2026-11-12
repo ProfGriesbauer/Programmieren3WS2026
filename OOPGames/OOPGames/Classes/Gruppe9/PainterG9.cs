@@ -12,7 +12,7 @@ using System.Windows.Shapes;
 namespace OOPGames
 {
     // Draws the arena every frame and keeps the player's world position at screen center.
-    public sealed class ArenaPainter : IPaintGame2
+    public sealed class PainterG9 : IPaintGame2
     {
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
