@@ -424,3 +424,23 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > create a small test which just displays if a click or arrow key is detected on the canvas (only temporary)
 
 **Ergebnis:** übernommen (temporär, wird nicht committet) – Testspiel „G10 Eingabetest“ in `Johannes_Lacher_InputTest.cs` (Painter, Regeln, Spieler) und vier als TEMPORARY markierte Zeilen im Registrierungsblock von `MainWindow.xaml.cs`. Die Anzeige zeigt Canvas-Größe, ob das Canvas den Tastaturfokus hat, Zähler für Klicks, Pfeiltasten und andere Tasten sowie die letzten 12 Eingaben. Per Testprogramm geprüft (Klick, ←, ↑, Enter werden angezeigt, Fokus „ja“).
+
+### 82
+**Prompt:**
+> Can you run a test to check if any of the games which are currently on master have issues with the changes of the framework branch. the area game crashes even on master so dont test against it. subwaysurfer was confirmed by me
+
+(Vom Nutzer vor dem Testlauf abgebrochen, da der Test den Mauszeiger bewegt.)
+
+**Ergebnis:** teilweise – Vorbereitung: Master ist weiter als `Framework` (u. a. Drag Race, Hay Day); in zwei temporären Worktrees (reines `origin/master` und `Framework` + Master) liegen lauffähige Builds und ein Testprogramm, das dieselbe Abfolge aus Klicks, Tasten und Vollbild gegen alle Spiele ausführt (ohne Arena Survival und Subway Surfer). Nicht ausgeführt. Dabei festgestellt: Merge von `origin/master` in `Framework` hat genau einen trivialen Konflikt in `MainWindow.xaml` (Zeile mit `Title=…`).
+
+### 83
+**Prompt:**
+> can we rebase framework onto master without major conflicts?
+
+**Ergebnis:** übernommen – Probelauf im temporären Worktree: Rebase der 7 eigenen Commits auf `origin/master` klappt mit einem trivialen Konflikt (gleiche Zeile in `MainWindow.xaml`, im Commit B2), Ergebnis baut, Spiele von Master bleiben registriert. Empfehlung trotzdem Merge statt Rebase, da `origin/Framework` schon gepusht ist und ein Rebase einen Force-Push bräuchte (laut Projektregeln verboten).
+
+### 84
+**Prompt:**
+> okay merge master into framework
+
+**Ergebnis:** übernommen – `origin/master` (24 Commits, u. a. Drag Race, Hay Day) in `Framework` gemergt, Merge-Commit `5a6e3ec`, nicht gepusht. Genau ein Konflikt in `MainWindow.xaml` (Zeile `Title=…`: Master entfernte eine Leerzeile, `Framework` hatte `StateChanged=…` ergänzt) – `StateChanged` und die entfernte Leerzeile übernommen. Dabei Seiten zunächst vertauscht (im Merge ist „HEAD“ die eigene Seite, im Rebase umgekehrt), sofort bemerkt und korrigiert. Der Merge baut, die Tests B2, B3, B5 und B6 laufen durch (B5 mit allen Paintern von Master). Temporäre Dateien (Eingabetest) vorher gestasht und danach wiederhergestellt; ihr Konflikt im Registrierungsblock von `MainWindow.xaml.cs` mit Master (Drag-Race-Zeilen) durch Behalten beider Seiten gelöst. Temporäre Worktrees entfernt.
