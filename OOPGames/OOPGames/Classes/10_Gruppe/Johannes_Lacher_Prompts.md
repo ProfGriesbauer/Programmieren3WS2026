@@ -400,3 +400,15 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > start with B3 (F11 key)
 
 **Ergebnis:** übernommen – Block B3 umgesetzt: In `Window_KeyDown` als erste Prüfung, noch vor der Prüfung auf ein laufendes Spiel, schaltet F11 die Ansicht um und wird als behandelt markiert, also nie an das Spiel weitergegeben; Esc bleibt beim Spiel. Tooltips „Normale Ansicht (F11)“ und „Vollbild (F11)“ am Umschalter. Testprogramm mit dem echten `MainWindow` und einem aufzeichnenden Testspieler: vorher 9 von 16 Prüfungen fehlgeschlagen, danach alle bestanden; B2-Tests weiterhin grün. Stand im Plan vermerkt; noch nicht committet.
+
+### 78
+**Prompt:**
+> How will you implement the redrawing after resize of B5? changes to the individual painter shouldnt be needed
+
+**Ergebnis:** übernommen – Umsetzung erklärt: `SizeChanged` am `PaintCanvas`, Handler ruft bei laufendem Spiel, passendem `CanBePaintedBy` und Painter ohne `IPaintGame2` einmal das vorhandene `PaintGameField` auf – keine Änderung an Paintern nötig, da sie den aktuellen Zustand ohnehin vollständig neu zeichnen und `ActualWidth/ActualHeight` beim Ereignis schon die neue Größe haben. Abwägungen genannt: keine Drosselung beim Ziehen der Fenstergröße, kein `try/catch` (stattdessen Test aller Painter), `ClipToBounds` am Canvas als optionale Entscheidung.
+
+### 79
+**Prompt:**
+> SizeChanged should simply fire on every change. start the implementation
+
+**Ergebnis:** übernommen – Block B5 umgesetzt: `SizeChanged="PaintCanvas_SizeChanged"` am Canvas, der Handler ruft bei jeder Größenänderung (ohne Drosselung) einmal `PaintGameField` auf, wenn ein Spiel läuft, `CanBePaintedBy` passt und der Painter kein `IPaintGame2` ist; keine Änderung an Paintern, `ClipToBounds` bleibt aus. Testprogramm mit zählenden Test-Paintern: vorher 3 Prüfungen fehlgeschlagen, danach alle bestanden; alle 11 registrierten Painter ohne Exception; B2/B3 weiterhin grün. Befund: Derzeit profitiert kein registrierter Painter sichtbar (größenabhängige Painter sind `IPaintGame2` oder haben wie Gruppe 1 einen eigenen `SizeChanged`-Handler). Stand im Plan vermerkt; noch nicht committet.

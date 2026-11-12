@@ -211,6 +211,22 @@ aufruft – **nur** wenn ein Spiel läuft, `CurrentField` nicht `null` ist, `Can
 - **Jeder registrierte Painter** einmal im Vollbild und beim Ziehen der Fenstergröße, ohne Absturz (R7).
   Fehler fremder Painter werden der jeweiligen Gruppe als Issue gemeldet.
 
+**Stand (2026-11-12): umgesetzt.** `SizeChanged="PaintCanvas_SizeChanged"` am Canvas; der Handler ruft bei
+jeder Größenänderung ohne Drosselung einmal `PaintGameField` auf (Bedingungen wie oben). Keine Änderung an
+Paintern; `ClipToBounds` bleibt aus.
+Testprogramm mit dem echten `MainWindow` und zwei zählenden Test-Paintern (mit und ohne `IPaintGame2`):
+vor der Änderung 3 Prüfungen fehlgeschlagen (kein Neuzeichnen bei Größenänderung), danach alle bestanden:
+eine Größenänderung → genau ein Aufruf, vier → vier, Wechsel ins Vollbild zeichnet neu; Painter mit
+`IPaintGame2` bekommt keinen zusätzlichen Aufruf (R6); ohne gestartetes Spiel wird nichts gezeichnet; alle 11
+registrierten Painter überstehen Vollbild und die Fenstergrößen 400 × 300, 800 × 500 und 1400 × 900 ohne
+Exception (R7). B2- und B3-Tests laufen weiterhin durch.
+**Befund:** Auf diesem Branch profitiert derzeit **kein** registrierter Painter sichtbar: alle Painter, die sich
+nach der Canvas-Größe richten, sind `IPaintGame2` oder zeichnen sich wie Gruppe 1 („Gruppe 1 Vier Gewinnt
+Painter“) über ein eigenes `canvas.SizeChanged` selbst neu; die übrigen (TicTacToe, G9, Gruppe 5) zeichnen in
+fester Größe. B5 wirkt für künftige Painter, die sich nach der Canvas-Größe richten, ohne `IPaintGame2` und
+ohne eigenen Handler. Bei Gruppe 1 wird bei einer Größenänderung nun zweimal gezeichnet (eigener Handler und
+Framework); das Ergebnis ist identisch und der Test ohne Fehler.
+
 ---
 
 ## B6 – Tastaturfokus auf die Spielfläche

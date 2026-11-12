@@ -189,6 +189,22 @@ namespace OOPGames
             }
         }
 
+        // Painters without IPaintGame2 only paint after a move. Repaint them when the canvas size changes
+        // (view switch, F11, resizing the window), so the game is drawn for the new size right away.
+        // IPaintGame2 painters are skipped: they paint every tick anyway, and an extra PaintGameField call
+        // can have side effects.
+        private void PaintCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_CurrentPainter != null &&
+                !(_CurrentPainter is IPaintGame2) &&
+                _CurrentRules != null &&
+                _CurrentRules.CurrentField != null &&
+                _CurrentRules.CurrentField.CanBePaintedBy(_CurrentPainter))
+            {
+                _CurrentPainter.PaintGameField(PaintCanvas, _CurrentRules.CurrentField);
+            }
+        }
+
         private void PaintCanvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
             int winner = _CurrentRules.CheckIfPLayerWon();
