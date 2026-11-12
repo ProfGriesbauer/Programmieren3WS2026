@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 
 namespace OOPGames
@@ -14,6 +15,11 @@ namespace OOPGames
         private static readonly Brush TrackBrush = Brush(Color.FromRgb(77, 74, 69));
         private static readonly Brush RailBrush = Brush(Color.FromRgb(203, 210, 216));
         private static readonly Brush PinkBrush = Brush(Color.FromRgb(231, 49, 135));
+        private static readonly Model3DGroup CargoWagonModel = CreateCargoWagonModel();
+        private static readonly Model3DGroup CityModel = CreateCityModel();
+        private static readonly Model3DGroup BushModel = CreateBushModel();
+        private static readonly Model3DGroup SignalModel = CreateSignalModel();
+        private const double ObstaclePreviewDistance = 170;
 
         public string Name { get { return "Gruppe 2 - Subway Surfer Painter"; } }
 
@@ -47,7 +53,7 @@ namespace OOPGames
             double height = Math.Max(260, canvas.ActualHeight);
             canvas.Background = SkyBrush;
 
-            DrawBackground(canvas, width, height);
+            DrawBackground(canvas, width, height, field.Distance);
             DrawTrack(canvas, width, height, field);
             DrawWorldObjects(canvas, width, height, field);
             DrawRunner(canvas, width, height, field, false);
@@ -63,47 +69,23 @@ namespace OOPGames
             }
         }
 
-        private static void DrawBackground(Canvas canvas, double width, double height)
+        private static void DrawBackground(Canvas canvas, double width, double height, double distance)
         {
             double center = width / 2;
             AddRectangle(canvas, 0, 0, width, height * 0.39, Brush(Color.FromRgb(104, 190, 224)));
-            AddRectangle(canvas, 0, height * 0.30, width, height * 0.13, Brush(Color.FromRgb(209, 157, 104)));
-            AddPolygon(canvas, new[]
+            Viewport3D city = new Viewport3D
             {
-                new Point(0, height * 0.03),
-                new Point(center - width * 0.075, height * 0.32),
-                new Point(center - width * 0.39, height * 0.91),
-                new Point(0, height * 0.91)
-            }, Brush(Color.FromRgb(174, 76, 48)));
-            AddPolygon(canvas, new[]
-            {
-                new Point(width, height * 0.02),
-                new Point(center + width * 0.075, height * 0.32),
-                new Point(center + width * 0.39, height * 0.91),
-                new Point(width, height * 0.91)
-            }, Brush(Color.FromRgb(195, 91, 48)));
-
-            for (int side = 0; side < 2; side++)
-            {
-                for (int floor = 0; floor < 4; floor++)
-                {
-                    double progress = 0.18 + floor * 0.19;
-                    double y = height * (0.24 + progress * 0.45);
-                    double facadeInset = width * (0.045 + progress * 0.30);
-                    double edge = side == 0 ? facadeInset : width - facadeInset;
-                    double windowWidth = width * (0.035 + progress * 0.025);
-                    double windowHeight = height * (0.035 + progress * 0.025);
-                    Brush windowBrush = floor % 2 == 0
-                        ? Brush(Color.FromRgb(124, 197, 218))
-                        : Brush(Color.FromRgb(255, 208, 112));
-
-                    AddRectangle(canvas, side == 0 ? edge : edge - windowWidth, y,
-                        windowWidth, windowHeight, windowBrush, Brushes.SaddleBrown, 1);
-                    AddRectangle(canvas, side == 0 ? edge : edge - windowWidth,
-                        y + windowHeight * 1.5, windowWidth, windowHeight * 0.55,
-                        Brush(Color.FromRgb(237, 167, 66)), Brushes.SaddleBrown, 1);
-                }
-            }
+                Width = width,
+                Height = height,
+                ClipToBounds = true,
+                IsHitTestVisible = false,
+                Camera = CreateCityCamera()
+            };
+            double cityScroll = distance * 0.25 % 42;
+            city.Children.Add(CreateCityVisual(cityScroll));
+            city.Children.Add(CreateCityVisual(cityScroll - 42));
+            city.Children.Add(CreateCityVisual(cityScroll + 42));
+            canvas.Children.Add(city);
 
             AddLine(canvas, center - width * 0.38, height * 0.28, center + width * 0.38, height * 0.28, Brushes.DimGray, 3);
             AddLine(canvas, center - width * 0.27, height * 0.20,
@@ -114,6 +96,129 @@ namespace OOPGames
                 AddLine(canvas, x, height * 0.05, center + cable * width * 0.045,
                     height * 0.32, Brush(Color.FromRgb(61, 69, 73)), 1.2);
             }
+        }
+
+        private static ModelVisual3D CreateCityVisual(double zOffset)
+        {
+            return new ModelVisual3D
+            {
+                Content = CityModel,
+                Transform = new TranslateTransform3D(0, 0, zOffset)
+            };
+        }
+
+        private static Model3DGroup CreateCityModel()
+        {
+            Model3DGroup city = new Model3DGroup();
+            Color[] facades =
+            {
+                Color.FromRgb(157, 73, 52),
+                Color.FromRgb(185, 91, 56),
+                Color.FromRgb(131, 77, 65),
+                Color.FromRgb(178, 113, 66),
+                Color.FromRgb(125, 83, 73),
+                Color.FromRgb(191, 102, 62)
+            };
+            double[,] buildings =
+            {
+                { 5.2, 10, 4.4, 4.0, 9.0 },
+                { 6.0, 2, 4.8, 4.2, 11.5 },
+                { 7.3, -6, 5.2, 4.5, 10.0 },
+                { 9.0, -15, 6.0, 5.0, 13.0 },
+                { 5.4, -24, 5.0, 5.0, 8.5 },
+                { 8.5, -32, 7.0, 5.5, 12.0 }
+            };
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                for (int index = 0; index < buildings.GetLength(0); index++)
+                {
+                    AddCityBuilding(city,
+                        side * buildings[index, 0],
+                        buildings[index, 1],
+                        buildings[index, 2],
+                        buildings[index, 3],
+                        buildings[index, 4],
+                        facades[index],
+                        index);
+                }
+            }
+
+            city.Children.Add(new AmbientLight(Color.FromRgb(122, 122, 122)));
+            city.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
+            city.Freeze();
+            return city;
+        }
+
+        private static void AddCityBuilding(
+            Model3DGroup city, double x, double z, double width, double depth, double height,
+            Color facadeColor, int style)
+        {
+            Material facade = Material(facadeColor);
+            Material sideFacade = Material(Color.FromRgb(
+                (byte)(facadeColor.R * 0.72),
+                (byte)(facadeColor.G * 0.72),
+                (byte)(facadeColor.B * 0.72)));
+            Material trim = Material(Color.FromRgb(91, 60, 49));
+            Material glass = Material(Color.FromRgb(104, 178, 199));
+            Material litGlass = Material(Color.FromRgb(255, 201, 111));
+            double left = x - width / 2;
+            double right = x + width / 2;
+            double front = z + depth / 2;
+
+            AddBox(city, left, 0, z - depth / 2, right, height, front, facade);
+            AddBox(city, left - 0.16, height, z - depth / 2 - 0.12,
+                right + 0.16, height + 0.24, front + 0.12, trim);
+            AddBox(city, left - 0.12, 0, front + 0.08,
+                right + 0.12, 0.36, front + 0.20, sideFacade);
+
+            int columns = Math.Max(2, (int)(width / 1.15));
+            int floors = Math.Max(2, (int)(height / 1.35));
+            double windowWidth = width / (columns * 2.2);
+            double windowHeight = Math.Min(0.55, height / (floors * 2.4));
+            for (int floor = 0; floor < floors; floor++)
+            {
+                double windowY = 0.72 + floor * (height - 1.0) / floors;
+                for (int column = 0; column < columns; column++)
+                {
+                    double windowX = left + (column + 0.5) * width / columns;
+                    Material window = (floor + column + style) % 4 == 0 ? litGlass : glass;
+                    AddBox(city,
+                        windowX - windowWidth / 2, windowY,
+                        front + 0.015,
+                        windowX + windowWidth / 2, windowY + windowHeight,
+                        front + 0.075,
+                        window);
+                }
+            }
+
+            double sideX = x < 0 ? right : left;
+            double sideWindowLeft = x < 0 ? sideX + 0.015 : sideX - 0.07;
+            double sideWindowRight = x < 0 ? sideX + 0.07 : sideX - 0.015;
+            for (int floor = 0; floor < floors; floor++)
+            {
+                double windowY = 0.72 + floor * (height - 1.0) / floors;
+                for (int column = 0; column < 2; column++)
+                {
+                    double windowZ = z - depth * 0.25 + column * depth * 0.5;
+                    AddBox(city,
+                        sideWindowLeft, windowY, windowZ - 0.22,
+                        sideWindowRight, windowY + windowHeight,
+                        windowZ + 0.22,
+                        (floor + column + style) % 5 == 0 ? litGlass : glass);
+                }
+            }
+        }
+
+        private static PerspectiveCamera CreateCityCamera()
+        {
+            Vector3D direction = new Vector3D(0, -0.17, -1);
+            direction.Normalize();
+            return new PerspectiveCamera(
+                new Point3D(0, 8.5, 25),
+                direction,
+                new Vector3D(0, 1, 0),
+                42);
         }
 
         private static void DrawTrack(Canvas canvas, double width, double height, IGruppe2_SubwayField field)
@@ -185,18 +290,34 @@ namespace OOPGames
         {
             foreach (Gruppe2_SubwayObstacle obstacle in field.Obstacles.OrderByDescending(item => item.Distance))
             {
-                double approach = 1 - Math.Max(0, Math.Min(100, obstacle.Distance)) / 100;
+                bool trainObject = obstacle.Kind == Gruppe2_SubwayObstacleKind.Train
+                    || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoRamp
+                    || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoWagon;
+                bool signal = obstacle.Kind == Gruppe2_SubwayObstacleKind.Signal;
+                double previewDistance = trainObject ? ObstaclePreviewDistance : signal ? 180 : 100;
+                double approach = 1 - Math.Max(0, Math.Min(previewDistance, obstacle.Distance)) / previewDistance;
                 double progress = approach * 0.82;
 
                 double scale = 0.32 + approach * 0.9;
                 double y = height * 0.34 + approach * height * 0.50;
+                if (signal)
+                {
+                    int boundary = Math.Min(obstacle.Lane, 1);
+                    double leftTrack = LaneCenter(width, boundary, progress);
+                    double rightTrack = LaneCenter(width, boundary + 1, progress);
+                    DrawSignal(canvas, (leftTrack + rightTrack) / 2, y, scale);
+                    continue;
+                }
+
                 double x = LaneCenter(width, obstacle.Lane, progress);
+                double trackAngle = Math.Atan2((1 - obstacle.Lane) * width * 0.212 * 0.82,
+                    height * 0.50) * 180 / Math.PI;
                 if (obstacle.Moving)
                 {
                     x += Math.Sin(obstacle.Distance / 9) * width * 0.012;
                 }
 
-                DrawObstacle(canvas, obstacle.Kind, x, y, scale);
+                DrawObstacle(canvas, obstacle.Kind, x, y, scale, trackAngle);
             }
 
             foreach (Gruppe2_SubwayReward reward in field.Rewards.OrderByDescending(item => item.Distance))
@@ -334,33 +455,27 @@ namespace OOPGames
             }
         }
 
-        private static void DrawObstacle(Canvas canvas, Gruppe2_SubwayObstacleKind kind, double x, double y, double scale)
+        private static void DrawObstacle(
+            Canvas canvas, Gruppe2_SubwayObstacleKind kind, double x, double y, double scale, double trackAngle)
         {
             double w = 35 * scale;
             double h = 42 * scale;
             switch (kind)
             {
                 case Gruppe2_SubwayObstacleKind.Train:
-                    DrawTrain(canvas, x, y, w, h);
+                    DrawTrain(canvas, x, y, w, h, trackAngle);
                     break;
                 case Gruppe2_SubwayObstacleKind.CargoRamp:
-                    DrawCargoWagon(canvas, x, y, w, h);
+                    DrawCargoWagon(canvas, x, y, w * 1.12, h * 1.08, trackAngle);
                     break;
                 case Gruppe2_SubwayObstacleKind.CargoWagon:
-                    DrawCargoTrailer(canvas, x, y, w, h);
+                    DrawClosedCargoWagon(canvas, x, y, w, h, trackAngle);
                     break;
                 case Gruppe2_SubwayObstacleKind.LargeBarrier:
                     DrawLargeBarrier(canvas, x, y, w, h, scale);
                     break;
-                case Gruppe2_SubwayObstacleKind.SmallBarrier:
-                    AddRectangle(canvas, x - w, y - h * 0.8, w * 2, h * 0.8,
-                        Brush(Color.FromRgb(235, 180, 51)), Brushes.Black, 2 * scale);
-                    break;
                 case Gruppe2_SubwayObstacleKind.Bush:
-                    AddEllipse(canvas, x - w, y - h, w * 2, h, Brush(Color.FromRgb(45, 136, 62)),
-                        Brushes.DarkGreen, scale);
-                    AddEllipse(canvas, x - w * 0.55, y - h * 1.3, w, h, Brush(Color.FromRgb(67, 165, 75)),
-                        null, 0);
+                    DrawBush(canvas, x, y, w, h, trackAngle);
                     break;
                 case Gruppe2_SubwayObstacleKind.PlantPot:
                     AddRectangle(canvas, x - w * 0.65, y - h * 0.65, w * 1.3, h * 0.65,
@@ -373,16 +488,6 @@ namespace OOPGames
                 case Gruppe2_SubwayObstacleKind.Curb:
                     AddRectangle(canvas, x - w, y - h * 0.45, w * 2, h * 0.45,
                         Brush(Color.FromRgb(172, 172, 165)), Brushes.DimGray, scale);
-                    break;
-                case Gruppe2_SubwayObstacleKind.CenterPillar:
-                    AddRectangle(canvas, x - w * 0.45, y - h * 2, w * 0.9, h * 2,
-                        Brush(Color.FromRgb(112, 105, 99)), Brushes.Black, 2 * scale);
-                    break;
-                case Gruppe2_SubwayObstacleKind.Signal:
-                    AddRectangle(canvas, x - w * 0.12, y - h * 2, w * 0.24, h * 2,
-                        Brushes.DimGray, Brushes.Black, scale);
-                    AddEllipse(canvas, x - w * 0.4, y - h * 2, w * 0.8, h * 0.8, Brushes.Red, null, 0);
-                    AddEllipse(canvas, x - w * 0.4, y - h * 1.1, w * 0.8, h * 0.8, Brushes.LimeGreen, null, 0);
                     break;
             }
         }
@@ -443,7 +548,20 @@ namespace OOPGames
                 Brush(Color.FromRgb(190, 197, 194)), scale);
         }
 
-        private static void DrawCargoWagon(Canvas canvas, double x, double y, double halfWidth, double height)
+        private static void DrawCargoWagon(
+            Canvas canvas, double x, double y, double halfWidth, double height, double trackAngle)
+        {
+            double detailWidth = halfWidth * 1.9;
+            double detailHeight = height * 2.25;
+            Canvas details = new Canvas { Width = detailWidth, Height = detailHeight };
+            DrawCargoWagonDetails(details, detailWidth / 2, detailHeight - height * 0.08,
+                halfWidth, height);
+            DrawTexturedTrainPart(canvas, details, x, y - height * 2.05,
+                detailWidth, detailHeight, Color.FromRgb(116, 35, 31),
+                detailHeight * 0.45, detailHeight * 0.91, 0.34, trackAngle);
+        }
+
+        private static void DrawCargoWagonDetails(Canvas canvas, double x, double y, double halfWidth, double height)
         {
             double rearY = y - height * 2.05;
             double frontY = y - height * 0.12;
@@ -543,73 +661,452 @@ namespace OOPGames
                 halfWidth * 0.29, height * 0.13, Brush(Color.FromRgb(91, 94, 86)), null, 0);
         }
 
-        private static void DrawCargoTrailer(Canvas canvas, double x, double y, double halfWidth, double height)
+        private static void DrawClosedCargoWagon(
+            Canvas canvas, double x, double y, double halfWidth, double height, double trackAngle)
         {
-            double rearY = y - height * 1.72;
-            double frontY = y - height * 0.12;
-            double rearHalfWidth = halfWidth * 0.58;
-            double frontHalfWidth = halfWidth * 0.92;
-            double scale = halfWidth / 35;
-            Brush body = Brush(Color.FromRgb(159, 48, 39));
-            Brush side = Brush(Color.FromRgb(200, 59, 44));
-            Brush top = Brush(Color.FromRgb(75, 78, 70));
-
-            AddPolygon(canvas, new[]
+            double wagonWidth = halfWidth * 3.25;
+            double wagonHeight = height * 3.75;
+            double viewportSize = Math.Sqrt(wagonWidth * wagonWidth + wagonHeight * wagonHeight) * 1.05;
+            Viewport3D viewport = new Viewport3D
             {
-                new Point(x - rearHalfWidth, rearY),
-                new Point(x + rearHalfWidth, rearY),
-                new Point(x + frontHalfWidth, frontY),
-                new Point(x - frontHalfWidth, frontY)
-            }, body, Brush(Color.FromRgb(102, 39, 34)), scale);
-            AddPolygon(canvas, new[]
-            {
-                new Point(x - rearHalfWidth, rearY),
-                new Point(x - rearHalfWidth * 0.78, rearY + height * 0.13),
-                new Point(x - frontHalfWidth * 0.78, frontY + height * 0.08),
-                new Point(x - frontHalfWidth, frontY)
-            }, side);
-            AddPolygon(canvas, new[]
-            {
-                new Point(x + rearHalfWidth * 0.78, rearY + height * 0.13),
-                new Point(x + rearHalfWidth, rearY),
-                new Point(x + frontHalfWidth, frontY),
-                new Point(x + frontHalfWidth * 0.78, frontY + height * 0.08)
-            }, Brush(Color.FromRgb(129, 39, 34)));
-            AddPolygon(canvas, new[]
-            {
-                new Point(x - rearHalfWidth * 0.78, rearY + height * 0.13),
-                new Point(x + rearHalfWidth * 0.78, rearY + height * 0.13),
-                new Point(x + frontHalfWidth * 0.78, frontY + height * 0.08),
-                new Point(x - frontHalfWidth * 0.78, frontY + height * 0.08)
-            }, top);
-
-            AddPolygon(canvas, new[]
-            {
-                new Point(x - rearHalfWidth * 0.42, rearY + height * 0.20),
-                new Point(x + rearHalfWidth * 0.34, rearY + height * 0.20),
-                new Point(x + frontHalfWidth * 0.48, frontY - height * 0.20),
-                new Point(x + frontHalfWidth * 0.05, frontY - height * 0.20),
-                new Point(x - frontHalfWidth * 0.43, frontY - height * 0.20)
-            }, Brush(Color.FromRgb(139, 137, 117)));
-            AddPolygon(canvas, new[]
-            {
-                new Point(x - rearHalfWidth * 0.20, rearY + height * 0.18),
-                new Point(x + rearHalfWidth * 0.48, rearY + height * 0.18),
-                new Point(x + frontHalfWidth * 0.32, frontY - height * 0.43),
-                new Point(x - frontHalfWidth * 0.12, frontY - height * 0.35)
-            }, Brush(Color.FromRgb(111, 111, 98)));
-
-            AddLine(canvas, x - halfWidth * 0.28, frontY + height * 0.12,
-                x + halfWidth * 0.28, frontY + height * 0.12,
-                Brush(Color.FromRgb(48, 50, 47)), 2 * scale);
-            AddEllipse(canvas, x - halfWidth * 0.06, frontY + height * 0.08,
-                halfWidth * 0.12, height * 0.10, Brush(Color.FromRgb(77, 78, 70)), null, 0);
+                Width = viewportSize,
+                Height = viewportSize,
+                ClipToBounds = true,
+                IsHitTestVisible = false,
+                Camera = new PerspectiveCamera(
+                    new Point3D(1.2, 2.6, 8),
+                    new Vector3D(-1.2, -2.6, -8),
+                    new Vector3D(0, 1, 0),
+                    42)
+            };
+            viewport.Children.Add(new ModelVisual3D { Content = CargoWagonModel });
+            viewport.RenderTransformOrigin = new Point(0.5, 0.5);
+            viewport.RenderTransform = new RotateTransform(trackAngle);
+            Canvas.SetLeft(viewport, x - viewportSize / 2);
+            Canvas.SetTop(viewport, y - height * 1.3 - viewportSize / 2);
+            canvas.Children.Add(viewport);
         }
 
-        private static void DrawTrain(Canvas canvas, double x, double bottom, double halfWidth, double bodyHeight)
+        private static Model3DGroup CreateCargoWagonModel()
+        {
+            Model3DGroup model = new Model3DGroup();
+            Material body = Material(Color.FromRgb(95, 31, 70));
+            Material roofHighlight = Material(Color.FromRgb(190, 43, 116));
+            Material roofMidtone = Material(Color.FromRgb(151, 34, 96));
+            Material roofShadow = Material(Color.FromRgb(112, 28, 79));
+            Material gold = Material(Color.FromRgb(244, 181, 35));
+            Material front = Material(Color.FromRgb(179, 104, 35));
+            Material window = Material(Color.FromRgb(35, 83, 133));
+            Material glass = Material(Color.FromRgb(91, 174, 218));
+            Material dark = Material(Color.FromRgb(36, 38, 48));
+            Material lamp = Material(Color.FromRgb(255, 224, 89));
+
+            AddBox(model, -0.78, -0.62, -1.55, 0.78, 0.30, 1.55, body);
+            AddBox(model, -0.80, -0.66, 1.55, 0.80, 0.27, 1.59, front);
+            AddBox(model, -0.82, -0.24, 1.595, 0.82, -0.12, 1.62, gold);
+            AddBox(model, -0.82, -0.58, 1.62, -0.40, -0.32, 1.65, window);
+            AddBox(model, -0.33, -0.58, 1.62, 0.09, -0.32, 1.65, window);
+            AddBox(model, 0.16, -0.58, 1.62, 0.58, -0.32, 1.65, window);
+            AddBox(model, -0.80, -0.28, 1.625, -0.40, -0.24, 1.66, glass);
+            AddBox(model, -0.31, -0.28, 1.625, 0.11, -0.24, 1.66, glass);
+            AddBox(model, 0.18, -0.28, 1.625, 0.58, -0.24, 1.66, glass);
+            AddBox(model, -0.56, -0.72, 1.63, -0.34, -0.61, 1.67, lamp);
+            AddBox(model, 0.34, -0.72, 1.63, 0.56, -0.61, 1.67, lamp);
+            AddBox(model, -0.82, -0.18, -1.58, 0.82, -0.08, -1.54, gold);
+            AddBox(model, -0.84, -0.18, 1.22, 0.84, -0.08, 1.33, gold);
+
+            for (int segment = 0; segment < 12; segment++)
+            {
+                double start = Math.PI * segment / 12;
+                double end = Math.PI * (segment + 1) / 12;
+                double startX = 0.80 * Math.Cos(start);
+                double startY = 0.27 + 0.53 * Math.Sin(start);
+                double endX = 0.80 * Math.Cos(end);
+                double endY = 0.27 + 0.53 * Math.Sin(end);
+                Material roofMaterial = segment < 4
+                    ? roofHighlight
+                    : segment < 8 ? roofMidtone : roofShadow;
+                AddQuad(model, new Point3D(startX, startY, -1.56),
+                    new Point3D(endX, endY, -1.56),
+                    new Point3D(endX, endY, 1.56),
+                    new Point3D(startX, startY, 1.56), roofMaterial);
+                AddTriangle(model, new Point3D(startX, startY, 1.565),
+                    new Point3D(endX, endY, 1.565),
+                    new Point3D(0, 0.27, 1.565), front);
+            }
+
+            AddWheel(model, 0.80, -0.68, -1.0);
+            AddWheel(model, 0.80, -0.68, 1.0);
+            AddWheel(model, -0.80, -0.68, -1.0);
+            AddWheel(model, -0.80, -0.68, 1.0);
+
+            model.Children.Add(new AmbientLight(Color.FromRgb(105, 105, 105)));
+            model.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
+            model.Freeze();
+            return model;
+        }
+
+        private static Model3DGroup CreateBushModel()
+        {
+            Model3DGroup bush = new Model3DGroup();
+            AddBox(bush, -0.15, -0.78, -0.15, 0.15, -0.18, 0.15,
+                Material(Color.FromRgb(91, 62, 38)));
+            AddBushCluster(bush, -0.43, -0.28, 0.00, 0.48, 0.48, 0.44,
+                Color.FromRgb(36, 112, 47));
+            AddBushCluster(bush, 0.00, -0.18, 0.00, 0.56, 0.57, 0.50,
+                Color.FromRgb(53, 144, 58));
+            AddBushCluster(bush, 0.42, -0.30, 0.02, 0.43, 0.45, 0.42,
+                Color.FromRgb(41, 124, 49));
+            AddBushCluster(bush, -0.20, 0.10, 0.08, 0.37, 0.40, 0.36,
+                Color.FromRgb(73, 164, 67));
+            AddBushCluster(bush, 0.24, 0.13, 0.10, 0.34, 0.36, 0.34,
+                Color.FromRgb(61, 151, 59));
+            bush.Children.Add(new AmbientLight(Color.FromRgb(135, 135, 135)));
+            bush.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
+            bush.Freeze();
+            return bush;
+        }
+
+        private static Model3DGroup CreateSignalModel()
+        {
+            Model3DGroup signal = new Model3DGroup();
+            Material pole = Material(Color.FromRgb(71, 77, 79));
+            Material housing = Material(Color.FromRgb(39, 43, 46));
+            Material rim = Material(Color.FromRgb(17, 19, 21));
+
+            AddBox(signal, -0.07, 0, -0.08, 0.07, 1.65, 0.08, pole);
+            AddBox(signal, -0.22, 0.02, -0.16, 0.22, 0.12, 0.16,
+                Material(Color.FromRgb(88, 85, 75)));
+            AddBox(signal, -0.48, 1.36, -0.25, 0.48, 2.84, 0.25, housing);
+            AddBox(signal, -0.52, 2.82, -0.29, 0.52, 2.94, 0.29, pole);
+            AddBox(signal, -0.40, 1.27, -0.22, 0.40, 1.37, 0.22, pole);
+
+            AddSignalLens(signal, 2.51, Color.FromRgb(242, 35, 38));
+            AddSignalLens(signal, 2.10, Color.FromRgb(255, 190, 28));
+            AddSignalLens(signal, 1.69, Color.FromRgb(55, 222, 75));
+
+            signal.Children.Add(new AmbientLight(Color.FromRgb(110, 110, 110)));
+            signal.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
+            signal.Freeze();
+            return signal;
+        }
+
+        private static void AddSignalLens(Model3DGroup signal, double y, Color color)
+        {
+            MeshGeometry3D sphere = CreateSphereMesh();
+            Material backing = Material(Color.FromRgb(12, 14, 16));
+            Material lens = new EmissiveMaterial(Brush(color));
+            lens.Freeze();
+
+            signal.Children.Add(new GeometryModel3D(sphere, backing)
+            {
+                BackMaterial = backing,
+                Transform = new Transform3DGroup
+                {
+                    Children = new Transform3DCollection
+                    {
+                        new ScaleTransform3D(0.30, 0.30, 0.10),
+                        new TranslateTransform3D(0, y, 0.27)
+                    }
+                }
+            });
+            signal.Children.Add(new GeometryModel3D(sphere, lens)
+            {
+                BackMaterial = lens,
+                Transform = new Transform3DGroup
+                {
+                    Children = new Transform3DCollection
+                    {
+                        new ScaleTransform3D(0.21, 0.21, 0.12),
+                        new TranslateTransform3D(0, y, 0.34)
+                    }
+                }
+            });
+        }
+
+        private static void DrawSignal(Canvas canvas, double x, double y, double scale)
+        {
+            double viewportWidth = 58 * scale;
+            double viewportHeight = 126 * scale;
+            Viewport3D viewport = new Viewport3D
+            {
+                Width = viewportWidth,
+                Height = viewportHeight,
+                ClipToBounds = true,
+                IsHitTestVisible = false,
+                Camera = new PerspectiveCamera(
+                    new Point3D(1.7, 2.1, 7),
+                    new Vector3D(-1.7, -1.6, -7),
+                    new Vector3D(0, 1, 0),
+                    36)
+            };
+            viewport.Children.Add(new ModelVisual3D { Content = SignalModel });
+            Canvas.SetLeft(viewport, x - viewportWidth / 2);
+            Canvas.SetTop(viewport, y - viewportHeight);
+            canvas.Children.Add(viewport);
+        }
+
+        private static void AddBushCluster(
+            Model3DGroup bush, double x, double y, double z, double radiusX, double radiusY,
+            double radiusZ, Color color)
+        {
+            MeshGeometry3D sphere = CreateSphereMesh();
+            Material leaves = Material(color);
+            GeometryModel3D cluster = new GeometryModel3D(sphere, leaves)
+            {
+                BackMaterial = leaves,
+                Transform = new Transform3DGroup
+                {
+                    Children = new Transform3DCollection
+                    {
+                        new ScaleTransform3D(radiusX, radiusY, radiusZ),
+                        new TranslateTransform3D(x, y, z)
+                    }
+                }
+            };
+            bush.Children.Add(cluster);
+        }
+
+        private static MeshGeometry3D CreateSphereMesh()
+        {
+            const int rings = 8;
+            const int segments = 12;
+            MeshGeometry3D mesh = new MeshGeometry3D();
+            for (int ring = 0; ring <= rings; ring++)
+            {
+                double latitude = Math.PI * ring / rings;
+                double y = Math.Cos(latitude);
+                double ringRadius = Math.Sin(latitude);
+                for (int segment = 0; segment <= segments; segment++)
+                {
+                    double longitude = 2 * Math.PI * segment / segments;
+                    mesh.Positions.Add(new Point3D(
+                        ringRadius * Math.Cos(longitude),
+                        y,
+                        ringRadius * Math.Sin(longitude)));
+                }
+            }
+
+            for (int ring = 0; ring < rings; ring++)
+            {
+                for (int segment = 0; segment < segments; segment++)
+                {
+                    int current = ring * (segments + 1) + segment;
+                    int next = current + segments + 1;
+                    mesh.TriangleIndices.Add(current);
+                    mesh.TriangleIndices.Add(next);
+                    mesh.TriangleIndices.Add(current + 1);
+                    mesh.TriangleIndices.Add(current + 1);
+                    mesh.TriangleIndices.Add(next);
+                    mesh.TriangleIndices.Add(next + 1);
+                }
+            }
+
+            mesh.Freeze();
+            return mesh;
+        }
+
+        private static void DrawBush(Canvas canvas, double x, double y, double halfWidth, double height, double trackAngle)
+        {
+            double viewportSize = Math.Max(halfWidth * 3.2, height * 2.8);
+            Viewport3D viewport = new Viewport3D
+            {
+                Width = viewportSize,
+                Height = viewportSize,
+                ClipToBounds = true,
+                IsHitTestVisible = false,
+                Camera = new PerspectiveCamera(
+                    new Point3D(2.4, 2.8, 5.4),
+                    new Vector3D(-2.4, -2.6, -5.4),
+                    new Vector3D(0, 1, 0),
+                    42)
+            };
+            viewport.Children.Add(new ModelVisual3D { Content = BushModel });
+            viewport.RenderTransformOrigin = new Point(0.5, 0.5);
+            viewport.RenderTransform = new RotateTransform(trackAngle);
+            Canvas.SetLeft(viewport, x - viewportSize / 2);
+            Canvas.SetTop(viewport, y - viewportSize * 0.72);
+            canvas.Children.Add(viewport);
+        }
+
+        private static Material Material(Color color)
+        {
+            DiffuseMaterial material = new DiffuseMaterial(Brush(color));
+            material.Freeze();
+            return material;
+        }
+
+        private static void AddBox(Model3DGroup model,
+            double x1, double y1, double z1, double x2, double y2, double z2, Material material)
+        {
+            Point3D p000 = new Point3D(x1, y1, z1);
+            Point3D p001 = new Point3D(x1, y1, z2);
+            Point3D p010 = new Point3D(x1, y2, z1);
+            Point3D p011 = new Point3D(x1, y2, z2);
+            Point3D p100 = new Point3D(x2, y1, z1);
+            Point3D p101 = new Point3D(x2, y1, z2);
+            Point3D p110 = new Point3D(x2, y2, z1);
+            Point3D p111 = new Point3D(x2, y2, z2);
+
+            AddQuad(model, p000, p001, p011, p010, material);
+            AddQuad(model, p100, p110, p111, p101, material);
+            AddQuad(model, p000, p100, p101, p001, material);
+            AddQuad(model, p010, p011, p111, p110, material);
+            AddQuad(model, p000, p010, p110, p100, material);
+            AddQuad(model, p001, p101, p111, p011, material);
+        }
+
+        private static void DrawTexturedTrainPart(
+            Canvas canvas,
+            Canvas details,
+            double x,
+            double top,
+            double width,
+            double height,
+            Color bodyColor,
+            double bodyCenterFromTop,
+            double bodyHeight,
+            double cameraElevation,
+            double trackAngle)
+        {
+            double modelHeight = height / width * 2;
+            double bodyCenterY = (0.5 - bodyCenterFromTop / height) * modelHeight;
+            double modelBodyHeight = bodyHeight / height * modelHeight;
+            Material body = Material(bodyColor);
+            Model3DGroup model = new Model3DGroup();
+            AddBox(model, -0.86, bodyCenterY - modelBodyHeight / 2, -0.26,
+                0.86, bodyCenterY + modelBodyHeight / 2, 0, body);
+
+            VisualBrush faceBrush = new VisualBrush(details)
+            {
+                Stretch = Stretch.Fill,
+                ViewboxUnits = BrushMappingMode.Absolute,
+                Viewbox = new Rect(0, 0, width, height)
+            };
+            EmissiveMaterial faceMaterial = new EmissiveMaterial(faceBrush);
+            MeshGeometry3D faceMesh = new MeshGeometry3D
+            {
+                Positions = new Point3DCollection
+                {
+                    new Point3D(-1, modelHeight / 2, 0.015),
+                    new Point3D(1, modelHeight / 2, 0.015),
+                    new Point3D(1, -modelHeight / 2, 0.015),
+                    new Point3D(-1, -modelHeight / 2, 0.015)
+                },
+                TextureCoordinates = new PointCollection
+                {
+                    new Point(0, 0), new Point(1, 0), new Point(1, 1), new Point(0, 1)
+                },
+                TriangleIndices = new Int32Collection { 0, 1, 2, 0, 2, 3 }
+            };
+            faceMesh.Freeze();
+            GeometryModel3D face = new GeometryModel3D(faceMesh, faceMaterial)
+            {
+                BackMaterial = faceMaterial
+            };
+            model.Children.Add(face);
+            model.Children.Add(new AmbientLight(Colors.White));
+            model.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
+
+            Viewport3D viewport = new Viewport3D
+            {
+                Width = width * 1.3,
+                Height = height * 1.3,
+                ClipToBounds = true,
+                IsHitTestVisible = false,
+                Camera = CreateTrainCamera(
+                    width * 1.3, height * 1.3, modelHeight * 1.3, cameraElevation)
+            };
+            viewport.Children.Add(new ModelVisual3D { Content = model });
+            viewport.RenderTransformOrigin = new Point(0.5, 0.5);
+            viewport.RenderTransform = new RotateTransform(trackAngle);
+            Canvas.SetLeft(viewport, x - width * 1.3 / 2);
+            Canvas.SetTop(viewport, top - height * 0.15);
+            canvas.Children.Add(viewport);
+        }
+
+        private static OrthographicCamera CreateTrainCamera(
+            double viewportWidth, double viewportHeight, double modelHeight, double elevation)
+        {
+            Vector3D direction = new Vector3D(-0.15, -elevation, -1);
+            direction.Normalize();
+            Vector3D right = Vector3D.CrossProduct(direction, new Vector3D(0, 1, 0));
+            right.Normalize();
+            Vector3D cameraUp = Vector3D.CrossProduct(right, direction);
+            cameraUp.Normalize();
+
+            const double modelWidth = 2;
+            const double bodyDepth = 0.28;
+            double horizontalSpan = Math.Abs(right.X) * modelWidth
+                + Math.Abs(right.Y) * modelHeight + Math.Abs(right.Z) * bodyDepth;
+            double verticalSpan = Math.Abs(cameraUp.X) * modelWidth
+                + Math.Abs(cameraUp.Y) * modelHeight + Math.Abs(cameraUp.Z) * bodyDepth;
+            double aspect = viewportWidth / viewportHeight;
+            double cameraWidth = Math.Max(horizontalSpan, verticalSpan * aspect) * 1.02;
+            Point3D position = new Point3D(-direction.X * 10, -direction.Y * 10, -direction.Z * 10);
+            return new OrthographicCamera(position, direction, new Vector3D(0, 1, 0), cameraWidth);
+        }
+
+        private static void AddWheel(Model3DGroup model, double x, double y, double z)
+        {
+            Material wheel = Material(Color.FromRgb(34, 35, 40));
+            const int segments = 10;
+            for (int segment = 0; segment < segments; segment++)
+            {
+                double a = 2 * Math.PI * segment / segments;
+                double b = 2 * Math.PI * (segment + 1) / segments;
+                Point3D a0 = new Point3D(x, y + 0.18 * Math.Sin(a), z + 0.18 * Math.Cos(a));
+                Point3D a1 = new Point3D(x, y + 0.18 * Math.Sin(b), z + 0.18 * Math.Cos(b));
+                Point3D b0 = new Point3D(x + (x > 0 ? 0.10 : -0.10), a0.Y, a0.Z);
+                Point3D b1 = new Point3D(x + (x > 0 ? 0.10 : -0.10), a1.Y, a1.Z);
+                AddQuad(model, a0, a1, b1, b0, wheel);
+            }
+        }
+
+        private static void AddQuad(Model3DGroup model, Point3D a, Point3D b, Point3D c, Point3D d,
+            Material material)
+        {
+            MeshGeometry3D mesh = new MeshGeometry3D
+            {
+                Positions = new Point3DCollection { a, b, c, d },
+                TriangleIndices = new Int32Collection { 0, 1, 2, 0, 2, 3 }
+            };
+            mesh.Freeze();
+            GeometryModel3D face = new GeometryModel3D(mesh, material) { BackMaterial = material };
+            face.Freeze();
+            model.Children.Add(face);
+        }
+
+        private static void AddTriangle(Model3DGroup model, Point3D a, Point3D b, Point3D c,
+            Material material)
+        {
+            MeshGeometry3D mesh = new MeshGeometry3D
+            {
+                Positions = new Point3DCollection { a, b, c },
+                TriangleIndices = new Int32Collection { 0, 1, 2 }
+            };
+            mesh.Freeze();
+            GeometryModel3D face = new GeometryModel3D(mesh, material) { BackMaterial = material };
+            face.Freeze();
+            model.Children.Add(face);
+        }
+
+        private static void DrawTrain(
+            Canvas canvas, double x, double bottom, double halfWidth, double bodyHeight, double trackAngle)
         {
             double sx = 2 * halfWidth / 229;
             double sy = 2.2 * bodyHeight / 281;
+            double detailWidth = 2 * halfWidth;
+            double detailHeight = 419 * sy;
+            Canvas details = new Canvas { Width = detailWidth, Height = detailHeight };
+            DrawTrainDetails(details, detailWidth / 2, detailHeight, sx, sy);
+            DrawTexturedTrainPart(canvas, details, x, bottom - detailHeight,
+                detailWidth, detailHeight, Color.FromRgb(151, 42, 37),
+                detailHeight * 0.66, detailHeight * 0.67, 0.18, trackAngle);
+        }
+
+        private static void DrawTrainDetails(Canvas canvas, double x, double bottom, double sx, double sy)
+        {
             Brush red = Brush(Color.FromRgb(218, 75, 62));
             Brush trim = Brush(Color.FromRgb(48, 69, 72));
             Brush fascia = Brush(Color.FromRgb(190, 203, 200));
