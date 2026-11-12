@@ -92,3 +92,61 @@
 > ich habe immernoch das problenm, wenn ich eine taste kurz drücke, dass er einen zug macht, dann die ki einen zug macht und ich dann automatisch noch einen zug an der selben stelle mache.
 
 - **Ergebnisvermerk:** Zusätzlich zur Spielereingabe fängt das WPF-Preview-Keyboard-Event automatische Tastenwiederholungen vor dem `MainWindow`-Handler ab. Dadurch kann ein nach dem Computerzug eintreffendes Repeat-Ereignis keinen zweiten Spielzug mehr auslösen.
+
+## Projekt: 2D-Fabrikspiel (Satisfactory-inspiriert)
+
+Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), Wortlaut, Werkzeug/Modell und Ergebnisvermerk ergänzt.
+
+### 2026-11-12, 08:52 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Ich möchte in der Uni für unser programmieren 3 Projekt im 3 semster Mechatronik bachelor studium. Wir wollen in einer vorgegebenen entwicklungsumgebung ein spiel programmieren. Dabei haben wir uns für eine abgespeckte version von satisfactory in 2D entschieden. Ich habe gehört, dass wäre dann wie factorio das spiel kenne ich selber aber nicht. Ich bin zuständig für das spielfeld. Kannst du mir bitte ein Konzept für den aufbau des programms erstellen. Also welche Klassen ich brauche und was da rein soll. Im anhang sind die anforderungen an das orojekt.Ich habe schonmal angefangen die anforderungen und ideen in der anforderungen.md erstellt
+
+- **Ergebnisvermerk:** Ein Spielfeldkonzept mit Klassenaufteilung, Verantwortlichkeiten, Framework-Anbindung und schrittweisem MVP wurde in `Plans/Tim_Eichert_Spielfeldkonzept.md` erstellt.
+
+### 2026-11-12, 09:10 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> bitte fügen meine prompts in der TIm Eichert prompts md hinzu. Mache für dieses spiel einen seperaten bereich in der datei. Erstelle mir bitte ebenfalls ein UML diagramm um die struktur besser zu verstehen
+
+- **Ergebnisvermerk:** Die Prompts zum Fabrikspiel wurden in diesem separaten Abschnitt dokumentiert. Ein UML-Klassendiagramm wurde in `Plans/Tim_Eichert_Spielfeld_UML.md` ergänzt.
+
+### 2026-11-12, 09:34 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> ich glaube die interfaces machen aktuell wenig sinn so wie du die erstellen möchtest, weil das interface einfach die komplette klasse verwendet. ICh dachte ein interface soll nur das notwendige lesend zeigen. Warum ist außerdem so viel öffentlich? kann man nicht mehr private machen und mit get funktionen arbeiten
+
+- **Ergebnisvermerk:** Das Konzept und UML wurden auf schmale, lesende Interfaces, private Spielfeldzustände, kontrollierte interne Änderungen und reduzierte Objektansichten umgestellt.
+
+### 2026-11-12, 09:38 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> bitte trage jeden prompt immer automatisch mit dem ergebnis in die markdown ein. kannst du bitte auch die uhrzeit hnzufügen. und den letzten prompt nachtragen
+
+- **Ergebnisvermerk:** Die Spiel-Prompt-Einträge erhielten Uhrzeiten; der vorherige Prompt zur Überarbeitung der Interfaces wurde nachgetragen. Ab jetzt wird bei weiteren Aufgaben zu diesem Spiel der Prompt mit Uhrzeit und Ergebnis in diesem Abschnitt dokumentiert.
+
+### 2026-11-12, 09:55 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> ich verstehe nicht ganz wofür g5kachelansicht benötigt wird, das wirkt irgendwie überflüssig. Kann es sein, dass de spieler nicht an die kartenansicht ran kommt? Ist can be painted by möglicherweise falsch herum beschrieben. Kann es sein dass noch ein IG5 welt painter fehlt?
+
+- **Ergebnisvermerk:** Die zusätzliche Kachelansicht wurde durch das schlanke `IG5_KachelInfo` ersetzt. Der fehlende Zugriff des Spielers auf die Kartenumrechnung wurde berücksichtigt; `CanBePaintedBy` und seine Aufrufrichtung wurden am Framework verifiziert; `IG5_WeltPainter` wurde im Konzept und UML ergänzt.
+
+### 2026-11-12, 10:19 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> biite pull den aktuellen stand, füge meine änderungen in spielfeldkonzept prompts und das uml hi nzu und pushe das bitte
+
+- **Ergebnisvermerk:** Der aktuelle Remote-Stand wurde per Fast-Forward eingezogen. Die Anforderungen zu Ressourcen, Sichtweite und getrennten Gebäude-/Laufband-/Stromnetzebenen wurden in Spielfeldkonzept und UML übernommen; der Prompt ist in diesem Dokument protokolliert.
