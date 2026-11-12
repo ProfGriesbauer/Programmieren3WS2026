@@ -6,10 +6,30 @@
 
 **Ziel:** Verbesserung der Kompatibilität zwischen den Komponenten verschiedener Gruppen.
 
-**Prompt (aus dem Arabischen ins Deutsche übersetzt):**
+**Prompt :**
 
-„Das Spielfeld funktioniert, aber die Klickpositionen stimmen nicht überein.“
+## 10.11.2026 – Kompatibilitätstests mit anderen Gruppen
 
+**KI-Werkzeug:** ChatGPT (GPT-6)
+
+**Prompts :**
+
+- Die Painter der Gruppen 2, 8 und 10 funktionieren mit unseren Komponenten. Wie dokumentiere ich diese Tests?
+- Wie kann ich den Computer Player einer anderen Gruppe mit unseren Regeln testen?“
+- Wie teste ich den Human Player und die Rules anderer Gruppen?
+- Welche Schritte sind nach den erfolgreichen Kompatibilitätstests notwendig?
+
+**Ergebnis:**
+
+- Erfolgreiche Tests mit den Paintern der Gruppen 2, 8 und 10.
+- Erfolgreicher Test des Computer Players der Gruppe 8.
+- Erfolgreicher Test des Human Players der Gruppe 2.
+- Erfolgreicher Test mit den Rules der Gruppe 8.
+- Dokumentation der getesteten Kombinationen in der `Kompatibilitaetsmatrix.md`.
+
+**Eigener Beitrag:**
+
+Die verschiedenen Spielkomponenten wurden manuell kombiniert und getestet. Die Ergebnisse wurden überprüft und dokumentiert.
 **Ergebnis:**
 
 - Die Ursache lag in den unterschiedlichen Spielfeldabmessungen der Painter.
