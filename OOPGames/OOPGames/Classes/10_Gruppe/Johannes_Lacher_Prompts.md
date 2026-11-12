@@ -308,3 +308,27 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > add the null check of the canvas click as a new task
 
 **Ergebnis:** übernommen – Plan auf Version 0.6: Umschalter „Normale Ansicht / Vollbild“ aus zwei `RadioButton`s im `ToggleButton`-Stil (aktiver Teil hervorgehoben, Klick darauf ohne Wirkung, Zustand wird nach ✕/Snap/F11 nachgezogen, Doppelaufruf über `_IsFullscreen` abgefangen); Testfall ergänzt. Null-Prüfung in `PaintCanvas_MouseDown` als eigene Aufgabe A1 im neuen Abschnitt 8 „Weitere Aufgaben“ (eigener Commit). Offene Fragen 5 und 6 als entschieden markiert.
+
+### 63
+**Prompt:**
+> lets discuss the key inputs now. how can we best handle the keyboard focus? currently the arrow keys navigate in the side bar and not in the game (left and right work in the game, up and down in the sidebar) enter is also caught by the framework i think and not passed to the game
+
+**Ergebnis:** übernommen – Ursache erklärt (Tasten gehen zuerst an das fokussierte Steuerelement: Liste nutzt ↑/↓, Button „Start New Game“ wertet Enter/Leertaste als Klick, `Window_KeyDown` sieht sie nie). Drei Varianten verglichen: A Fokus auf die Spielfläche, B `PreviewKeyDown`, C Steuerelemente nicht fokussierbar; Empfehlung war B.
+
+### 64
+**Prompt:**
+> i think a has less side effects and is the less invasive change compared to b
+
+**Ergebnis:** übernommen – Variante A bestätigt, mit zwei nötigen Ergänzungen: an das Spiel weitergegebene Tasten als behandelt markieren (sonst verschiebt WPF bei Pfeiltasten/Tab den Fokus weg), Klick ins Spiel holt den Fokus zurück. Plan auf Version 0.7: Problem, Lösung in vier Schritten, verworfene Alternativen B und C, drei Testfälle.
+
+### 65
+**Prompt:**
+> so even if the game/canvas is focused the arrows can move the focus?
+
+**Ergebnis:** übernommen – Erklärt (WPF verschiebt den Fokus bei Pfeiltasten und Tab, wenn die Taste nach dem Ereignisweg nicht als behandelt markiert ist) und mit einem Testprogramm im Scratchpad belegt: gleiches Layout wie das Hauptfenster, Fokus auf dem Canvas, echte Tastendrücke durch die WPF-Eingabeverarbeitung. Ohne `e.Handled` landet der Fokus bei ↑/↓/Tab auf „Start New Game“ und bei ←/→ in der Liste (das Spiel bekommt die Taste trotzdem); mit `e.Handled = true` bleibt er bei allen Tasten auf dem Canvas. Schritt 4 im Plan damit bestätigt.
+
+### 66
+**Prompt:**
+> lets go with e.Handled = true
+
+**Ergebnis:** übernommen – Plan auf Version 0.8: Schritt 4 (`e.Handled = true` für an das Spiel weitergegebene Tasten) als entschieden vermerkt und das Testergebnis zur Fokusverschiebung als Begründung ergänzt.

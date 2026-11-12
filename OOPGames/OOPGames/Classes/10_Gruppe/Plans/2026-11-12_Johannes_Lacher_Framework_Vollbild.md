@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Entwurf – Tastensteuerung folgt in einem zweiten Schritt |
-| **Version** | 0.6 |
+| **Version** | 0.8 |
 | **Branch** | `Framework` |
 | **Betroffene Dateien** | `MainWindow.xaml`, `MainWindow.xaml.cs` |
 
@@ -135,6 +135,9 @@ Registrierung oder am Spielablauf (Start, Züge, Ticks).
 | Sehr langer Statustext wird gekürzt (R9) | – (Text von Hand ins Statusfeld tippen) |
 | Hinweis: Vollbild kurz verlassen und wieder betreten → Hinweis bleibt die volle Zeit sichtbar (R10) | – |
 | **Jeder registrierte Painter** einmal im Vollbild und beim Ziehen der Fenstergröße, ohne Absturz (R7) | alle |
+| Tasten-Schritt: Spieler wählen (Fokus in der Liste), Spiel starten → ↑/↓/←/→, Enter und Leertaste kommen beim Spiel an, Spiel startet nicht neu, Listenauswahl ändert sich nicht | Kinderzimmer, ein Spiel mit Pfeiltasten |
+| Tasten-Schritt: mehrfach Pfeiltasten und Tab drücken → Fokus bleibt auf der Spielfläche | – |
+| Tasten-Schritt: in eine Liste klicken (↑/↓ wirken dort), dann ins Spiel klicken → Tasten wirken wieder im Spiel | – |
 
 ## 6. Später: Tasten und Fokus (eigener Schritt)
 
@@ -153,9 +156,39 @@ Registrierung oder am Spielablauf (Start, Züge, Ticks).
   | Esc nur, wenn das Spiel die Taste nicht braucht | Nicht feststellbar: Echtzeitspiele puffern Tasten und reagieren erst im nächsten Tick. |
   | Checkbox „Esc beendet Vollbild“ | Spieler müsste wissen, welches Spiel Esc nutzt. |
   | Neues optionales Interface, mit dem ein Spiel Esc für sich beansprucht | Neues Framework-Interface für alle Gruppen; kann bei Bedarf später ergänzt werden, ohne die F11-Lösung zu ändern. |
-- **Fokus:** Nach `Start New Game` bleibt der Fokus heute auf dem Button bzw. in den Listen. Dann wertet der
-  Button Enter/Leertaste als Klick, und die Pfeiltasten wechseln die Auswahl in den Listen, statt beim Spiel
-  anzukommen. Geplant: Nach dem Start den Fokus auf die Spielfläche legen.
+- **Fokus – Problem:** Das Framework liest Tasten in `Window_KeyDown` (Ereignis `KeyDown` des Fensters). Eine
+  Taste geht in WPF zuerst an das Steuerelement mit Tastaturfokus und steigt dann zum Fenster auf; behandelt
+  das Steuerelement sie selbst, kommt sie nie bei `Window_KeyDown` an. Folgen heute:
+  - Hat eine Liste rechts den Fokus, wechseln ↑/↓ deren Auswahl (←/→ kommen an, da eine senkrechte Liste
+    sie nicht nutzt). Nebenbei ändert sich still die Auswahl für den nächsten Spielstart.
+  - Nach `Start New Game` behält der Button den Fokus und wertet Enter und Leertaste als erneuten Klick –
+    das Spiel startet neu.
+  - Hat das Statusfeld den Fokus, werden Buchstaben hineingetippt; Tab wechselt immer den Fokus.
+- **Fokus – Lösung (Variante A, Fokus auf die Spielfläche):**
+  1. `PaintCanvas` wird fokussierbar (`Focusable = True`, `FocusVisualStyle = {x:Null}`, damit kein
+     gestrichelter Rahmen erscheint).
+  2. Am Ende von `StartGame_Click` den Fokus auf `PaintCanvas` legen.
+  3. In `PaintCanvas_MouseDown` als Erstes den Fokus auf `PaintCanvas` legen – noch vor der Null-Prüfung aus
+     Aufgabe A1, damit ein Klick ins Spiel den Fokus auch dann zurückholt, wenn noch kein Spiel läuft.
+     Klicks auf Elemente, die ein Painter in das Canvas legt, steigen ebenfalls zum Canvas auf.
+  4. In `Window_KeyDown`: Wurde die Taste an ein laufendes Spiel weitergegeben, `e.Handled = true` setzen.
+     Sonst würde WPF bei Pfeiltasten und Tab anschließend den Fokus von der Spielfläche zum nächsten
+     Steuerelement verschieben (z. B. auf `Start New Game`), und das nächste Enter startet das Spiel neu.
+     **Per Test bestätigt** (2026-11-12, nachgebautes Layout des Hauptfensters, Tasten durch die
+     WPF-Eingabeverarbeitung): Ohne `e.Handled` wandert der Fokus bei ↑/↓/Tab auf `Start New Game` und bei
+     ←/→ in die Liste; mit `e.Handled = true` bleibt er bei allen getesteten Tasten (Pfeile, Tab, Enter,
+     Leertaste, Buchstaben) auf dem Canvas. Das Spiel bekommt die Taste in beiden Fällen.
+  - Bewusst so gelassen: Klickt der Spieler in eine Liste oder ins Statusfeld, bekommt dieses den Fokus und
+    die Tasten wirken dort. Ein Klick ins Spiel holt den Fokus zurück.
+  - Die Buttons des Vollbild-Umschalters und ✕ sind nicht fokussierbar (R4), nehmen also den Fokus nie weg.
+  - Unser Kinderzimmer verschiebt den Fokus bisher selbst (`TakeKeyboardFocus` im Branch `gruppe10`); das
+    wird danach überflüssig und kann entfernt werden.
+- **Geprüfte Alternativen:**
+
+  | Alternative | Verworfen, weil |
+  |---|---|
+  | B: Tasten im Fenster per `PreviewKeyDown` vor allen Steuerelementen abfangen und bei laufendem Spiel immer ans Spiel geben | Unabhängig vom Fokus, aber deutlich stärkerer Eingriff: ändert den Tastenweg für alle Gruppen, und nach dem ersten Spielstart sind die Listen bis zum Programmende nicht mehr per Tastatur bedienbar. |
+  | C: Listen, Buttons und Statusfeld nicht fokussierbar machen | Tastatur für die Oberfläche auch vor dem Spielstart unbrauchbar; unklar, ob Listen dann noch per Maus auswählen; viele Einzeländerungen. |
 
 ## 7. Offene Fragen
 
@@ -182,6 +215,8 @@ Registrierung oder am Spielablauf (Start, Züge, Ticks).
 
 | Version | Datum | Autor | Änderung |
 |---|---|---|---|
+| 0.8 | 2026-11-12 | Johannes Lacher | Entschieden: `e.Handled = true` für an das Spiel weitergegebene Tasten (Schritt 4); Testergebnis zur Fokusverschiebung bei Pfeiltasten und Tab ergänzt. |
+| 0.7 | 2026-11-12 | Johannes Lacher | Tastaturfokus: Ursachen beschrieben; Lösung Variante A (Fokus nach Spielstart und bei Klick ins Spiel auf das Canvas, an das Spiel weitergegebene Tasten als behandelt markieren); Alternativen B (`PreviewKeyDown`) und C (Steuerelemente nicht fokussierbar) mit Begründung verworfen. |
 | 0.6 | 2026-11-12 | Johannes Lacher | Entschieden: zweiteiliger Umschalter „Normale Ansicht / Vollbild“ (zwei `RadioButton`s im `ToggleButton`-Stil, aktiver Teil hervorgehoben, Zustand nach jedem Wechsel synchron); Null-Prüfung beim Klick ins Canvas als eigene Aufgabe A1 in neuem Abschnitt 8. |
 | 0.5 | 2026-11-12 | Johannes Lacher | Randfälle-Prüfung: neuer Abschnitt 3 (R1–R14), Umsetzung ergänzt (`RestoreBounds`, `_IsFullscreen`, `StateChanged`, `Focusable = False`, Container ohne Hintergrund, Ränder auf 0, Neuzeichnen nur ohne `IPaintGame2`, Hinweis-Timer), Testplan erweitert, F11 vor der Null-Prüfung, offene Fragen 5 und 6. Abschnitte ab 3 neu nummeriert. |
 | 0.4 | 2026-11-12 | Johannes Lacher | Entschieden: „Start New Game“ nur in der normalen Ansicht, kein Neustart-Button im Vollbild. |
