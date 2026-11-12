@@ -49,17 +49,31 @@ namespace OOPGames
                 return null;
             }
 
-            double x = click.XClickPos - BoardLeft;
-            double y = click.YClickPos - BoardTop;
-            if (x < 0 || x >= G9_VierGewinntBoard.Columns * CellSize
-                || y < 0 || y >= G9_VierGewinntBoard.Rows * CellSize)
+            int column;
+
+            if (OOPGamesManager.Singleton.ActivePainter is IConnectFourPainter painter)
             {
-                return null;
+                column = painter.ColumnAt(click.XClickPos, click.YClickPos);
+            }
+            else
+            {
+                double x = click.XClickPos - BoardLeft;
+                double y = click.YClickPos - BoardTop;
+
+            if (x < 0 || x >= G9_VierGewinntBoard.Columns * CellSize
+                    || y < 0 || y >= G9_VierGewinntBoard.Rows * CellSize)
+            {
+                 return null;
             }
 
-            int column = (int)(x / CellSize);
+            column = (int)(x / CellSize);
+}   
+
+            
             int row = G9_VierGewinntRules.GetLandingRow(field, column);
-            return row < 0 ? null : new G9_VierGewinntMove(row, column, _playerNumber);
+            return row < 0 
+                ? null 
+                : new G9_VierGewinntMove(row, column, _playerNumber);
         }
     }
 

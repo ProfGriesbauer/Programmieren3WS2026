@@ -6,7 +6,6 @@
         xmlns:local="clr-namespace:OOPGames"
         mc:Ignorable="d"
         Title="OOP Games" ResizeMode="CanResizeWithGrip" MinWidth="400" MinHeight="300" Closed="Window_Closed" KeyDown="Window_KeyDown" StateChanged="Window_StateChanged">
-
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="10,5,10,5"/>
