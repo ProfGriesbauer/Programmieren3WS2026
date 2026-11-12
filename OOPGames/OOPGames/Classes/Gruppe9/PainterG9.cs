@@ -215,10 +215,12 @@ namespace OOPGames
                 {
                     if (visited.Add(directory.FullName))
                     {
-                        string[] pathParts = new string[relativePath.Length + 2];
+                        string[] pathParts = new string[relativePath.Length + 4];
                         pathParts[0] = directory.FullName;
-                        pathParts[1] = "Assets";
-                        Array.Copy(relativePath, 0, pathParts, 2, relativePath.Length);
+                        pathParts[1] = "Classes";
+                        pathParts[2] = "Gruppe9";
+                        pathParts[3] = "Assets";
+                        Array.Copy(relativePath, 0, pathParts, 4, relativePath.Length);
                         string path = System.IO.Path.Combine(pathParts);
                         if (File.Exists(path))
                         {
@@ -230,7 +232,7 @@ namespace OOPGames
             }
 
             throw new FileNotFoundException(
-                "Could not locate an animation asset in an Assets directory.",
+                "Could not locate an animation asset under Classes\\Gruppe9\\Assets.",
                 String.Join(System.IO.Path.DirectorySeparatorChar.ToString(), relativePath));
         }
 
