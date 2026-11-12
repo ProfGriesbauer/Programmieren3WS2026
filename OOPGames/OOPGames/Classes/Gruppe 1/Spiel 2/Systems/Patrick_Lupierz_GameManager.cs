@@ -13,13 +13,18 @@ namespace OOPGames
         private const int BartenderGift = 500;
         private const int BartenderLimit = 50;
 
-        private readonly G1C_PlayerMovement _movement;
+        private G1C_PlayerMovement _movement;
         private readonly G1C_InteractionManager _interactions;
+        private readonly G1C_SceneTransitionManager _sceneTransitions;
         private readonly Random _random = new Random();
         private int _gameStartBalance;
 
         public G1C_GameState State { get; private set; } = G1C_GameState.MainGame;
+        public G1C_HomeWorld Home { get; } = new G1C_HomeWorld();
+        public G1C_ExteriorWorld Exterior { get; } = new G1C_ExteriorWorld();
         public G1C_CasinoWorld World { get; } = new G1C_CasinoWorld();
+        public G1C_WorldLocation CurrentLocation { get { return _sceneTransitions.Location; } }
+        public IG1C_WorldScene CurrentWorld { get { return _sceneTransitions.CurrentWorld; } }
         public G1C_Player Player { get; }
         public G1C_MoneyManager Money { get; } = new G1C_MoneyManager();
         public G1C_DialogueBox Dialogue { get; } = new G1C_DialogueBox();
@@ -29,19 +34,29 @@ namespace OOPGames
         public int TickCount { get; private set; }
         public int GamesPlayed { get; private set; }
 
+        // Änderung durch: Denis Mock – Ein neues Spiel startet im Zuhause.
         public G1C_GameManager()
         {
-            Player = new G1C_Player(World.PlayerStartX, World.PlayerStartY, G1C_Direction.Up);
-            _movement = new G1C_PlayerMovement(Player, new G1C_CollisionManager(World));
+            _sceneTransitions = new G1C_SceneTransitionManager(Home, Exterior, World);
+            Player = new G1C_Player(Home.PlayerStartX, Home.PlayerStartY, G1C_Direction.Down);
+            _movement = CreateMovement();
             _interactions = new G1C_InteractionManager(World);
         }
 
+        // Änderung durch: Denis Mock – Türhinweise richten sich nach der aktuell aktiven Welt.
         public string CurrentHint
         {
-            get { return State == G1C_GameState.MainGame ? _interactions.GetHint(Player) : ""; }
+            get
+            {
+                if (State != G1C_GameState.MainGame) return "";
+                string transitionHint = _sceneTransitions.GetHint(Player);
+                if (!string.IsNullOrEmpty(transitionHint)) return transitionHint;
+                return CurrentLocation == G1C_WorldLocation.Casino ? _interactions.GetHint(Player) : "";
+            }
         }
 
-        /// <summary>Zeigt die Casino-Welt (inkl. Dialog/Menü/Ergebnis darüber) an?</summary>
+        /// <summary>Zeigt die aktive Welt-Szene (inkl. Dialog/Menü/Ergebnis darüber) an?</summary>
+        // Änderung durch Denis Mock: Der zentrale Painter verwendet diese Anzeige für alle drei Orte.
         public bool IsWorldVisible
         {
             get
@@ -49,6 +64,12 @@ namespace OOPGames
                 return State == G1C_GameState.MainGame || State == G1C_GameState.Dialogue ||
                        State == G1C_GameState.Menu || State == G1C_GameState.Result;
             }
+        }
+
+        // Entwickler: Denis Mock
+        private G1C_PlayerMovement CreateMovement()
+        {
+            return new G1C_PlayerMovement(Player, new G1C_CollisionManager(CurrentWorld));
         }
 
         // ------------------------------------------------------------------ Eingaben
@@ -106,19 +127,22 @@ namespace OOPGames
             }
         }
 
+        // Änderung durch: Denis Mock – Türen wechseln die aktive Szene; Casinointeraktionen bleiben erhalten.
         private void Interact()
         {
             if (Player.IsMoving) return;
 
-            G1C_WorldObject target = _interactions.FindTarget(Player);
-            if (target == null)
+            if (_sceneTransitions.TryTransition(Player))
             {
-                if (_interactions.IsFacingExit(Player))
-                {
-                    OpenDialogue("Türsteher", new[] { "Du willst schon gehen?", "Die Nacht ist noch jung - versuch doch noch ein Spiel!" }, null);
-                }
+                _movement.ClearQueue();
+                _movement = CreateMovement();
                 return;
             }
+
+            if (CurrentLocation != G1C_WorldLocation.Casino) return;
+
+            G1C_WorldObject target = _interactions.FindTarget(Player);
+            if (target == null) return;
 
             target.OnInteract(Player);
             switch (target.Interaction)

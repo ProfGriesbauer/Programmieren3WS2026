@@ -1,6 +1,8 @@
-# Gruppe 1 – Casino (Spiel 2), Version 1
+# Gruppe 1 – Casino Adventure (Spiel 2)
 
-2D-Pixel-Art-Casino im OOPGames-Framework. Regeln für die Entwicklung: `Rules_Framework`.
+2D-Pixel-Art-Abenteuer im OOPGames-Framework. Die verbindlichen Entwicklungsregeln stehen in `Agents.md`.
+
+Das Spiel startet im Zuhause. Über die quadratische Stadtkarte mit geschlossener Außengrenze erreicht man das Casino. Krankenhaus und Supermarkt sind erkennbare, kollidierbare Gebäude; Zuhause und Casino besitzen betretbare Innenräume.
 
 ## Starten
 
@@ -42,12 +44,12 @@ Eingaben erreichen das Spiel im Framework nur über Player → Rules. Deshalb le
 `G1C_GameManager` weiter; der Painter zeichnet den Zustand und delegiert an das aktive Minispiel.
 Außerhalb dieses Ordners wurden nur drei Registrierungszeilen im Block `//REGISTER YOUR CLASSES HERE` der MainWindow ergänzt.
 
-## Ordner
+## Spielaufbau
 
-- `Painter.cs` – zentraler Painter
+- `Painter.cs` – zeichnet die aktive Szene und Minispiele auf dem vom Framework übergebenen Canvas
 - `Framework/` – Rules, Field, Move, Player
 - `Systems/` – GameManager, GameState, MoneyManager, InputManager
-- `World/` – Karte, Objekte/NPCs, Kollision, Interaktion
+- `World/` – Stadt-, Haus- und Casinokarten, Objekte/NPCs, Kollision, Szenenübergänge
 - `Player/` – Spielfigur, Bewegung, Animation
 - `CasinoGames/` – Roulette, Blackjack, Poker, Slots, gemeinsame Basis, Karten
 - `AI/` – KI-Gegner (Roulette, Blackjack, Poker)

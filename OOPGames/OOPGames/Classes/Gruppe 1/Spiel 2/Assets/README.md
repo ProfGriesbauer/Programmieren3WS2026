@@ -16,10 +16,19 @@ Hohe Bilder (z.B. 90x135) ragen nach oben über ihre Kachel hinaus.
 - frame: `0` = stehen, `1` und `2` = Schritte
 - Beispiel: `player_left_1.png`. NPCs benutzen nur Frame `0`.
 
-**Kacheln:** `tile_floor`, `tile_floor_alt`, `tile_wall`, `tile_wall_face`, `tile_exit`
+**Casino-Kacheln:** `tile_floor`, `tile_floor_alt`, `tile_wall`, `tile_wall_face`, `tile_exit`
+
+**Außenwelt-Kacheln:** `tile_city_grass`, `tile_city_grass_alt`, `tile_city_road`,
+`tile_city_sidewalk`, `tile_city_path`, `tile_city_border`, `tile_city_home_entry`,
+`tile_city_casino_entry`
+
+**Zuhause-Kacheln:** `tile_home_floor`, `tile_home_floor_alt`, `tile_home_wall`, `tile_home_exit`
 
 **Möbel:** `obj_roulette_table`, `obj_blackjack_table`, `obj_poker_table` (je 3x2 Kacheln),
 `obj_slot_machine`, `obj_bar`, `obj_plant` (je 1 Kachel breit)
 
 **Minispiele:** `roulette_wheel` (Tasche 0 oben, Reihenfolge im Uhrzeigersinn), `card_front`, `card_back`, `chip`,
 `slot_cherry`, `slot_lemon`, `slot_bell`, `slot_bar`, `slot_diamond`, `slot_seven`
+
+**Weltobjekte:** `building_home`, `building_hospital`, `building_market`, `building_casino`,
+`obj_city_tree`, `obj_home_bed`, `obj_home_table`

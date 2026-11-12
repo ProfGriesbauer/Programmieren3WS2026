@@ -1,9 +1,9 @@
 namespace OOPGames
 {
-    /// <summary>Klar getrennte Spielzustände (siehe Rules_Framework, Abschnitt 8).</summary>
+    /// <summary>Minispiel- und UI-Zustände; die aktive Welt-Szene wird separat verwaltet.</summary>
     public enum G1C_GameState
     {
-        MainGame,   // normale Casino-Erkundung
+        MainGame,   // Erkundung der aktiven Welt-Szene; Änderung durch Denis Mock
         Dialogue,   // Gespräch mit einem NPC
         Menu,       // Hilfe-/Pausenmenü
         Roulette,

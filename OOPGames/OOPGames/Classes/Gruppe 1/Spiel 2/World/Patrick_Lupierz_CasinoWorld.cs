@@ -3,15 +3,18 @@ using System.Collections.Generic;
 namespace OOPGames
 {
     /// <summary>
-    /// Das Casino-Gebäude: Karte, Spieltische, Automaten und NPCs.
-    /// Es gibt bewusst nur dieses eine Gebäude (Rules_Framework, Abschnitt 7).
+    /// Das Casino-Innere: Karte, Spieltische, Automaten und NPCs.
     /// </summary>
-    public class G1C_CasinoWorld
+    // Änderung durch: Denis Mock – Die bestehende Casino-Szene wird mit Haus und Außenwelt verbunden.
+    public class G1C_CasinoWorld : IG1C_WorldScene
     {
         private readonly List<G1C_WorldObject> _objects = new List<G1C_WorldObject>();
 
         public G1C_CasinoMap Map { get; } = new G1C_CasinoMap();
         public IReadOnlyList<G1C_WorldObject> Objects { get { return _objects; } }
+        // Ergänzt durch Denis Mock: Die Casino-Karte wird als aktive Szene bereitgestellt.
+        IG1C_WorldMap IG1C_WorldScene.Grid { get { return Map; } }
+        public int TileSize { get { return 24; } }
 
         public int PlayerStartX { get { return 9; } }
         public int PlayerStartY { get { return 10; } }

@@ -4,9 +4,10 @@ namespace OOPGames
     public enum G1C_InteractionType { None, Talk, Bartender, Roulette, Blackjack, Poker, Slots }
 
     /// <summary>
-    /// Ein Objekt in der Casino-Welt (Tisch, Automat, Pflanze, ...).
+    /// Ein Objekt in einer Welt-Szene (Tisch, Automat, Gebäude, Pflanze, ...).
     /// Belegt ein Rechteck aus Kacheln und kann massiv (nicht begehbar) sein.
     /// </summary>
+    // Änderung durch Denis Mock: Weltobjekte werden auch in Stadt und Zuhause verwendet.
     public class G1C_WorldObject
     {
         private readonly string _spriteId;

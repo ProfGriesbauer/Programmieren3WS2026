@@ -78,6 +78,17 @@ namespace OOPGames
             IsMoving = true;
         }
 
+        // Entwickler: Denis Mock
+        // Setzt die Figur bei einem Türübergang ohne laufende Kachelanimation in die Zielszene.
+        public void Teleport(int tileX, int tileY, G1C_Direction facing)
+        {
+            TileX = _fromX = tileX;
+            TileY = _fromY = tileY;
+            Facing = facing;
+            StepProgress = 0;
+            IsMoving = false;
+        }
+
         /// <summary>Einen Tick weiterlaufen. Gibt true zurück, wenn der Schritt abgeschlossen ist.</summary>
         public bool AdvanceStep()
         {

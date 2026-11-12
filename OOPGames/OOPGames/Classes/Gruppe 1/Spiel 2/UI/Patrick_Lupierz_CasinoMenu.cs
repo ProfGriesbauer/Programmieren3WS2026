@@ -19,7 +19,7 @@ namespace OOPGames
 
             string[] lines =
             {
-                "Steuerung in der Casino-Welt:",
+                "Steuerung in der Welt:", // Änderung durch Denis Mock
                 "  W A S D / Pfeiltasten  Laufen",
                 "  E                      Interagieren / Weiter",
                 "  Q / Esc                Abbrechen / Zurück",

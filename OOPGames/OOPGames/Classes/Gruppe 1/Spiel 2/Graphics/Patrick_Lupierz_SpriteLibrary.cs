@@ -45,7 +45,8 @@ namespace OOPGames
                 return bitmap;
             }
 
-            bitmap = LoadFromFile(id) ?? G1C_BuiltInSprites.Create(id) ?? CreateMissingSprite();
+            // Erweiterung durch Denis Mock: Stadt- und Hausgrafiken bleiben zentral austauschbar.
+            bitmap = LoadFromFile(id) ?? G1C_BuiltInSprites.Create(id) ?? G1C_WorldSprites.Create(id) ?? CreateMissingSprite();
             _cache[id] = bitmap;
             return bitmap;
         }

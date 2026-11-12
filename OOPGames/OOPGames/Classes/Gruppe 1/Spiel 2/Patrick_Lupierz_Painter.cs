@@ -7,13 +7,13 @@ namespace OOPGames
 {
     /// <summary>
     /// Zentraler Painter (IPaintGame2) des Casino-Spiels.
-    /// Zeichnet je nach Spielphase die Casino-Welt mit Figuren, HUD, Dialog, Menü und
+    /// Zeichnet je nach Spielphase die aktive Welt-Szene mit Figuren, HUD, Dialog, Menü und
     /// Ergebnis – oder übergibt das Zeichnen an das aktive Minispiel.
     /// Gezeichnet wird ausschließlich auf das vom Framework übergebene Canvas.
     /// </summary>
+    // Erweiterung durch Denis Mock: Der Painter rendert auch Zuhause und Außenwelt.
     public class G1C_CasinoPainter : IG1C_CasinoPainter
     {
-        private const double TileSize = 24;        // virtuelle Einheiten pro Kachel (20 x 12 Kacheln = 480 x 288)
         private const int MapPixelsPerTile = 48;   // Auflösung des zusammengesetzten Kartenbildes
 
         private readonly G1C_SpriteLibrary _sprites = new G1C_SpriteLibrary();
@@ -22,7 +22,7 @@ namespace OOPGames
         private readonly G1C_PlayerAnimation _animation = new G1C_PlayerAnimation();
 
         private BitmapSource _mapImage;
-        private G1C_CasinoMap _mapImageSource;
+        private IG1C_WorldMap _mapImageSource;
 
         public G1C_CasinoPainter()
         {
@@ -65,26 +65,35 @@ namespace OOPGames
             }
         }
 
-        // ------------------------------------------------------------------ Casino-Welt
+        // ------------------------------------------------------------------ Aktive Welt-Szene
 
+        // Änderung durch: Denis Mock – zeichnet die aktive Szene und zentriert auch quadratische Karten.
         private void DrawWorld(G1C_Renderer r, G1C_GameManager game)
         {
-            G1C_CasinoMap map = game.World.Map;
+            IG1C_WorldScene world = game.CurrentWorld;
+            IG1C_WorldMap map = world.Grid;
             EnsureMapImage(map);
-            r.DrawBitmap(_mapImage, 0, G1C_GameHUD.Height, map.Width * TileSize, map.Height * TileSize);
+            double tileSize = world.TileSize;
+            double worldWidth = map.Width * tileSize;
+            double worldHeight = map.Height * tileSize;
+            double mapX = (G1C_Renderer.ScreenWidth - worldWidth) / 2;
+            double mapY = G1C_GameHUD.Height +
+                          (G1C_Renderer.ScreenHeight - G1C_GameHUD.Height - worldHeight) / 2;
+            r.DrawBitmap(_mapImage, mapX, mapY, worldWidth, worldHeight);
 
             // Objekte und Figuren nach ihrer Unterkante sortieren, damit Vordergrund richtig überdeckt
             List<KeyValuePair<double, System.Action>> drawables = new List<KeyValuePair<double, System.Action>>();
-            foreach (G1C_WorldObject obj in game.World.Objects)
+            foreach (G1C_WorldObject obj in world.Objects)
             {
                 G1C_WorldObject o = obj;
                 drawables.Add(new KeyValuePair<double, System.Action>(o.Y + o.Height,
-                    () => DrawEntity(r, o.SpriteId, o.X, o.Y, o.Width, o.Height)));
+                    () => DrawEntity(r, o.SpriteId, o.X, o.Y, o.Width, o.Height, tileSize, mapX, mapY)));
             }
 
             G1C_Player player = game.Player;
             drawables.Add(new KeyValuePair<double, System.Action>(player.VisualY + 1.01,
-                () => DrawEntity(r, _animation.GetSpriteId(player), player.VisualX, player.VisualY, 1, 1)));
+                () => DrawEntity(r, _animation.GetSpriteId(player), player.VisualX, player.VisualY, 1, 1,
+                                 tileSize, mapX, mapY)));
 
             foreach (KeyValuePair<double, System.Action> d in drawables.OrderBy(d => d.Key))
             {
@@ -93,16 +102,19 @@ namespace OOPGames
         }
 
         /// <summary>Zeichnet eine Grafik unten bündig auf ihre Kacheln (hohe Grafiken ragen nach oben).</summary>
-        private void DrawEntity(G1C_Renderer r, string spriteId, double tileX, double tileY, double tilesWide, double tilesHigh)
+        // Entwickler: Denis Mock
+        private void DrawEntity(G1C_Renderer r, string spriteId, double tileX, double tileY, double tilesWide,
+                                double tilesHigh, double tileSize, double mapX, double mapY)
         {
-            double width = tilesWide * TileSize;
+            double width = tilesWide * tileSize;
             double height = width * _sprites.GetAspect(spriteId);
-            double bottom = G1C_GameHUD.Height + (tileY + tilesHigh) * TileSize;
-            r.Sprite(spriteId, tileX * TileSize, bottom - height, width, height);
+            double bottom = mapY + (tileY + tilesHigh) * tileSize;
+            r.Sprite(spriteId, mapX + tileX * tileSize, bottom - height, width, height);
         }
 
+        // Entwickler: Denis Mock
         /// <summary>Setzt alle Bodenkacheln einmalig zu einem Bild zusammen (schneller als 240 Einzelbilder pro Tick).</summary>
-        private void EnsureMapImage(G1C_CasinoMap map)
+        private void EnsureMapImage(IG1C_WorldMap map)
         {
             if (_mapImage != null && ReferenceEquals(_mapImageSource, map)) return;
 

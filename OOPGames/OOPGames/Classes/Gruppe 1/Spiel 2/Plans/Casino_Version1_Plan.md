@@ -38,3 +38,7 @@
 - Kamera und größere Karte, laufende NPCs
 - Mehrere Einsätze pro Roulette-Runde, Verdoppeln/Teilen beim Blackjack
 - Spielstand speichern, Sound (nur falls mit dem Framework abgestimmt)
+
+## Erweiterung: Zuhause und Außenwelt
+
+Die aktuelle Version ergänzt die Casino-Innenwelt um ein Zuhause als Startszene und eine quadratische Stadtkarte. Das Casino bleibt das vorhandene Gebäude mit unveränderten Minispielen. Zuhause und Casino sind über Türfelder mit der Stadt verbunden; Krankenhaus und Supermarkt sind zunächst nicht betretbare Fassaden. Karten, Weltobjekte, Kollisionen und Übergänge sind getrennt modelliert und verwenden weiterhin die Framework-Eingaben, den 40-ms-Tick und den übergebenen Canvas.

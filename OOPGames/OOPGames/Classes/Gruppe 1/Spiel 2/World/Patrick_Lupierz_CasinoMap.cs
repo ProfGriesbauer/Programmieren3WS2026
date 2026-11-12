@@ -6,7 +6,8 @@ namespace OOPGames
     /// Kachelkarte des Casinos (20 x 12 Kacheln).
     /// '#' = Mauer (von oben), 'W' = Wand mit Tapete, '.' = Teppich, 'E' = Ausgang.
     /// </summary>
-    public class G1C_CasinoMap
+    // Änderung durch: Denis Mock – Einbindung in die gemeinsamen Weltkartenverträge.
+    public class G1C_CasinoMap : IG1C_WorldMap
     {
         private static readonly string[] Layout =
         {
@@ -66,6 +67,12 @@ namespace OOPGames
         public bool IsWalkable(int x, int y)
         {
             return GetTile(x, y) == G1C_TileType.Floor;
+        }
+
+        // Entwickler: Denis Mock
+        public G1C_WorldLocation? GetTransitionAt(int x, int y)
+        {
+            return GetTile(x, y) == G1C_TileType.Exit ? G1C_WorldLocation.Exterior : (G1C_WorldLocation?)null;
         }
 
         public string GetTileSpriteId(int x, int y)

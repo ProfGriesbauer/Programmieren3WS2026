@@ -1,8 +1,8 @@
 # AGENTS.md – Verbindliche Projektregeln für unser Casino-Spiel
 
-**Projekt:** Casino Adventure – Pokémon-Rubin-inspirierte Casino-Welt  
+**Projekt:** Casino Adventure – Pokémon-Rubin-inspirierte Stadt- und Casino-Welt
 **Studiengang:** Programmieren 3 – Wintersemester 2026/27  
-**Framework:** OOPGames – WPF, C#, .NET 6
+**Framework:** OOPGames – WPF, C#, .NET 10 (Windows)
 
 Diese Datei enthält die verbindlichen Regeln für alle Entwickler und KI-Agenten, die an diesem Projekt arbeiten.
 
@@ -14,14 +14,17 @@ Die offiziellen Projektanforderungen und das vorhandene Framework haben immer Vo
 
 Wir entwickeln ein umfangreiches 2D-Pixel-Art-Spiel, das sich optisch und spielerisch an Pokémon Rubin/Saphir für den Game Boy Advance orientiert.
 
-Der Spieler übernimmt die Rolle einer Spielfigur, die sich frei durch ein vollständig gestaltetes Casino-Gebäude bewegen kann.
+Der Spieler startet in seinem Zuhause und erkundet von dort eine quadratische Stadt mit begehbaren Straßen und Gassen. Das Casino ist ein betretbares Gebäude in dieser Außenwelt; seine vorhandenen Spielbereiche und Minispiele bleiben erhalten.
 
 Das Casino enthält verschiedene Spielbereiche, NPCs und interaktive Spieltische. An diesen Tischen kann der Spieler unterschiedliche Casino-Spiele gegen KI-Gegner spielen.
 
-Das Spiel besteht aus zwei Hauptbereichen:
+Das Spiel besteht aus drei verbundenen Bereichen:
 
-1. Erkundung des Casino-Gebäudes mit einer frei steuerbaren Spielfigur.
-2. Interaktive Casino-Minispiele mit eigenständiger Spiellogik und KI-Gegnern.
+1. Das Zuhause als Start- und Rückkehrort.
+2. Die begehbare Stadt mit Casino, Krankenhaus, Supermarkt und weiteren erkennbaren Gebäuden.
+3. Das Casino-Innere mit interaktiven Minispielen, eigenständiger Spiellogik und KI-Gegnern.
+
+Nur Zuhause und Casino benötigen betretbare Innenräume. Weitere Gebäude dürfen zunächst als solide, nicht betretbare Fassaden dargestellt werden.
 
 Das Spiel soll einen hochwertigen, zusammenhängenden Eindruck vermitteln und deutlich umfangreicher als ein einfacher Brettspielklon sein.
 
@@ -252,7 +255,7 @@ Der Computer-Player übernimmt die KI-Entscheidungen der jeweiligen Spielkompone
 
 Die Spielfigur ist ein zentraler Bestandteil des Spiels.
 
-Sie soll sich ähnlich wie die Spielfigur in Pokémon Rubin/Saphir durch die Casino-Welt bewegen.
+Sie soll sich ähnlich wie die Spielfigur in Pokémon Rubin/Saphir durch Zuhause, Außenwelt und Casino bewegen.
 
 ## 5.1 Größe und Darstellung
 
@@ -346,7 +349,7 @@ Folgende Objekte müssen Kollisionen besitzen:
 - Dekorationen mit physischer Begrenzung.
 - Andere nicht begehbare Objekte.
 
-Die Spielfigur darf diese Objekte nicht durchdringen.
+Die Spielfigur darf diese Objekte und die geschlossene Außengrenze der Stadtkarte nicht durchdringen.
 
 ## 6.2 Kollisionsabfrage
 
@@ -366,7 +369,7 @@ Es darf dafür keine Framework-Datei verändert werden.
 
 ## 6.3 Begehbare Bereiche
 
-Die Casino-Welt muss klar definierte begehbare und nicht begehbare Bereiche besitzen.
+Jede Szene muss klar definierte begehbare und nicht begehbare Bereiche besitzen. Die Außenwelt benötigt eine sichtbare, geschlossene und kollidierbare Kartengrenze.
 
 Die Spielfigur darf sich ausschließlich innerhalb der vorgesehenen begehbaren Fläche bewegen.
 
@@ -405,6 +408,7 @@ Dies gilt mindestens für:
 - Symbole.
 - Benutzeroberfläche.
 - Hintergrundgrafiken.
+- Stadtboden, Straßen, Wege, Stadtgrenze und Gebäudefassaden.
 
 ## 7.2 Trennung von Grafik und Spiellogik
 
@@ -456,32 +460,25 @@ Grafikdateien dürfen nur dort abgelegt werden, wo dies mit den offiziellen Proj
 
 ---
 
-# 8. Casino-Spielwelt
+# 8. Stadt- und Casino-Spielwelt
 
-Es gibt ausschließlich ein Casino-Gebäude als Spielbereich.
+Die begehbare Spielwelt besteht aus dem Zuhause, einer quadratischen Außenwelt und dem vorhandenen Casino-Innenraum. Alle Szenen werden in Top-Down-Perspektive und im einheitlichen 2D-Pixel-Art-Stil dargestellt.
 
-Die Casino-Welt wird in einer Top-Down-Perspektive dargestellt.
+## 8.1 Außenwelt
 
-Sie soll aus mehreren optisch unterscheidbaren Bereichen bestehen.
+- Die Spielfigur startet im eigenen Zuhause und kann dieses betreten sowie verlassen.
+- Die Stadtkarte ist quadratisch, hat eine sichtbare geschlossene Außengrenze und ist an allen Kartenrändern nicht begehbar.
+- Straßen, Gassen und Wege bilden ein verbundenes Wegenetz zwischen Zuhause, Casino und Stadtbereichen.
+- Mindestens Zuhause, Casino, Krankenhaus und Supermarkt müssen von außen erkennbar sein.
+- Gebäude, Mauern, Bäume und andere Hindernisse besitzen unabhängig von ihrer Grafik Kollisionen.
+- Zuhause und Casino sind betretbar und über eindeutige Türfelder wieder verlassbar.
+- Krankenhaus, Supermarkt und weitere Gebäude dürfen zunächst Fassaden ohne Innenraum sein. Ein weiterer Innenraum benötigt eine eigene Szene, Kollisionskarte und explizite Integration in die vorhandene Szenenverwaltung.
 
-Vorgesehene Bereiche:
+## 8.2 Casino-Innenraum
 
-1. Eingangsbereich.
-2. Empfang und Kasse.
-3. Roulette-Bereich.
-4. Poker-Bereich.
-5. Blackjack-Bereich.
-6. Spielautomaten-Bereich.
-7. NPC-Bereiche.
-8. Dekorations- und Aufenthaltsbereiche.
+Das bestehende Casino bleibt als eigener Innenraum mit Eingangsbereich, Empfang, Roulette-, Poker-, Blackjack- und Spielautomatenbereichen, NPCs und Dekoration erhalten. Der Übergang aus der Stadt führt in diesen vorhandenen Innenraum; der Ausgang führt zurück an die Casino-Tür in der Außenwelt.
 
-Der Spieler muss sich zwischen diesen Bereichen frei bewegen können.
-
-Die Umgebung muss ausreichend Platz für die Spielfigur bieten.
-
-Spieltische und Möbel müssen sinnvoll positioniert sein.
-
-Die Spielwelt soll nicht wie ein einfacher leerer Raum wirken.
+Spieltische und Möbel müssen sinnvoll positioniert sein. Die Umgebung muss ausreichend Platz bieten und darf nicht wie ein einfacher leerer Raum wirken.
 
 ---
 
@@ -632,7 +629,7 @@ Das Spiel muss über eindeutig definierte Zustände verfügen.
 
 Mindestens folgende Zustände sind vorgesehen:
 
-- CasinoExploration
+- WorldExploration (Zuhause, Außenwelt oder Casino-Innenraum; der aktuelle Ort ist getrennt vom UI-/Minispielzustand)
 - Dialogue
 - Roulette
 - Poker
@@ -652,7 +649,7 @@ Nach Beendigung:
 - Wird das Spielergebnis angezeigt.
 - Wird das Spielgeld aktualisiert.
 - Wird der Zustand zurückgesetzt.
-- Kehrt der Spieler zur Casino-Welt zurück.
+- Kehrt der Spieler in die Szene zurück, aus der das Minispiel gestartet wurde.
 - Wird die Bewegung wieder aktiviert.
 
 Die Zustandsverwaltung muss zentral und nachvollziehbar erfolgen.
@@ -942,12 +939,13 @@ Die Implementierung soll in folgender Reihenfolge erfolgen.
 - Computer-Player implementieren.
 - Registrierung vorbereiten.
 
-## Phase 3: Casino-Spielwelt
+## Phase 3: Zuhause, Außenwelt und Casino-Spielwelt
 
-- Casino-Grundriss erstellen.
-- Boden und Wände implementieren.
-- Begehbare Bereiche definieren.
-- Kollisionssystem implementieren.
+- Begehbare Startszene im Zuhause erstellen.
+- Quadratische Außenkarte mit geschlossener Grenze, verbundenen Straßen und Gassen erstellen.
+- Casino, Krankenhaus, Supermarkt und weitere Stadtbereiche erkennbar darstellen.
+- Übergänge zwischen Zuhause, Stadt und vorhandenem Casino-Innenraum implementieren.
+- Begehbare Bereiche und Kollisionen für alle Szenen definieren.
 
 ## Phase 4: Spielfigur
 
@@ -990,7 +988,7 @@ Die Implementierung soll in folgender Reihenfolge erfolgen.
 - Spielzustände verbinden.
 - Geldsystem integrieren.
 - Benutzeroberfläche fertigstellen.
-- Übergänge zwischen Welt und Minispielen testen.
+- Übergänge zwischen Zuhause, Außenwelt, Casino und Minispielen testen.
 
 ## Phase 10: Qualitätssicherung
 
@@ -1012,7 +1010,7 @@ Danach folgen:
 
 1. Saubere objektorientierte Architektur.
 2. Modulare Klassen mit klaren Verantwortlichkeiten.
-3. Funktionierende Casino-Spielwelt.
+3. Funktionierende, verbundene Zuhause-, Stadt- und Casino-Spielwelt.
 4. Spielfigur mit vier Laufrichtungen und Animationen.
 5. Zuverlässiges Kollisionssystem.
 6. Vollständig austauschbare Grafiken.
@@ -1032,3 +1030,5 @@ Alle Klassen müssen modular, nachvollziehbar und austauschbar sein.
 Jede wesentliche Codeänderung muss dem tatsächlich verantwortlichen Teammitglied zugeordnet werden können.
 
 Alle diese Regeln sind bei jeder Implementierung verbindlich.
+
+Bei Bedarf soll die Agents.md erweitern werden. Die Grundregeln dürfen nicht verändert werden. Pushen soll nur auf den jetzigen Branch sein, kein merge.
