@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace OOPGames
@@ -13,6 +15,7 @@ namespace OOPGames
             TestMovementAndLaneBounds();
             TestJumpAndRollTransitions();
             TestHumanPlayerInput();
+            TestPainterFocusesGameCanvas();
             TestFatalAndNonFatalObstacles();
             TestRewardCollectionAndUpgrades();
             TestWaveSpawningKeepsOneSafeLane();
@@ -90,6 +93,37 @@ namespace OOPGames
                 "unsupported keys are rejected");
         }
 
+        private static void TestPainterFocusesGameCanvas()
+        {
+            Window window = new Window
+            {
+                Width = 320,
+                Height = 260,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.ToolWindow
+            };
+            Canvas canvas = new Canvas();
+            window.Content = canvas;
+
+            try
+            {
+                window.Show();
+                Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+                rules.ClearField();
+
+                new Gruppe2_SubwayPainter().PaintGameField(canvas, rules.CurrentField);
+
+                AssertTrue(canvas.Focusable,
+                    "game canvas accepts keyboard focus");
+                AssertTrue(Keyboard.FocusedElement == canvas,
+                    "painting a new game focuses the canvas instead of the start button");
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
         private static void TestFatalAndNonFatalObstacles()
         {
             Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
@@ -97,7 +131,7 @@ namespace OOPGames
 
             rules.ClearField();
             field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.SmallBarrier, 1, 0.5));
+                Gruppe2_SubwayObstacleKind.Curb, 1, 0.5));
             rules.TickGameCall();
             AssertTrue(field.GuardGap < 100 && field.GuardGap > 0,
                 "light collision reduces the guard distance");
@@ -107,7 +141,7 @@ namespace OOPGames
             rules.ClearField();
             field = (Gruppe2_SubwayField)rules.CurrentField;
             field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.Signal, 1, 0.5));
+                Gruppe2_SubwayObstacleKind.Train, 1, 0.5));
             rules.TickGameCall();
             AssertTrue(field.GameOver,
                 "fatal collision ends the run");

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
@@ -25,7 +26,9 @@ namespace OOPGames
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
+            canvas.Focusable = true;
             Draw(canvas, currentField);
+            Keyboard.Focus(canvas);
         }
 
         public void TickPaintGameField(Canvas canvas, IGameField currentField)

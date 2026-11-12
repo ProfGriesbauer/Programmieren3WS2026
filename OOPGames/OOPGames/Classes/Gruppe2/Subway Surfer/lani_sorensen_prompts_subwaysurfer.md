@@ -154,3 +154,91 @@ Assistant answer:
 - Run it from PowerShell with:
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Users\lania\Downloads\Programmieren3WS2026\OOPGames\OOPGames\Classes\Gruppe2\Subway Surfer\RunSubwayTests.ps1"`
 - This is a custom test runner, not a `dotnet test` project. The current environment blocked execution of the generated runner because of its application-control policy; the test suite itself had passed in an earlier temporary validation harness.
+
+### Prompt 11
+Timestamp: 2026-11-12T11:00:53+01:00
+
+User prompt:
+> is there a way that you can run the tests automatically with every code change?
+
+Assistant answer:
+- A local file watcher could rerun the tests whenever a Subway Surfer C# file is saved, or the test command could be wired to a build.
+- In this environment, Windows application control blocks the generated test runner, so I cannot currently run the suite automatically or bypass that restriction.
+- The current test runner is manual; no automatic watcher or build hook has been configured.
+
+### Prompt 12
+Timestamp: 2026-11-12T11:01:46+01:00
+
+User prompt:
+> how do i let it run a generated test runner
+
+Assistant answer:
+- The error indicates Windows application control, not PowerShell execution policy. The `-ExecutionPolicy Bypass` option does not override that restriction.
+- Check Event Viewer at the time of the block under `Microsoft-Windows-CodeIntegrity/Operational` or the AppLocker `EXE and DLL` log to identify which policy blocked it.
+- If the device is managed, ask its administrator to approve a trusted test-runner workflow or a properly signed runner. Do not allow all of `%TEMP%` or disable the policy; the runner is regenerated there and a broad path exception would be unsafe.
+
+### Prompt 13
+Timestamp: 2026-11-12T11:03:07+01:00
+
+User prompt:
+> how do i alloww just this runner to run
+
+Assistant answer:
+- If the block is from AppLocker and you administer the device, an administrator can create an Allow rule for the exact runner file hash. Because the runner is regenerated, the hash may need updating on future runs.
+- If Code Integrity/WDAC blocked the file, the managed policy administrator must authorize an approved runner.
+- A broad allow rule for `%TEMP%` would be unsafe.
+
+### Prompt 14
+Timestamp: 2026-11-12T11:13:16+01:00
+
+User prompt:
+> there seems to be a bug where space resets the game state, it shouldnt do that
+
+Assistant answer:
+- I traced the likely cause to the Start New Game button retaining keyboard focus: Space activates the button, whose handler clears the field.
+- Keeping the change within the Subway Surfer folder, I made the game canvas focusable and give it keyboard focus when the game is first painted. That keeps Space from activating the start button while the game is running.
+- I did not edit the shared MainWindow files.
+
+### Prompt 15
+Timestamp: 2026-11-12T11:17:01+01:00
+
+User prompt:
+> please create further tests when necessaryy
+
+Assistant answer:
+- I added a WPF regression test that checks painting a new Subway Surfer game makes the canvas keyboard-focusable and focused.
+- I marked the temporary test runner's entry point as STA so the WPF focus test can run.
+- Running the full Subway Surfer suite succeeded with all tests passing.
+
+### Prompt 12
+Timestamp: 2026-11-12T11:01:46+01:00
+
+User prompt:
+> how do i let it run a generated test runner
+
+Assistant answer:
+- The error indicates Windows application control, not PowerShell execution policy. The `-ExecutionPolicy Bypass` option does not override that restriction.
+- Check Event Viewer at the time of the block under `Microsoft-Windows-CodeIntegrity/Operational` or the AppLocker `EXE and DLL` log to identify which policy blocked it.
+- If the device is managed, ask its administrator to approve a trusted test-runner workflow or a properly signed runner. Do not allow all of `%TEMP%` or disable the policy; the runner is regenerated there and a broad path exception would be unsafe.
+
+### Prompt 13
+Timestamp: 2026-11-12T11:03:07+01:00
+
+User prompt:
+> how do i alloww just this runner to run
+
+Assistant answer:
+- If the block is from AppLocker and you administer the device, an administrator can create an Allow rule for the exact runner file hash. Because the runner is regenerated, the hash may need updating on future runs.
+- If Code Integrity/WDAC blocked the file, the managed policy administrator must authorize an approved runner.
+- A broad allow rule for `%TEMP%` would be unsafe.
+
+### Prompt 14
+Timestamp: 2026-11-12T11:13:16+01:00
+
+User prompt:
+> there seems to be a bug where space resets the game state, it shouldnt do that
+
+Assistant answer:
+- I traced the likely cause to the Start New Game button retaining keyboard focus: Space activates the button, whose handler clears the field.
+- Keeping the change within the Subway Surfer folder, I made the game canvas focusable and give it keyboard focus when the game is first painted. That keeps Space from activating the start button while the game is running.
+- I did not edit the shared MainWindow files.
