@@ -10,10 +10,10 @@ Hindernisse wie große Felsen, wo man nicht drüber gehen kann
 zoomen möglich, und ansicht verschieben
 Immer nur gewisser radius um einen sichtbar, wenn noch nicht in dem bereich gewesen
 
-## Gebäude
+## Gebäude (gestalten, Funktionen festlegen)
 Miner, Schmelze, Konstruktor, Verbrennungsgenerator, Kohlekraftwerk
 Gebäude upgradebar
-Laufband
+Laufband (Tick-basiert)
 
 ## Game Logik
 Hand abbauen und craften möglich

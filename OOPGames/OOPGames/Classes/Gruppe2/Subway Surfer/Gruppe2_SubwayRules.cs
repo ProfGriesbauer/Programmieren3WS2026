@@ -7,7 +7,18 @@ namespace OOPGames
 {
     public sealed class Gruppe2_SubwayRules : IGameRules2
     {
+        private const double SignalLaneChangeCollisionDistance = 8;
         private readonly Random _random = new Random();
+        private static readonly Gruppe2_SubwayObstacleKind[] SpawnableObstacleKinds =
+        {
+            Gruppe2_SubwayObstacleKind.LargeBarrier,
+            Gruppe2_SubwayObstacleKind.Bush,
+            Gruppe2_SubwayObstacleKind.PlantPot,
+            Gruppe2_SubwayObstacleKind.Train,
+            Gruppe2_SubwayObstacleKind.CargoRamp,
+            Gruppe2_SubwayObstacleKind.Curb,
+            Gruppe2_SubwayObstacleKind.CargoWagon
+        };
         private Gruppe2_SubwayField _field = new Gruppe2_SubwayField();
         private double _nextWaveAt;
 
@@ -38,11 +49,15 @@ namespace OOPGames
             {
                 case Key.Left:
                 case Key.A:
+                    int previousLane = _field.Lane;
                     _field.Lane = Math.Max(0, _field.Lane - 1);
+                    ResolveSignalLaneChange(previousLane, _field.Lane);
                     break;
                 case Key.Right:
                 case Key.D:
+                    previousLane = _field.Lane;
                     _field.Lane = Math.Min(2, _field.Lane + 1);
+                    ResolveSignalLaneChange(previousLane, _field.Lane);
                     break;
                 case Key.Up:
                 case Key.W:
@@ -167,24 +182,43 @@ namespace OOPGames
 
                 foreach (int lane in blockedLanes)
                 {
-                    Gruppe2_SubwayObstacleKind kind = (Gruppe2_SubwayObstacleKind)_random.Next(0, 9);
+                    Gruppe2_SubwayObstacleKind kind =
+                        SpawnableObstacleKinds[_random.Next(SpawnableObstacleKinds.Length)];
+                    bool laneHasTrain = _field.MutableObstacles.Any(obstacle =>
+                        obstacle.Lane == lane
+                        && obstacle.Distance > 0
+                        && obstacle.Distance < 220
+                        && (obstacle.Kind == Gruppe2_SubwayObstacleKind.Train
+                            || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoRamp
+                            || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoWagon));
+                    if (kind == Gruppe2_SubwayObstacleKind.Train && laneHasTrain)
+                    {
+                        kind = Gruppe2_SubwayObstacleKind.LargeBarrier;
+                    }
+
                     if (kind == Gruppe2_SubwayObstacleKind.Train)
                     {
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoRamp, lane, 112));
+                            Gruppe2_SubwayObstacleKind.CargoRamp, lane, 150));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 82));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 125));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 52));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 100));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 22));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 75));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            kind, lane, -8, _random.Next(0, 2) == 0));
+                            kind, lane, 50, _random.Next(0, 2) == 0));
                     }
                     else
                     {
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, lane, 82));
                     }
+                }
+
+                if (_random.Next(0, 2) == 0)
+                {
+                    _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                        Gruppe2_SubwayObstacleKind.Signal, _random.Next(0, 2), 145));
                 }
 
                 if (_random.Next(0, 4) == 0)
@@ -275,7 +309,8 @@ namespace OOPGames
         private void ResolveObstacles()
         {
             foreach (Gruppe2_SubwayObstacle obstacle in _field.MutableObstacles
-                .Where(item => item.Distance <= 0.5 && item.Lane == _field.Lane)
+                .Where(item => item.Kind != Gruppe2_SubwayObstacleKind.Signal
+                    && item.Distance <= 0.5 && item.Lane == _field.Lane)
                 .ToArray())
             {
                 bool airborne = _field.Level == Gruppe2_SubwayLevel.Air;
@@ -324,25 +359,17 @@ namespace OOPGames
                             HitOrEnd(true, "Grosse Schranke! Nur ducken hilft.");
                         }
                         break;
-                    case Gruppe2_SubwayObstacleKind.SmallBarrier:
-                        if (!rolling && !airborne && !onRoof)
+                    case Gruppe2_SubwayObstacleKind.Bush:
+                        if (!airborne && !onRoof)
                         {
-                            HitOrEnd(false, "Schranke gestreift - der Bahnbaer kommt naeher!");
+                            HitOrEnd(true, "Busch! Weiche rechtzeitig aus oder springe darueber.");
                         }
                         break;
-                    case Gruppe2_SubwayObstacleKind.Bush:
                     case Gruppe2_SubwayObstacleKind.PlantPot:
                     case Gruppe2_SubwayObstacleKind.Curb:
                         if (!airborne && !onRoof)
                         {
                             HitOrEnd(false, "Hindernis gestreift - der Bahnbaer kommt naeher!");
-                        }
-                        break;
-                    case Gruppe2_SubwayObstacleKind.CenterPillar:
-                    case Gruppe2_SubwayObstacleKind.Signal:
-                        if (!airborne && !onRoof)
-                        {
-                            HitOrEnd(true, "Frontal gegen ein Hindernis!");
                         }
                         break;
                 }
@@ -353,6 +380,31 @@ namespace OOPGames
                     break;
                 }
             }
+        }
+
+        private void ResolveSignalLaneChange(int previousLane, int currentLane)
+        {
+            if (previousLane == currentLane)
+            {
+                return;
+            }
+
+            int crossedBoundary = Math.Min(previousLane, currentLane);
+            Gruppe2_SubwayObstacle signal = _field.MutableObstacles
+                .Where(obstacle => obstacle.Kind == Gruppe2_SubwayObstacleKind.Signal
+                    && obstacle.Lane == crossedBoundary
+                    && obstacle.Distance >= -SignalLaneChangeCollisionDistance
+                    && obstacle.Distance <= SignalLaneChangeCollisionDistance)
+                .OrderBy(obstacle => Math.Abs(obstacle.Distance))
+                .FirstOrDefault();
+
+            if (signal == null)
+            {
+                return;
+            }
+
+            _field.MutableObstacles.Remove(signal);
+            HitOrEnd(false, "Ampel gestreift - der Bahnbaer kommt naeher!");
         }
 
         private void HitOrEnd(bool fatal, string message)
