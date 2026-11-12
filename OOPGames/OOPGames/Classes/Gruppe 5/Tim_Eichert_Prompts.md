@@ -168,3 +168,39 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > pushe miene datein
 
 - **Ergebnisvermerk:** Die Spielfeldimplementierung und die dazugehörigen Konzept-/UML-Dateien wurden geprüft und auf den Remote-Branch gepusht. Nicht zugehörige generierte `obj`-Dateien blieben außen vor. `MainWindow.xaml.cs` war unverändert und wurde nicht mitgepusht.
+
+### 2026-11-12, 10:53 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> erstelle mir ein konzept für das gesamte spiel
+
+- **Ergebnisvermerk:** Ein übergeordnetes Spielkonzept mit OOPGames-Anbindung, Klassenverantwortlichkeiten, Datenfluss, Simulationstick, MVP-Stufen, Teamzuständigkeiten und offenen Entscheidungen wurde in `Plans/Tim_Eichert_Gesamtkonzept.md` erstellt. Das bestehende Spielfeldkonzept verweist auf das Gesamtkonzept.
+
+### 2026-11-12, 11:08 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> zunächst würde ich mit einem workaround arbeiten. erstelle nun ein erstes einfaches spiel dabei sein soll:Karte, Gebäude per Klick platzieren (Förderer, Schmelze), automatische Produktion, ein einfaches Lager oder HUB als Ziel.
+
+- **Ergebnisvermerk:** Ein fester Karten-/Fabrikprototyp mit Förderer- und Schmelzenplatzierung, automatischer Erz- und Barrenproduktion sowie HUB-Transfer wurde implementiert. Die Produktion wurde mit einem gezielten Laufzeittest verifiziert; Build erfolgreich. `MainWindow.xaml.cs` bleibt unverändert, daher sind die Rollen noch nicht über die Framework-Auswahllisten startbar.
+
+### 2026-11-12, 11:21 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> bedenke es darf nichts an der main window.xaml.cs geändert werden
+
+- **Ergebnisvermerk:** Alle Fabrikspiel-Registrierungseinträge wurden aus `MainWindow.xaml.cs` entfernt; die Datei ist unverändert. Konzept und UML halten fest, dass der Spielstart über die bestehende Auswahloberfläche dadurch noch nicht möglich ist und ein erlaubter Integrationsweg fehlt.
+
+### 2026-11-12, 11:27 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> achso klarden painter die rules und players dürfen hinzugefügt werden
+
+- **Ergebnisvermerk:** `G5_FabrikPainter`, `G5_FabrikRules` und `G5_FabrikHumanPlayer` wurden ausschließlich im bestehenden Registrierungsblock von `MainWindow.xaml.cs` eingetragen. Konzept und UML wurden entsprechend korrigiert.

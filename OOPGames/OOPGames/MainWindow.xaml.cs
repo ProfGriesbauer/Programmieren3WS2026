@@ -51,6 +51,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_SubwayPainter());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new G5_FabrikPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G1_VierGewinntPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe3DragRacePainter());
             OOPGamesManager.Singleton.RegisterPainter(new HayDayPainter());
@@ -64,6 +65,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_SubwayRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
+            OOPGamesManager.Singleton.RegisterRules(new G5_FabrikRules());
             OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe3DragRaceRules());
             OOPGamesManager.Singleton.RegisterRules(new HayDayRules());
@@ -85,6 +87,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWComputerPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new G5_FabrikHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe3DragRaceHumanPlayer());
