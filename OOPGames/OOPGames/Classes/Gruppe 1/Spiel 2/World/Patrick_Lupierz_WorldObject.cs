@@ -1,7 +1,7 @@
 namespace OOPGames
 {
     /// <summary>Was passiert, wenn der Spieler mit [E] interagiert.</summary>
-    public enum G1C_InteractionType { None, Talk, Bartender, Roulette, Blackjack, Poker, Slots }
+    public enum G1C_InteractionType { None, Talk, Bartender, Roulette, Blackjack, Poker, Slots, Trash, Shop, Wardrobe, Bed }
 
     /// <summary>
     /// Ein Objekt in einer Welt-Szene (Tisch, Automat, Gebäude, Pflanze, ...).

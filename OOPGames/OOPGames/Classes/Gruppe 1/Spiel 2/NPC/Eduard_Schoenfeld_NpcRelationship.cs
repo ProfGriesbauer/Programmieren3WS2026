@@ -49,6 +49,14 @@ namespace OOPGames
             return Respect - old;
         }
 
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Werte aus einem Spielstand übernehmen
+        public void Restore(int trust, int respect, G1C_RelationshipStatus status)
+        {
+            Trust = Clamp(trust);
+            Respect = Clamp(respect);
+            Status = status;
+        }
+
         // Entwickler: Eduard Schoenfeld
         // Aufgabe: Neuen Status bestimmen. Gibt true zurück, wenn er sich geändert hat.
         public bool UpdateStatus(G1C_NpcMemory memory, G1C_NpcPersonality personality)

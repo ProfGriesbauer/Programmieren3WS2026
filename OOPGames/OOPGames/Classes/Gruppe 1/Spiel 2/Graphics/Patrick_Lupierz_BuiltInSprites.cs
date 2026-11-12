@@ -28,6 +28,7 @@ namespace OOPGames
         private class CharacterPalette
         {
             public Color Hair, Skin, Shirt, Vest, Pants, Shoes;
+            public Color? Hat; // nur Spielfigur
         }
 
         private static readonly Dictionary<string, CharacterPalette> Palettes = new Dictionary<string, CharacterPalette>
@@ -462,8 +463,8 @@ namespace OOPGames
             string direction = parts[parts.Length - 2];
             string skin = string.Join("_", parts, 0, parts.Length - 2);
 
-            CharacterPalette palette;
-            if (!Palettes.TryGetValue(skin, out palette)) return null;
+            CharacterPalette palette = ParseCustomPalette(skin);
+            if (palette == null && !Palettes.TryGetValue(skin, out palette)) return null;
 
             G1C_PixelCanvas c;
             switch (direction)
@@ -475,6 +476,25 @@ namespace OOPGames
                 default: return null;
             }
             return c;
+        }
+
+        // Skin der anpassbaren Spielfigur: pc-Haar-Haut-Oberteil-Hose-Schuhe-Mütze (siehe G1C_PlayerProfile.SkinId)
+        private static CharacterPalette ParseCustomPalette(string skin)
+        {
+            string[] parts = skin.Split('-');
+            if (parts.Length != 7 || parts[0] != "pc") return null;
+
+            uint[] colors = new uint[6];
+            for (int i = 0; i < 6; i++)
+            {
+                bool noHat = i == 5 && parts[6] == "x";
+                if (!noHat && !uint.TryParse(parts[i + 1], System.Globalization.NumberStyles.HexNumber, null, out colors[i])) return null;
+            }
+            return new CharacterPalette
+            {
+                Hair = Hex(colors[0]), Skin = Hex(colors[1]), Shirt = Hex(colors[2]), Vest = Hex(colors[2]),
+                Pants = Hex(colors[3]), Shoes = Hex(colors[4]), Hat = parts[6] == "x" ? (Color?)null : Hex(colors[5])
+            };
         }
 
         // Ansicht von vorne (down) oder von hinten (up)
@@ -498,6 +518,12 @@ namespace OOPGames
                 c.FillRect(12, 1, 1, 4, p.Hair);
                 c.FillRect(6, 4, 1, 2, eye);
                 c.FillRect(9, 4, 1, 2, eye);
+            }
+
+            if (p.Hat.HasValue)
+            {
+                c.FillRect(4, 0, 8, back ? 3 : 2, p.Hat.Value);
+                if (!back) c.FillRect(3, 2, 10, 1, Darken(p.Hat.Value, 0.7)); // Schirm
             }
 
             // Oberkörper mit Weste
@@ -542,6 +568,12 @@ namespace OOPGames
             c.FillRect(5, 0, 7, 3, p.Hair);
             c.FillRect(5, 3, 3, 4, p.Hair);
             c.FillRect(10, 4, 1, 2, Hex(0x202028));
+
+            if (p.Hat.HasValue)
+            {
+                c.FillRect(5, 0, 7, 2, p.Hat.Value);
+                c.FillRect(10, 2, 3, 1, Darken(p.Hat.Value, 0.7));
+            }
 
             // Körper
             c.FillRect(6, 8, 5, 5, p.Shirt);

@@ -44,7 +44,9 @@ namespace OOPGames
         private int _fromX;
         private int _fromY;
 
-        public string Skin { get { return "player"; } }
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Aussehen und Lauftempo sind veränderbar
+        public string Skin { get; set; } = "player";
+        public int StepTicks { get; set; } = TicksPerStep;
         public int TileX { get; private set; }
         public int TileY { get; private set; }
         public G1C_Direction Facing { get; set; }
@@ -59,7 +61,7 @@ namespace OOPGames
             Facing = facing;
         }
 
-        private double Progress { get { return IsMoving ? StepProgress / (double)TicksPerStep : 1.0; } }
+        private double Progress { get { return IsMoving ? StepProgress / (double)StepTicks : 1.0; } }
 
         /// <summary>Position in Kacheln inkl. Zwischenschritt (für das Zeichnen).</summary>
         public double VisualX { get { return _fromX + (TileX - _fromX) * Progress; } }
@@ -94,7 +96,7 @@ namespace OOPGames
         {
             if (!IsMoving) return false;
             StepProgress++;
-            if (StepProgress < TicksPerStep) return false;
+            if (StepProgress < StepTicks) return false;
 
             IsMoving = false;
             _fromX = TileX;

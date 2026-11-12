@@ -21,10 +21,14 @@ namespace OOPGames
             _player = player ?? throw new ArgumentNullException(nameof(player));
             _random = random ?? throw new ArgumentNullException(nameof(random));
 
-            AddPatrol(world.TownNpcs[0], 28, 32, 38, 39, 8, 18);
-            AddPatrol(world.TownNpcs[1], 139, 32, 158, 39, 10, 22);
-            AddPatrol(world.TownNpcs[2], 28, 151, 38, 158, 7, 17);
-            AddPatrol(world.TownNpcs[3], 139, 151, 158, 158, 12, 24);
+            // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Bezirke folgen den neuen Startpositionen.
+            int[][] pauses = { new[] { 8, 18 }, new[] { 10, 22 }, new[] { 7, 17 }, new[] { 12, 24 } };
+            for (int i = 0; i < world.TownNpcs.Count; i++)
+            {
+                G1C_Npc npc = world.TownNpcs[i];
+                int[] pause = pauses[i % pauses.Length];
+                AddPatrol(npc, npc.X - 5, npc.Y - 1, npc.X + 5, npc.Y + 3, pause[0], pause[1]);
+            }
         }
 
         // Entwickler: Denis Mock

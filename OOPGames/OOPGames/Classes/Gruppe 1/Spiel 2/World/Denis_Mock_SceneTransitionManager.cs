@@ -14,6 +14,9 @@ namespace OOPGames
         private readonly G1C_CasinoWorld _casino;
         private readonly G1C_BuildingInteriorWorld _hospital;
         private readonly G1C_BuildingInteriorWorld _market;
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – weitere Geschäfte ohne eigene Felder
+        private readonly System.Collections.Generic.Dictionary<G1C_WorldLocation, G1C_BuildingInteriorWorld> _shops =
+            new System.Collections.Generic.Dictionary<G1C_WorldLocation, G1C_BuildingInteriorWorld>();
 
         public G1C_WorldLocation Location { get; private set; }
 
@@ -28,21 +31,47 @@ namespace OOPGames
                     case G1C_WorldLocation.Casino: return _casino;
                     case G1C_WorldLocation.Hospital: return _hospital;
                     case G1C_WorldLocation.Market: return _market;
-                    default: throw new InvalidOperationException("Unbekannter Weltbereich: " + Location);
+                    default:
+                        G1C_BuildingInteriorWorld shop;
+                        if (_shops.TryGetValue(Location, out shop)) return shop;
+                        throw new InvalidOperationException("Unbekannter Weltbereich: " + Location);
                 }
             }
         }
 
         // Entwickler: Denis Mock
         public G1C_SceneTransitionManager(G1C_HomeWorld home, G1C_ExteriorWorld exterior, G1C_CasinoWorld casino,
-                                          G1C_BuildingInteriorWorld hospital, G1C_BuildingInteriorWorld market)
+                                          G1C_BuildingInteriorWorld hospital, G1C_BuildingInteriorWorld market,
+                                          params G1C_BuildingInteriorWorld[] shops)
         {
             _home = home ?? throw new ArgumentNullException(nameof(home));
             _exterior = exterior ?? throw new ArgumentNullException(nameof(exterior));
             _casino = casino ?? throw new ArgumentNullException(nameof(casino));
             _hospital = hospital ?? throw new ArgumentNullException(nameof(hospital));
             _market = market ?? throw new ArgumentNullException(nameof(market));
+            foreach (G1C_BuildingInteriorWorld shop in shops) _shops[shop.Location] = shop;
             Location = G1C_WorldLocation.Home;
+        }
+
+        // Entwickler: Patrick Lupierz – Ort beim Laden eines Spielstands wiederherstellen
+        public void Restore(G1C_WorldLocation location)
+        {
+            Location = location;
+        }
+
+        // Entwickler: Patrick Lupierz
+        public static string DisplayName(G1C_WorldLocation location)
+        {
+            switch (location)
+            {
+                case G1C_WorldLocation.Home: return "Zuhause";
+                case G1C_WorldLocation.Casino: return "Casino";
+                case G1C_WorldLocation.Hospital: return "Krankenhaus";
+                case G1C_WorldLocation.Market: return "Supermarkt";
+                case G1C_WorldLocation.GasStation: return "Tankstelle";
+                case G1C_WorldLocation.ClothingStore: return "Bekleidungsgeschäft";
+                default: return "Stadt";
+            }
         }
 
         // Entwickler: Denis Mock
@@ -68,14 +97,9 @@ namespace OOPGames
             G1C_WorldLocation? destination = CurrentWorld.Grid.GetTransitionAt(player.FacingTileX, player.FacingTileY);
             if (!destination.HasValue) return "";
 
-            if (Location == G1C_WorldLocation.Exterior && destination.Value == G1C_WorldLocation.Home) return "[E] Zuhause betreten";
-            if (Location == G1C_WorldLocation.Exterior && destination.Value == G1C_WorldLocation.Casino) return "[E] Casino betreten";
-            if (Location == G1C_WorldLocation.Exterior && destination.Value == G1C_WorldLocation.Hospital) return "[E] Krankenhaus betreten";
-            if (Location == G1C_WorldLocation.Exterior && destination.Value == G1C_WorldLocation.Market) return "[E] Supermarkt betreten";
-            if (Location == G1C_WorldLocation.Home && destination.Value == G1C_WorldLocation.Exterior) return "[E] Haus verlassen";
-            if (Location == G1C_WorldLocation.Casino && destination.Value == G1C_WorldLocation.Exterior) return "[E] Casino verlassen";
-            if (Location == G1C_WorldLocation.Hospital && destination.Value == G1C_WorldLocation.Exterior) return "[E] Krankenhaus verlassen";
-            if (Location == G1C_WorldLocation.Market && destination.Value == G1C_WorldLocation.Exterior) return "[E] Supermarkt verlassen";
+            // Änderung durch: Patrick Lupierz – Hinweise für alle Gebäude aus einer Namenstabelle
+            if (Location == G1C_WorldLocation.Exterior) return "[E] " + DisplayName(destination.Value) + " betreten";
+            if (destination.Value == G1C_WorldLocation.Exterior) return "[E] " + DisplayName(Location) + " verlassen";
             return "";
         }
 
@@ -98,35 +122,22 @@ namespace OOPGames
                 return new G1C_Spawn(_market.PlayerStartX, _market.PlayerStartY, G1C_Direction.Down);
             if (source == G1C_WorldLocation.Market && destination == G1C_WorldLocation.Exterior)
                 return ExteriorSpawn(G1C_WorldLocation.Market);
+            // Änderung durch: Patrick Lupierz – weitere Geschäfte
+            G1C_BuildingInteriorWorld shop;
+            if (source == G1C_WorldLocation.Exterior && _shops.TryGetValue(destination, out shop))
+                return new G1C_Spawn(shop.PlayerStartX, shop.PlayerStartY, G1C_Direction.Up);
+            if (destination == G1C_WorldLocation.Exterior && _shops.ContainsKey(source))
+                return ExteriorSpawn(source);
             throw new InvalidOperationException("Kein Spawnpunkt für den Übergang " + source + " -> " + destination + ".");
         }
 
         // Entwickler: Denis Mock
         private G1C_Spawn ExteriorSpawn(G1C_WorldLocation building)
         {
-            int x;
-            int y;
-            switch (building)
-            {
-                case G1C_WorldLocation.Home:
-                    x = _exterior.Map.HomeDoorX;
-                    y = _exterior.Map.HomeDoorY;
-                    break;
-                case G1C_WorldLocation.Casino:
-                    x = _exterior.Map.CasinoDoorX;
-                    y = _exterior.Map.CasinoDoorY;
-                    break;
-                case G1C_WorldLocation.Hospital:
-                    x = _exterior.Map.HospitalDoorX;
-                    y = _exterior.Map.HospitalDoorY;
-                    break;
-                case G1C_WorldLocation.Market:
-                    x = _exterior.Map.MarketDoorX;
-                    y = _exterior.Map.MarketDoorY;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(building));
-            }
+            // Änderung durch: Patrick Lupierz – Türpositionen kommen aus der Karte
+            int x = _exterior.Map.DoorX(building);
+            int y = _exterior.Map.DoorY(building);
+            if (x == 0) throw new ArgumentOutOfRangeException(nameof(building));
             return new G1C_Spawn(x, y + 1, G1C_Direction.Up);
         }
 

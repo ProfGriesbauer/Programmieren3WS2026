@@ -28,7 +28,11 @@ namespace OOPGames
         // Entwickler: Denis Mock
         private void BuildHome()
         {
-            _objects.Add(new G1C_WorldObject("Bett", "obj_home_bed", 2, 2, 2, 1, true, G1C_InteractionType.None));
+            // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Bett, Kleiderschrank und Spiegel sind benutzbar
+            _objects.Add(new G1C_WorldObject("Bett", "obj_home_bed", 2, 2, 2, 1, true, G1C_InteractionType.Bed));
+            _objects.Add(new G1C_WorldObject("Kleiderschrank", "obj_wardrobe", 5, 1, 1, 1, true, G1C_InteractionType.Wardrobe));
+            _objects.Add(new G1C_WorldObject("Spiegel", "obj_mirror", 7, 1, 1, 1, true, G1C_InteractionType.Wardrobe));
+            _objects.Add(new G1C_WorldObject("Pflanze", "obj_plant", 10, 1, 1, 1, true, G1C_InteractionType.None));
             _objects.Add(new G1C_WorldObject("Tisch", "obj_home_table", 8, 3, 2, 1, true, G1C_InteractionType.None));
         }
 

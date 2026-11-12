@@ -23,10 +23,10 @@ namespace OOPGames
                 "  W A S D / Pfeiltasten  Laufen",
                 "  E                      Interagieren / Weiter",
                 "  Q / Esc                Abbrechen / Zurück",
-                "  M                      Menü",
-                "",
+                "  M                      Menü (pausiert die Uhr)",
+                "  P / I                  Handy / Inventar",
                 "In den Spielen: Tasten oder Knöpfe anklicken.",
-                "Wenig Chips? Der Barkeeper hilft dir aus.",
+                "Wenig Chips? Jobs an der Bar, Pfand im Laden.",
                 "",
                 "Hinweis: Leertaste/Enter nicht benutzen",
                 "(startet das Spiel im Framework neu)."

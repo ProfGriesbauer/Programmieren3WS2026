@@ -10,7 +10,7 @@ namespace OOPGames
         public string GetSpriteId(G1C_Player player)
         {
             int frame = 0;
-            if (player.IsMoving && player.StepProgress < (G1C_Player.TicksPerStep + 1) / 2)
+            if (player.IsMoving && player.StepProgress < (player.StepTicks + 1) / 2)
             {
                 frame = player.StepCount % 2 == 0 ? 1 : 2;
             }

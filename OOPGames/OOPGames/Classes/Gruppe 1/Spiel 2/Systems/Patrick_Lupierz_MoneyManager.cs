@@ -22,6 +22,13 @@ namespace OOPGames
             Balance = startBalance;
         }
 
+        /// <summary>Kontostand aus einem Spielstand übernehmen.</summary>
+        public void Restore(int balance)
+        {
+            if (balance < 0) throw new ArgumentOutOfRangeException(nameof(balance));
+            Balance = balance;
+        }
+
         public bool CanAfford(int amount)
         {
             return amount > 0 && amount <= Balance;

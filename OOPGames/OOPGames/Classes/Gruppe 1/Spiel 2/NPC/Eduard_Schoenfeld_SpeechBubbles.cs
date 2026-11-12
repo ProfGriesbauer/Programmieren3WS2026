@@ -98,6 +98,12 @@ namespace OOPGames
             _nextMonologue[npc] = tick + ReactionTicks + MinPause;
         }
 
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – abgelaufene Blasen entfernen, ohne neue Monologe zu starten
+        public void Expire(int tick)
+        {
+            _active.RemoveAll(b => tick >= b.EndTick);
+        }
+
         public void Clear()
         {
             _active.Clear();

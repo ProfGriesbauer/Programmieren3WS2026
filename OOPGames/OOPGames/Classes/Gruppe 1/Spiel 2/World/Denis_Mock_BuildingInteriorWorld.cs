@@ -14,16 +14,22 @@ namespace OOPGames
         public int PlayerStartX { get { return 7; } }
         public int PlayerStartY { get { return 10; } }
         public int TileSize { get { return 24; } }
+        public G1C_WorldLocation Location { get; }
 
         // Entwickler: Denis Mock
         public G1C_BuildingInteriorWorld(G1C_WorldLocation location)
         {
-            if (location != G1C_WorldLocation.Hospital && location != G1C_WorldLocation.Market)
-                throw new System.ArgumentOutOfRangeException(nameof(location));
-
+            // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Tankstelle und Bekleidungsgeschäft
+            Location = location;
             Map = new G1C_BuildingInteriorMap(location);
-            if (location == G1C_WorldLocation.Hospital) BuildHospital();
-            else BuildMarket();
+            switch (location)
+            {
+                case G1C_WorldLocation.Hospital: BuildHospital(); break;
+                case G1C_WorldLocation.Market: BuildMarket(); break;
+                case G1C_WorldLocation.GasStation: BuildGasStation(); break;
+                case G1C_WorldLocation.ClothingStore: BuildClothingStore(); break;
+                default: throw new System.ArgumentOutOfRangeException(nameof(location));
+            }
         }
 
         // Entwickler: Denis Mock
@@ -43,15 +49,49 @@ namespace OOPGames
             AddFurniture("Regal", "obj_store_shelf", 2, 2, 2, 2);
             AddFurniture("Regal", "obj_store_shelf", 5, 2, 2, 2);
             AddFurniture("Regal", "obj_store_shelf", 9, 2, 2, 2);
-            AddFurniture("Kasse", "obj_counter", 10, 6, 3, 1);
+            // Änderung durch: Patrick Lupierz – die Kasse ist jetzt ein echter Verkaufstresen
+            AddFurniture("Kasse", "obj_counter", 10, 6, 3, 1, G1C_InteractionType.Shop);
+            AddSeller("Kassiererin Jana", "guest", 11, 5);
             AddFurniture("K\u00fchlschrank", "obj_clinic_cabinet", 13, 6, 1, 2);
             AddFurniture("Pflanze", "obj_plant", 2, 8, 1, 1);
         }
 
-        // Entwickler: Denis Mock
-        private void AddFurniture(string name, string sprite, int x, int y, int width, int height)
+        // Entwickler: Patrick Lupierz
+        private void BuildGasStation()
         {
-            _objects.Add(new G1C_WorldObject(name, sprite, x, y, width, height, true, G1C_InteractionType.None));
+            AddFurniture("Regal", "obj_store_shelf", 2, 2, 2, 2);
+            AddFurniture("Regal", "obj_store_shelf", 5, 2, 2, 2);
+            AddFurniture("K\u00fchlregal", "obj_clinic_cabinet", 13, 2, 1, 2);
+            AddFurniture("Regal", "obj_store_shelf", 2, 6, 2, 2);
+            AddFurniture("Verkaufstheke", "obj_counter", 9, 4, 3, 1, G1C_InteractionType.Shop);
+            AddSeller("Tankwart Olli", "dealer_green", 10, 3);
+            AddFurniture("M\u00fclleimer", "obj_trash", 13, 9, 1, 1, G1C_InteractionType.Trash);
+        }
+
+        // Entwickler: Patrick Lupierz
+        private void BuildClothingStore()
+        {
+            AddFurniture("Kleiderst\u00e4nder", "obj_clothes_rack", 2, 2, 2, 1);
+            AddFurniture("Kleiderst\u00e4nder", "obj_clothes_rack", 5, 2, 2, 1);
+            AddFurniture("Kleiderst\u00e4nder", "obj_clothes_rack", 2, 5, 2, 1);
+            AddFurniture("Kleiderst\u00e4nder", "obj_clothes_rack", 5, 5, 2, 1);
+            AddFurniture("Spiegel", "obj_mirror", 13, 1, 1, 1);
+            AddFurniture("Verkaufstheke", "obj_counter", 10, 4, 3, 1, G1C_InteractionType.Shop);
+            AddSeller("Verk\u00e4uferin Mia", "dealer_red", 11, 3);
+            AddFurniture("Pflanze", "obj_plant", 2, 9, 1, 1);
+        }
+
+        // Entwickler: Denis Mock
+        private void AddFurniture(string name, string sprite, int x, int y, int width, int height,
+                                  G1C_InteractionType interaction = G1C_InteractionType.None)
+        {
+            _objects.Add(new G1C_WorldObject(name, sprite, x, y, width, height, true, interaction));
+        }
+
+        // Entwickler: Patrick Lupierz – Verkäufer steht hinter der Theke und öffnet ebenfalls den Laden
+        private void AddSeller(string name, string skin, int x, int y)
+        {
+            _objects.Add(new G1C_Npc(name, skin, x, y, G1C_Direction.Down, G1C_InteractionType.Shop));
         }
 
         // Entwickler: Denis Mock
@@ -97,9 +137,13 @@ namespace OOPGames
         {
             char tile = GetTile(x, y);
             if (tile == 'E') return "tile_interior_exit";
-            if (tile == '#') return _location == G1C_WorldLocation.Hospital ? "tile_hospital_wall" : "tile_market_wall";
+            // Änderung durch: Patrick Lupierz – Kachelsatz je Gebäude (hospital, market, gas, clothing)
+            string set = _location == G1C_WorldLocation.Hospital ? "hospital"
+                       : _location == G1C_WorldLocation.GasStation ? "gas"
+                       : _location == G1C_WorldLocation.ClothingStore ? "clothing" : "market";
+            if (tile == '#') return "tile_" + set + "_wall";
             if (tile == 'r') return "tile_interior_rug";
-            return _location == G1C_WorldLocation.Hospital ? "tile_hospital_floor" : "tile_market_floor";
+            return "tile_" + set + "_floor";
         }
 
         // Entwickler: Denis Mock

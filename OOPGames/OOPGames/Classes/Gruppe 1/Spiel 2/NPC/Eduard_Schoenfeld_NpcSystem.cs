@@ -44,6 +44,8 @@ namespace OOPGames
         public Random Random { get; }
         public int Tick { get; private set; }
         public int Reputation { get; private set; } = 50;
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – NPCs sprechen den Spieler mit seinem Namen an
+        public string PlayerName { get; set; } = "";
         public G1C_SpeechBubbleSystem Bubbles { get; }
         public G1C_TaskBoard Tasks { get; }
         public G1C_NpcMoneyService MoneyRequests { get; }
@@ -77,6 +79,12 @@ namespace OOPGames
             Reputation = Math.Max(0, Math.Min(100, Reputation + delta));
         }
 
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Ruf aus einem Spielstand
+        public void RestoreReputation(int reputation)
+        {
+            Reputation = Math.Max(0, Math.Min(100, reputation));
+        }
+
         // Entwickler: Eduard Schoenfeld
         // Aufgabe: Gespräch mit dem NPC (oder dessen Tisch/Tresen) öffnen. False, wenn kein Profil existiert.
         // Anpassung durch Denis Mock: Außenwelt-NPCs besitzen kein Casino-Sprechblasenobjekt.
@@ -104,7 +112,8 @@ namespace OOPGames
 
             if (!inCasino)
             {
-                Bubbles.Clear();
+                // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Reaktionen (z.B. am Mülleimer) laufen auch außerhalb aus
+                Bubbles.Expire(tick);
                 return;
             }
             Bubbles.Update(tick, exploring, player, PlacedNpcs);

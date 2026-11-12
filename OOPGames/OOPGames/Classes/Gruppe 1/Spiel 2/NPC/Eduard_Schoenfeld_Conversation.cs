@@ -90,6 +90,7 @@ namespace OOPGames
             RequestedGame = null;
             _notices.Clear();
             IsOpen = true;
+            ViaPhone = false;
 
             bool firstMeeting = Memory.Conversations == 0;
             if (firstMeeting && !Memory.ReputationApplied)
@@ -103,6 +104,10 @@ namespace OOPGames
             string greeting = BuildGreeting(firstMeeting);
             Memory.Conversations++;
             RefreshStatus();
+            // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Freunde nennen den Spieler beim Namen und geben ihre Nummer
+            if (!firstMeeting && G1C_NpcRelationship.IsFriendly(Status) && !string.IsNullOrEmpty(_system.PlayerName))
+                greeting = "Hey " + _system.PlayerName + "! " + greeting;
+            if (TryGivePhoneNumber()) greeting = "Weißt du was? Hier ist meine Nummer. Ruf mich ruhig mal an.";
             Say(greeting, GreetingExpression());
             ShowRoot();
         }
@@ -219,6 +224,15 @@ namespace OOPGames
                 bool refusesTable = Status == G1C_RelationshipStatus.ArchEnemy && Npc.Personality.Competitive;
                 if (_gameOffered.HasValue && !refusesTable) AddOption("Ich will trotzdem spielen.", PlayGame);
                 AddOption("Schon gut, ich gehe.", Close);
+                return;
+            }
+
+            // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – am Telefon gibt es weder Spiele noch Aufgaben oder Geldübergaben
+            if (ViaPhone)
+            {
+                AddOption("Lass uns plaudern.", SmallTalk);
+                AddOption("Wie läuft es bei dir?", AskHowAreYou);
+                AddOption("Ich muss auflegen.", Close);
                 return;
             }
 
@@ -436,6 +450,40 @@ namespace OOPGames
 
         // ------------------------------------------------------------------ Hilfen
 
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026
+        /// <summary>True, wenn das Gespräch ein Telefonat ist (Anruf über das Handy).</summary>
+        public bool ViaPhone { get; private set; }
+
+        // Entwickler: Patrick Lupierz – Telefonat: gleiches Gespräch, aber mit eigenen Optionen
+        public void OpenCall(G1C_NpcCharacter npc, string playerName)
+        {
+            Open(npc, null);
+            ViaPhone = true;
+            Say("Hallo " + playerName + "! Schön, dass du anrufst. Was gibt's?", G1C_NpcExpression.Happy);
+            ShowRoot();
+        }
+
+        // Entwickler: Patrick Lupierz – Wirkung von außen (z.B. angetrunken ins Gespräch) mit Hinweis
+        public void ApplyOutsideEffect(int trustDelta, int respectDelta)
+        {
+            if (IsOpen) Adjust(trustDelta, respectDelta);
+        }
+
+        private void AskHowAreYou()
+        {
+            string story = Status == G1C_RelationshipStatus.GoodFriend ? Npc.Personality.PersonalStory : Npc.Personality.GeneralInfo;
+            Say(string.IsNullOrEmpty(story) ? "Alles wie immer. Komm doch mal wieder vorbei!" : story, G1C_NpcExpression.Thoughtful);
+        }
+
+        // Entwickler: Patrick Lupierz – ab Freundschaft gibt der NPC einmalig seine Telefonnummer heraus
+        private bool TryGivePhoneNumber()
+        {
+            if (Memory.PhoneNumberGiven || !G1C_NpcRelationship.IsFriendly(Status)) return false;
+            Memory.PhoneNumberGiven = true;
+            AddNotice("Neuer Kontakt: " + Npc.Name, true);
+            return true;
+        }
+
         private void Say(string text, G1C_NpcExpression expression)
         {
             Line = text ?? "";
@@ -462,6 +510,7 @@ namespace OOPGames
             if (trust != 0) AddNotice("Vertrauen " + (trust > 0 ? "+" : "") + trust, trust > 0);
             if (respect != 0) AddNotice("Respekt " + (respect > 0 ? "+" : "") + respect, respect > 0);
             RefreshStatus();
+            TryGivePhoneNumber(); // Änderung durch: Patrick Lupierz – Datum: 12.11.2026
             return trust;
         }
 

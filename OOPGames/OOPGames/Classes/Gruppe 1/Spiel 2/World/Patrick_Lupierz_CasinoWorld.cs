@@ -85,6 +85,9 @@ namespace OOPGames
                 "Und beim Poker: Wenn Max erhöht, hat er meistens etwas Gutes.",
                 "Mit [M] öffnest du übrigens das Menü mit allen Tasten."));
 
+            // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – durchsuchbarer Mülleimer
+            _objects.Add(new G1C_WorldObject("M\u00fclleimer", "obj_trash", 11, 10, 1, 1, true, G1C_InteractionType.Trash));
+
             // --- Deko ---
             _objects.Add(new G1C_WorldObject("Pflanze", "obj_plant", 1, 2, 1, 1, true, G1C_InteractionType.None));
             _objects.Add(new G1C_WorldObject("Pflanze", "obj_plant", 18, 2, 1, 1, true, G1C_InteractionType.None));

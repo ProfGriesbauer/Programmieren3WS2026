@@ -25,3 +25,13 @@ Scrum Master: _noch eintragen_
 | 18 | Als Spieler möchte ich kurze Monologe und Reaktionen der NPCs auf Gewinne und Verluste sehen. | erledigt (Eduard Schoenfeld) |
 | 19 | Als Spieler möchte ich, dass NPCs im Casino umhergehen (Tagesablauf). | offen |
 | 20 | Als Team möchten wir 30 detaillierte Porträt-PNGs (5 NPCs × 6 Ausdrücke) einbauen. | offen |
+| 21 | Als Spieler möchte ich meine Figur in der Stadt sehen und über natürlich verlaufende Straßen laufen. | erledigt (Patrick Lupierz) |
+| 22 | Als Spieler möchte ich beim Start einen Namen und mein Aussehen wählen. | erledigt (Patrick Lupierz) |
+| 23 | Als Spieler möchte ich eine Uhrzeit mit Tag-Nacht-Wechsel erleben (ein Tag = 30 Minuten). | erledigt (Patrick Lupierz) |
+| 24 | Als Spieler möchte ich in Tankstelle, Supermarkt und Bekleidungsgeschäft mit Chips einkaufen und Gekauftes im Inventar finden. | erledigt (Patrick Lupierz) |
+| 25 | Als Spieler möchte ich gekaufte Kleidung an meiner Figur sehen. | erledigt (Patrick Lupierz) |
+| 26 | Als Spieler möchte ich ein Klapphandy mit Kontakten, Anrufen, SMS, Uhr, Aufgaben und Speichern benutzen. | erledigt (Patrick Lupierz) |
+| 27 | Als Spieler möchte ich auf drei Speicherplätzen speichern und im Hauptmenü laden. | erledigt (Patrick Lupierz) |
+| 28 | Als Spieler möchte ich Mülleimer durchsuchen; nur NPCs in der Nähe bemerken es. | erledigt (Patrick Lupierz) |
+| 29 | Als Spieler möchte ich zum Friseur gehen und Möbel für mein Haus kaufen. | offen |
+| 30 | Als Spieler möchte ich wechselndes Wetter erleben. | offen |

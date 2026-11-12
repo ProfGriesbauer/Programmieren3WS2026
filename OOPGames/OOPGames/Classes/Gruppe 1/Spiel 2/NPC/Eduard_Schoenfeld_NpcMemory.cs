@@ -31,6 +31,10 @@ namespace OOPGames
 
         /// <summary>Eine Bemerkung, die der NPC bei der nächsten Begrüßung einmalig anbringt.</summary>
         public string PendingRemark { get; set; }
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Telefonnummer und Mülleimer-Beobachtungen
+        public bool PhoneNumberGiven { get; set; }
+        public int TrashSeenCount { get; set; }
+        public int LastTrashSeenDay { get; set; } = -1;
 
         public int DuelsTotal { get { return DuelsWonByPlayer + DuelsLostByPlayer; } }
     }

@@ -97,7 +97,15 @@ namespace OOPGames
         public int Purse { get; private set; }
         public G1C_NpcMood Mood { get; private set; }
         public G1C_NpcRelationship Relationship { get; }
-        public G1C_NpcMemory Memory { get; } = new G1C_NpcMemory();
+        public G1C_NpcMemory Memory { get; private set; } = new G1C_NpcMemory();
+
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Geldbeutel, Stimmung und Erinnerungen aus einem Spielstand
+        public void Restore(int purse, G1C_NpcMood mood, G1C_NpcMemory memory)
+        {
+            Purse = Math.Max(0, purse);
+            Mood = mood;
+            Memory = memory ?? new G1C_NpcMemory();
+        }
 
         // Entwickler: Eduard Schoenfeld
         // Aufgabe: Stimmung setzen; ohne force nur, wenn die letzte Änderung lange genug her ist.

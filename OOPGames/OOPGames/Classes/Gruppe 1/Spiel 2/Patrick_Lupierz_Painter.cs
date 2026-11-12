@@ -25,6 +25,10 @@ namespace OOPGames
         private readonly G1C_ConversationView _conversationView = new G1C_ConversationView();
         private readonly G1C_NpcOverlayView _npcOverlay = new G1C_NpcOverlayView();
         private readonly G1C_WorldCamera _camera = new G1C_WorldCamera();
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Hauptmenü, Listenmenü und Handy
+        private readonly G1C_StartView _startView = new G1C_StartView();
+        private readonly G1C_ListMenuView _listMenuView = new G1C_ListMenuView();
+        private readonly G1C_PhoneView _phoneView = new G1C_PhoneView();
 
         private readonly Dictionary<IG1C_WorldMap, BitmapSource> _mapImages =
             new Dictionary<IG1C_WorldMap, BitmapSource>();
@@ -55,6 +59,12 @@ namespace OOPGames
             field.Viewport = r.Viewport;
             G1C_GameManager game = field.Manager;
 
+            if (game.State == G1C_GameState.Title)
+            {
+                _startView.Draw(r, game.Start);
+                return;
+            }
+
             if (game.IsWorldVisible || game.ActiveGame == null)
             {
                 DrawWorld(r, game);
@@ -64,6 +74,8 @@ namespace OOPGames
                 else if (game.State == G1C_GameState.Menu) game.Menu.Draw(r, game);
                 else if (game.State == G1C_GameState.Result) game.Result.Draw(r);
                 else if (game.State == G1C_GameState.Conversation) _conversationView.Draw(r, game.Npcs); // Änderung durch: Eduard Schoenfeld
+                else if (game.State == G1C_GameState.ListMenu) _listMenuView.Draw(r, game);
+                else if (game.State == G1C_GameState.Phone) _phoneView.Draw(r, game);
             }
             else
             {
@@ -79,29 +91,31 @@ namespace OOPGames
             IG1C_WorldScene world = game.CurrentWorld;
             IG1C_WorldMap map = world.Grid;
             bool scrolling = game.CurrentLocation == G1C_WorldLocation.Exterior;
-            int mapPixelsPerTile = scrolling ? world.TileSize : MapPixelsPerTile;
-            BitmapSource mapImage = EnsureMapImage(map, mapPixelsPerTile);
+            // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Reparatur "Figur unsichtbar":
+            // mapX/mapY bezeichneten bisher die Ecke des Kartenausschnitts, Figuren rechnen aber ab der
+            // Kartenecke. Dadurch lagen sie außerhalb des Bildes, sobald die Kamera scrollte. Jetzt ist
+            // mapX/mapY immer die Bildschirmposition der Kartenecke (bei scrollender Kamera negativ).
+            // Das Kartenbild der Stadt wird in 16 Pixeln pro Kachel gebaut und beim Zeichnen vergrößert.
+            const int sourceTile = 16;
+            BitmapSource mapImage = EnsureMapImage(map, scrolling ? sourceTile : MapPixelsPerTile);
             double tileSize = world.TileSize;
             double mapX;
             double mapY;
-            double cameraPixelX = 0;
-            double cameraPixelY = 0;
 
             if (scrolling)
             {
+                double scale = tileSize / sourceTile;
                 double viewHeight = G1C_Renderer.ScreenHeight - G1C_GameHUD.Height;
                 _camera.Follow(game.Player, world, G1C_Renderer.ScreenWidth, viewHeight);
-                cameraPixelX = _camera.X * tileSize;
-                cameraPixelY = _camera.Y * tileSize;
-                int cropX = (int)System.Math.Floor(cameraPixelX);
-                int cropY = (int)System.Math.Floor(cameraPixelY);
-                int cropWidth = System.Math.Min((int)G1C_Renderer.ScreenWidth + 1, mapImage.PixelWidth - cropX);
-                int cropHeight = System.Math.Min((int)viewHeight + 1, mapImage.PixelHeight - cropY);
+                mapX = -_camera.X * tileSize;
+                mapY = G1C_GameHUD.Height - _camera.Y * tileSize;
+                int cropX = (int)System.Math.Floor(_camera.X * sourceTile);
+                int cropY = (int)System.Math.Floor(_camera.Y * sourceTile);
+                int cropWidth = System.Math.Min((int)(G1C_Renderer.ScreenWidth / scale) + 2, mapImage.PixelWidth - cropX);
+                int cropHeight = System.Math.Min((int)(viewHeight / scale) + 2, mapImage.PixelHeight - cropY);
                 CroppedBitmap viewport = new CroppedBitmap(mapImage, new Int32Rect(cropX, cropY, cropWidth, cropHeight));
                 viewport.Freeze();
-                mapX = -(cameraPixelX - cropX);
-                mapY = G1C_GameHUD.Height - (cameraPixelY - cropY);
-                r.DrawBitmap(viewport, mapX, mapY, cropWidth, cropHeight);
+                r.DrawBitmap(viewport, mapX + cropX * scale, mapY + cropY * scale, cropWidth * scale, cropHeight * scale);
             }
             else
             {
@@ -140,11 +154,35 @@ namespace OOPGames
                 d.Value();
             }
 
+            DrawDaylight(r, game, world, scrolling, tileSize, mapX, mapY);
+
             // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Sprechblasen und Aufgabenanzeige
-            if (inCasino)
+            // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Reaktions-Sprechblasen gibt es jetzt auf jeder Karte
+            _npcOverlay.DrawBubbles(r, game.Npcs, mapX, mapY, tileSize);
+            if (inCasino) _npcOverlay.DrawTaskStatus(r, game.Npcs);
+        }
+
+        // Entwickler: Patrick Lupierz
+        // Aufgabe: Tag-Nacht-Wechsel als halbtransparente Farbfläche über der Welt (die Grafiken selbst
+        //          bleiben unverändert). Abends und nachts leuchten die Straßenlaternen.
+        private void DrawDaylight(G1C_Renderer r, G1C_GameManager game, IG1C_WorldScene world, bool outdoors,
+                                  double tileSize, double mapX, double mapY)
+        {
+            System.Windows.Media.Color tint = game.Clock.Tint(outdoors);
+            // Auf wenige Stufen runden, damit der Renderer nicht für jeden Tick einen neuen Pinsel anlegt
+            tint = System.Windows.Media.Color.FromArgb((byte)(tint.A / 6 * 6), (byte)(tint.R / 16 * 16),
+                                                       (byte)(tint.G / 16 * 16), (byte)(tint.B / 16 * 16));
+            if (tint.A > 0)
+                r.FillRect(0, G1C_GameHUD.Height, G1C_Renderer.ScreenWidth, G1C_Renderer.ScreenHeight - G1C_GameHUD.Height, tint);
+
+            if (!outdoors || (game.Clock.Hour >= 7 && game.Clock.Hour < 19)) return;
+            foreach (G1C_WorldObject obj in world.Objects)
             {
-                _npcOverlay.DrawBubbles(r, game.Npcs, mapX, mapY, tileSize);
-                _npcOverlay.DrawTaskStatus(r, game.Npcs);
+                if (obj.SpriteId != "obj_street_lamp" || !IsEntityVisible(obj, obj.X, obj.Y, tileSize, mapX, mapY)) continue;
+                double x = mapX + (obj.X + 0.5) * tileSize;
+                double y = mapY + (obj.Y - 0.5) * tileSize;
+                r.FillEllipse(x, y + tileSize, tileSize * 1.4, tileSize * 1.0, System.Windows.Media.Color.FromArgb(50, 255, 230, 140));
+                r.FillEllipse(x, y, tileSize * 0.5, tileSize * 0.5, System.Windows.Media.Color.FromArgb(120, 255, 240, 170));
             }
         }
 

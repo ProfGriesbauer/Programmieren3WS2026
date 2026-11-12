@@ -2,9 +2,17 @@
 
 2D-Pixel-Art-Abenteuer im OOPGames-Framework. Die verbindlichen Entwicklungsregeln stehen in `Agents.md`.
 
-Das Spiel startet im Zuhause. Die quadratische 180x180-Stadtkarte hat die 100-fache Fläche der ursprünglichen Karte und wird durch eine scrollende Kamera erkundet. Straßen und Parkwege verbinden die Stadtteile und Brücken überqueren den gewundenen Fluss. Eine dichte Baum-/Wassergrenze schließt die Welt ab.
+Nach **Start New Game** erscheint das Hauptmenü: *Neues Spiel* (Name eingeben, Haare, Haut und Kleidung wählen) oder
+*Spiel laden* (drei Speicherplätze). Das Spiel beginnt im Zuhause. Die Stadt (96x64 Kacheln, scrollende Kamera) hat
+geschwungene Straßen, einen Fluss mit Brücken, Parks, Laternen und Mülleimer.
 
-Zuhause, Casino, Krankenhaus und Supermarkt sind betretbar. Krankenhaus und Supermarkt besitzen eigene, möblierte Innenräume; weitere markante Gebäude sind von außen sichtbar und kollidierbar. Enten und Fische leben am Fluss, Katzen und Vögel beleben die Plätze und Wege. Vier Stadtbewohner patrouillieren in getrennten Bezirken und lassen sich mit **E** ansprechen. Casino-Gast Lena erscheint auch in der Stadt; Casino-NPCs und Minispiele bleiben erhalten.
+Betretbar sind Zuhause, Casino, Krankenhaus, Supermarkt, Tankstelle und Bekleidungsgeschäft. In den Läden kauft man mit
+Chips ein; Kleidung zieht man zu Hause am Kleiderschrank an und sieht sie an der Figur. Getränke und Snacks haben zeitlich
+begrenzte Effekte. Eine zentrale Uhr (ein Tag = 30 Minuten) steuert Tageslicht, Öffnungszeiten, SMS und die Erreichbarkeit
+der NPCs am Handy. Befreundete NPCs geben ihre Telefonnummer heraus. Gespeichert wird über das Handy.
+
+Enten und Fische leben am Fluss, Katzen und Vögel beleben die Plätze. Vier Stadtbewohner patrouillieren in ihren Vierteln
+und lassen sich mit **E** ansprechen; Casino-NPCs und Minispiele bleiben erhalten.
 
 ## Starten
 
@@ -28,6 +36,8 @@ den Spieler. Fehlt Player 2, stürzt das Framework bei der ersten Eingabe ab.
 | E                     | Interagieren, Bestätigen, Weiter          |
 | Q / Esc               | Abbrechen, Minispiel verlassen            |
 | M                     | Menü                                      |
+| P                     | Handy (Kontakte, SMS, Uhr, Aufgaben, Speichern) |
+| I                     | Inventar                                  |
 | Maus                  | Knöpfe und Roulette-Felder anklicken      |
 
 Leertaste und Enter **nicht** benutzen: Nach dem Start hat der Button "Start New Game" den Fokus,

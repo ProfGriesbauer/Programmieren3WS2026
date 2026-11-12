@@ -112,6 +112,21 @@ namespace OOPGames
             return Reward;
         }
 
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Aufgabenstand speichern und laden
+        public G1C_SaveTask Capture()
+        {
+            return new G1C_SaveTask { Giver = GiverName, State = (int)State, Collected = (bool[])_collected.Clone(), AvailableAgainTick = _availableAgainTick };
+        }
+
+        public void Restore(G1C_SaveTask saved)
+        {
+            if (saved == null || saved.Collected == null || saved.Collected.Length != _collected.Length ||
+                !Enum.IsDefined(typeof(G1C_TaskState), saved.State)) return;
+            State = (G1C_TaskState)saved.State;
+            Array.Copy(saved.Collected, _collected, _collected.Length);
+            _availableAgainTick = saved.AvailableAgainTick;
+        }
+
         public IEnumerable<KeyValuePair<int, int>> OpenItems()
         {
             if (State != G1C_TaskState.Active) yield break;

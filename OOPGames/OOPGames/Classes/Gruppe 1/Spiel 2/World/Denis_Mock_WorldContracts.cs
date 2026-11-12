@@ -8,7 +8,10 @@ namespace OOPGames
         Exterior,
         Casino,
         Hospital,
-        Market
+        Market,
+        // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – weitere Geschäfte
+        GasStation,
+        ClothingStore
     }
 
     public interface IG1C_WorldMap
