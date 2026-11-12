@@ -1848,3 +1848,17 @@ Plan, Regelkonflikte und offene Punkte: `Plans/Patrick_Lupierz_Welt_Plan.md`.
 `dotnet build`: 0 Fehler, 0 Warnungen. Automatischer Testlauf (Testprojekt außerhalb des Repos): 149 neue Prüfungen bestanden,
 dazu die bisherigen NPC-Prüfungen. Bedienung mit echter Tastatur/Maus im Hauptfenster nicht getestet.
 Nicht umgesetzt: NPC-Tagesabläufe, Friseur, Möbel/Hausgestaltung, Wetter, Karten- und Einstellungs-App, Frisuren-Auswahl.
+
+### Prompt 5
+
+Werkzeug: Claude Code (VS-Code-Erweiterung)
+Modell: Claude Opus 5.5
+
+```text
+ändere die agents.md ab harte Struktur regeln nicht wie framework aber erweiterungen dürfen hinzugefpgt werrden
+```
+
+Ergebnisvermerk: `Agents.md` um Abschnitt 0 (harte Regeln vs. erweiterbare Inhalte, Bedingungen für Erweiterungen) und
+Abschnitt 22 (Inhaltsregeln der Erweiterungen aus Prompt 4) ergänzt. Feste Vorgaben wie die 180x180-Karte und die
+Begrenzung auf Krankenhaus/Supermarkt gelten jetzt als Mindestumfang. Framework-, Verzeichnis-, Kennzeichnungs-, Doku- und
+Git-Regeln sind unverändert. Kein Commit.

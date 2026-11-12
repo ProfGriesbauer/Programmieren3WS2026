@@ -8,6 +8,39 @@ Diese Datei enthält die verbindlichen Regeln für alle Entwickler und KI-Agente
 
 Die offiziellen Projektanforderungen und das vorhandene Framework haben immer Vorrang vor zusätzlichen Projektwünschen.
 
+## 0. Harte Regeln und erweiterbare Inhalte
+
+Änderung durch: Patrick Lupierz – Datum: 12.11.2026
+
+Diese Datei unterscheidet zwei Arten von Regeln.
+
+**Harte Regeln** – gelten immer, dürfen nicht abgeschwächt, umgangen oder durch Erweiterungen ersetzt werden:
+
+- Abschnitt 2: Framework-Regeln.
+- Abschnitt 3: Erlaubte Verzeichnisse und Registrierung.
+- Abschnitt 4: Trennung von Logik und Darstellung, Rollen von Painter, Rules, Field und Player.
+- Abschnitt 7: Austauschbarkeit der Grafiken.
+- Abschnitte 14 und 16: Modularität und Codequalität.
+- Abschnitt 15: Entwicklerkennzeichnung.
+- Abschnitt 17: Vorgehen von KI-Agenten.
+- Abschnitt 18: Dokumentation (Prompts, Pläne, Backlog).
+- Abschnitt 19: Git- und Build-Regeln.
+
+**Erweiterbare Inhalte** – beschreiben den Mindestumfang des Spiels. Neue Funktionen dürfen hinzugefügt werden:
+
+- Abschnitt 1: Spielbereiche und Spielidee.
+- Abschnitte 5, 6, 8 und 9: Spielfigur, Kollision, Spielwelt und Interaktionen (z. B. weitere Karten, Gebäude, Innenräume, NPCs).
+- Abschnitte 10 und 11: weitere Minispiele oder KI-Gegner.
+- Abschnitte 12 und 13: weitere Spielzustände und Oberflächen (z. B. Hauptmenü, Handy, Inventar).
+
+Für jede Erweiterung gilt:
+
+1. Sie hält alle harten Regeln ein.
+2. Vorhandene Funktionen bleiben funktionsfähig; der beschriebene Mindestumfang darf nicht unterschritten werden.
+3. Sie wird im Product Backlog, in einem Plan unter `Plans/` und in der Prompt-Datei des verantwortlichen Teammitglieds dokumentiert.
+4. Neue Inhaltsregeln werden in dieser Datei ergänzt (Abschnitt 22). Die harten Regeln werden dabei nicht verändert.
+5. Braucht eine Erweiterung eine Framework-Änderung, gilt Abschnitt 17: abbrechen und mit Team und Dozent klären.
+
 ---
 
 # 1. Allgemeine Projektbeschreibung
@@ -21,9 +54,9 @@ Das Casino enthält verschiedene Spielbereiche, NPCs und interaktive Spieltische
 Das Spiel besteht aus verbundenen Bereichen:
 
 1. Das Zuhause als Start- und Rückkehrort.
-2. Die begehbare, 180x180 Kacheln große Stadt mit Casino, Krankenhaus, Supermarkt, weiteren Gebäuden, Fluss und Tierwelt.
+2. Die begehbare Stadt mit Casino, Krankenhaus, Supermarkt, weiteren Gebäuden, Fluss und Tierwelt.
 3. Das Casino-Innere mit interaktiven Minispielen, eigenständiger Spiellogik und KI-Gegnern.
-4. Ergänzende, eingerichtete Innenräume für Krankenhaus und Supermarkt.
+4. Ergänzende, eingerichtete Innenräume für Krankenhaus, Supermarkt und weitere Gebäude (z. B. Tankstelle, Bekleidungsgeschäft).
 
 Mindestens Zuhause und Casino benötigen betretbare Innenräume. Zusätzliche Gebäude dürfen als solide Fassaden oder mit klar abgegrenzten, eigenen Innenräumen umgesetzt werden.
 
@@ -463,12 +496,12 @@ Grafikdateien dürfen nur dort abgelegt werden, wo dies mit den offiziellen Proj
 
 # 8. Stadt- und Casino-Spielwelt
 
-Die begehbare Spielwelt besteht aus dem Zuhause, einer quadratischen Außenwelt und dem vorhandenen Casino-Innenraum. Alle Szenen werden in Top-Down-Perspektive und im einheitlichen 2D-Pixel-Art-Stil dargestellt.
+Die begehbare Spielwelt besteht mindestens aus dem Zuhause, einer Außenwelt und dem vorhandenen Casino-Innenraum. Weitere getrennte Karten dürfen ergänzt werden (siehe Abschnitt 0). Alle Szenen werden in Top-Down-Perspektive und im einheitlichen 2D-Pixel-Art-Stil dargestellt.
 
 ## 8.1 Außenwelt
 
 - Die Spielfigur startet im eigenen Zuhause und kann dieses betreten sowie verlassen.
-- Die Stadtkarte ist quadratisch und 180x180 Kacheln groß (100-fache Fläche der ursprünglichen 18x18-Karte).
+- Größe und Form der Stadtkarte sind nicht festgelegt; sie müssen zum Maßstab der Spielfigur passen (aktuell 96x64 Kacheln).
 - Eine mit der Spielfigur scrollende Kamera zeigt nur einen viewportgroßen Ausschnitt, folgt flüssig und begrenzt sich an allen Kartenrändern.
 - Dichte Baumreihen und Wasser bilden eine sichtbare, geschlossene, nicht begehbare Außengrenze.
 - Straßen, Gassen, Parkwege und Brücken bilden ein verbundenes Wegenetz zwischen Zuhause, Casino und Stadtbereichen.
@@ -491,7 +524,7 @@ Spieltische und Möbel müssen sinnvoll positioniert sein. Die Umgebung muss aus
 
 ## 8.3 Weitere Innenräume
 
-Krankenhaus und Supermarkt dürfen eigene kleine, ausgestattete Szenen erhalten. Jede Szene benötigt eine passende Bodentextur, eine geschlossene Außenwand, ein Ausgangsfeld, kollidierbare Einrichtung und einen eindeutigen Übergang zurück zur zugehörigen Außentür.
+Krankenhaus, Supermarkt und weitere Gebäude dürfen eigene kleine, ausgestattete Szenen erhalten. Jede Szene benötigt eine passende Bodentextur, eine geschlossene Außenwand, ein Ausgangsfeld, kollidierbare Einrichtung und einen eindeutigen Übergang zurück zur zugehörigen Außentür.
 
 ---
 
@@ -649,6 +682,8 @@ Mindestens folgende Zustände sind vorgesehen:
 - Blackjack
 - Slots
 - Result
+
+Weitere Zustände (z. B. Hauptmenü, Gespräch, Listenmenü, Handy) dürfen ergänzt werden, solange sie zentral verwaltet werden.
 
 Beim Start eines Minispiels:
 
@@ -955,7 +990,7 @@ Die Implementierung soll in folgender Reihenfolge erfolgen.
 ## Phase 3: Zuhause, Außenwelt und Casino-Spielwelt
 
 - Begehbare Startszene im Zuhause erstellen.
-- Quadratische 180x180 Außenkarte mit geschlossener Baum-/Wassergrenze, Fluss, Brücken und verbundenen Straßen erstellen.
+- Außenkarte mit geschlossener Baum-/Wassergrenze, Fluss, Brücken und verbundenen Straßen erstellen.
 - Scrollende, begrenzte Kamera und sichtbaren Kartenausschnitt implementieren.
 - Casino, Krankenhaus, Supermarkt und weitere Stadtbereiche erkennbar darstellen.
 - Übergänge zwischen Zuhause, Stadt, Casino und optionalen Gebäudeinnenräumen implementieren.
@@ -1048,5 +1083,25 @@ Alle Klassen müssen modular, nachvollziehbar und austauschbar sein.
 Jede wesentliche Codeänderung muss dem tatsächlich verantwortlichen Teammitglied zugeordnet werden können.
 
 Alle diese Regeln sind bei jeder Implementierung verbindlich.
+
+---
+
+# 22. Ergänzte Erweiterungen
+
+Hier werden Inhaltsregeln für Erweiterungen nach Abschnitt 0 nachgetragen. Die harten Regeln gelten unverändert.
+
+## 22.1 Spielwelt, Uhr, Charakter, Läden, Handy, Speichern
+
+Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Plan: `Plans/Patrick_Lupierz_Welt_Plan.md`
+
+- **Währung:** Es gibt nur Casino-Chips. Alle Zahlungen laufen über die zentrale Geldverwaltung; NPC-Geldbeutel sind getrennt und werden nie negativ.
+- **Uhr:** Es gibt genau eine Ingame-Uhr im Framework-Tick (ein Tag = 30 Echtzeitminuten). Im Hauptmenü und im Pausenmenü steht sie.
+- **Licht:** Der Tag-Nacht-Wechsel wird darübergezeichnet; Grafikdateien werden nicht verändert.
+- **Charakter und Kleidung:** Name und Aussehen werden beim neuen Spiel gewählt. Kleidung ist an der Figur in allen Laufrichtungen sichtbar.
+- **Läden und Inventar:** Alle Läden nutzen dieselbe Kauflogik. Das Inventar hat keine eigene Geldverwaltung. Effekte sind zeitlich begrenzt und verändern keine Gewinnchancen der Minispiele.
+- **Handy:** Das Handy wird auf dem Framework-Canvas gezeichnet. Eingaben kommen nur über die Framework-Selections; neue Apps werden modular ergänzt.
+- **Speichern:** Spielstände liegen als versionierte Dateien im Ordner `G1Casino_Saves` neben der `OOPGames.exe`, nie im Quellcode-Ordner. Beschädigte Dateien dürfen das Spiel nicht abstürzen lassen.
+- **Lokale Wahrnehmung:** Nur NPCs auf derselben Karte und im Wahrnehmungsradius bemerken eine Handlung (z. B. Mülleimer); dieselbe Handlung wird nicht mehrfach bewertet.
+- **Tasten:** Enter und Leertaste werden nicht verwendet, weil sie den Start-Knopf des Frameworks auslösen.
 
 Bei Bedarf soll die Agents.md erweitern werden. Die Grundregeln dürfen nicht verändert werden. Pushen soll nur auf den jetzigen Branch sein, kein merge.

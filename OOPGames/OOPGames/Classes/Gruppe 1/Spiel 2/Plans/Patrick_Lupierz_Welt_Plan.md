@@ -21,7 +21,7 @@ die Ecke des Kartenausschnitts statt der Kartenecke mit; sobald die Kamera scrol
 
 | Punkt | Bewertung | Umgang |
 |---|---|---|
-| `Agents.md` sieht nur das Casino als Spielbereich vor, das Konzept mehrere Karten | **genehmigungspflichtig** (Team/Dozent). Die Außenwelt ist bereits seit dem Commit „Außenwelt hinzugefügt“ im Branch. | Auf dem Bestand aufgebaut, `Agents.md` nicht verändert. Regelkonforme Alternative, falls abgelehnt: Läden als Räume im Casino – die Shop-, Inventar- und Uhrklassen hängen nicht an der Stadtkarte. |
+| `Agents.md` sieht nur das Casino als Spielbereich vor, das Konzept mehrere Karten | Gelöst (Prompt 5): `Agents.md` erlaubt Erweiterungen jetzt ausdrücklich (Abschnitt 0, Regeln in Abschnitt 22). Vorstellung beim Dozenten bleibt nach Abschnitt 18 nötig. Die Außenwelt ist bereits seit dem Commit „Außenwelt hinzugefügt“ im Branch. | Auf dem Bestand aufgebaut, `Agents.md` nicht verändert. Regelkonforme Alternative, falls abgelehnt: Läden als Räume im Casino – die Shop-, Inventar- und Uhrklassen hängen nicht an der Stadtkarte. |
 | Speicherdateien | zulässig, solange nichts im Quellcode-Ordner landet | Ordner `G1Casino_Saves` neben der `OOPGames.exe`, wie der Grafikordner |
 | „Beenden“ im Hauptmenü | nicht zulässig: das Spiel darf das Framework-Fenster nicht schließen | weggelassen |
 | Enter/Leertaste | lösen den Start-Knopf des Frameworks aus | Namenseingabe bestätigt mit Pfeil ↓ oder Klick |
