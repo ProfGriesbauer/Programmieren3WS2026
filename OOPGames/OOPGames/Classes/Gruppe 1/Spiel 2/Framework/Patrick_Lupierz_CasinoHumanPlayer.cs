@@ -22,7 +22,7 @@ namespace OOPGames
 
         public bool CanBeRuledBy(IGameRules rules)
         {
-            return rules is G1C_CasinoRules;
+            return rules is IG1C_CasinoRules;
         }
 
         public IGamePlayer Clone()

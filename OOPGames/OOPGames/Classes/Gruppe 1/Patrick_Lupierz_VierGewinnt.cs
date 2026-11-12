@@ -240,7 +240,7 @@ namespace OOPGames
             }
 
             int row = G1_VierGewinntLogic.FreeRow(_field, connectFourMove.Column);
-            if (row < 0 || connectFourMove.Row != row)
+            if (row < 0)
             {
                 return;
             }
@@ -256,7 +256,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class G1_VierGewinntPaint : IPaintGame
+    public sealed class G1_VierGewinntPaint : IConnectFourPainter, IG9_4GewinntPainter
     {
         private static readonly Brush BackgroundBrush = new SolidColorBrush(Color.FromRgb(0x03, 0x04, 0x5E));
         private static readonly Brush FrameBrush = new SolidColorBrush(Color.FromRgb(0x77, 0x8D, 0xA9));
@@ -266,6 +266,16 @@ namespace OOPGames
         private IGameField _currentField;
 
         public string Name { get { return "Gruppe 1 Vier Gewinnt Painter"; } }
+
+        public int ColumnAt(int x, int y)
+        {
+            return G1_VierGewinntLayout.ColumnAt(x, y);
+        }
+
+        public void Paint4GewinntField(Canvas canvas, I4GWFeld currentField)
+        {
+            PaintGameField(canvas, currentField);
+        }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
@@ -310,9 +320,15 @@ namespace OOPGames
             }
             else
             {
-                int currentPlayer = field is G1_VierGewinntField
-                    ? ((G1_VierGewinntField)field).NextPlayer
-                    : 1;
+                int movesPlayed = 0;
+                for (int row = 0; row < G1_VierGewinntLogic.Rows; row++)
+                {
+                    for (int column = 0; column < G1_VierGewinntLogic.Columns; column++)
+                    {
+                        if (field[row, column] > 0) movesPlayed++;
+                    }
+                }
+                int currentPlayer = movesPlayed % 2 == 0 ? 1 : 2;
                 Brush playerBrush = currentPlayer == 1 ? PlayerOneBrush : PlayerTwoBrush;
                 bool hasCanvasSize = canvas.ActualWidth > 0;
                 double indicatorSize = hasCanvasSize
@@ -469,7 +485,11 @@ namespace OOPGames
             IClickSelection click = selection as IClickSelection;
             if (click != null)
             {
-                column = G1_VierGewinntLayout.ColumnAt(click.XClickPos, click.YClickPos);
+                IConnectFourPainter painter =
+                    OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter;
+                column = painter != null
+                    ? painter.ColumnAt(click.XClickPos, click.YClickPos)
+                    : G1_VierGewinntLayout.ColumnAt(click.XClickPos, click.YClickPos);
             }
             else
             {

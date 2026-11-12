@@ -11,7 +11,7 @@ namespace OOPGames
     /// Ergebnis – oder übergibt das Zeichnen an das aktive Minispiel.
     /// Gezeichnet wird ausschließlich auf das vom Framework übergebene Canvas.
     /// </summary>
-    public class G1C_CasinoPainter : IPaintGame2
+    public class G1C_CasinoPainter : IG1C_CasinoPainter
     {
         private const double TileSize = 24;        // virtuelle Einheiten pro Kachel (20 x 12 Kacheln = 480 x 288)
         private const int MapPixelsPerTile = 48;   // Auflösung des zusammengesetzten Kartenbildes

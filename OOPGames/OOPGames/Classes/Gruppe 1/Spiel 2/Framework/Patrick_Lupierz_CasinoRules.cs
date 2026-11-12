@@ -10,7 +10,7 @@ namespace OOPGames
 
         public bool CanBePaintedBy(IPaintGame painter)
         {
-            return painter is G1C_CasinoPainter;
+            return painter is IG1C_CasinoPainter;
         }
     }
 
@@ -34,7 +34,7 @@ namespace OOPGames
     ///  - ClearField:      startet ein neues Casino-Spiel (beim Klick auf "Start New Game")
     /// Es gibt keinen Gewinner im Framework-Sinn (-1), Eingaben sind immer möglich.
     /// </summary>
-    public class G1C_CasinoRules : IGameRules2
+    public class G1C_CasinoRules : IG1C_CasinoRules
     {
         private readonly G1C_CasinoField _field = new G1C_CasinoField();
         private readonly G1C_InputManager _input = new G1C_InputManager();
