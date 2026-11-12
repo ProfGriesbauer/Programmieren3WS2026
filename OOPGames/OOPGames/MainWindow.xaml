@@ -41,8 +41,8 @@
                 </Grid.ColumnDefinitions>
                 <Button x:Name="StartGame" Grid.Column="0" Content="Start New Game" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,5,5,5" Click="StartGame_Click"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="5,5,5,5">
-                    <RadioButton x:Name="NormalViewButton" Content="Normale Ansicht" Style="{StaticResource ViewSwitchStyle}" IsChecked="True" Checked="NormalViewButton_Checked"/>
-                    <RadioButton x:Name="FullscreenButton" Content="Vollbild" Style="{StaticResource ViewSwitchStyle}" Checked="FullscreenButton_Checked"/>
+                    <RadioButton x:Name="NormalViewButton" Content="Normale Ansicht" ToolTip="Normale Ansicht (F11)" Style="{StaticResource ViewSwitchStyle}" IsChecked="True" Checked="NormalViewButton_Checked"/>
+                    <RadioButton x:Name="FullscreenButton" Content="Vollbild" ToolTip="Vollbild (F11)" Style="{StaticResource ViewSwitchStyle}" Checked="FullscreenButton_Checked"/>
                 </StackPanel>
                 <TextBox x:Name="Status" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="5,5,5,5" FontSize="18"/>
             </Grid>

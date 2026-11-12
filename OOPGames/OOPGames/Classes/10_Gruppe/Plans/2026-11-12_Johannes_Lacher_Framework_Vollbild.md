@@ -168,6 +168,15 @@ ist F11 so auffindbar.
 - Nach F11 zeigt der Umschalter den richtigen Zustand.
 - Tooltips am Umschalter nennen F11.
 
+**Stand (2026-11-12): umgesetzt.** Testprogramm mit dem echten `MainWindow` und einem Testspieler, der
+aufzeichnet, welche Tasten beim Spiel ankommen; Tasten durch die WPF-Eingabeverarbeitung. Vor der Änderung
+9 von 16 Prüfungen fehlgeschlagen (F11 schaltete nicht um und kam beim Spiel an), danach alle bestanden:
+F11 schaltet vor dem ersten Spielstart, mit Fokus in einer Liste und im Statusfeld sowie während eines Spiels
+in beide Richtungen; das Spiel bekommt F11 nie; Esc kommt beim Spiel an und lässt das Vollbild bestehen;
+der Umschalter zeigt nach F11 den richtigen Zustand; beide Tooltips nennen F11. Die B2-Tests laufen
+weiterhin durch.
+Noch von Hand zu prüfen: F11 auf einer echten Tastatur (manche Laptops brauchen dafür die Fn-Taste).
+
 ---
 
 ## B4 – ~~Einblendungen im Vollbild~~ (gestrichen)

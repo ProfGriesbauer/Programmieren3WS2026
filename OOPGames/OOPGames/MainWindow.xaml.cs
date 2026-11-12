@@ -225,6 +225,16 @@ namespace OOPGames
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            // F11 belongs to the framework and switches the view, also before a game is started.
+            // It is never passed on to the game. Esc is left to the games, many of them use it.
+            if (e.Key == Key.F11)
+            {
+                if (_IsFullscreen) ExitFullscreen(true);
+                else EnterFullscreen();
+                e.Handled = true;
+                return;
+            }
+
             if (_CurrentRules == null) return;
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)

@@ -394,3 +394,9 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > suggest a commit message
 
 **Ergebnis:** übernommen – Commit-Nachricht für B2 vorgeschlagen (Betreffzeile nach Plan, Text mit Ansichten, Fensterwiederherstellung, Snap-Verhalten und mitcommitteten Plan-/Prompt-Änderungen).
+
+### 77
+**Prompt:**
+> start with B3 (F11 key)
+
+**Ergebnis:** übernommen – Block B3 umgesetzt: In `Window_KeyDown` als erste Prüfung, noch vor der Prüfung auf ein laufendes Spiel, schaltet F11 die Ansicht um und wird als behandelt markiert, also nie an das Spiel weitergegeben; Esc bleibt beim Spiel. Tooltips „Normale Ansicht (F11)“ und „Vollbild (F11)“ am Umschalter. Testprogramm mit dem echten `MainWindow` und einem aufzeichnenden Testspieler: vorher 9 von 16 Prüfungen fehlgeschlagen, danach alle bestanden; B2-Tests weiterhin grün. Stand im Plan vermerkt; noch nicht committet.
