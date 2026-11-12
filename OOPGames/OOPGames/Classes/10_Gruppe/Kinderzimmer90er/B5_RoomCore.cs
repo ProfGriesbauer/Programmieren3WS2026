@@ -169,9 +169,9 @@ namespace OOPGames
 
                 if (Phase == B5RoomPhase.Room)
                 {
-                    if (key == Key.A || key == Key.D)
+                    if (B5RoomKeys.IsLeft(key) || B5RoomKeys.IsRight(key))
                     {
-                        int direction = key == Key.D ? 1 : -1;
+                        int direction = B5RoomKeys.IsRight(key) ? 1 : -1;
                         SelectedDevice = (SelectedDevice + direction + B5RoomRegistry.Devices.Count) % B5RoomRegistry.Devices.Count;
                         SelectedGame = 0;
                     }

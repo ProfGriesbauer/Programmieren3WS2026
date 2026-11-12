@@ -21,15 +21,12 @@ namespace OOPGames
         Border _Sidebar;
         StackPanel _Cards;
         TextBlock _DeviceTitle;
-        TextBlock _Hint;
-        TextBlock _RoomSelection;
+        B5ControlBar _ControlBar;
         readonly List<GeometryModel3D> _Highlights = new List<GeometryModel3D>();
         readonly List<GeometryModel3D> _Screens = new List<GeometryModel3D>();
         readonly List<Border> _CardBorders = new List<Border>();
         readonly List<TextBlock> _CardTitles = new List<TextBlock>();
-        readonly Model3DGroup[] _DeviceControls = { new Model3DGroup(), new Model3DGroup(), new Model3DGroup() };
         B5RoomField _LastField;
-        Model3DGroup _VisibleControls;
         int _LastDevice = -1;
         int _LastSelected = -1;
         double _LastWidth = -1;
@@ -77,7 +74,8 @@ namespace OOPGames
                 AddDisplayQuad(-3.6, 1.62, -1.268, 1.1, 0.82);
                 Point3D gameBoyScreen = B5GameBoyModel.ScreenCenter;
                 AddDisplayQuad(gameBoyScreen.X, gameBoyScreen.Y, gameBoyScreen.Z, B5GameBoyModel.ScreenWidth, B5GameBoyModel.ScreenHeight);
-                AddDisplayQuad(3.3, 2.03, -1.945, 0.6, 0.46);
+                Point3D commodoreScreen = B5CommodoreModel.ScreenCenter;
+                AddDisplayQuad(commodoreScreen.X, commodoreScreen.Y, commodoreScreen.Z, B5CommodoreModel.ScreenWidth, B5CommodoreModel.ScreenHeight);
                 canvas.Children.Clear();
                 canvas.Children.Add(_Root);
                 _LastField = field;
@@ -141,53 +139,25 @@ namespace OOPGames
             };
             _AnimationLayer.Children.Add(_Cartridge);
 
-            _Sidebar = new Border
-            {
-                Width = 250,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                VerticalAlignment = VerticalAlignment.Stretch,
-                Background = new SolidColorBrush(Color.FromArgb(238, 19, 24, 35)),
-                Padding = new Thickness(18),
-                Visibility = Visibility.Collapsed
-            };
             StackPanel panel = new StackPanel();
-            _DeviceTitle = new TextBlock { Foreground = Brushes.White, FontSize = 19, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 14) };
-            panel.Children.Add(new TextBlock { Text = "SPIELE", Foreground = new SolidColorBrush(Color.FromRgb(239, 191, 83)), FontSize = 14, FontWeight = FontWeights.Bold });
+            panel.Children.Add(B5RetroStyle.CreateText("Spiele waehlen:", 19, B5RetroStyle.Text));
+            panel.Children.Add(new Border { Height = 2, Background = B5RetroStyle.Frame, Margin = new Thickness(-12, 8, -12, 10) });
+            _DeviceTitle = B5RetroStyle.CreateText("", 17, B5RetroStyle.Text);
+            _DeviceTitle.Margin = new Thickness(0, 0, 0, 8);
             panel.Children.Add(_DeviceTitle);
             _Cards = new StackPanel();
             panel.Children.Add(_Cards);
-            _Sidebar.Child = panel;
+            _Sidebar = B5RetroStyle.CreatePanel(panel);
+            _Sidebar.Width = 250;
+            _Sidebar.HorizontalAlignment = HorizontalAlignment.Right;
+            _Sidebar.VerticalAlignment = VerticalAlignment.Stretch;
+            _Sidebar.Visibility = Visibility.Collapsed;
             _Sidebar.SetValue(Panel.ZIndexProperty, 3);
             _Root.Children.Add(_Sidebar);
 
-            _Hint = new TextBlock
-            {
-                Foreground = Brushes.White,
-                Background = new SolidColorBrush(Color.FromArgb(205, 18, 22, 32)),
-                FontSize = 14,
-                Padding = new Thickness(12, 7, 12, 7),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(8),
-                TextAlignment = TextAlignment.Center
-            };
-            _Hint.SetValue(Panel.ZIndexProperty, 4);
-            _Root.Children.Add(_Hint);
-
-            _RoomSelection = new TextBlock
-            {
-                Foreground = new SolidColorBrush(Color.FromRgb(255, 220, 125)),
-                Background = new SolidColorBrush(Color.FromArgb(190, 17, 22, 31)),
-                FontSize = 22,
-                FontWeight = FontWeights.Bold,
-                Padding = new Thickness(16, 8, 16, 8),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(0, 18, 0, 0),
-                TextAlignment = TextAlignment.Center
-            };
-            _RoomSelection.SetValue(Panel.ZIndexProperty, 2);
-            _Root.Children.Add(_RoomSelection);
+            _ControlBar = new B5ControlBar();
+            _ControlBar.Element.SetValue(Panel.ZIndexProperty, 4);
+            _Root.Children.Add(_ControlBar.Element);
         }
 
         void BuildRoom()
@@ -252,30 +222,8 @@ namespace OOPGames
 
             B5GameBoyModel.Build(_Scene);
 
-            AddBox(3.3, 2.03, -2.4, 0.95, 0.85, 0.85, Color.FromRgb(235, 232, 224));
-            AddBox(3.3, 2.03, -1.96, 0.61, 0.47, 0.02, Color.FromRgb(26, 26, 31));
-            AddBox(3.3, 1.62, -2.4, 0.6, 0.2, 0.5, Color.FromRgb(198, 195, 188));
-            AddBox(2.1, 1.67, -2.0, 1.25, 0.14, 0.6, Color.FromRgb(217, 210, 187));
-            Model3DGroup commodoreControls = _DeviceControls[(int)B5RoomDeviceKind.Commodore];
-            for (int row = 0; row < 4; row++)
-            {
-                for (int col = 0; col < 10; col++)
-                {
-                    if (row == 3 && col >= 4 && col <= 6) continue;
-                    AddBox(commodoreControls, 1.65 + col * 0.082, 1.755, -2.21 + row * 0.115, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
-                }
-            }
-            AddBox(commodoreControls, 2.06, 1.755, -1.865, 0.27, 0.018, 0.06, Color.FromRgb(64, 57, 48));
-            AddBox(commodoreControls, 2.58, 1.755, -2.095, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
-            AddBox(commodoreControls, 2.52, 1.755, -1.98, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
-            AddBox(commodoreControls, 2.64, 1.755, -1.98, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
-            AddBox(commodoreControls, 2.58, 1.755, -1.865, 0.055, 0.018, 0.06, Color.FromRgb(64, 57, 48));
-
-            Model3DGroup atariControls = _DeviceControls[(int)B5RoomDeviceKind.Atari];
-            AddBox(atariControls, -3.6, 0.68, -1.15, 0.48, 0.08, 0.34, Color.FromRgb(32, 31, 31));
-            AddBox(atariControls, -3.6, 0.85, -1.15, 0.075, 0.28, 0.075, Color.FromRgb(19, 19, 20));
-            AddBox(atariControls, -3.6, 1.005, -1.15, 0.16, 0.09, 0.16, Color.FromRgb(12, 12, 13));
-            AddBox(atariControls, -3.32, 0.745, -1.15, 0.09, 0.04, 0.09, Color.FromRgb(201, 49, 39));
+            B5CommodoreModel.Build(_Scene);
+            B5AtariControllerModel.Build(_Scene);
 
             AddBox(-1.5, 2.7, -2.91, 1.3, 0.8, 0.04, Color.FromRgb(38, 57, 78));
             AddBox(-1.5, 2.48, -2.884, 1.04, 0.07, 0.012, Color.FromRgb(221, 117, 67));
@@ -302,9 +250,10 @@ namespace OOPGames
             AddBox(-4.18, 0.68, 1.55, 0.12, 0.1, 0.3, Color.FromRgb(89, 136, 70));
 
             _Highlights.Clear();
-            _Highlights.Add(AddBox(-3.6, 0.14, -1.8, 1.4, 0.025, 0.9, Color.FromArgb(0, 255, 213, 92)));
-            _Highlights.Add(AddBox(0.8, 1.625, -2.5, 0.55, 0.02, 0.34, Color.FromArgb(0, 255, 213, 92)));
-            _Highlights.Add(AddBox(2.8, 1.62, -2.1, 1.5, 0.02, 0.85, Color.FromArgb(0, 255, 213, 92)));
+            // Selection frames lie flat around each device and are made visible for the selected one.
+            _Highlights.Add(AddFrame(-3.6, 0.03, -1.8, 1.9, 1.2, 0.03));
+            _Highlights.Add(AddFrame(0.8, 1.608, -2.51, 0.5, 0.28, 0.02));
+            _Highlights.Add(AddFrame(2.815, 1.608, -2.3225, 2.87, 1.235, 0.03));
         }
 
         // Books stand on the top surface of the lower shelf (y = 2.34), flush with the back of the shelf.
@@ -345,7 +294,33 @@ namespace OOPGames
             return AddBox(_Scene, x, y, z, width, height, depth, color);
         }
 
-        GeometryModel3D AddBox(Model3DGroup parent, double x, double y, double z, double width, double height, double depth, Color color)
+        // Flat rectangular frame (four bars) around a footprint, as one model so it can be lit up as a whole.
+        GeometryModel3D AddFrame(double x, double y, double z, double width, double depth, double thickness)
+        {
+            const double height = 0.012;
+            double innerDepth = depth - 2 * thickness;
+            MeshGeometry3D mesh = new MeshGeometry3D();
+            AppendBox(mesh, x, y, z - depth / 2 + thickness / 2, width, height, thickness);
+            AppendBox(mesh, x, y, z + depth / 2 - thickness / 2, width, height, thickness);
+            AppendBox(mesh, x - width / 2 + thickness / 2, y, z, thickness, height, innerDepth);
+            AppendBox(mesh, x + width / 2 - thickness / 2, y, z, thickness, height, innerDepth);
+            DiffuseMaterial material = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(0, 255, 213, 92)));
+            GeometryModel3D model = new GeometryModel3D(mesh, material) { BackMaterial = material };
+            _Scene.Children.Add(model);
+            return model;
+        }
+
+        internal static GeometryModel3D AddBox(Model3DGroup parent, double x, double y, double z, double width, double height, double depth, Color color)
+        {
+            MeshGeometry3D mesh = new MeshGeometry3D();
+            AppendBox(mesh, x, y, z, width, height, depth);
+            DiffuseMaterial material = new DiffuseMaterial(new SolidColorBrush(color));
+            GeometryModel3D model = new GeometryModel3D(mesh, material) { BackMaterial = material };
+            parent.Children.Add(model);
+            return model;
+        }
+
+        static void AppendBox(MeshGeometry3D mesh, double x, double y, double z, double width, double height, double depth)
         {
             double x0 = x - width / 2, x1 = x + width / 2;
             double y0 = y - height / 2, y1 = y + height / 2;
@@ -360,7 +335,6 @@ namespace OOPGames
                 new[] { new Point3D(x0,y0,z0), new Point3D(x0,y0,z1), new Point3D(x0,y1,z1), new Point3D(x0,y1,z0) }
             };
             Vector3D[] normals = { new Vector3D(0,0,1), new Vector3D(0,0,-1), new Vector3D(0,1,0), new Vector3D(0,-1,0), new Vector3D(1,0,0), new Vector3D(-1,0,0) };
-            MeshGeometry3D mesh = new MeshGeometry3D();
             for (int face = 0; face < faces.Length; face++)
             {
                 int start = mesh.Positions.Count;
@@ -372,10 +346,6 @@ namespace OOPGames
                 mesh.TriangleIndices.Add(start); mesh.TriangleIndices.Add(start + 1); mesh.TriangleIndices.Add(start + 2);
                 mesh.TriangleIndices.Add(start); mesh.TriangleIndices.Add(start + 2); mesh.TriangleIndices.Add(start + 3);
             }
-            DiffuseMaterial material = new DiffuseMaterial(new SolidColorBrush(color));
-            GeometryModel3D model = new GeometryModel3D(mesh, material) { BackMaterial = material };
-            parent.Children.Add(model);
-            return model;
         }
 
         void AddDisplayQuad(double x, double y, double z, double width, double height)
@@ -401,18 +371,13 @@ namespace OOPGames
         void UpdateInterface(B5RoomField field)
         {
             bool deviceView = field.Phase != B5RoomPhase.Room;
-            UpdateDeviceControls(field);
+            _ControlBar.Update(field);
             _Sidebar.Visibility = deviceView ? Visibility.Visible : Visibility.Collapsed;
-            _RoomSelection.Visibility = field.Phase == B5RoomPhase.Room ? Visibility.Visible : Visibility.Collapsed;
+            _Sidebar.Margin = new Thickness(0, 8, 8, _ControlBar.OccupiedHeight);
             _GameFrame.Visibility = field.Phase == B5RoomPhase.Playing || field.ShowTitle ? Visibility.Visible : Visibility.Collapsed;
             SizeGameFrame(field);
             _GameCanvas.Width = field.Device.DisplayWidth;
             _GameCanvas.Height = field.Device.DisplayHeight;
-            _RoomSelection.Text = "Geraet: " + field.Device.Name + "    <  >   |   ENTER";
-            _Hint.Text =             field.Phase == B5RoomPhase.Room ? "A / D: Geraet waehlen     ENTER / Z: oeffnen" :
-                field.Phase == B5RoomPhase.Device ? "1 / 2: Spiel waehlen     ENTER / Z: Modul     ESC / X: zurueck" :
-                field.Phase == B5RoomPhase.Playing ? "WASD: steuern     ESC / X: zurueck zur Geraeteauswahl" :
-                "Modul wird " + (field.Phase == B5RoomPhase.Ejecting ? "ausgeworfen" : "eingesteckt") + " ...     ESC: abbrechen";
             UpdateCartridgeAnimation(field);
             UpdateScreenLighting(field);
 
@@ -427,29 +392,16 @@ namespace OOPGames
                 _CardTitles.Clear();
                 foreach (B5RoomGameEntry game in device.Games)
                 {
-                    TextBlock title = new TextBlock
-                    {
-                        Text = game.Title,
-                        Foreground = Brushes.White,
-                        FontSize = 15,
-                        TextWrapping = TextWrapping.Wrap
-                    };
-                    Border card = new Border
-                    {
-                        Margin = new Thickness(0, 4, 0, 5),
-                        Padding = new Thickness(10),
-                        BorderThickness = new Thickness(2),
-                        BorderBrush = Brushes.Transparent,
-                        Background = new SolidColorBrush(Color.FromRgb(35, 40, 54)),
-                        Child = new StackPanel
-                        {
-                            Children =
-                            {
-                                new Border { Height = 7, Background = new SolidColorBrush(game.CartridgeColor), Margin = new Thickness(0,0,0,7) },
-                                title
-                            }
-                        }
-                    };
+                    TextBlock title = B5RetroStyle.CreateText(game.Title, 16, B5RetroStyle.Text);
+                    title.TextWrapping = TextWrapping.Wrap;
+                    title.VerticalAlignment = VerticalAlignment.Center;
+                    DockPanel row = new DockPanel();
+                    Border colorMark = new Border { Width = 10, Height = 10, Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush(game.CartridgeColor) };
+                    DockPanel.SetDock(colorMark, Dock.Left);
+                    row.Children.Add(colorMark);
+                    row.Children.Add(title);
+                    Border card = B5RetroStyle.CreateSelectable(row);
+                    card.Margin = new Thickness(0, 2, 0, 2);
                     _Cards.Children.Add(card);
                     _CardBorders.Add(card);
                     _CardTitles.Add(title);
@@ -458,17 +410,15 @@ namespace OOPGames
 
             for (int i = 0; i < _CardBorders.Count; i++)
             {
-                bool selected = i == field.SelectedGame;
-                _CardBorders[i].BorderBrush = selected ? new SolidColorBrush(Color.FromRgb(255, 213, 92)) : Brushes.Transparent;
+                B5RetroStyle.SetSelected(_CardBorders[i], i == field.SelectedGame);
                 if (field.Phase == B5RoomPhase.Inserting && i == field.PendingGame)
                 {
                     _CardBorders[i].Background = Brushes.Transparent;
-                    _CardBorders[i].BorderBrush = new SolidColorBrush(Color.FromRgb(170, 170, 180));
+                    _CardBorders[i].BorderBrush = B5RetroStyle.Frame;
                     _CardTitles[i].Text = "  . . .";
                 }
                 else
                 {
-                    _CardBorders[i].Background = new SolidColorBrush(Color.FromRgb(35, 40, 54));
                     _CardTitles[i].Text = B5RoomRegistry.Devices[field.SelectedDevice].Games[i].Title +
                         (i == field.InsertedGame ? "  [EINGELEGT]" : "");
                 }
@@ -477,26 +427,14 @@ namespace OOPGames
             for (int i = 0; i < _Highlights.Count; i++)
             {
                 Color color = i == field.SelectedDevice
-                    ? Color.FromArgb(145, 255, 213, 92) : Color.FromArgb(0, 255, 213, 92);
+                    ? Color.FromRgb(255, 213, 92) : Color.FromArgb(0, 255, 213, 92);
                 MaterialGroup material = new MaterialGroup();
                 material.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));
                 if (i == field.SelectedDevice)
-                    material.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(80, 255, 185, 55))));
+                    material.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(150, 105, 20))));
                 _Highlights[i].Material = material;
                 _Highlights[i].BackMaterial = material;
             }
-        }
-
-        void UpdateDeviceControls(B5RoomField field)
-        {
-            Model3DGroup controls = field.Phase == B5RoomPhase.Playing
-                ? _DeviceControls[(int)field.Device.Kind]
-                : null;
-            if (_VisibleControls == controls) return;
-
-            if (_VisibleControls != null) _Scene.Children.Remove(_VisibleControls);
-            _VisibleControls = controls;
-            if (_VisibleControls != null) _Scene.Children.Add(_VisibleControls);
         }
 
         void SizeGameFrame(B5RoomField field)
@@ -505,7 +443,8 @@ namespace OOPGames
             double rootHeight = Math.Max(1, _Root.ActualHeight);
             bool sidebarVisible = _Sidebar.Visibility == Visibility.Visible;
             double usableWidth = Math.Max(1, rootWidth - (sidebarVisible ? _Sidebar.Width : 0) - 32);
-            double usableHeight = Math.Max(1, rootHeight - 80);
+            double barHeight = _ControlBar.OccupiedHeight;
+            double usableHeight = Math.Max(1, rootHeight - barHeight - 32);
             double border = _GameFrame.BorderThickness.Left + _GameFrame.BorderThickness.Right;
             double verticalBorder = _GameFrame.BorderThickness.Top + _GameFrame.BorderThickness.Bottom;
             double scale = Math.Min(
@@ -514,7 +453,7 @@ namespace OOPGames
             scale = Math.Max(0.1, scale);
             _GameFrame.Width = field.Device.DisplayWidth * scale + border;
             _GameFrame.Height = field.Device.DisplayHeight * scale + verticalBorder;
-            _GameFrame.Margin = new Thickness(Math.Max(0, (usableWidth - _GameFrame.Width) / 2), 0, 0, 0);
+            _GameFrame.Margin = new Thickness(Math.Max(0, (usableWidth - _GameFrame.Width) / 2), 0, 0, barHeight);
         }
 
         void UpdateScreenLighting(B5RoomField field)

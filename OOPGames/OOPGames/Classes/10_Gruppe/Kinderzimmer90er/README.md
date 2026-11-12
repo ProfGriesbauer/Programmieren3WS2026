@@ -15,9 +15,9 @@ Spiels in der jeweiligen Geraeteansicht eingeblendet.
 
 ## Steuerung
 
-- Im Zimmer: A/D waehlt ein Geraet, Enter oder Z oeffnet es.
+- Im Zimmer: Pfeiltasten links/rechts oder A/D waehlen ein Geraet, Enter oder Z oeffnet es.
 - In der Geraeteansicht: 1/2 waehlt ein Spiel, Enter oder Z startet es.
-- Im Spiel: WASD steuert; Esc oder X geht zur Geraeteansicht zurueck.
+- Im Spiel: Pfeiltasten oder WASD steuern; Esc oder X geht zur Geraeteansicht zurueck.
 - Esc oder X in der Geraeteansicht geht zurueck ins Zimmer.
 
 Die Gameboy- und Atari-Quellen aus der Aufgabenbeschreibung waren in diesem

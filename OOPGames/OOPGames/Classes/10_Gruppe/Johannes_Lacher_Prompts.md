@@ -510,3 +510,55 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > okay merge master into framework
 
 **Ergebnis:** übernommen – `origin/master` (24 Commits, u. a. Drag Race, Hay Day) in `Framework` gemergt, Merge-Commit `5a6e3ec`, nicht gepusht. Genau ein Konflikt in `MainWindow.xaml` (Zeile `Title=…`: Master entfernte eine Leerzeile, `Framework` hatte `StateChanged=…` ergänzt) – `StateChanged` und die entfernte Leerzeile übernommen. Dabei Seiten zunächst vertauscht (im Merge ist „HEAD“ die eigene Seite, im Rebase umgekehrt), sofort bemerkt und korrigiert. Der Merge baut, die Tests B2, B3, B5 und B6 laufen durch (B5 mit allen Paintern von Master). Temporäre Dateien (Eingabetest) vorher gestasht und danach wiederhergestellt; ihr Konflikt im Registrierungsblock von `MainWindow.xaml.cs` mit Master (Drag-Race-Zeilen) durch Behalten beider Seiten gelöst. Temporäre Worktrees entfernt.
+
+## 2026-11-05 und 2026-11-12 – Claude Code – Branch `gruppe10` (Nachtrag aus Stash)
+
+(Im Branch `gruppe10` ursprünglich als 47–50 nummeriert; zeitlich vor den Einträgen 51–84, beim Wiederherstellen des Stashs am 2026-11-12 auf 87–90 umnummeriert, da 47–50 schon vergeben waren.)
+
+### 87
+**Prompt:**
+> add keys to the keyboard as well. make the "Heimcomputer" more detailed as well
+
+**Ergebnis:** übernommen – Heimcomputer in `Kinderzimmer90er/B5_CommodoreModel.cs` ausgelagert und neu aufgebaut: dreistufiges Röhrenmonitor-Gehäuse mit Standfuß, Bezel und Rahmen um den Bildschirm, Bedienleiste (Badge mit Farbstreifen, LED, zwei Knöpfe, Schalter), Lüftungsschlitze, Tastatur mit Rückleiste, über 50 Tasten in fünf Reihen plus Funktionstastenspalte und Leertaste, Diskettenlaufwerk mit zwei Disketten und Tastaturkabel. Die Tasten sind jetzt immer sichtbar (vorher nur im Spiel). Dabei Spalt zwischen Monitorfuß und Monitor erkannt und behoben.
+
+### 88
+**Prompt:**
+> make the controller for the atatri look proper. the yellow selection cube also needs an update for all consoles
+
+**Ergebnis:** übernommen – Atari-Joystick in `Kinderzimmer90er/B5_AtariControllerModel.cs` neu modelliert (schwarzer Sockel, roter Feuerknopf, Schaft mit rundem Griff, Kabel zur Konsole) und auf das Regal neben die Konsole gestellt (vorher schwebte er frei im Raum und war nur im Spiel sichtbar). Der gelbe Auswahlquader wurde durch einen flachen, leuchtenden Rahmen um das jeweilige Gerät ersetzt (`AddFrame`); `AddBox` ist jetzt statisch und teilt sich die Mesh-Erzeugung mit `AppendBox`. Nicht mehr benötigte `_DeviceControls`-Gruppen entfernt. Per Offscreen-Rendering geprüft.
+
+### 89
+**Prompt:**
+> move the controls down to the bottom. they should be in a sort of retro look like in the attached image
+
+(Anhang: Konzeptbild mit Atari, Game Boy und Commodore im 90er-Zimmer und einer Spieleliste „Spiele wählen:“ im Retro-Stil.)
+
+**Ergebnis:** übernommen – Gerätewahl (vorher oben) und Tastenhinweise (vorher unten) zu einer Steuerleiste am unteren Rand zusammengefasst: Geräte als Tabs, das gewählte im blauen Kasten, Tasten als Keycaps. Retro-Stil wie im Bild (dunkles Navy-Panel mit hellem Rahmen, Monospace-Schrift Consolas). Spieleliste rechts im gleichen Stil („Spiele waehlen:“) und endet über der Leiste; laufendes Spiel wird über der Leiste zentriert. Stil und Leiste in neue Datei `Kinderzimmer90er/B5_RetroUi.cs` (`B5RetroStyle`, `B5ControlBar`) ausgelagert. Per Offscreen-Rendering geprüft.
+
+### 90
+**Prompt:**
+> the enter key is not read when the cursor is not in the text field at the bottom. when the cursor is in there it types. can we read the enter key like the other keys (a, d, z and so on)?
+
+**Ergebnis:** übernommen – Ursache: Nach dem Klick auf „Start New Game“ behält der Button den Tastaturfokus und wertet Enter (und Leertaste) selbst als Klick, sodass `Window_KeyDown` des Frameworks die Taste nie erhält; das Status-Textfeld lässt Enter durch, tippt aber die Buchstaben mit. Lösung ohne Änderung am Framework und ohne eigene Event-Handler am `MainWindow`: Der Painter (`B5_RoomPaint.cs`, `TakeKeyboardFocus`) verschiebt den Fokus bei jedem Zeichnen von einem Button oder Textfeld auf das eigene Wurzelelement des Zimmers; die Tasten laufen danach wie gewohnt über das Framework. Kompiliert; im laufenden Programm noch nicht getestet.
+
+## 2026-11-12 – Claude Code (Modell: Claude Opus 5.5) – Branch `gruppe10`
+
+### 91
+**Prompt:**
+> okay lets switch back to the gruppe 10 branch and rebase it. remove the unneccessary rules we hand implemented
+
+Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Rebase bräuchte Force-Push); Stash mit der Kinderzimmer-Arbeit bleibt unangetastet; Prompt-Einträge des `gruppe10`-Teils umnummerieren.
+
+**Ergebnis:** übernommen – `origin/master` (inkl. Framework-Änderungen) in `gruppe10` gemergt, Merge-Commit `3367116`, nicht gepusht. Konflikte: Registrierungsblock in `MainWindow.xaml.cs` (beide Seiten behalten), `Johannes_Gabriel_Prompts.md` (`gruppe10`-Fassung enthält die von `master` vollständig), eigene Prompt-Datei (37–40 doppelt vergeben: Einträge von `master` behalten, `gruppe10`-Einträge 37–46 als 41–50). Einzige nun überflüssige eigene Lösung ist `TakeKeyboardFocus` im Kinderzimmer-Painter; sie liegt nur im Stash und wurde daher nicht entfernt. Test mit dem echten `MainWindow`: Fokus nach dem Start auf dem Spiel, D/Enter/Esc/A kommen im Kinderzimmer an, Enter öffnet das Gerät statt neu zu starten, F11 funktioniert. Einträge 85–86 (Merge-Reihenfolge, PR-Text) fehlen in allen Branches.
+
+### 92
+**Prompt:**
+> okay restore my stashed changes
+
+**Ergebnis:** übernommen – Stash mit der Kinderzimmer-Arbeit (Commodore- und Atari-Modell, Retro-Steuerleiste, Auswahlrahmen) per `git stash apply` wiederhergestellt; der Stash bleibt als Sicherung bestehen. Prompt-Datei: Die Einträge 47–50 aus dem Stash als 87–90 angehängt (Nummern vergeben), der Merge-Eintrag wurde dadurch 91. Wie in Eintrag 91 gewünscht, die nun überflüssige eigene Fokus-Lösung `TakeKeyboardFocus` im Kinderzimmer-Painter entfernt (samt `Focusable`/`FocusVisualStyle` am Wurzelelement und zwei ungenutzten `using`s); das Framework legt den Fokus jetzt selbst aufs Spiel. Build fehlerfrei; Test mit dem echten `MainWindow`: Fokus nach dem Start auf dem Spiel, D/Enter/Esc/A kommen an, Enter öffnet das Gerät, F11 funktioniert.
+
+### 93
+**Prompt:**
+> add the arrow keys for navigation back then suggest a commit for the changes
+
+**Ergebnis:** übernommen – Pfeiltasten wieder eingeführt, zusätzlich zu WASD (Lukas hatte sie im Commit „changed steering“ ersetzt, weil sie damals in den Listen des Hauptfensters landeten; das behebt jetzt das Framework). Neue Hilfsklasse `B5RoomKeys` (`IsLeft`/`IsRight`/`IsUp`/`IsDown`: Pfeiltaste oder WASD), genutzt bei der Geräteauswahl im Zimmer (`B5_RoomCore.cs`) und in Münzen sammeln, Snake und Pong (`B5_RoomGames.cs`); Hinweise in der Steuerleiste („← → / A D“, „PFEILE / WASD“), im Münzspiel und in der README angepasst. Test mit dem echten `MainWindow`: ←/→ wählen das Gerät, im Münzspiel bewegen → und ↓ die Figur, A und W weiterhin; Fokus bleibt auf dem Spiel; Screenshot der Hinweise geprüft. Commit-Nachricht vorgeschlagen.
