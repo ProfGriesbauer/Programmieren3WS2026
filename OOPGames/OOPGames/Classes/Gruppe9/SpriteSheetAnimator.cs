@@ -126,6 +126,8 @@ namespace OOPGames
         private void ReadClips(
             JsonElement tagMetadata, IReadOnlyList<AnimationFrame> frames)
         {
+            Dictionary<string, Tuple<int, int>> clipRanges =
+                new Dictionary<string, Tuple<int, int>>(StringComparer.OrdinalIgnoreCase);
             foreach (JsonElement tag in tagMetadata.EnumerateArray())
             {
                 string name = tag.GetProperty("name").GetString();
@@ -138,6 +140,17 @@ namespace OOPGames
                         "The sprite-sheet metadata contains an invalid animation tag.");
                 }
 
+                if (clipRanges.TryGetValue(name, out Tuple<int, int> existingRange))
+                {
+                    if (existingRange.Item1 == firstFrame && existingRange.Item2 == lastFrame)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidDataException(
+                        "The sprite-sheet metadata contains conflicting animation tag names.");
+                }
+
                 List<AnimationFrame> clipFrames = new List<AnimationFrame>();
                 for (int index = firstFrame; index <= lastFrame; index++)
                 {
@@ -145,6 +158,7 @@ namespace OOPGames
                 }
 
                 _clips.Add(name, new AnimationClip(clipFrames));
+                clipRanges.Add(name, Tuple.Create(firstFrame, lastFrame));
             }
 
             if (_clips.Count == 0)

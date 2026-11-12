@@ -22,11 +22,21 @@ namespace OOPGames
         private static readonly Brush GridBrush = new SolidColorBrush(Color.FromRgb(68, 108, 78));
         private static readonly Brush WallBrush = new SolidColorBrush(Color.FromRgb(55, 57, 62));
         private static readonly object StartMenuTag = new object();
-        // The entity-specific setup supplies assets and maps movement to clip names.
-        private static readonly Lazy<SpriteSheetAnimator> PlayerAnimator =
-            new Lazy<SpriteSheetAnimator>(() => new SpriteSheetAnimator(
-                FindAssetPath("Character", "BoxingKnight", "BoxingKnightSpritesheet.png"),
-                FindAssetPath("Character", "BoxingKnight", "BoxingKnightAnimation.json")));
+        private static readonly AnimationProfile BoxingKnightProfile = new AnimationProfile(
+            "BoxingKnight",
+            new[] { "Character", "BoxingKnight", "BoxingKnightSpritesheet.png" },
+            new[] { "Character", "BoxingKnight", "BoxingKnightAnimation.json" },
+            "IdleFront", "IdleBack", "IdleLeft", "IdleRight",
+            "WalkFront", "WalkBack", "WalkLeft", "WalkRight");
+        private static readonly AnimationProfile KurtProfile = new AnimationProfile(
+            "Kurt",
+            new[] { "Character", "Kurt", "Kurt.png" },
+            new[] { "Character", "Kurt", "Kurt.json" },
+            "Idle Front", "Idle Back", "Idle Left", "Idle Right",
+            "Walk Forwards", "Walk Backwards", "Walk Left", "Walk Right");
+        private AnimationProfile _selectedAnimationProfile = BoxingKnightProfile;
+        private SpriteSheetAnimator _playerAnimator;
+        private bool _showAnimationMenu;
 
         public string Name { get { return "Arena Survival"; } }
 
@@ -113,8 +123,12 @@ namespace OOPGames
                 ArenaField.MapHeight - 2 * ArenaField.WallThickness);
 
             string animationName = GetPlayerAnimationName(
-                field.Player.Facing, field.Player.IsMoving);
-            BitmapSource sprite = PlayerAnimator.Value.GetFrame(animationName);
+                _selectedAnimationProfile, field.Player.Facing, field.Player.IsMoving);
+            if (_playerAnimator == null)
+            {
+                _playerAnimator = CreateAnimator(_selectedAnimationProfile);
+            }
+            BitmapSource sprite = _playerAnimator.GetFrame(animationName);
             double spriteHeight = field.Player.Size * 2;
             double spriteWidth = spriteHeight * sprite.PixelWidth / sprite.PixelHeight;
             Image player = new Image
@@ -176,26 +190,39 @@ namespace OOPGames
         }
 
         // Keep Boxing Knight's game-state naming convention outside the generic animator.
-        private static string GetPlayerAnimationName(PlayerFacing facing, bool isMoving)
+        private static string GetPlayerAnimationName(
+            AnimationProfile profile, PlayerFacing facing, bool isMoving)
         {
-            string direction;
+            string idleAnimation;
+            string walkAnimation;
             switch (facing)
             {
                 case PlayerFacing.Back:
-                    direction = "Back";
+                    idleAnimation = profile.IdleBack;
+                    walkAnimation = profile.WalkBack;
                     break;
                 case PlayerFacing.Left:
-                    direction = "Left";
+                    idleAnimation = profile.IdleLeft;
+                    walkAnimation = profile.WalkLeft;
                     break;
                 case PlayerFacing.Right:
-                    direction = "Right";
+                    idleAnimation = profile.IdleRight;
+                    walkAnimation = profile.WalkRight;
                     break;
                 default:
-                    direction = "Front";
+                    idleAnimation = profile.IdleFront;
+                    walkAnimation = profile.WalkFront;
                     break;
             }
 
-            return (isMoving ? "Walk" : "Idle") + direction;
+            return isMoving ? walkAnimation : idleAnimation;
+        }
+
+        private static SpriteSheetAnimator CreateAnimator(AnimationProfile profile)
+        {
+            return new SpriteSheetAnimator(
+                FindAssetPath(profile.SpriteSheetPath),
+                FindAssetPath(profile.AnimationMetadataPath));
         }
 
         // Locate project assets both when launched from the project and from its build output.
@@ -236,7 +263,7 @@ namespace OOPGames
                 String.Join(System.IO.Path.DirectorySeparatorChar.ToString(), relativePath));
         }
 
-        private static void PaintStartMenu(Canvas canvas, ArenaField field, double width, double height)
+        private void PaintStartMenu(Canvas canvas, ArenaField field, double width, double height)
         {
             canvas.Children.Clear();
             canvas.ClipToBounds = true;
@@ -252,6 +279,44 @@ namespace OOPGames
                 Background = new SolidColorBrush(Color.FromRgb(27, 38, 52))
             };
             StackPanel contents = new StackPanel();
+            if (_showAnimationMenu)
+            {
+                contents.Children.Add(new TextBlock
+                {
+                    Text = "PLAYER ANIMATION",
+                    FontSize = 24,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.White,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 0, 0, 8)
+                });
+                contents.Children.Add(new TextBlock
+                {
+                    Text = "Selected: " + _selectedAnimationProfile.Name,
+                    FontSize = 15,
+                    Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 0, 0, 14)
+                });
+                contents.Children.Add(CreateMenuButton("BoxingKnight (Default)",
+                    GetAnimationButtonBrush(BoxingKnightProfile),
+                    (sender, e) => SelectAnimationProfile(
+                        canvas, BoxingKnightProfile)));
+                contents.Children.Add(CreateMenuButton("Kurt",
+                    GetAnimationButtonBrush(KurtProfile),
+                    (sender, e) => SelectAnimationProfile(canvas, KurtProfile)));
+                contents.Children.Add(CreateMenuButton("Back",
+                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                    (sender, e) =>
+                    {
+                        _showAnimationMenu = false;
+                        canvas.Tag = null;
+                    }));
+                panel.Child = contents;
+                DrawStartMenuPanel(canvas, panel, width, height);
+                return;
+            }
+
             contents.Children.Add(new TextBlock
             {
                 Text = "ARENA SURVIVAL",
@@ -275,19 +340,45 @@ namespace OOPGames
             contents.Children.Add(CreateMenuButton("How to Play",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                 (sender, e) => ShowNotImplemented("How to Play")));
-            contents.Children.Add(CreateMenuButton("Settings",
+            contents.Children.Add(CreateMenuButton("Choose Animation",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                (sender, e) => ShowNotImplemented("Settings")));
+                (sender, e) =>
+                {
+                    _showAnimationMenu = true;
+                    canvas.Tag = null;
+                }));
             contents.Children.Add(CreateMenuButton("High Scores",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                 (sender, e) => ShowNotImplemented("High Scores")));
             panel.Child = contents;
 
+            DrawStartMenuPanel(canvas, panel, width, height);
+        }
+
+        private static void DrawStartMenuPanel(Canvas canvas, Border panel, double width, double height)
+        {
             panel.Measure(new Size(width, height));
             Canvas.SetLeft(panel, (width - panel.DesiredSize.Width) / 2);
             Canvas.SetTop(panel, (height - panel.DesiredSize.Height) / 2);
             canvas.Children.Add(panel);
             canvas.Tag = StartMenuTag;
+        }
+
+        private Brush GetAnimationButtonBrush(AnimationProfile profile)
+        {
+            return ReferenceEquals(profile, _selectedAnimationProfile)
+                ? new SolidColorBrush(Color.FromRgb(43, 125, 82))
+                : new SolidColorBrush(Color.FromRgb(55, 70, 88));
+        }
+
+        private void SelectAnimationProfile(Canvas canvas, AnimationProfile profile)
+        {
+            if (!ReferenceEquals(profile, _selectedAnimationProfile))
+            {
+                _selectedAnimationProfile = profile;
+                _playerAnimator = null;
+            }
+            canvas.Tag = null;
         }
 
         private static Button CreateMenuButton(string text, Brush background, RoutedEventHandler onClick)
@@ -307,6 +398,47 @@ namespace OOPGames
             };
             button.Click += onClick;
             return button;
+        }
+
+        private sealed class AnimationProfile
+        {
+            public string Name { get; }
+            public string[] SpriteSheetPath { get; }
+            public string[] AnimationMetadataPath { get; }
+            public string IdleFront { get; }
+            public string IdleBack { get; }
+            public string IdleLeft { get; }
+            public string IdleRight { get; }
+            public string WalkFront { get; }
+            public string WalkBack { get; }
+            public string WalkLeft { get; }
+            public string WalkRight { get; }
+
+            public AnimationProfile(
+                string name,
+                string[] spriteSheetPath,
+                string[] animationMetadataPath,
+                string idleFront,
+                string idleBack,
+                string idleLeft,
+                string idleRight,
+                string walkFront,
+                string walkBack,
+                string walkLeft,
+                string walkRight)
+            {
+                Name = name;
+                SpriteSheetPath = spriteSheetPath;
+                AnimationMetadataPath = animationMetadataPath;
+                IdleFront = idleFront;
+                IdleBack = idleBack;
+                IdleLeft = idleLeft;
+                IdleRight = idleRight;
+                WalkFront = walkFront;
+                WalkBack = walkBack;
+                WalkLeft = walkLeft;
+                WalkRight = walkRight;
+            }
         }
 
         private static void ShowNotImplemented(string feature)
