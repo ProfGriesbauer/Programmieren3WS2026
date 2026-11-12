@@ -16,6 +16,10 @@ namespace OOPGames
         private double _selectionGap = 15;
         private double _selectionLeft = 20;
         private double _selectionTop = 70;
+        private int _lastPlayerOneCar = -1;
+        private int _lastPlayerTwoCar = -1;
+        private DateTime _selectionFeedbackUntil;
+        private string _selectionFeedbackText;
 
         public Gruppe3DragRacePainter()
         {
@@ -53,6 +57,7 @@ namespace OOPGames
             canvas.Children.Clear();
             canvas.Background = new SolidColorBrush(Color.FromRgb(25, 28, 38));
             double width = canvas.ActualWidth > 10 ? canvas.ActualWidth : 800;
+            UpdateSelectionFeedback(field);
             if (!field.CarSelectionComplete)
             {
                 PaintCarSelection(canvas, field, width);
@@ -75,11 +80,16 @@ namespace OOPGames
                 trackTop + laneHeight + 10 * scale,
                 field.PlayerTwoCar, cameraPosition, scale);
 
-            if (!field.IsRaceStarted || field.Winner != 0)
+            bool showSelectionFeedback =
+                DateTime.UtcNow < field.SelectionFeedbackUntil;
+            if (!field.IsRaceStarted || field.Winner != 0 ||
+                showSelectionFeedback)
             {
                 TextBlock status = new TextBlock
                 {
-                    Text = field.CountdownText,
+                    Text = showSelectionFeedback
+                        ? field.SelectionFeedbackText
+                        : field.CountdownText,
                     Foreground = Brushes.White,
                     FontSize = 32 * scale,
                     FontWeight = FontWeights.Bold,
@@ -125,9 +135,12 @@ namespace OOPGames
             _selectionTop = Math.Max(55, (height -
                 (3 * _selectionCardHeight + 2 * _selectionGap)) / 2);
 
+            UpdateSelectionFeedback(field);
             TextBlock title = new TextBlock
             {
-                Text = field.CountdownText,
+                Text = DateTime.UtcNow < _selectionFeedbackUntil
+                    ? _selectionFeedbackText
+                    : field.CountdownText,
                 Foreground = Brushes.White,
                 FontSize = 30 * scale,
                 FontWeight = FontWeights.Bold
@@ -149,18 +162,133 @@ namespace OOPGames
                     Width = _selectionCardWidth,
                     Height = _selectionCardHeight,
                     Fill = new SolidColorBrush(Color.FromRgb(55, 58, 68)),
-                    Stroke = Brushes.White,
-                    StrokeThickness = 1
+                    Stroke = IsSelected(field, carIndex)
+                        ? GetSelectionBrush(field, carIndex)
+                        : Brushes.White,
+                    StrokeThickness = IsSelected(field, carIndex)
+                        ? 5 * scale
+                        : 1
                 };
                 Canvas.SetLeft(card, left);
                 Canvas.SetTop(card, top);
                 canvas.Children.Add(card);
+                if (field.PlayerOneCar == carIndex &&
+                    field.PlayerTwoCar == carIndex)
+                {
+                    AddSharedSelectionBorder(
+                        canvas, left, top, _selectionCardWidth,
+                        _selectionCardHeight, 5 * scale);
+                }
                 AddCarImage(
                     canvas, carIndex, left + 0.19 * _selectionCardWidth,
                     top + 0.1 * _selectionCardHeight,
                     0.62 * _selectionCardWidth,
                     0.8 * _selectionCardHeight);
             }
+        }
+
+        private static void AddSharedSelectionBorder(
+            Canvas canvas,
+            double left,
+            double top,
+            double width,
+            double height,
+            double thickness)
+        {
+            canvas.Children.Add(new Line
+            {
+                X1 = left,
+                Y1 = top,
+                X2 = left + width,
+                Y2 = top,
+                Stroke = Brushes.Gold,
+                StrokeThickness = thickness
+            });
+            canvas.Children.Add(new Line
+            {
+                X1 = left,
+                Y1 = top,
+                X2 = left,
+                Y2 = top + height,
+                Stroke = Brushes.Gold,
+                StrokeThickness = thickness
+            });
+            canvas.Children.Add(new Line
+            {
+                X1 = left,
+                Y1 = top + height,
+                X2 = left + width,
+                Y2 = top + height,
+                Stroke = Brushes.Cyan,
+                StrokeThickness = thickness
+            });
+            canvas.Children.Add(new Line
+            {
+                X1 = left + width,
+                Y1 = top,
+                X2 = left + width,
+                Y2 = top + height,
+                Stroke = Brushes.Cyan,
+                StrokeThickness = thickness
+            });
+        }
+
+        private void UpdateSelectionFeedback(IGruppe3DragRaceField field)
+        {
+            if (field.PlayerOneCar != _lastPlayerOneCar)
+            {
+                if (field.PlayerOneCar >= 0)
+                {
+                    _selectionFeedbackText =
+                        "PLAYER 1: AUTO " + (field.PlayerOneCar + 1) + " GEWÄHLT!";
+                    _selectionFeedbackUntil =
+                        DateTime.UtcNow.AddSeconds(1.2);
+                }
+
+                _lastPlayerOneCar = field.PlayerOneCar;
+            }
+
+            if (field.PlayerTwoCar != _lastPlayerTwoCar)
+            {
+                if (field.PlayerTwoCar >= 0)
+                {
+                    _selectionFeedbackText =
+                        "PLAYER 2: AUTO " + (field.PlayerTwoCar + 1) + " GEWÄHLT!";
+                    _selectionFeedbackUntil =
+                        DateTime.UtcNow.AddSeconds(1.2);
+                }
+
+                _lastPlayerTwoCar = field.PlayerTwoCar;
+            }
+        }
+
+        private static bool IsSelected(
+            IGruppe3DragRaceField field, int carIndex)
+        {
+            return field.PlayerOneCar == carIndex ||
+                field.PlayerTwoCar == carIndex;
+        }
+
+        private static Brush GetSelectionBrush(
+            IGruppe3DragRaceField field, int carIndex)
+        {
+            if (field.PlayerOneCar == carIndex &&
+                field.PlayerTwoCar == carIndex)
+            {
+                return Brushes.White;
+            }
+
+            if (field.PlayerOneCar == carIndex)
+            {
+                return Brushes.Gold;
+            }
+
+            if (field.PlayerTwoCar == carIndex)
+            {
+                return Brushes.Cyan;
+            }
+
+            return Brushes.White;
         }
 
         private static double GetCameraPosition(

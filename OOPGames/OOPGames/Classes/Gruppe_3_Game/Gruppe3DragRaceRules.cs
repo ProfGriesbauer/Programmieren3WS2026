@@ -10,6 +10,8 @@ namespace OOPGames
         private bool _playerOneBraking;
         private bool _playerTwoAccelerating;
         private bool _playerTwoBraking;
+        private double _playerOneSpeed;
+        private double _playerTwoSpeed;
         private DateTime _countdownStarted;
         private readonly Random _random = new Random();
 
@@ -20,8 +22,10 @@ namespace OOPGames
         {
             get
             {
+                bool selectionInProgress = !_field.CarSelectionComplete &&
+                    !(_field.PlayerOneCar >= 0 && _field.PlayerTwoCar >= 0);
                 return _field.Winner == 0 &&
-                    (!_field.CarSelectionComplete || _field.IsRaceStarted);
+                    (selectionInProgress || _field.IsRaceStarted);
             }
         }
 
@@ -42,10 +46,14 @@ namespace OOPGames
             _field.PlayerOneCar = -1;
             _field.PlayerTwoCar = -1;
             _field.CarSelectionComplete = false;
+            _field.SelectionFeedbackText = null;
+            _field.SelectionFeedbackUntil = DateTime.MinValue;
             _playerOneAccelerating = false;
             _playerOneBraking = false;
             _playerTwoAccelerating = false;
             _playerTwoBraking = false;
+            _playerOneSpeed = 0;
+            _playerTwoSpeed = 0;
         }
 
         public void DoMove(IPlayMove move)
@@ -66,18 +74,13 @@ namespace OOPGames
                 if (raceMove.PlayerNumber == 1 && _field.PlayerOneCar < 0)
                 {
                     _field.PlayerOneCar = raceMove.CarIndex;
+                    SetSelectionFeedback(1, raceMove.CarIndex);
                     _field.CountdownText = "PLAYER 2: AUTO AUSWÄHLEN";
                 }
                 else if (raceMove.PlayerNumber == 2 && _field.PlayerTwoCar < 0)
                 {
                     _field.PlayerTwoCar = raceMove.CarIndex;
-                }
-
-                if (_field.PlayerOneCar >= 0 && _field.PlayerTwoCar >= 0)
-                {
-                    _field.CarSelectionComplete = true;
-                    _countdownStarted = DateTime.UtcNow;
-                    _field.CountdownText = "3";
+                    SetSelectionFeedback(2, raceMove.CarIndex);
                 }
 
                 return;
@@ -104,6 +107,19 @@ namespace OOPGames
 
             if (!_field.CarSelectionComplete)
             {
+                if (_field.PlayerOneCar >= 0 &&
+                    _field.PlayerTwoCar >= 0)
+                {
+                    if (DateTime.UtcNow >= _field.SelectionFeedbackUntil)
+                    {
+                        _field.CarSelectionComplete = true;
+                        _countdownStarted = DateTime.UtcNow;
+                        _field.CountdownText = "3";
+                    }
+
+                    return;
+                }
+
                 return;
             }
 
@@ -126,9 +142,15 @@ namespace OOPGames
             ApplyComputerControls();
             ApplyKeyboardControls();
             _field.PlayerOneDistance = Advance(
-                _field.PlayerOneDistance, _playerOneAccelerating, _playerOneBraking);
+                _field.PlayerOneDistance,
+                ref _playerOneSpeed,
+                _playerOneAccelerating,
+                _playerOneBraking);
             _field.PlayerTwoDistance = Advance(
-                _field.PlayerTwoDistance, _playerTwoAccelerating, _playerTwoBraking);
+                _field.PlayerTwoDistance,
+                ref _playerTwoSpeed,
+                _playerTwoAccelerating,
+                _playerTwoBraking);
 
             if (_field.PlayerOneDistance >= Gruppe3DragRaceField.FinishDistance ||
                 _field.PlayerTwoDistance >= Gruppe3DragRaceField.FinishDistance)
@@ -153,15 +175,33 @@ namespace OOPGames
             return _field.Winner;
         }
 
-        private static double Advance(double distance, bool accelerating, bool braking)
+        private static double Advance(
+            double distance,
+            ref double speed,
+            bool accelerating,
+            bool braking)
         {
-            double speed = accelerating ? 4.0 : 0.6;
             if (braking)
             {
-                speed = -2.0;
+                speed = Math.Max(0, speed - 0.45);
+            }
+            else if (accelerating)
+            {
+                speed = Math.Min(16.0, speed + 0.28);
+            }
+            else
+            {
+                speed = Math.Max(0, speed - 0.05);
             }
 
             return Math.Max(0, distance + speed);
+        }
+
+        private void SetSelectionFeedback(int playerNumber, int carIndex)
+        {
+            _field.SelectionFeedbackText =
+                "PLAYER " + playerNumber + ": AUTO " + (carIndex + 1) + " GEWÄHLT!";
+            _field.SelectionFeedbackUntil = DateTime.UtcNow.AddSeconds(1.2);
         }
 
         private void ApplyComputerControls()
