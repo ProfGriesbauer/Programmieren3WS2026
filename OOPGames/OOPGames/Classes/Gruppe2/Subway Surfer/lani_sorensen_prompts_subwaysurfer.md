@@ -12,6 +12,7 @@ This file documents the work on the Subway Surfer implementation in the Gruppe2 
   - `Gruppe2_SubwayPainter.cs` for drawing/rendering
 - The original monolithic `SubwaySurfer.cs` is kept as a lightweight compatibility stub to avoid duplicate class definitions while the split implementation is the active logic.
 - The game-over logic was corrected so a run ending in loss is no longer reported as a win.
+- The guard now catches the runner when its distance reaches zero.
 
 ## Important finding
 The main issue in the original rules logic was that `CheckIfPLayerWon()` returned `1` when `GameOver` was true. That meant the UI interpreted a loss as a win and showed `Player 1 Won!`.
@@ -61,13 +62,41 @@ Assistant answer:
 - I updated this file to include the prompt history and the corresponding assistant responses so the documentation reflects the actual conversation progress.
 - This markdown now records the review, the refactor, and the fix work in a traceable way.
 
+### Prompt 4
+User prompt:
+> can you check the subfiles for function, clarity of code and repetitions?
+
+Assistant answer:
+- I reviewed the split field, player, rules, and painter files, along with their shared interfaces.
+- The responsibility split is understandable, and the public field interface keeps the renderer separated from most gameplay internals.
+- I found a gameplay gap: collisions reduce `GuardGap`, but reaching zero does not end the run or otherwise affect gameplay. The chase meter currently communicates a threat that is not enforced.
+- `Gruppe2_SubwayPainter.cs` is still very large (849 lines). Its responsibilities could be separated into scene/track, objects and characters, HUD, and drawing helpers.
+- The painter redraws the entire canvas and recreates many shapes and brushes on each timer tick; this may cause unnecessary allocations and rendering work.
+- Upgrade labels are maintained in both the rules and painter files. A shared label helper could prevent the strings from drifting.
+- The split player and field files are small and focused. `StartedGameCall()` is an empty required-interface implementation, and `PaintGameField()`/`TickPaintGameField()` intentionally share the same drawing routine.
+- I did not change game code as part of this review.
+
+### Prompt 5
+User prompt:
+> dont change the painter. can you change the guard behaviour to better reflect that of the vision of the game and rename variables where appropriate for clarity
+
+Assistant answer:
+- I left `Gruppe2_SubwayPainter.cs` unchanged.
+- Non-fatal obstacle hits reduce the guard distance. When it reaches zero, the guard catches the runner and the game ends with a specific message.
+- The guard distance no longer recovers after game over.
+- I renamed `HitOrEnd` to `HandleObstacleHit`, clarified its parameter names, and renamed the local obstacle `kind` variable to `obstacleKind`.
+- I kept the `GuardGap` property name because the painter and shared field interface use it.
+- The solution built successfully with 0 warnings and 0 errors.
+
 ## Conversation summary
 - User requested a review of the Subway Surfer game code.
 - User then requested that the large game implementation be split into more logical files.
 - The split was applied by responsibility.
 - The game-over condition bug was identified and fixed.
+- The guard now ends the run if the chase distance reaches zero.
 - The project remains buildable after the refactor.
 - The prompt-and-answer history is recorded in this file.
+- A follow-up review checked the split files for functionality, clarity, and repetition.
 
 ## Notes
 This document should be updated as the project continues evolving.
