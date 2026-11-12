@@ -229,3 +229,82 @@ Werkzeug: Claude Code (VS-Code-Erweiterung), Modell: Claude Opus 5.5 (`claude-op
 > i pulled new changes from gruppe 3. can IG10_Painter be removed now?
 
 **Ergebnis:** übernommen – Gruppe 3 verwendet `IG10_Painter` nicht mehr; Interface entfernt, Build und Tests geprüft.
+
+## 2026-11-12 – Claude Code (Modell: Claude Opus 5.5) – Branch `Framework`
+
+(Einträge 41–50 stehen im Branch `gruppe10`.)
+
+### 51
+**Prompt:**
+> can you stash my local changes so i can checkout another branch?
+
+**Ergebnis:** übernommen – Alle lokalen Änderungen in `gruppe10` inkl. neuer Dateien mit `git stash push -u` gesichert.
+
+### 52
+**Prompt:**
+> checkout the Framework branch
+
+**Ergebnis:** übernommen – Lokalen Branch `Framework` angelegt, der `origin/Framework` folgt.
+
+### 53
+**Prompt:**
+> The framework branch is there to develop full screen and a focus change so the arrow keys dont navigate in the side bar. our group has the task to develop this. lets plan it first. there should be options for fullscreen and the current view. use 2 different buttons for this. lets do the keys later.
+
+Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über „✕“-Button sowie Esc / F11; die zwei Buttons neben „Start New Game“.
+
+**Ergebnis:** übernommen – Plan `Plans/2026-11-12_Johannes_Lacher_Framework_Vollbild.md` erstellt: Verhalten beider Ansichten, Umsetzung in `MainWindow.xaml(.cs)`, Auswirkungen auf andere Gruppen, Testplan, späterer Tasten-/Fokus-Schritt, offene Fragen (u. a. Esc-Konflikt mit Spielen).
+
+### 54
+**Prompt:**
+> esc confliciting with other games is a valid concern. what are the options? can we make it optional or should we go with only f11?
+
+**Ergebnis:** übernommen – Sechs Varianten verglichen (nur F11; Esc immer; Esc zusätzlich zum Spiel; optionales Interface; Checkbox; Esc nur wenn ungenutzt). Empfehlung: nur F11 plus „✕“-Button, da keine Konflikte mit Spielen und kein neues Interface nötig.
+
+### 55
+**Prompt:**
+> go with a. update the plan
+
+**Ergebnis:** übernommen – Plan auf Version 0.2: F11 schaltet um und wird nicht an das Spiel weitergegeben, Esc bleibt beim Spiel, verworfene Alternativen mit Begründung dokumentiert, Hinweis „F11 oder ✕: Vollbild beenden“ beim Wechsel ins Vollbild, offene Frage 1 als entschieden markiert.
+
+### 56
+**Prompt:**
+> regrading the status bar. i think it should be displayed as an overlay. but only if there is conent inside
+
+**Ergebnis:** übernommen – Plan auf Version 0.3: Status im Vollbild als halbtransparente Einblendung oben links, Text per Binding vom Statusfeld, bei leerem Text ausgeblendet, lässt Klicks zum Spiel durch. Ecken aufgeteilt (Status links, Hinweis mittig, „✕“ rechts, unten frei für Spielleisten). Gemeinsamer Container `FullscreenLayer`, damit der Code den Leer-Trigger nicht überschreibt. Testfall und Hinweis ergänzt, dass der Status während eines Spiels praktisch immer Text enthält.
+
+### 57
+**Prompt:**
+> why did you chose the top left corner. wouldnt the bottom be move intuitive as its currently at the bottom too?
+
+**Ergebnis:** übernommen – Begründung erklärt (unten zeichnen viele Spiele eigene Leisten, z. B. das Kinderzimmer) und Gegenargument anerkannt (Status steht heute unten, also dort erwartet). Alternative unten links mit Vor- und Nachteilen beschrieben.
+
+### 58
+**Prompt:**
+> okay conflicts with in game bars is valid. keep it at the top left
+
+**Ergebnis:** übernommen – Plan bleibt bei Version 0.3 (Status oben links, Begründung steht bereits im Plan); keine Änderung nötig.
+
+### 59
+**Prompt:**
+> "start new game" is enough if its only available in the normal view
+
+**Ergebnis:** übernommen – Plan auf Version 0.4: offene Frage 3 als entschieden markiert (Neustart nur über die normale Ansicht, kein eigener Button im Vollbild).
+
+### 60
+**Prompt:**
+> check the plan if all edge cases are covered
+
+**Ergebnis:** übernommen – Plan gegen `MainWindow.xaml(.cs)` geprüft; fehlende Randfälle aufgelistet (u. a. Button „Normale Ansicht“ nie klickbar, Absturz bei Klick ins Canvas vor Spielstart, Fensterzustand über `RestoreBounds`, Snap/Minimieren im Vollbild, Fokus auf den neuen Buttons, Hintergrund des Overlay-Containers, Neuzeichnen nur für Painter ohne `IPaintGame2`, Risiko durch fremde Painter beim Neuzeichnen). Zwei Punkte zur Entscheidung zurückgegeben.
+
+### 61
+**Prompt:**
+> add these point to the plan
+
+**Ergebnis:** übernommen – Plan auf Version 0.5: neuer Abschnitt „Randfälle“ (R1–R14) mit Behandlung je Fall, Umsetzung und Testplan entsprechend ergänzt, F11-Prüfung vor der Null-Prüfung in `Window_KeyDown` vermerkt. Die zwei Punkte mit Entscheidungsbedarf (Button „Normale Ansicht“ nie klickbar; Null-Prüfung in `PaintCanvas_MouseDown`) als offene Fragen 5 und 6 mit Empfehlung aufgenommen. Abschnitte ab 3 neu nummeriert.
+
+### 62
+**Prompt:**
+> use a two-part switch for fullscreen/normal view. 
+> add the null check of the canvas click as a new task
+
+**Ergebnis:** übernommen – Plan auf Version 0.6: Umschalter „Normale Ansicht / Vollbild“ aus zwei `RadioButton`s im `ToggleButton`-Stil (aktiver Teil hervorgehoben, Klick darauf ohne Wirkung, Zustand wird nach ✕/Snap/F11 nachgezogen, Doppelaufruf über `_IsFullscreen` abgefangen); Testfall ergänzt. Null-Prüfung in `PaintCanvas_MouseDown` als eigene Aufgabe A1 im neuen Abschnitt 8 „Weitere Aufgaben“ (eigener Commit). Offene Fragen 5 und 6 als entschieden markiert.
