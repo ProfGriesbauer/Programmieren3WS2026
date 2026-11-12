@@ -332,3 +332,9 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > lets go with e.Handled = true
 
 **Ergebnis:** übernommen – Plan auf Version 0.8: Schritt 4 (`e.Handled = true` für an das Spiel weitergegebene Tasten) als entschieden vermerkt und das Testergebnis zur Fokusverschiebung als Begründung ergänzt.
+
+### 67
+**Prompt:**
+> go through the plan and restructure it before implememtation. split it into logical blocks for implementation
+
+**Ergebnis:** übernommen – Plan auf Version 0.9 umstrukturiert, inhaltlich unverändert: Zielbild, Reihenfolge mit Abhängigkeiten und Commit-Nachrichten, sechs Blöcke (B1 Absturz bei Klick ins Canvas, B2 Vollbild-Grundfunktion, B3 F11, B4 Einblendungen, B5 Neuzeichnen, B6 Tastaturfokus) mit je Ziel, Änderungen, Randfällen und Tests; F11 vor die Einblendungen gezogen, weil der Hinweistext F11 nennt; Randfälle-Tabelle mit Block-Zuordnung; Entscheidungen und verworfene Alternativen in Anhang A.
