@@ -346,6 +346,9 @@ namespace OOPGames
                 case Gruppe2_SubwayObstacleKind.CargoRamp:
                     DrawCargoWagon(canvas, x, y, w, h);
                     break;
+                case Gruppe2_SubwayObstacleKind.CargoWagon:
+                    DrawCargoTrailer(canvas, x, y, w, h);
+                    break;
                 case Gruppe2_SubwayObstacleKind.LargeBarrier:
                     DrawLargeBarrier(canvas, x, y, w, h, scale);
                     break;
@@ -444,11 +447,13 @@ namespace OOPGames
         {
             double rearY = y - height * 2.05;
             double frontY = y - height * 0.12;
-            double rearHalfWidth = halfWidth * 0.48;
+            double rearHalfWidth = halfWidth * 0.64;
             double frontHalfWidth = halfWidth * 0.88;
             double wagonScale = halfWidth / 35;
             Brush wagonRed = Brush(Color.FromRgb(194, 55, 42));
             Brush rimRed = Brush(Color.FromRgb(224, 75, 58));
+            Brush wagonLight = Brush(Color.FromRgb(211, 69, 53));
+            Brush wagonShade = Brush(Color.FromRgb(157, 43, 36));
             Brush inside = Brush(Color.FromRgb(77, 78, 70));
 
             AddPolygon(canvas, new[]
@@ -465,14 +470,14 @@ namespace OOPGames
                 new Point(x - rearHalfWidth * 0.78, rearY + height * 0.12),
                 new Point(x - frontHalfWidth * 0.76, frontY - height * 0.12),
                 new Point(x - frontHalfWidth, frontY - height * 0.12)
-            }, wagonRed);
+            }, wagonLight);
             AddPolygon(canvas, new[]
             {
                 new Point(x + rearHalfWidth * 0.78, rearY + height * 0.12),
                 new Point(x + rearHalfWidth, rearY + height * 0.12),
                 new Point(x + frontHalfWidth, frontY - height * 0.12),
                 new Point(x + frontHalfWidth * 0.76, frontY - height * 0.12)
-            }, wagonRed);
+            }, wagonShade);
             AddPolygon(canvas, new[]
             {
                 new Point(x - rearHalfWidth, rearY + height * 0.12),
@@ -536,6 +541,69 @@ namespace OOPGames
                 halfWidth * 0.35, height * 0.16, Brush(Color.FromRgb(157, 154, 136)), null, 0);
             AddEllipse(canvas, x + halfWidth * 0.06, y - height * 1.46,
                 halfWidth * 0.29, height * 0.13, Brush(Color.FromRgb(91, 94, 86)), null, 0);
+        }
+
+        private static void DrawCargoTrailer(Canvas canvas, double x, double y, double halfWidth, double height)
+        {
+            double rearY = y - height * 1.72;
+            double frontY = y - height * 0.12;
+            double rearHalfWidth = halfWidth * 0.58;
+            double frontHalfWidth = halfWidth * 0.92;
+            double scale = halfWidth / 35;
+            Brush body = Brush(Color.FromRgb(159, 48, 39));
+            Brush side = Brush(Color.FromRgb(200, 59, 44));
+            Brush top = Brush(Color.FromRgb(75, 78, 70));
+
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth, rearY),
+                new Point(x + rearHalfWidth, rearY),
+                new Point(x + frontHalfWidth, frontY),
+                new Point(x - frontHalfWidth, frontY)
+            }, body, Brush(Color.FromRgb(102, 39, 34)), scale);
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth, rearY),
+                new Point(x - rearHalfWidth * 0.78, rearY + height * 0.13),
+                new Point(x - frontHalfWidth * 0.78, frontY + height * 0.08),
+                new Point(x - frontHalfWidth, frontY)
+            }, side);
+            AddPolygon(canvas, new[]
+            {
+                new Point(x + rearHalfWidth * 0.78, rearY + height * 0.13),
+                new Point(x + rearHalfWidth, rearY),
+                new Point(x + frontHalfWidth, frontY),
+                new Point(x + frontHalfWidth * 0.78, frontY + height * 0.08)
+            }, Brush(Color.FromRgb(129, 39, 34)));
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth * 0.78, rearY + height * 0.13),
+                new Point(x + rearHalfWidth * 0.78, rearY + height * 0.13),
+                new Point(x + frontHalfWidth * 0.78, frontY + height * 0.08),
+                new Point(x - frontHalfWidth * 0.78, frontY + height * 0.08)
+            }, top);
+
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth * 0.42, rearY + height * 0.20),
+                new Point(x + rearHalfWidth * 0.34, rearY + height * 0.20),
+                new Point(x + frontHalfWidth * 0.48, frontY - height * 0.20),
+                new Point(x + frontHalfWidth * 0.05, frontY - height * 0.20),
+                new Point(x - frontHalfWidth * 0.43, frontY - height * 0.20)
+            }, Brush(Color.FromRgb(139, 137, 117)));
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth * 0.20, rearY + height * 0.18),
+                new Point(x + rearHalfWidth * 0.48, rearY + height * 0.18),
+                new Point(x + frontHalfWidth * 0.32, frontY - height * 0.43),
+                new Point(x - frontHalfWidth * 0.12, frontY - height * 0.35)
+            }, Brush(Color.FromRgb(111, 111, 98)));
+
+            AddLine(canvas, x - halfWidth * 0.28, frontY + height * 0.12,
+                x + halfWidth * 0.28, frontY + height * 0.12,
+                Brush(Color.FromRgb(48, 50, 47)), 2 * scale);
+            AddEllipse(canvas, x - halfWidth * 0.06, frontY + height * 0.08,
+                halfWidth * 0.12, height * 0.10, Brush(Color.FromRgb(77, 78, 70)), null, 0);
         }
 
         private static void DrawTrain(Canvas canvas, double x, double bottom, double halfWidth, double bodyHeight)
@@ -645,7 +713,8 @@ namespace OOPGames
             double sourceX,
             double sourceY)
         {
-            return new Point(x + (sourceX - 174.5) * sx, bottom + (sourceY - 301) * sy);
+            double upperBodySpread = 1 + 0.10 * Math.Max(0, Math.Min(1, (301 - sourceY) / 281));
+            return new Point(x + (sourceX - 174.5) * sx * upperBodySpread, bottom + (sourceY - 301) * sy);
         }
 
         private static void AddTrainPolygon(

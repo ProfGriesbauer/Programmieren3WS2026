@@ -173,7 +173,13 @@ namespace OOPGames
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
                             Gruppe2_SubwayObstacleKind.CargoRamp, lane, 112));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            kind, lane, 82, _random.Next(0, 2) == 0));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 82));
+                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 52));
+                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 22));
+                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                            kind, lane, -8, _random.Next(0, 2) == 0));
                     }
                     else
                     {
@@ -285,7 +291,9 @@ namespace OOPGames
                         }
                         else if (onRoof)
                         {
-                            _field.RoofTicks = 42;
+                            _field.Level = Gruppe2_SubwayLevel.Track;
+                            _field.RoofTicks = 0;
+                            SetMessage("Das Zugdach endet - zurueck auf die Gleise!");
                         }
                         break;
                     case Gruppe2_SubwayObstacleKind.CargoRamp:
@@ -298,6 +306,16 @@ namespace OOPGames
                         else
                         {
                             HitOrEnd(false, "Rampe beruehrt - der Bahnbaer kommt naeher!");
+                        }
+                        break;
+                    case Gruppe2_SubwayObstacleKind.CargoWagon:
+                        if (!airborne && !onRoof)
+                        {
+                            HitOrEnd(true, "Gueterwagen! Springe auf die Rampe und laufe ueber die Wagen.");
+                        }
+                        else if (onRoof)
+                        {
+                            _field.RoofTicks = 42;
                         }
                         break;
                     case Gruppe2_SubwayObstacleKind.LargeBarrier:

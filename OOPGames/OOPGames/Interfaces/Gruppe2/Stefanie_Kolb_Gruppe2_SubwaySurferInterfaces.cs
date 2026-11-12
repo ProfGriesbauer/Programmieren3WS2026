@@ -20,7 +20,8 @@ namespace OOPGames
         CargoRamp,
         Curb,
         CenterPillar,
-        Signal
+        Signal,
+        CargoWagon
     }
 
     public enum Gruppe2_SubwayRewardKind
