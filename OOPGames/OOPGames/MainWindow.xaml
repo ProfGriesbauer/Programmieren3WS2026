@@ -5,8 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:OOPGames"
         mc:Ignorable="d"
-        Title="OOP Games" ResizeMode="CanResizeWithGrip" MinWidth="400" MinHeight="300" Closed="Window_Closed" KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown">
-    
+        Title="OOP Games" ResizeMode="CanResizeWithGrip" MinWidth="400" MinHeight="300" Closed="Window_Closed" KeyDown="Window_KeyDown">
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="10,5,10,5"/>
