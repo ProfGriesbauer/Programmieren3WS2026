@@ -42,6 +42,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G1_VierGewinntPaint());
+            OOPGamesManager.Singleton.RegisterPainter(new HayDayPainter());
             //Rules
             OOPGamesManager.Singleton.RegisterRules(new X_TicTacToeRules());
             OOPGamesManager.Singleton.RegisterRules(new G10_VierGewinntRules());
@@ -53,6 +54,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
             OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
+            OOPGamesManager.Singleton.RegisterRules(new HayDayRules());
             //Players
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeComputerPlayer());
@@ -73,6 +75,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntComputerPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new HayDayHumanPlayer());
 
             InitializeComponent();
             PaintList.ItemsSource = OOPGamesManager.Singleton.Painters;
@@ -107,25 +110,39 @@ namespace OOPGames
 
         private void StartGame_Click(object sender, RoutedEventArgs e)
         {
+            _CurrentPainter = PaintList.SelectedItem as IPaintGame;
+            _CurrentRules = RulesList.SelectedItem as IGameRules;
             List<IGamePlayer> activePlayers = new List<IGamePlayer>();
             _CurrentPlayer1 = null;
-            if (Player1List.SelectedItem is IGamePlayer)
+            _CurrentPlayer2 = null;
+            if (_CurrentRules is HayDayRules)
             {
-                _CurrentPlayer1 = ((IGamePlayer)Player1List.SelectedItem).Clone();
+                _CurrentPlayer1 = new HayDayHumanPlayer();
                 _CurrentPlayer1.SetPlayerNumber(1);
                 activePlayers.Add(_CurrentPlayer1);
-            }
-            _CurrentPlayer2 = null;
-            if (Player2List.SelectedItem is IGamePlayer)
-            {
-                _CurrentPlayer2 = ((IGamePlayer)Player2List.SelectedItem).Clone();
+
+                _CurrentPlayer2 = _CurrentPlayer1.Clone();
                 _CurrentPlayer2.SetPlayerNumber(2);
                 activePlayers.Add(_CurrentPlayer2);
             }
+            else
+            {
+                if (Player1List.SelectedItem is IGamePlayer)
+                {
+                    _CurrentPlayer1 = ((IGamePlayer)Player1List.SelectedItem).Clone();
+                    _CurrentPlayer1.SetPlayerNumber(1);
+                    activePlayers.Add(_CurrentPlayer1);
+                }
+
+                if (Player2List.SelectedItem is IGamePlayer)
+                {
+                    _CurrentPlayer2 = ((IGamePlayer)Player2List.SelectedItem).Clone();
+                    _CurrentPlayer2.SetPlayerNumber(2);
+                    activePlayers.Add(_CurrentPlayer2);
+                }
+            }
 
             _CurrentPlayer = null;
-            _CurrentPainter = PaintList.SelectedItem as IPaintGame;
-            _CurrentRules = RulesList.SelectedItem as IGameRules;
 
             OOPGamesManager.Singleton.RegisterActivePlayers(activePlayers);
             OOPGamesManager.Singleton.RegisterActivePainter(_CurrentPainter);
