@@ -174,9 +174,8 @@ namespace OOPGames
             }
 
             _field.Distance += _field.Speed;
-            _field.Speed = Math.Min(2.1, 1 + _field.Distance / 1500.0)
-                + (_field.HasUpgrade(Gruppe2_SubwayUpgradeKind.SpeedBoost) ? 0.55 : 0);
             _field.Score = (int)_field.Distance + _field.Coins * 10;
+            _field.Speed = Math.Min(2.1, 1 + _field.Score / 1500.0);
 
             TickTimers();
             SpawnWaves();
@@ -277,7 +276,8 @@ namespace OOPGames
                 if (_random.Next(0, 4) == 0)
                 {
                     _field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                        Gruppe2_SubwayRewardKind.UpgradeBox, safeLane, 82));
+                        Gruppe2_SubwayRewardKind.UpgradeBox, safeLane, 82,
+                        (Gruppe2_SubwayUpgradeKind)_random.Next(0, 5)));
                 }
                 else
                 {
@@ -331,7 +331,7 @@ namespace OOPGames
                 }
                 else
                 {
-                    GrantUpgrade((Gruppe2_SubwayUpgradeKind)_random.Next(0, 6));
+                    GrantUpgrade(reward.Upgrade);
                 }
 
                 _field.MutableRewards.Remove(reward);
@@ -347,9 +347,6 @@ namespace OOPGames
                 case Gruppe2_SubwayUpgradeKind.Jetpack:
                     _field.JetpackTicks = duration;
                     _field.Level = Gruppe2_SubwayLevel.Air;
-                    break;
-                case Gruppe2_SubwayUpgradeKind.SpeedBoost:
-                    _field.Speed += 0.55;
                     break;
                 case Gruppe2_SubwayUpgradeKind.JumpStick:
                     _field.JumpDurationTicks = 42;
@@ -732,10 +729,121 @@ namespace OOPGames
                 else
                 {
                     AddRectangle(canvas, x - 16 * scale, y - 38 * scale, 32 * scale, 30 * scale,
-                        Brush(Color.FromRgb(147, 63, 209)), Brushes.White, 2 * scale);
-                    AddText(canvas, "?", x - 7 * scale, y - 37 * scale, 15 * scale,
-                        Brushes.White, FontWeights.Bold);
+                        UpgradeColor(reward.Upgrade), Brushes.White, 2 * scale);
+                    DrawUpgradeIcon(canvas, reward.Upgrade, x, y - 23 * scale, scale);
                 }
+            }
+        }
+
+        private static Brush UpgradeColor(Gruppe2_SubwayUpgradeKind upgrade)
+        {
+            switch (upgrade)
+            {
+                case Gruppe2_SubwayUpgradeKind.Magnet: return Brush(Color.FromRgb(190, 65, 77));
+                case Gruppe2_SubwayUpgradeKind.DoubleCoins: return Brush(Color.FromRgb(196, 137, 27));
+                case Gruppe2_SubwayUpgradeKind.Surfboard: return Brush(Color.FromRgb(25, 143, 157));
+                case Gruppe2_SubwayUpgradeKind.JumpStick: return Brush(Color.FromRgb(78, 140, 72));
+                case Gruppe2_SubwayUpgradeKind.Jetpack: return Brush(Color.FromRgb(65, 105, 176));
+                default: return Brush(Color.FromRgb(147, 63, 209));
+            }
+        }
+
+        private static void DrawUpgradeIcon(
+            Canvas canvas,
+            Gruppe2_SubwayUpgradeKind upgrade,
+            double x,
+            double y,
+            double scale)
+        {
+            double size = scale;
+            switch (upgrade)
+            {
+                case Gruppe2_SubwayUpgradeKind.Magnet:
+                    AddPolygon(canvas, new[]
+                    {
+                        new Point(x - 10 * size, y - 11 * size),
+                        new Point(x - 5 * size, y - 11 * size),
+                        new Point(x - 5 * size, y + size),
+                        new Point(x - 4 * size, y + 5 * size),
+                        new Point(x - 2 * size, y + 7 * size),
+                        new Point(x + 2 * size, y + 7 * size),
+                        new Point(x + 4 * size, y + 5 * size),
+                        new Point(x + 5 * size, y + size),
+                        new Point(x + 5 * size, y - 11 * size),
+                        new Point(x + 10 * size, y - 11 * size),
+                        new Point(x + 10 * size, y + 2 * size),
+                        new Point(x + 8 * size, y + 7 * size),
+                        new Point(x + 4 * size, y + 11 * size),
+                        new Point(x, y + 12 * size),
+                        new Point(x - 4 * size, y + 11 * size),
+                        new Point(x - 8 * size, y + 7 * size),
+                        new Point(x - 10 * size, y + 2 * size)
+                    }, Brush(Color.FromRgb(205, 30, 12)), Brush(Color.FromRgb(150, 25, 8)), 1.2 * size);
+                    AddPolygon(canvas, new[]
+                    {
+                        new Point(x - 10 * size, y - 11 * size),
+                        new Point(x - 5 * size, y - 11 * size),
+                        new Point(x - 5 * size, y - 3 * size),
+                        new Point(x - 9 * size, y - 3 * size)
+                    }, Brush(Color.FromRgb(255, 220, 0)), Brush(Color.FromRgb(203, 160, 0)), size);
+                    AddPolygon(canvas, new[]
+                    {
+                        new Point(x + 5 * size, y - 11 * size),
+                        new Point(x + 10 * size, y - 11 * size),
+                        new Point(x + 9 * size, y - 3 * size),
+                        new Point(x + 5 * size, y - 3 * size)
+                    }, Brush(Color.FromRgb(255, 220, 0)), Brush(Color.FromRgb(203, 160, 0)), size);
+                    break;
+                case Gruppe2_SubwayUpgradeKind.DoubleCoins:
+                    AddEllipse(canvas, x - 9 * size, y - 5 * size, 12 * size, 12 * size,
+                        Brushes.Gold, Brushes.DarkGoldenrod, size);
+                    AddEllipse(canvas, x - 2 * size, y - 5 * size, 12 * size, 12 * size,
+                        Brushes.Gold, Brushes.DarkGoldenrod, size);
+                    AddLine(canvas, x - 3 * size, y - 2 * size, x - 3 * size, y + 4 * size,
+                        Brushes.DarkGoldenrod, size);
+                    AddLine(canvas, x + 4 * size, y - 2 * size, x + 4 * size, y + 4 * size,
+                        Brushes.DarkGoldenrod, size);
+                    break;
+                case Gruppe2_SubwayUpgradeKind.Surfboard:
+                    AddPolygon(canvas, new[]
+                    {
+                        new Point(x - 4 * size, y - 9 * size),
+                        new Point(x + 3 * size, y - 7 * size),
+                        new Point(x + 5 * size, y + 7 * size),
+                        new Point(x, y + 10 * size),
+                        new Point(x - 5 * size, y + 7 * size)
+                    }, Brushes.LightCyan, Brushes.White, size);
+                    AddLine(canvas, x - 3 * size, y - 2 * size, x + 4 * size, y,
+                        Brushes.Teal, 2 * size);
+                    break;
+                case Gruppe2_SubwayUpgradeKind.JumpStick:
+                    AddLine(canvas, x, y - 9 * size, x, y + 3 * size,
+                        Brushes.LightGray, 2 * size);
+                    AddLine(canvas, x, y + 3 * size, x - 4 * size, y + 5 * size,
+                        Brushes.Gold, 2 * size);
+                    AddLine(canvas, x - 4 * size, y + 5 * size, x + 4 * size, y + 7 * size,
+                        Brushes.Gold, 2 * size);
+                    AddLine(canvas, x + 4 * size, y + 7 * size, x - 4 * size, y + 9 * size,
+                        Brushes.Gold, 2 * size);
+                    AddLine(canvas, x - 4 * size, y + 9 * size, x + 4 * size, y + 11 * size,
+                        Brushes.Gold, 2 * size);
+                    break;
+                case Gruppe2_SubwayUpgradeKind.Jetpack:
+                    AddRectangle(canvas, x - 5 * size, y - 6 * size, 10 * size, 12 * size,
+                        Brushes.Silver, Brushes.White, size);
+                    AddPolygon(canvas, new[]
+                    {
+                        new Point(x - 4 * size, y + 6 * size),
+                        new Point(x, y + 6 * size),
+                        new Point(x - 2 * size, y + 11 * size)
+                    }, Brushes.OrangeRed);
+                    AddPolygon(canvas, new[]
+                    {
+                        new Point(x + size, y + 6 * size),
+                        new Point(x + 5 * size, y + 6 * size),
+                        new Point(x + 3 * size, y + 11 * size)
+                    }, Brushes.Gold);
+                    break;
             }
         }
 
@@ -746,27 +854,13 @@ namespace OOPGames
             switch (kind)
             {
                 case Gruppe2_SubwayObstacleKind.Train:
-                    AddRectangle(canvas, x - w, y - h * 2.2, w * 2, h * 2.2,
-                        Brush(Color.FromRgb(200, 61, 55)), Brushes.DarkRed, 2 * scale);
-                    AddRectangle(canvas, x - w * 0.7, y - h * 1.9, w * 1.4, h * 0.6,
-                        Brush(Color.FromRgb(255, 221, 130)), Brushes.Black, scale);
-                    AddRectangle(canvas, x - w * 0.55, y - h * 0.8, w * 1.1, h * 0.6,
-                        Brush(Color.FromRgb(91, 67, 45)), Brushes.Black, scale);
-                    AddLine(canvas, x - w * 0.9, y, x + w * 0.9, y, Brushes.Black, 3 * scale);
+                    DrawTrain(canvas, x, y, w, h);
                     break;
                 case Gruppe2_SubwayObstacleKind.CargoRamp:
-                    AddPolygon(canvas, new[]
-                    {
-                        new Point(x - w, y),
-                        new Point(x + w, y),
-                        new Point(x + w * 0.7, y - h * 1.4),
-                        new Point(x - w * 0.7, y - h * 1.4)
-                    }, Brush(Color.FromRgb(199, 144, 82)), Brushes.SaddleBrown, 2 * scale);
+                    DrawCargoWagon(canvas, x, y, w, h);
                     break;
                 case Gruppe2_SubwayObstacleKind.LargeBarrier:
-                    AddRectangle(canvas, x - w, y - h * 1.8, w * 2, h * 1.8,
-                        Brush(Color.FromRgb(227, 71, 56)), Brushes.White, 3 * scale);
-                    AddLine(canvas, x - w, y - h, x + w, y - h, Brushes.White, 4 * scale);
+                    DrawLargeBarrier(canvas, x, y, w, h, scale);
                     break;
                 case Gruppe2_SubwayObstacleKind.SmallBarrier:
                     AddRectangle(canvas, x - w, y - h * 0.8, w * 2, h * 0.8,
@@ -803,6 +897,340 @@ namespace OOPGames
             }
         }
 
+        private static void DrawLargeBarrier(Canvas canvas, double x, double y, double halfWidth, double height, double scale)
+        {
+            Brush red = Brush(Color.FromRgb(196, 43, 42));
+            Brush white = Brush(Color.FromRgb(238, 236, 220));
+            double signTop = y - height * 2.15;
+            double signBottom = y - height * 1.05;
+            double postWidth = halfWidth * 0.16;
+
+            AddRectangle(canvas, x - halfWidth * 0.92, signTop, halfWidth * 1.84,
+                signBottom - signTop, red, Brush(Color.FromRgb(104, 35, 36)), 2 * scale);
+
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - halfWidth * 0.78, signTop + (signBottom - signTop) * 0.1),
+                new Point(x - halfWidth * 0.49, signTop + (signBottom - signTop) * 0.1),
+                new Point(x, signTop + (signBottom - signTop) * 0.61),
+                new Point(x + halfWidth * 0.49, signTop + (signBottom - signTop) * 0.1),
+                new Point(x + halfWidth * 0.78, signTop + (signBottom - signTop) * 0.1),
+                new Point(x, signTop + (signBottom - signTop) * 0.86)
+            }, white);
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - halfWidth * 0.92, signTop + (signBottom - signTop) * 0.1),
+                new Point(x - halfWidth * 0.79, signTop + (signBottom - signTop) * 0.1),
+                new Point(x - halfWidth * 0.79, signTop + (signBottom - signTop) * 0.37),
+                new Point(x - halfWidth * 0.92, signTop + (signBottom - signTop) * 0.5)
+            }, white);
+            AddPolygon(canvas, new[]
+            {
+                new Point(x + halfWidth * 0.79, signTop + (signBottom - signTop) * 0.1),
+                new Point(x + halfWidth * 0.92, signTop + (signBottom - signTop) * 0.1),
+                new Point(x + halfWidth * 0.92, signTop + (signBottom - signTop) * 0.5),
+                new Point(x + halfWidth * 0.79, signTop + (signBottom - signTop) * 0.37)
+            }, white);
+
+            AddRectangle(canvas, x - halfWidth * 0.9, signBottom, postWidth, y - signBottom,
+                Brush(Color.FromRgb(105, 67, 55)), Brush(Color.FromRgb(59, 48, 44)), scale);
+            AddRectangle(canvas, x + halfWidth * 0.74, signBottom, postWidth, y - signBottom,
+                Brush(Color.FromRgb(105, 67, 55)), Brush(Color.FromRgb(59, 48, 44)), scale);
+            AddRectangle(canvas, x - halfWidth * 0.96, signBottom - height * 0.09,
+                halfWidth * 1.92, height * 0.12, white, Brush(Color.FromRgb(104, 35, 36)), scale);
+
+            AddEllipse(canvas, x - halfWidth * 0.8, signTop - height * 0.05,
+                halfWidth * 0.22, halfWidth * 0.22, Brush(Color.FromRgb(55, 59, 62)),
+                Brush(Color.FromRgb(190, 197, 194)), scale);
+            AddEllipse(canvas, x + halfWidth * 0.58, signTop - height * 0.05,
+                halfWidth * 0.22, halfWidth * 0.22, Brush(Color.FromRgb(55, 59, 62)),
+                Brush(Color.FromRgb(190, 197, 194)), scale);
+            AddEllipse(canvas, x - halfWidth * 0.82, signBottom - height * 0.02,
+                halfWidth * 0.19, halfWidth * 0.19, Brush(Color.FromRgb(55, 59, 62)),
+                Brush(Color.FromRgb(190, 197, 194)), scale);
+            AddEllipse(canvas, x + halfWidth * 0.63, signBottom - height * 0.02,
+                halfWidth * 0.19, halfWidth * 0.19, Brush(Color.FromRgb(55, 59, 62)),
+                Brush(Color.FromRgb(190, 197, 194)), scale);
+        }
+
+        private static void DrawCargoWagon(Canvas canvas, double x, double y, double halfWidth, double height)
+        {
+            double rearY = y - height * 2.05;
+            double frontY = y - height * 0.12;
+            double rearHalfWidth = halfWidth * 0.48;
+            double frontHalfWidth = halfWidth * 0.88;
+            double wagonScale = halfWidth / 35;
+            Brush wagonRed = Brush(Color.FromRgb(194, 55, 42));
+            Brush rimRed = Brush(Color.FromRgb(224, 75, 58));
+            Brush inside = Brush(Color.FromRgb(77, 78, 70));
+
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth, rearY),
+                new Point(x + rearHalfWidth, rearY),
+                new Point(x + frontHalfWidth, frontY),
+                new Point(x - frontHalfWidth, frontY)
+            }, Brush(Color.FromRgb(47, 54, 53)));
+
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth, rearY + height * 0.12),
+                new Point(x - rearHalfWidth * 0.78, rearY + height * 0.12),
+                new Point(x - frontHalfWidth * 0.76, frontY - height * 0.12),
+                new Point(x - frontHalfWidth, frontY - height * 0.12)
+            }, wagonRed);
+            AddPolygon(canvas, new[]
+            {
+                new Point(x + rearHalfWidth * 0.78, rearY + height * 0.12),
+                new Point(x + rearHalfWidth, rearY + height * 0.12),
+                new Point(x + frontHalfWidth, frontY - height * 0.12),
+                new Point(x + frontHalfWidth * 0.76, frontY - height * 0.12)
+            }, wagonRed);
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth, rearY + height * 0.12),
+                new Point(x + rearHalfWidth, rearY + height * 0.12),
+                new Point(x + rearHalfWidth * 0.78, rearY + height * 0.34),
+                new Point(x - rearHalfWidth * 0.78, rearY + height * 0.34)
+            }, rimRed);
+
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth * 0.78, rearY + height * 0.18),
+                new Point(x + rearHalfWidth * 0.78, rearY + height * 0.18),
+                new Point(x + frontHalfWidth * 0.76, frontY - height * 0.18),
+                new Point(x - frontHalfWidth * 0.76, frontY - height * 0.18)
+            }, inside);
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth * 0.68, rearY + height * 0.35),
+                new Point(x + rearHalfWidth * 0.68, rearY + height * 0.35),
+                new Point(x + frontHalfWidth * 0.65, frontY - height * 0.31),
+                new Point(x - frontHalfWidth * 0.65, frontY - height * 0.31)
+            }, Brush(Color.FromRgb(102, 102, 91)));
+
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - frontHalfWidth, frontY - height * 0.12),
+                new Point(x + frontHalfWidth, frontY - height * 0.12),
+                new Point(x + frontHalfWidth * 0.94, frontY + height * 0.20),
+                new Point(x - frontHalfWidth * 0.94, frontY + height * 0.20)
+            }, wagonRed, Brush(Color.FromRgb(132, 41, 33)), wagonScale * 1.5);
+
+            AddLine(canvas, x - rearHalfWidth, rearY + height * 0.12,
+                x - frontHalfWidth, frontY - height * 0.12, rimRed, 3 * wagonScale);
+            AddLine(canvas, x + rearHalfWidth, rearY + height * 0.12,
+                x + frontHalfWidth, frontY - height * 0.12, rimRed, 3 * wagonScale);
+            AddLine(canvas, x - frontHalfWidth * 0.68, frontY + height * 0.08,
+                x + frontHalfWidth * 0.68, frontY + height * 0.08,
+                Brush(Color.FromRgb(112, 43, 36)), 2 * wagonScale);
+
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth * 0.55, rearY + height * 0.56),
+                new Point(x - rearHalfWidth * 0.13, rearY + height * 0.42),
+                new Point(x + rearHalfWidth * 0.22, rearY + height * 0.54),
+                new Point(x + rearHalfWidth * 0.55, rearY + height * 0.45),
+                new Point(x + frontHalfWidth * 0.53, frontY - height * 0.48),
+                new Point(x + frontHalfWidth * 0.18, frontY - height * 0.34),
+                new Point(x - frontHalfWidth * 0.2, frontY - height * 0.48),
+                new Point(x - frontHalfWidth * 0.55, frontY - height * 0.36)
+            }, Brush(Color.FromRgb(124, 123, 108)));
+            AddPolygon(canvas, new[]
+            {
+                new Point(x - rearHalfWidth * 0.45, rearY + height * 0.88),
+                new Point(x - rearHalfWidth * 0.08, rearY + height * 0.72),
+                new Point(x + rearHalfWidth * 0.27, rearY + height * 0.82),
+                new Point(x + frontHalfWidth * 0.4, frontY - height * 0.66),
+                new Point(x + frontHalfWidth * 0.05, frontY - height * 0.52),
+                new Point(x - frontHalfWidth * 0.3, frontY - height * 0.63)
+            }, Brush(Color.FromRgb(145, 143, 125)));
+            AddEllipse(canvas, x - halfWidth * 0.16, y - height * 1.1,
+                halfWidth * 0.35, height * 0.16, Brush(Color.FromRgb(157, 154, 136)), null, 0);
+            AddEllipse(canvas, x + halfWidth * 0.06, y - height * 1.46,
+                halfWidth * 0.29, height * 0.13, Brush(Color.FromRgb(91, 94, 86)), null, 0);
+        }
+
+        private static void DrawTrain(Canvas canvas, double x, double bottom, double halfWidth, double bodyHeight)
+        {
+            double sx = 2 * halfWidth / 229;
+            double sy = 2.2 * bodyHeight / 281;
+            Brush red = Brush(Color.FromRgb(218, 75, 62));
+            Brush trim = Brush(Color.FromRgb(48, 69, 72));
+            Brush fascia = Brush(Color.FromRgb(190, 203, 200));
+
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(86, 50), new Point(153, 20), new Point(169, -118),
+                new Point(133, -103), new Point(104, -62)
+            }, Brush(Color.FromRgb(178, 52, 45)));
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(195, 20), new Point(267, 48), new Point(245, -58),
+                new Point(214, -99), new Point(180, -118)
+            }, Brush(Color.FromRgb(235, 88, 70)));
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(153, 20), new Point(195, 20), new Point(180, -118),
+                new Point(169, -118)
+            }, Brush(Color.FromRgb(203, 65, 54)));
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(116, -44), new Point(139, -71), new Point(145, -15), new Point(128, -7)
+            }, Brush(Color.FromRgb(53, 91, 94)));
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(204, -72), new Point(228, -43), new Point(216, -7), new Point(198, -15)
+            }, Brush(Color.FromRgb(53, 91, 94)));
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(110, -49), new Point(134, -74), new Point(138, -65), new Point(116, -40)
+            }, Brush(Color.FromRgb(165, 211, 210)));
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(207, -65), new Point(229, -40), new Point(225, -31), new Point(203, -56)
+            }, Brush(Color.FromRgb(165, 211, 210)));
+
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(153, 20), new Point(195, 20), new Point(267, 48), new Point(280, 58),
+                new Point(287, 71), new Point(289, 85), new Point(289, 248), new Point(285, 265),
+                new Point(276, 280), new Point(259, 291), new Point(239, 299), new Point(111, 299),
+                new Point(91, 294), new Point(74, 283), new Point(64, 270), new Point(60, 252),
+                new Point(60, 85), new Point(63, 71), new Point(72, 59), new Point(86, 50)
+            }, red, Brush(Color.FromRgb(174, 54, 46)), 1.5 * sx);
+            AddTrainRectangle(canvas, x, bottom, sx, sy, 153, 20, 42, 34,
+                Brush(Color.FromRgb(67, 80, 83)), Brush(Color.FromRgb(45, 54, 57)), sx, 2);
+            AddTrainEllipse(canvas, x, bottom, sx, sy, 159, 33, 13, 13,
+                Brush(Color.FromRgb(174, 207, 212)));
+            AddTrainEllipse(canvas, x, bottom, sx, sy, 176, 33, 13, 13,
+                Brush(Color.FromRgb(174, 207, 212)));
+
+            AddTrainRectangle(canvas, x, bottom, sx, sy, 80, 61, 189, 94,
+                trim, Brush(Color.FromRgb(35, 54, 57)), 2 * sx, 10);
+            AddTrainRectangle(canvas, x, bottom, sx, sy, 88, 69, 80, 79,
+                Brush(Color.FromRgb(119, 190, 194)), null, 0, 6);
+            AddTrainRectangle(canvas, x, bottom, sx, sy, 180, 69, 80, 79,
+                Brush(Color.FromRgb(119, 190, 194)), null, 0, 6);
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(89, 135), new Point(154, 69), new Point(167, 69), new Point(97, 143)
+            }, Brush(Color.FromRgb(181, 222, 220)));
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(181, 135), new Point(246, 69), new Point(259, 69), new Point(189, 143)
+            }, Brush(Color.FromRgb(181, 222, 220)));
+
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(60, 154), new Point(121, 177), new Point(175, 201), new Point(229, 177),
+                new Point(289, 154), new Point(289, 174), new Point(231, 195), new Point(210, 300),
+                new Point(140, 300), new Point(119, 195), new Point(60, 174)
+            }, fascia);
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(60, 225), new Point(119, 225), new Point(124, 248), new Point(60, 248)
+            }, Brush(Color.FromRgb(184, 44, 35)));
+            AddTrainPolygon(canvas, x, bottom, sx, sy, new[]
+            {
+                new Point(231, 225), new Point(289, 225), new Point(289, 248), new Point(226, 248)
+            }, Brush(Color.FromRgb(184, 44, 35)));
+            AddTrainEllipse(canvas, x, bottom, sx, sy, 76, 198, 17, 17,
+                Brush(Color.FromRgb(191, 34, 24)));
+            AddTrainEllipse(canvas, x, bottom, sx, sy, 100, 203, 18, 18,
+                Brush(Color.FromRgb(255, 202, 47)));
+            AddTrainEllipse(canvas, x, bottom, sx, sy, 232, 203, 18, 18,
+                Brush(Color.FromRgb(255, 202, 47)));
+            AddTrainEllipse(canvas, x, bottom, sx, sy, 256, 198, 17, 17,
+                Brush(Color.FromRgb(191, 34, 24)));
+            AddTrainRectangle(canvas, x, bottom, sx, sy, 145, 211, 59, 7, trim, null, 0, 0);
+            AddTrainRectangle(canvas, x, bottom, sx, sy, 145, 222, 59, 7, trim, null, 0, 0);
+            AddTrainRectangle(canvas, x, bottom, sx, sy, 145, 233, 59, 7, trim, null, 0, 0);
+            AddTrainRectangle(canvas, x, bottom, sx, sy, 151, 264, 48, 28,
+                Brush(Color.FromRgb(24, 58, 61)), Brush(Color.FromRgb(106, 134, 133)), sx, 0);
+        }
+
+        private static Point TrainPoint(
+            double x,
+            double bottom,
+            double sx,
+            double sy,
+            double sourceX,
+            double sourceY)
+        {
+            return new Point(x + (sourceX - 174.5) * sx, bottom + (sourceY - 301) * sy);
+        }
+
+        private static void AddTrainPolygon(
+            Canvas canvas,
+            double x,
+            double bottom,
+            double sx,
+            double sy,
+            IEnumerable<Point> points,
+            Brush fill,
+            Brush stroke = null,
+            double strokeWidth = 0)
+        {
+            AddPolygon(canvas, points.Select(point =>
+                TrainPoint(x, bottom, sx, sy, point.X, point.Y)), fill, stroke, strokeWidth);
+        }
+
+        private static void AddTrainRectangle(
+            Canvas canvas,
+            double x,
+            double bottom,
+            double sx,
+            double sy,
+            double sourceX,
+            double sourceY,
+            double sourceWidth,
+            double sourceHeight,
+            Brush fill,
+            Brush stroke,
+            double strokeWidth,
+            double radius)
+        {
+            Point topLeft = TrainPoint(x, bottom, sx, sy, sourceX, sourceY);
+            Rectangle shape = new Rectangle
+            {
+                Width = sourceWidth * sx,
+                Height = sourceHeight * sy,
+                RadiusX = radius * sx,
+                RadiusY = radius * sy,
+                Fill = fill,
+                Stroke = stroke,
+                StrokeThickness = strokeWidth
+            };
+            Canvas.SetLeft(shape, topLeft.X);
+            Canvas.SetTop(shape, topLeft.Y);
+            canvas.Children.Add(shape);
+        }
+
+        private static void AddTrainEllipse(
+            Canvas canvas,
+            double x,
+            double bottom,
+            double sx,
+            double sy,
+            double sourceX,
+            double sourceY,
+            double sourceWidth,
+            double sourceHeight,
+            Brush fill)
+        {
+            Point topLeft = TrainPoint(x, bottom, sx, sy, sourceX, sourceY);
+            Ellipse shape = new Ellipse
+            {
+                Width = sourceWidth * sx,
+                Height = sourceHeight * sy,
+                Fill = fill
+            };
+            Canvas.SetLeft(shape, topLeft.X);
+            Canvas.SetTop(shape, topLeft.Y);
+            canvas.Children.Add(shape);
+        }
+
         private static void DrawRunner(Canvas canvas, double width, double height, IGruppe2_SubwayField field, bool guard)
         {
             double x = LaneCenter(width, field.Lane, 0.82);
@@ -828,6 +1256,13 @@ namespace OOPGames
                 baseY += height * (0.03 + Math.Abs(Math.Sin(field.Distance / 8)) * 0.035);
             }
 
+            double runCycle = Math.Sin(field.Distance * 0.48);
+            double runSwing = runCycle * 13 * scale;
+            if (field.Level == Gruppe2_SubwayLevel.Track)
+            {
+                baseY -= Math.Abs(runCycle) * 2.5 * scale;
+            }
+
             if (!guard && field.Level == Gruppe2_SubwayLevel.Track && field.RollTicks > 0)
             {
                 AddEllipse(canvas, x - 23, baseY - 33, 46, 19, PinkBrush, Brushes.DarkMagenta, 2);
@@ -839,14 +1274,28 @@ namespace OOPGames
             }
 
             Brush outfit = guard ? Brush(Color.FromRgb(43, 74, 112)) : PinkBrush;
-            AddLine(canvas, x - 5 * scale, baseY - 24 * scale, x - 11 * scale, baseY, Brushes.Black, 5 * scale);
-            AddLine(canvas, x + 5 * scale, baseY - 24 * scale, x + 12 * scale, baseY, Brushes.Black, 5 * scale);
+            double leftKneeX = x - 9 * scale + runSwing * 0.45;
+            double rightKneeX = x + 9 * scale - runSwing * 0.45;
+            double leftFootY = baseY - Math.Max(0, -runCycle) * 7 * scale;
+            double rightFootY = baseY - Math.Max(0, runCycle) * 7 * scale;
+            AddLine(canvas, x - 5 * scale, baseY - 24 * scale,
+                leftKneeX, baseY - 12 * scale, Brushes.Black, 5 * scale);
+            AddLine(canvas, leftKneeX, baseY - 12 * scale,
+                x - 12 * scale + runSwing, leftFootY, Brushes.Black, 5 * scale);
+            AddLine(canvas, x + 5 * scale, baseY - 24 * scale,
+                rightKneeX, baseY - 12 * scale, Brushes.Black, 5 * scale);
+            AddLine(canvas, rightKneeX, baseY - 12 * scale,
+                x + 12 * scale - runSwing, rightFootY, Brushes.Black, 5 * scale);
             AddRectangle(canvas, x - 15 * scale, baseY - 67 * scale, 30 * scale, 42 * scale,
                 outfit, Brushes.Black, 1.5 * scale);
-            AddLine(canvas, x - 13 * scale, baseY - 58 * scale, x - 25 * scale, baseY - 35 * scale,
-                outfit, 5 * scale);
-            AddLine(canvas, x + 13 * scale, baseY - 58 * scale, x + 25 * scale, baseY - 42 * scale,
-                outfit, 5 * scale);
+            AddLine(canvas, x - 13 * scale, baseY - 58 * scale,
+                x - 21 * scale - runSwing * 0.55, baseY - 46 * scale, outfit, 5 * scale);
+            AddLine(canvas, x - 21 * scale - runSwing * 0.55, baseY - 46 * scale,
+                x - 25 * scale - runSwing, baseY - 34 * scale, outfit, 5 * scale);
+            AddLine(canvas, x + 13 * scale, baseY - 58 * scale,
+                x + 21 * scale + runSwing * 0.55, baseY - 46 * scale, outfit, 5 * scale);
+            AddLine(canvas, x + 21 * scale + runSwing * 0.55, baseY - 46 * scale,
+                x + 25 * scale + runSwing, baseY - 34 * scale, outfit, 5 * scale);
             AddEllipse(canvas, x - 12 * scale, baseY - 94 * scale, 24 * scale, 27 * scale,
                 Brush(Color.FromRgb(245, 194, 157)), Brushes.Black, scale);
             AddEllipse(canvas, x - 14 * scale, baseY - 99 * scale, 28 * scale, 15 * scale,
@@ -908,7 +1357,7 @@ namespace OOPGames
                 case Gruppe2_SubwayUpgradeKind.Surfboard: return "Surfboard";
                 case Gruppe2_SubwayUpgradeKind.JumpStick: return "Huepfstab";
                 case Gruppe2_SubwayUpgradeKind.Jetpack: return "Jetpack";
-                default: return "Boost";
+                default: return "Upgrade";
             }
         }
 

@@ -213,6 +213,14 @@ namespace OOPGames
             _PaintTimer = null;
         }
 
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (_CurrentRules is Gruppe2_SubwayRules && e.Key == Key.Space)
+            {
+                e.Handled = true;
+            }
+        }
+
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             if (_CurrentRules == null) return;

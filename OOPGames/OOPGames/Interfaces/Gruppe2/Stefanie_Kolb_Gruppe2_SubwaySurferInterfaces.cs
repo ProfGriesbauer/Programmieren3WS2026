@@ -35,8 +35,7 @@ namespace OOPGames
         DoubleCoins,
         Surfboard,
         JumpStick,
-        Jetpack,
-        SpeedBoost
+        Jetpack
     }
 
     public interface IGruppe2_SubwayMove : IPlayMove
@@ -86,15 +85,21 @@ namespace OOPGames
 
     public sealed class Gruppe2_SubwayReward
     {
-        internal Gruppe2_SubwayReward(Gruppe2_SubwayRewardKind kind, int lane, double distance)
+        internal Gruppe2_SubwayReward(
+            Gruppe2_SubwayRewardKind kind,
+            int lane,
+            double distance,
+            Gruppe2_SubwayUpgradeKind upgrade = Gruppe2_SubwayUpgradeKind.Magnet)
         {
             Kind = kind;
             Lane = lane;
             Distance = distance;
+            Upgrade = upgrade;
         }
 
         public Gruppe2_SubwayRewardKind Kind { get; }
         public int Lane { get; }
         public double Distance { get; internal set; }
+        public Gruppe2_SubwayUpgradeKind Upgrade { get; }
     }
 }
