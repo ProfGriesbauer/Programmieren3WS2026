@@ -199,6 +199,18 @@ Assistant answer:
 - Keeping the change within the Subway Surfer folder, I made the game canvas focusable and give it keyboard focus when the game is first painted. That keeps Space from activating the start button while the game is running.
 - I did not edit the shared MainWindow files.
 
+### Prompt 16
+Timestamp: 2026-11-12T11:24:50+01:00
+
+User prompt:
+> can you check the subway surfer code for potential bugs?
+
+Assistant answer:
+- I reviewed the rules, field, player, painter, tests, interfaces, and the Gruppe-2 design sheet. I made no game-code changes.
+- High-priority finding: `GuardGap` can be reduced to zero, but the tick loop contains no catch/game-over check for zero; it instead starts recovering the gap. This conflicts with the guard-catching behavior documented for the game.
+- Design-sheet gaps: `CenterPillar` and a tempo-boost upgrade are declared/planned but are not generated or implemented in the current rules/painter. The existing collision test suite also does not test the guard reaching zero.
+- The solution builds with 0 warnings and 0 errors. The test runner was blocked on this attempt by Windows application control.
+
 ### Prompt 15
 Timestamp: 2026-11-12T11:17:01+01:00
 
