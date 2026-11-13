@@ -1008,13 +1008,13 @@ Die Implementierung soll in folgender Reihenfolge erfolgen.
 - Kartengrenzen, Flussufer und Brücken testen.
 - Kamerafahrt und Randbegrenzung testen.
 - Tierdarstellung und zus\u00e4tzliche Innenraumübergänge testen.
-
 ## Phase 5: Grafiksystem
 
 - Austauschbares Grafiksystem implementieren.
 - Ressourcen zentral verwalten.
 - Grafiken von der Spiellogik trennen.
 - Austauschbarkeit testen.
+
 
 ## Phase 6: Interaktionen
 
@@ -1035,6 +1035,7 @@ Die Implementierung soll in folgender Reihenfolge erfolgen.
 - KI-Gegner integrieren.
 - Entscheidungslogik implementieren.
 - Spielstrategien testen.
+
 
 ## Phase 9: Gesamtsystem
 
