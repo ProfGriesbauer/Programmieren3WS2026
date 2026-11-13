@@ -4,7 +4,7 @@ namespace OOPGames
 {
     public sealed class Gruppe3DragRaceField : IGruppe3DragRaceField
     {
-        internal const double FinishDistance = 1600;
+        internal const double FinishDistance = 3000;
 
         public double PlayerOneDistance { get; internal set; }
         public double PlayerTwoDistance { get; internal set; }
