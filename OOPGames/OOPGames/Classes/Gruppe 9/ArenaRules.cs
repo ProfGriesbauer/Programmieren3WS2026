@@ -15,7 +15,13 @@ namespace OOPGames
 
         public void ClearField()
         {
-            _field.ResetGame();
+            PainterG9 painter = OOPGamesManager.Singleton.ActivePainter as PainterG9;
+            if (painter != null)
+            {
+                painter.ResetAnimationProfile();
+            }
+
+            _field.StartNewGame();
         }
 
         public int CheckIfPLayerWon()

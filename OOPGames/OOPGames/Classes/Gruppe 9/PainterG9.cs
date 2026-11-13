@@ -36,9 +36,17 @@ namespace OOPGames
             "Walk Forwards", "Walk Backwards", "Walk Left", "Walk Right");
         private AnimationProfile _selectedAnimationProfile = BoxingKnightProfile;
         private SpriteSheetAnimator _playerAnimator;
+        private AnimationProfile _playerAnimatorProfile;
         private bool _showAnimationMenu;
 
         public string Name { get { return "Arena Survival"; } }
+
+        internal void ResetAnimationProfile()
+        {
+            _selectedAnimationProfile = BoxingKnightProfile;
+            _playerAnimator = null;
+            _playerAnimatorProfile = null;
+        }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
@@ -124,9 +132,11 @@ namespace OOPGames
 
             string animationName = GetPlayerAnimationName(
                 _selectedAnimationProfile, field.Player.Facing, field.Player.IsMoving);
-            if (_playerAnimator == null)
+            if (_playerAnimator == null
+                || !ReferenceEquals(_playerAnimatorProfile, _selectedAnimationProfile))
             {
                 _playerAnimator = CreateAnimator(_selectedAnimationProfile);
+                _playerAnimatorProfile = _selectedAnimationProfile;
             }
             BitmapSource sprite = _playerAnimator.GetFrame(animationName);
             double spriteHeight = field.Player.Size * 2;
@@ -145,7 +155,7 @@ namespace OOPGames
             canvas.Children.Add(worldCanvas);
         }
 
-        // Listen at the window level so zoom keys work regardless of which control has focus.
+        // Listen at the window level so arena controls work regardless of which control has focus.
         private void AttachZoomInput(Canvas canvas, ArenaField field)
         {
             Window window = Window.GetWindow(canvas);
@@ -158,6 +168,7 @@ namespace OOPGames
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
+                _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
                 _zoomInputWindow.Closed -= OnZoomWindowClosed;
             }
 
@@ -166,6 +177,7 @@ namespace OOPGames
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown += OnZoomKeyDown;
+                _zoomInputWindow.PreviewMouseWheel += OnZoomMouseWheel;
                 _zoomInputWindow.Closed += OnZoomWindowClosed;
             }
         }
@@ -174,7 +186,24 @@ namespace OOPGames
         {
             if (!e.IsRepeat)
             {
+                if (e.Key == Key.Escape && _zoomInputField != null)
+                {
+                    _zoomInputField.ReturnToStartMenu();
+                    e.Handled = true;
+                    return;
+                }
+
                 _zoomInputField?.HandleZoomKey(e.Key);
+            }
+        }
+
+        private void OnZoomMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control
+                && _zoomInputField != null)
+            {
+                _zoomInputField.HandleZoomWheel(e.Delta);
+                e.Handled = true;
             }
         }
 
@@ -183,6 +212,7 @@ namespace OOPGames
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
+                _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
                 _zoomInputWindow.Closed -= OnZoomWindowClosed;
                 _zoomInputWindow = null;
                 _zoomInputField = null;
@@ -319,7 +349,7 @@ namespace OOPGames
 
             contents.Children.Add(new TextBlock
             {
-                Text = "ARENA SURVIVAL",
+                Text = "ARENA PAUSED",
                 FontSize = 28,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White,
@@ -328,15 +358,22 @@ namespace OOPGames
             });
             contents.Children.Add(new TextBlock
             {
-                Text = "Get ready to enter the arena",
+                Text = "Your game is paused",
                 FontSize = 15,
                 Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 20)
             });
-            contents.Children.Add(CreateMenuButton("Start Game",
-                new SolidColorBrush(Color.FromRgb(43, 125, 82)),
-                (sender, e) => field.StartGame()));
+            contents.Children.Add(CreateMenuButton("Spiel fortsetzen",
+                new SolidColorBrush(Color.FromRgb(43, 91, 125)),
+                (sender, e) =>
+                {
+                    if (!field.ContinueGame())
+                    {
+                        MessageBox.Show("Kein aktives Spiel gefunden.",
+                            "Spiel fortsetzen", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }));
             contents.Children.Add(CreateMenuButton("How to Play",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                 (sender, e) => ShowNotImplemented("How to Play")));
@@ -377,6 +414,7 @@ namespace OOPGames
             {
                 _selectedAnimationProfile = profile;
                 _playerAnimator = null;
+                _playerAnimatorProfile = null;
             }
             canvas.Tag = null;
         }

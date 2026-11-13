@@ -19,6 +19,7 @@ namespace OOPGames
         // The field owns the current player instance.
         public PlayerCharacter Player { get; private set; }
         public bool IsGameStarted { get; private set; }
+        public bool HasActiveGame { get; private set; }
         public double ZoomLevel { get; private set; } = 1.0;
 
         public ArenaField()
@@ -38,11 +39,35 @@ namespace OOPGames
             ResetPlayer();
             ZoomLevel = 1.0;
             IsGameStarted = false;
+            HasActiveGame = false;
+        }
+
+        public void StartNewGame()
+        {
+            ResetGame();
+            StartGame();
         }
 
         public void StartGame()
         {
             IsGameStarted = true;
+            HasActiveGame = true;
+        }
+
+        public bool ContinueGame()
+        {
+            if (!HasActiveGame)
+            {
+                return false;
+            }
+
+            StartGame();
+            return true;
+        }
+
+        public void ReturnToStartMenu()
+        {
+            IsGameStarted = false;
         }
 
         public bool CanBePaintedBy(IPaintGame painter)
@@ -71,12 +96,26 @@ namespace OOPGames
         {
             if (key == Key.K)
             {
-                ZoomLevel = Math.Min(MaximumZoom, ZoomLevel + ZoomStep);
+                ChangeZoom(1);
             }
             else if (key == Key.L)
             {
-                ZoomLevel = Math.Max(MinimumZoom, ZoomLevel - ZoomStep);
+                ChangeZoom(-1);
             }
+        }
+
+        public void HandleZoomWheel(int delta)
+        {
+            if (delta != 0)
+            {
+                ChangeZoom(Math.Sign(delta));
+            }
+        }
+
+        private void ChangeZoom(int direction)
+        {
+            ZoomLevel = Math.Max(MinimumZoom,
+                Math.Min(MaximumZoom, ZoomLevel + direction * ZoomStep));
         }
     }
 }

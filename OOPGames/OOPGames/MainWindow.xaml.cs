@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -86,10 +89,83 @@ namespace OOPGames
             Player2List.ItemsSource = OOPGamesManager.Singleton.Players;
             RulesList.ItemsSource = OOPGamesManager.Singleton.Rules;
 
+            // LOCAL ARENA AUTOSTART: optional helper is excluded from Git.
+            Loaded += StartArenaLocalScript;
+
             _PaintTimer = new System.Windows.Threading.DispatcherTimer();
             _PaintTimer.Interval = new TimeSpan(0, 0, 0, 0, 40);
             _PaintTimer.Tick += _PaintTimer_Tick;
             _PaintTimer.Start();
+        }
+
+        private void StartArenaLocalScript(object sender, RoutedEventArgs e)
+        {
+            Loaded -= StartArenaLocalScript;
+
+            string scriptPath = FindLocalArenaStartupScript();
+            if (scriptPath == null)
+            {
+                return;
+            }
+
+            string powerShellPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = powerShellPath,
+                WorkingDirectory = System.IO.Path.GetDirectoryName(scriptPath),
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-ExecutionPolicy");
+            startInfo.ArgumentList.Add("Bypass");
+            startInfo.ArgumentList.Add("-File");
+            startInfo.ArgumentList.Add(scriptPath);
+            startInfo.ArgumentList.Add("-TargetProcessId");
+            startInfo.ArgumentList.Add(Environment.ProcessId.ToString());
+
+            try
+            {
+                using (Process process = Process.Start(startInfo))
+                {
+                    if (process == null)
+                    {
+                        MessageBox.Show("Das Arena-Startskript konnte nicht gestartet werden.",
+                            "Arena-Autostart", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+            catch (Win32Exception ex)
+            {
+                MessageBox.Show("Das Arena-Startskript konnte nicht gestartet werden:\n" + ex.Message,
+                    "Arena-Autostart", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show("Das Arena-Startskript konnte nicht gestartet werden:\n" + ex.Message,
+                    "Arena-Autostart", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static string FindLocalArenaStartupScript()
+        {
+            DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null)
+            {
+                string candidate = System.IO.Path.Combine(
+                    directory.FullName, "start-arena.local.ps1");
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                directory = directory.Parent;
+            }
+
+            return null;
         }
 
         private void _PaintTimer_Tick(object sender, EventArgs e)
