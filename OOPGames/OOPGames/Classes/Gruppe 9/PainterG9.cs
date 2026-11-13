@@ -16,11 +16,20 @@ namespace OOPGames
     {
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
+        private Canvas _zoomInputCanvas;
 
         // Reusable brushes avoid creating new colors for every frame.
         private static readonly Brush FloorBrush = new SolidColorBrush(Color.FromRgb(55, 93, 65));
         private static readonly Brush GridBrush = new SolidColorBrush(Color.FromRgb(68, 108, 78));
         private static readonly Brush WallBrush = new SolidColorBrush(Color.FromRgb(55, 57, 62));
+        private static readonly Brush PlayerDamageRangeBrush =
+            new SolidColorBrush(Color.FromArgb(65, 110, 190, 255));
+        private static readonly Brush EnemyDamageRangeBrush =
+            new SolidColorBrush(Color.FromArgb(60, 245, 70, 70));
+        private static readonly Brush EnemyAttackFlashBrush =
+            new SolidColorBrush(Color.FromArgb(40, 255, 40, 40));
+        private static readonly Brush EnemyAttackFlashStroke =
+            new SolidColorBrush(Color.FromArgb(220, 255, 70, 50));
         private static readonly object StartMenuTag = new object();
         private static readonly AnimationProfile BoxingKnightProfile = new AnimationProfile(
             "BoxingKnight",
@@ -34,9 +43,14 @@ namespace OOPGames
             new[] { "Character", "Kurt", "Kurt.json" },
             "Idle Front", "Idle Back", "Idle Left", "Idle Right",
             "Walk Forwards", "Walk Backwards", "Walk Left", "Walk Right");
+        private static readonly string[] EnemySpriteSheetPath =
+            { "Enemies", "Enemie1.png" };
+        private static readonly string[] EnemyAnimationMetadataPath =
+            { "Enemies", "Enemie1.json" };
         private AnimationProfile _selectedAnimationProfile = BoxingKnightProfile;
         private SpriteSheetAnimator _playerAnimator;
         private AnimationProfile _playerAnimatorProfile;
+        private SpriteSheetAnimator _enemyAnimator;
         private bool _showAnimationMenu;
 
         public string Name { get { return "Arena Survival"; } }
@@ -46,6 +60,8 @@ namespace OOPGames
             _selectedAnimationProfile = BoxingKnightProfile;
             _playerAnimator = null;
             _playerAnimatorProfile = null;
+            _enemyAnimator = null;
+            _showAnimationMenu = false;
         }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
@@ -130,8 +146,18 @@ namespace OOPGames
                 mapTop + ArenaField.WallThickness, ArenaField.WallThickness,
                 ArenaField.MapHeight - 2 * ArenaField.WallThickness);
 
+            if (field.ShowDamageRanges)
+            {
+                AddDamageCone(worldCanvas, PlayerDamageRangeBrush,
+                    field.Player.PositionX - left, field.Player.PositionY - top,
+                    ArenaField.PlayerAttackRange,
+                    field.AimDirectionX, field.AimDirectionY,
+                    ArenaField.PlayerAttackHalfAngleRadians);
+            }
+
             string animationName = GetPlayerAnimationName(
-                _selectedAnimationProfile, field.Player.Facing, field.Player.IsMoving);
+                _selectedAnimationProfile, field.Player.Facing, field.Player.IsMoving,
+                field.Player.IsAttacking, field.Player.AttackFacing);
             if (_playerAnimator == null
                 || !ReferenceEquals(_playerAnimatorProfile, _selectedAnimationProfile))
             {
@@ -152,7 +178,225 @@ namespace OOPGames
             Canvas.SetLeft(player, width / 2 - spriteWidth / 2);
             Canvas.SetTop(player, height / 2 - spriteHeight / 2);
             worldCanvas.Children.Add(player);
+
+            foreach (PursuerEnemy enemy in field.Enemies)
+            {
+                if (!enemy.IsAlive)
+                {
+                    continue;
+                }
+
+                if (field.ShowDamageRanges)
+                {
+                    AddDamageRange(worldCanvas, EnemyDamageRangeBrush,
+                        enemy.PositionX - left, enemy.PositionY - top,
+                        (enemy.Size + field.Player.Size) / 2);
+                }
+
+                if (_enemyAnimator == null)
+                {
+                    _enemyAnimator = new SpriteSheetAnimator(
+                        FindAssetPath(EnemySpriteSheetPath),
+                        FindAssetPath(EnemyAnimationMetadataPath));
+                }
+
+                BitmapSource enemyFrame = _enemyAnimator.GetFrame(
+                    GetEnemyAnimationName(enemy));
+                double enemyHeight = enemy.Size * 2;
+                double enemyWidth = enemyHeight * enemyFrame.PixelWidth / enemyFrame.PixelHeight;
+                Image enemyImage = new Image
+                {
+                    Source = enemyFrame,
+                    Width = enemyWidth,
+                    Height = enemyHeight,
+                    Stretch = Stretch.Uniform,
+                    RenderTransformOrigin = new Point(0.5, 0.5),
+                    RenderTransform = new ScaleTransform(
+                        enemy.Facing == PlayerFacing.Right && !enemy.IsMoving
+                            ? (enemy.IsAttacking ? -1.2 : -1)
+                            : (enemy.IsAttacking ? 1.2 : 1),
+                        enemy.IsAttacking ? 1.2 : 1),
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(enemyImage,
+                    enemy.PositionX - left - enemyWidth / 2);
+                Canvas.SetTop(enemyImage,
+                    enemy.PositionY - top - enemyHeight / 2);
+                worldCanvas.Children.Add(enemyImage);
+
+                if (enemy.IsAttacking)
+                {
+                    PaintEnemyAttackEffect(worldCanvas, enemy,
+                        enemy.PositionX - left, enemy.PositionY - top);
+                }
+
+                PaintEnemyHealth(worldCanvas, enemy,
+                    enemy.PositionX - left, enemy.PositionY - top - enemyHeight / 2 - 10);
+            }
+
             canvas.Children.Add(worldCanvas);
+            PaintPlayerHealth(canvas, field.Player);
+        }
+
+        private static void PaintPlayerHealth(Canvas canvas, PlayerCharacter player)
+        {
+            const double width = 220;
+            const double height = 26;
+            Grid healthBar = new Grid
+            {
+                Width = width,
+                Height = height,
+                ClipToBounds = true
+            };
+            healthBar.Children.Add(new Rectangle
+            {
+                Fill = new SolidColorBrush(Color.FromRgb(40, 45, 50))
+            });
+            healthBar.Children.Add(new Rectangle
+            {
+                Width = width * player.CurrentHitPoints / player.MaxHitPoints,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Fill = player.CurrentHitPoints > player.MaxHitPoints / 3
+                    ? Brushes.LimeGreen
+                    : Brushes.IndianRed
+            });
+            healthBar.Children.Add(new TextBlock
+            {
+                Text = "HP: " + player.CurrentHitPoints + " / " + player.MaxHitPoints,
+                Foreground = Brushes.White,
+                FontWeight = FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            Border border = new Border
+            {
+                Width = width,
+                Height = height,
+                BorderThickness = new Thickness(1),
+                BorderBrush = Brushes.White,
+                Child = healthBar,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(border, 16);
+            Canvas.SetTop(border, 16);
+            canvas.Children.Add(border);
+        }
+
+        private static void AddDamageRange(
+            Canvas canvas, Brush fill, double centerX, double centerY, double radius)
+        {
+            double diameter = radius * 2;
+            Ellipse range = new Ellipse
+            {
+                Width = diameter,
+                Height = diameter,
+                Fill = fill,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(range, centerX - radius);
+            Canvas.SetTop(range, centerY - radius);
+            canvas.Children.Add(range);
+        }
+
+        private static void AddDamageCone(
+            Canvas canvas, Brush fill, double centerX, double centerY, double radius,
+            double directionX, double directionY, double halfAngle)
+        {
+            double direction = Math.Atan2(directionY, directionX);
+            Point center = new Point(centerX, centerY);
+            Point start = new Point(
+                centerX + radius * Math.Cos(direction - halfAngle),
+                centerY + radius * Math.Sin(direction - halfAngle));
+            Point end = new Point(
+                centerX + radius * Math.Cos(direction + halfAngle),
+                centerY + radius * Math.Sin(direction + halfAngle));
+
+            StreamGeometry geometry = new StreamGeometry();
+            using (StreamGeometryContext context = geometry.Open())
+            {
+                context.BeginFigure(center, true, true);
+                context.LineTo(start, true, false);
+                context.ArcTo(end, new Size(radius, radius), 0, false,
+                    SweepDirection.Clockwise, true, false);
+            }
+            geometry.Freeze();
+
+            System.Windows.Shapes.Path cone = new System.Windows.Shapes.Path
+            {
+                Data = geometry,
+                Fill = fill,
+                IsHitTestVisible = false
+            };
+            canvas.Children.Add(cone);
+        }
+
+        private static void PaintEnemyAttackEffect(
+            Canvas canvas, PursuerEnemy enemy, double centerX, double centerY)
+        {
+            double radius = enemy.Size * 1.25;
+            Ellipse flash = new Ellipse
+            {
+                Width = radius * 2,
+                Height = radius * 2,
+                Fill = EnemyAttackFlashBrush,
+                Stroke = EnemyAttackFlashStroke,
+                StrokeThickness = 3,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(flash, centerX - radius);
+            Canvas.SetTop(flash, centerY - radius);
+            canvas.Children.Add(flash);
+        }
+
+        private static void PaintEnemyHealth(Canvas canvas, PursuerEnemy enemy, double centerX, double top)
+        {
+            const double width = 44;
+            const double height = 6;
+            Grid healthBar = new Grid
+            {
+                Width = width,
+                Height = height,
+                ClipToBounds = true
+            };
+            healthBar.Children.Add(new Rectangle
+            {
+                Fill = new SolidColorBrush(Color.FromRgb(40, 20, 20))
+            });
+            healthBar.Children.Add(new Rectangle
+            {
+                Width = width * enemy.CurrentHitPoints / enemy.MaxHitPoints,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Fill = Brushes.IndianRed
+            });
+
+            Border border = new Border
+            {
+                Width = width,
+                Height = height,
+                BorderThickness = new Thickness(1),
+                BorderBrush = Brushes.Black,
+                Child = healthBar,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(border, centerX - width / 2);
+            Canvas.SetTop(border, top);
+            canvas.Children.Add(border);
+        }
+
+        private static string GetEnemyAnimationName(PursuerEnemy enemy)
+        {
+            switch (enemy.Facing)
+            {
+                case PlayerFacing.Back:
+                    return enemy.IsMoving ? "WalkForward" : "IdleBack";
+                case PlayerFacing.Left:
+                    return enemy.IsMoving ? "WalkLeft" : "idleLeft";
+                case PlayerFacing.Right:
+                    return enemy.IsMoving ? "WalkRight" : "idleLeft";
+                default:
+                    return enemy.IsMoving ? "WalkForward" : "IdleFront";
+            }
         }
 
         // Listen at the window level so arena controls work regardless of which control has focus.
@@ -162,6 +406,7 @@ namespace OOPGames
             if (ReferenceEquals(window, _zoomInputWindow))
             {
                 _zoomInputField = field;
+                _zoomInputCanvas = canvas;
                 return;
             }
 
@@ -169,17 +414,65 @@ namespace OOPGames
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
                 _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
+                _zoomInputWindow.PreviewMouseLeftButtonDown -= OnAttackMouseDown;
+                _zoomInputWindow.PreviewMouseMove -= OnAimMouseMove;
                 _zoomInputWindow.Closed -= OnZoomWindowClosed;
             }
 
             _zoomInputWindow = window;
             _zoomInputField = field;
+            _zoomInputCanvas = canvas;
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown += OnZoomKeyDown;
                 _zoomInputWindow.PreviewMouseWheel += OnZoomMouseWheel;
+                _zoomInputWindow.PreviewMouseLeftButtonDown += OnAttackMouseDown;
+                _zoomInputWindow.PreviewMouseMove += OnAimMouseMove;
                 _zoomInputWindow.Closed += OnZoomWindowClosed;
             }
+        }
+
+        private void OnAttackMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_zoomInputField == null || !_zoomInputField.IsGameStarted
+                || !_zoomInputField.Player.IsAlive || _zoomInputCanvas == null)
+            {
+                return;
+            }
+
+            Point clickPosition = e.GetPosition(_zoomInputCanvas);
+            if (clickPosition.X < 0 || clickPosition.Y < 0
+                || clickPosition.X > _zoomInputCanvas.ActualWidth
+                || clickPosition.Y > _zoomInputCanvas.ActualHeight)
+            {
+                return;
+            }
+
+            double aimX = clickPosition.X - _zoomInputCanvas.ActualWidth / 2;
+            double aimY = clickPosition.Y - _zoomInputCanvas.ActualHeight / 2;
+            _zoomInputField.AttackWithPlayer(aimX, aimY);
+            e.Handled = true;
+        }
+
+        private void OnAimMouseMove(object sender, MouseEventArgs e)
+        {
+            if (_zoomInputField == null || !_zoomInputField.IsGameStarted
+                || _zoomInputCanvas == null)
+            {
+                return;
+            }
+
+            Point mousePosition = e.GetPosition(_zoomInputCanvas);
+            if (mousePosition.X < 0 || mousePosition.Y < 0
+                || mousePosition.X > _zoomInputCanvas.ActualWidth
+                || mousePosition.Y > _zoomInputCanvas.ActualHeight)
+            {
+                return;
+            }
+
+            _zoomInputField.SetAimDirection(
+                mousePosition.X - _zoomInputCanvas.ActualWidth / 2,
+                mousePosition.Y - _zoomInputCanvas.ActualHeight / 2);
         }
 
         private void OnZoomKeyDown(object sender, KeyEventArgs e)
@@ -189,6 +482,22 @@ namespace OOPGames
                 if (e.Key == Key.Escape && _zoomInputField != null)
                 {
                     _zoomInputField.ReturnToStartMenu();
+                    e.Handled = true;
+                    return;
+                }
+
+                if (e.Key == Key.N && _zoomInputField != null
+                    && _zoomInputField.IsGameStarted)
+                {
+                    _zoomInputField.SpawnEnemy();
+                    e.Handled = true;
+                    return;
+                }
+
+                if (e.Key == Key.B && _zoomInputField != null
+                    && _zoomInputField.IsGameStarted)
+                {
+                    _zoomInputField.ToggleDamageRanges();
                     e.Handled = true;
                     return;
                 }
@@ -213,16 +522,35 @@ namespace OOPGames
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
                 _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
+                _zoomInputWindow.PreviewMouseLeftButtonDown -= OnAttackMouseDown;
+                _zoomInputWindow.PreviewMouseMove -= OnAimMouseMove;
                 _zoomInputWindow.Closed -= OnZoomWindowClosed;
                 _zoomInputWindow = null;
                 _zoomInputField = null;
+                _zoomInputCanvas = null;
             }
         }
 
         // Keep Boxing Knight's game-state naming convention outside the generic animator.
         private static string GetPlayerAnimationName(
-            AnimationProfile profile, PlayerFacing facing, bool isMoving)
+            AnimationProfile profile, PlayerFacing facing, bool isMoving,
+            bool isAttacking, PlayerFacing attackFacing)
         {
+            if (ReferenceEquals(profile, KurtProfile) && isAttacking)
+            {
+                switch (attackFacing)
+                {
+                    case PlayerFacing.Back:
+                        return "WalkAttackBackwards";
+                    case PlayerFacing.Left:
+                        return "IdleAttackLeft";
+                    case PlayerFacing.Right:
+                        return "IdleAttackRight";
+                    default:
+                        return "IdleAttackFront";
+                }
+            }
+
             string idleAnimation;
             string walkAnimation;
             switch (facing)
@@ -275,7 +603,7 @@ namespace OOPGames
                         string[] pathParts = new string[relativePath.Length + 4];
                         pathParts[0] = directory.FullName;
                         pathParts[1] = "Classes";
-                        pathParts[2] = "Gruppe9";
+                        pathParts[2] = "Gruppe 9";
                         pathParts[3] = "Assets";
                         Array.Copy(relativePath, 0, pathParts, 4, relativePath.Length);
                         string path = System.IO.Path.Combine(pathParts);
@@ -289,7 +617,7 @@ namespace OOPGames
             }
 
             throw new FileNotFoundException(
-                "Could not locate an animation asset under Classes\\Gruppe9\\Assets.",
+                "Could not locate an animation asset under Classes\\Gruppe 9\\Assets.",
                 String.Join(System.IO.Path.DirectorySeparatorChar.ToString(), relativePath));
         }
 
@@ -328,11 +656,11 @@ namespace OOPGames
                     HorizontalAlignment = HorizontalAlignment.Center,
                     Margin = new Thickness(0, 0, 0, 14)
                 });
-                contents.Children.Add(CreateMenuButton("BoxingKnight (Default)",
+                contents.Children.Add(CreateMenuButton("BoxingKnight (ohne Schlag)",
                     GetAnimationButtonBrush(BoxingKnightProfile),
                     (sender, e) => SelectAnimationProfile(
                         canvas, BoxingKnightProfile)));
-                contents.Children.Add(CreateMenuButton("Kurt",
+                contents.Children.Add(CreateMenuButton("Kurt (mit Schlaganimation)",
                     GetAnimationButtonBrush(KurtProfile),
                     (sender, e) => SelectAnimationProfile(canvas, KurtProfile)));
                 contents.Children.Add(CreateMenuButton("Back",

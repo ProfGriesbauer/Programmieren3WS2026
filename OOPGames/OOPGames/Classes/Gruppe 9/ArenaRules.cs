@@ -42,6 +42,7 @@ namespace OOPGames
             }
 
             _field.UpdatePlayerPosition();
+            _field.UpdateEnemyPositions();
         }
     }
 }
