@@ -32,7 +32,7 @@ namespace OOPGames
         System.Windows.Threading.DispatcherTimer _PaintTimer = null;
 
         public MainWindow()
-        {
+        {   
             ArenaGameRegistration.RegisterArenaGame();
 
             //REGISTER YOUR CLASSES HERE
