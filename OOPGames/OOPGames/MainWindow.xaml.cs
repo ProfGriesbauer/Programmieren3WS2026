@@ -31,6 +31,16 @@ namespace OOPGames
 
         System.Windows.Threading.DispatcherTimer _PaintTimer = null;
 
+        // Fullscreen view: window settings before entering fullscreen, restored when leaving it.
+        bool _IsFullscreen = false;
+        WindowState _SavedWindowState;
+        WindowStyle _SavedWindowStyle;
+        ResizeMode _SavedResizeMode;
+        Rect _SavedBounds;
+        GridLength _SavedSideColumnWidth;
+        Thickness _SavedRootMargin;
+        Thickness _SavedCanvasMargin;
+
         public MainWindow()
         {   
             ArenaGameRegistration.RegisterArenaGame();
@@ -46,8 +56,10 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_SubwayPainter());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new G5_FabrikPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G1_VierGewinntPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe3DragRacePainter());
+            OOPGamesManager.Singleton.RegisterPainter(new HayDayPainter());
             //Rules
             OOPGamesManager.Singleton.RegisterRules(new X_TicTacToeRules());
             OOPGamesManager.Singleton.RegisterRules(new G10_VierGewinntRules());
@@ -58,8 +70,10 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_SubwayRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
+            OOPGamesManager.Singleton.RegisterRules(new G5_FabrikRules());
             OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe3DragRaceRules());
+            OOPGamesManager.Singleton.RegisterRules(new HayDayRules());
             //Players
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeComputerPlayer());
@@ -78,10 +92,12 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWComputerPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new G5_FabrikHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe3DragRaceHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe3DragRaceComputerPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new HayDayHumanPlayer());
 
             InitializeComponent();
             PaintList.ItemsSource = OOPGamesManager.Singleton.Painters;
@@ -227,6 +243,10 @@ namespace OOPGames
                 _CurrentRules.ClearField();
                 _CurrentPainter.PaintGameField(PaintCanvas, _CurrentRules.CurrentField);
                 DoComputerMoves();
+
+                // Keys go to the focused control first. Without this the Start button would keep the focus and
+                // take Enter and Space as another click, and a list would take the arrow keys.
+                PaintCanvas.Focus();
             }
         }
 
@@ -285,8 +305,27 @@ namespace OOPGames
             }
         }
 
+        // Painters without IPaintGame2 only paint after a move. Repaint them when the canvas size changes
+        // (view switch, F11, resizing the window), so the game is drawn for the new size right away.
+        // IPaintGame2 painters are skipped: they paint every tick anyway, and an extra PaintGameField call
+        // can have side effects.
+        private void PaintCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_CurrentPainter != null &&
+                !(_CurrentPainter is IPaintGame2) &&
+                _CurrentRules != null &&
+                _CurrentRules.CurrentField != null &&
+                _CurrentRules.CurrentField.CanBePaintedBy(_CurrentPainter))
+            {
+                _CurrentPainter.PaintGameField(PaintCanvas, _CurrentRules.CurrentField);
+            }
+        }
+
         private void PaintCanvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            // A click into the game brings the keyboard focus back, e.g. after a click into a list.
+            PaintCanvas.Focus();
+
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
             {
@@ -333,6 +372,16 @@ namespace OOPGames
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            // F11 belongs to the framework and switches the view, also before a game is started.
+            // It is never passed on to the game. Esc is left to the games, many of them use it.
+            if (e.Key == Key.F11)
+            {
+                if (_IsFullscreen) ExitFullscreen(true);
+                else EnterFullscreen();
+                e.Handled = true;
+                return;
+            }
+
             if (_CurrentRules == null) return;
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
@@ -349,6 +398,9 @@ namespace OOPGames
                     _CurrentPlayer is IHumanGamePlayer)
                 {
                     IPlayMove pm = ((IHumanGamePlayer)_CurrentPlayer).GetMove(new KeySelection(e.Key), _CurrentRules.CurrentField);
+                    // The key belongs to the game now. Marked as handled, so that WPF does not also use arrow keys
+                    // and Tab to move the keyboard focus away from the game to the next control.
+                    e.Handled = true;
                     if (pm != null)
                     {
                         _CurrentRules.DoMove(pm);
@@ -359,6 +411,88 @@ namespace OOPGames
                     DoComputerMoves();
                 }
             }
+        }
+
+        private void FullscreenButton_Checked(object sender, RoutedEventArgs e)
+        {
+            EnterFullscreen();
+        }
+
+        private void NormalViewButton_Checked(object sender, RoutedEventArgs e)
+        {
+            ExitFullscreen(true);
+        }
+
+        // Windows snap (Win+Left/Right) or Win+Down turn the borderless window into a normal window, which would
+        // leave the fullscreen layout in a small frameless window. Leave fullscreen, but keep the size and position
+        // Windows just chose instead of jumping back to the window from before fullscreen.
+        private void Window_StateChanged(object sender, EventArgs e)
+        {
+            if (_IsFullscreen && WindowState == WindowState.Normal)
+            {
+                ExitFullscreen(false);
+            }
+        }
+
+        private void EnterFullscreen()
+        {
+            if (_IsFullscreen) return;
+
+            _SavedWindowState = WindowState;
+            _SavedWindowStyle = WindowStyle;
+            _SavedResizeMode = ResizeMode;
+            // A maximized window reports its maximized size in Left/Top/Width/Height, so its normal size comes from
+            // RestoreBounds. A normal (possibly snapped) window is saved as it is shown: RestoreBounds would return
+            // the size from before snapping.
+            _SavedBounds = WindowState == WindowState.Maximized ? RestoreBounds : new Rect(Left, Top, ActualWidth, ActualHeight);
+            _SavedSideColumnWidth = SideColumn.Width;
+            _SavedRootMargin = RootGrid.Margin;
+            _SavedCanvasMargin = PaintCanvas.Margin;
+
+            // Normal first: only a window that is maximized after becoming borderless covers the taskbar. A window
+            // that is already maximized and only becomes borderless keeps the size of the work area.
+            // NoResize also hides the resize grip in the bottom right corner.
+            WindowState = WindowState.Normal;
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Maximized;
+
+            // The control row stays visible and spans the whole width below the game.
+            SidePanel.Visibility = Visibility.Collapsed;
+            SideColumn.Width = new GridLength(0);
+            RootGrid.Margin = new Thickness(0);
+            PaintCanvas.Margin = new Thickness(0);
+
+            // Set only after the window changes above, so that their StateChanged events are ignored.
+            _IsFullscreen = true;
+            FullscreenButton.IsChecked = true;
+        }
+
+        // restoreWindow: false when Windows itself has already placed the window (snap), which is kept.
+        private void ExitFullscreen(bool restoreWindow)
+        {
+            if (!_IsFullscreen) return;
+            // Cleared first, so that the StateChanged events below are ignored.
+            _IsFullscreen = false;
+
+            PaintCanvas.Margin = _SavedCanvasMargin;
+            RootGrid.Margin = _SavedRootMargin;
+            SideColumn.Width = _SavedSideColumnWidth;
+            SidePanel.Visibility = Visibility.Visible;
+
+            if (restoreWindow) WindowState = WindowState.Normal;
+            WindowStyle = _SavedWindowStyle;
+            ResizeMode = _SavedResizeMode;
+            if (restoreWindow)
+            {
+                Left = _SavedBounds.Left;
+                Top = _SavedBounds.Top;
+                Width = _SavedBounds.Width;
+                Height = _SavedBounds.Height;
+                WindowState = _SavedWindowState;
+            }
+
+            NormalViewButton.IsChecked = true;
         }
     }
 }

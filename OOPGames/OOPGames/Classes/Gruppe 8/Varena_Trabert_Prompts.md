@@ -118,3 +118,145 @@ Ergebnis: Spielklassen, Rules, Painter, Human- und Computer-Player in
 registriert. Verwendet werden `I4GWFeld`, `I4GWMove` und die Framework-
 Interfaces. Der Build lief erfolgreich; Framework-Dateien wurden nicht
 geändert.
+
+## 2026-11-05
+
+### Prompt 10
+
+```text
+Ich möchte das der Hühnerstall als umzäuntes Gehege angezeit wird. Und die 5 Hüner soll man sehen können. Auf dem Bildschirm soll nur meine Anzahl an münzen angezeigt werden linke obere Ecke. alles andere will ich nur sehen können wenn ich auf den jeweilige Gebäude klicke.
+```
+
+Ergebnis: Hühnergehege mit fünf sichtbaren Hühnern und reduzierte Münzanzeige
+links oben umgesetzt. Der Projektbuild war erfolgreich.
+
+### Prompt 11
+
+```text
+Ich brauche einen Shop in dem ich neue Gebäude, Ställe für Tiere,und auch mehr Felder kaufen kann. Diese müssen verhältnismäßig im Preis sein. Wie eine Molkerei,  mehr Futtermühlen in dennen ich aus Getreide und Mais Hünerfutter oder anderes Futter für meine Tiere. Mit rechtsklick auf das Feld möchte ihc auswählen können was ich pflanzen möchte. Auch möchte ich wie einen Gegenmarkt bei dem ich sachen kaufen wie Weizen oder mais.
+```
+
+Ergebnis: Shop-/Saatwahl-/Marktlogik und zusätzliche Tierhaltungs- sowie
+Produktionsfunktionen umgesetzt und im vorhandenen Framework gebaut.
+
+## 2026-11-12
+
+### Prompt 12
+
+```text
+[[PLAN]] Erstelle mir einen Plan für unser Hayday spiel.
+
+Bleibe immer in dem Framework!
+
+Feld mit Rasterlogik, Größe 50x100
+irgendeine Straße mit Ende beim Farmhaus
+isometrischer Winkel der Kamera
+Steuerung: Kamera mit Pfeiltasten, Zoom mit + udn - Tasten, Interaktion mit Mausklick rechts und links
+zu Beginn immer gleiche Ansicht
+Speicherung mit Zeitstempel, damit Fortschritt beim Öffnen abgefragt werden kann
+
+Marktstände (erweiterbar mit Angeboten, Preisentwicklung, Bestellanfragen, Lieferwagen mit Anzeigetafel ...)
+nur Münzen als Währung, alles wird mit Münzen gekauft, neue Gebäude/Tiere/Erweiterungen werden bei Fortschritt immer teurer
+Startkapital: Scheune (Gegenstände) und Silo (Pflanzen)
+6 Felder, 1 Hühnerkäfig mit 5 Hühnern, Futtermühle
+
+Die Tiere haben jeweils einen Stall mit zaun außenrum. Wir wollen das es Hühenr, Kühe, Scheine, Schafe, Ziegen gibt die man sich kaufen kann. Diese kann man füttern und dann Wahren von Ihnen bekommen, wie Eier, Milch oder Fleisch.
+
+Auf dem Feld kann man verschiedene Pflanzen anbauen und abärnten. Neue Pflanzen soll man sich recht Billig kaufen können. In der Futtermühle kann Futter für die Tiere hergestellt werden
+```
+
+Ergebnis: Erster Planentwurf wurde erstellt; ein vollständigerer Folgeprompt
+präzisierte Tier- und Fütterungsverhalten.
+
+### Prompt 13
+
+```text
+[[PLAN]] Erstelle mir einen Plan für unser Hayday spiel.
+
+Bleibe immer in dem Framework!
+
+Feld mit Rasterlogik, Größe 50x100
+irgendeine Straße mit Ende beim Farmhaus
+isometrischer Winkel der Kamera
+Steuerung: Kamera mit Pfeiltasten, Zoom mit + udn - Tasten, Interaktion mit Mausklick rechts und links
+zu Beginn immer gleiche Ansicht
+Speicherung mit Zeitstempel, damit Fortschritt beim Öffnen abgefragt werden kann
+
+Marktstände (erweiterbar mit Angeboten, Preisentwicklung, Bestellanfragen, Lieferwagen mit Anzeigetafel ...)
+nur Münzen als Währung, alles wird mit Münzen gekauft, neue Gebäude/Tiere/Erweiterungen werden bei Fortschritt immer teurer
+Startkapital: Scheune (Gegenstände) und Silo (Pflanzen)
+6 Felder, 1 Hühnerkäfig mit 5 Hühnern, Futtermühle
+
+Die Tiere haben jeweils einen Stall mit zaun außenrum. Wir wollen es Hühenr, Kühe, Scheine, Schafe, Ziegen gibt die man sich kaufen kann. Diese kann man füttern und dann Wahren von Ihnen bekommen, wie Eier, Milch oder Fleisch.
+
+Auf dem Feld kann man verschiedene Pflanzen anbauen und abärnten. Neue Pflanzen soll man sich recht Billig kaufen können. In der Futtermühle kann Futter für die Tiere hergestellt werden mit den abgeärnteten Pflanzen.
+
+Die Tiere können/ müssen gefüttert werden damit sie Waren geben können.
+```
+
+Ergebnis: Plan mit Grundspiel zuerst und Tier-/Markterweiterungen danach
+erstellt. Festgelegt: Tiere bleiben dauerhaft erhalten, sterben nicht und
+erzeugen bei passendem Futter fortlaufend tierartspezifische Produkte.
+
+### Prompt 14
+
+```text
+Füge den Plan mit in den Hayday Ordner hinzu
+```
+
+Ergebnis: Plan als `HayDay-Plan.md` im Hay-Day-Ordner abgelegt.
+
+### Prompt 15
+
+```text
+ich bekommen diesen Fehler beim abspielen des Codes
+```
+
+Ergebnis: Screenshot zeigte den allgemeinen VS-Code-Dialog „Build Failures“,
+aber keine konkreten Compilerdetails.
+
+### Prompt 16
+
+```text
+pull
+```
+
+Ergebnis: Pull-Versuch abgebrochen, da der lokale Ordner ein leeres
+Repository ohne konfiguriertes Remote war.
+
+### Prompt 17
+
+```text
+pull noch mal ich habe gerade keine Datein mehr auas dem repository
+```
+
+Ergebnis: Leeres Repository erkannt. Nach Angabe des Remotes wurde festgestellt,
+dass der Standardbranch `master` statt `main` heißt; `master` wurde abgerufen.
+
+### Prompt 18
+
+```text
+Lege eine kopie des Repositorys auf meienm Rechner ab. Aber außerhalb von One Drive. Mit dieser ich dann weiter arbeiten kann
+```
+
+Ergebnis: Saubere Repository-Kopie unter
+`C:\Users\Varena\source\repos\Programmieren3WS2026` erstellt.
+
+### Prompt 19
+
+```text
+Mache einen Pull und einen Push
+```
+
+Ergebnis: In der Kopie außerhalb von OneDrive ausgeführt. Pull war bereits
+aktuell; beim Push gab es keine neuen Commits.
+
+### Prompt 20
+
+```text
+Füge den Plan der gerade erstellt wurde als Datei in Gruppe 8 im Ordner HayDay hinuzu. Gleichzeitig füge all meien Promps zu Varena_TRabert_Prompzts hinuzu
+```
+
+Ergebnis: Plan und Prompt-Protokoll in der Arbeitskopie außerhalb von OneDrive
+aktualisiert. Als Dateiname wurde die bereits bestehende Schreibweise
+`Varena_Trabert_Prompts.md` beibehalten.

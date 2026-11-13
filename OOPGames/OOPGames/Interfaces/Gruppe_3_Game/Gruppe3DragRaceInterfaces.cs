@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Controls;
 
 namespace OOPGames
@@ -12,6 +13,8 @@ namespace OOPGames
         int PlayerOneCar { get; }
         int PlayerTwoCar { get; }
         bool CarSelectionComplete { get; }
+        string SelectionFeedbackText { get; }
+        DateTime SelectionFeedbackUntil { get; }
     }
 
     public interface IGruppe3DragRaceMove : IPlayMove

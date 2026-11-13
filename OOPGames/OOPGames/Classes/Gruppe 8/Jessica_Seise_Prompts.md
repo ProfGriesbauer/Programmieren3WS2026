@@ -140,3 +140,59 @@ pushe den aktuellen stand
 ```
 
 Ergebnis: Das Projekt wurde gebaut und die Änderungen am Gruppe-8-Spiel sowie dieses Prompt-Protokoll wurden auf `origin/master` gepusht.
+
+### Prompt 18
+
+```text
+speicher weiterhin alle meiner promts in die jessica_seise_promts md datei mit dem genauen promt und kurz einem ergebnis dazu
+```
+
+Ergebnis: Der Wunsch wurde im Prompt-Protokoll festgehalten. Weitere Prompts in diesem Chat sollen mit dem genauen Wortlaut und einem kurzen Ergebnis ergänzt werden.
+
+### Prompt 19
+
+```text
+[[PLAN]] erstelle einen plan für tests unseres programms bzw. unseres hayday spiels  damit wenn wir alleine oder zu mehr programmieren nicht unsere classes und objekte sich in die quere kommen. Dafür brauchen wir ein paar test erstelle hierfür erstmal einen plan und bleibe immer im selben interface
+```
+
+Ergebnis: Ein Markdown-Plan für spätere isolierte Hay-Day-Tests wurde erstellt. Der erste Umfang konzentriert sich auf Spiellogik, Regeln, Zustände und Ressourcen; UI-/Painter-Tests sind zunächst ausgeschlossen. Es wurden noch keine Tests implementiert.
+
+### Prompt 20
+
+```text
+er soll bei den oopgames unter classes gruppe 8 in hayday gespeichert sein
+```
+
+Ergebnis: Der Hay-Day-Testplan wurde unter `OOPGames/OOPGames/Classes/Gruppe 8/Hay Day/HayDay_Testplan.md` gespeichert.
+
+### Prompt 21
+
+```text
+ok in diesem plan sollen konzepte beinhaltet sein wie unsere codes und unser spiel getestet werden kann wir wollen später einfach sagen können führe einen test durch. was dieser test genau macht bzw was er prüft soll in dem plan festgeschrieben sein
+```
+
+Ergebnis: Der Testplan wurde um eine konkrete Testkonzeption erweitert: benannte Tests mit präzisen Prüfschritten und erwarteten Ergebnissen, Isolation von Spielzustand/Zeit/Speicher sowie einem einheitlichen späteren Testkommando. Tests wurden noch nicht implementiert.
+
+### Prompt 22
+
+```text
+pushe den aktuellen stand
+```
+
+Ergebnis: Der aktuelle Stand mit dem Hay-Day-Testplan und diesem Prompt-Protokoll wurde für den Push vorbereitet.
+
+### Prompt 23
+
+```text
+pull den aktuellen stand
+```
+
+Ergebnis: `master` wurde per Fast-Forward von `cff2fd0` auf `a2ab5a5` aktualisiert. Der lokale, nicht versionierte Ordner `HouseExample/JessicaSeise_HouseExample` blieb unberührt.
+
+### Prompt 24
+
+```text
+pushe und pulle den aktuellen stand
+```
+
+Ergebnis: `master` wurde zuerst per Fast-Forward auf den aktuellen Remote-Stand `8f6b6e6` aktualisiert. Anschließend wurde dieses Prompt-Protokoll für den Push vorgemerkt.

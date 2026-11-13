@@ -10,10 +10,10 @@ Hindernisse wie große Felsen, wo man nicht drüber gehen kann
 zoomen möglich, und ansicht verschieben
 Immer nur gewisser radius um einen sichtbar, wenn noch nicht in dem bereich gewesen
 
-## Gebäude
+## Gebäude (gestalten, Funktionen festlegen)
 Miner, Schmelze, Konstruktor, Verbrennungsgenerator, Kohlekraftwerk
 Gebäude upgradebar
-Laufband
+Laufband (Tick-basiert)
 
 ## Game Logik
 Hand abbauen und craften möglich
@@ -45,6 +45,14 @@ Sollte alles erkennbar und gut unterscheidbar sein
 
 # Aufteilung
 Plan machen für Klassen und Struktur:
-Spielfeld: Tim
+Spielfeld, design: Tim
 Game Logik und Interaktion: Maxi
 Gebäude: Chris
+
+## Erste spielbare Version
+
+- Eine feste, übersichtliche Kachelkarte mit Eisenfeldern und einem festen HUB/Lager als Ziel.
+- Mit `F` den Förderer oder mit `S` die Schmelze auswählen und anschließend per Klick auf der Karte platzieren; `Esc` bricht die Auswahl ab.
+- Förderer werden auf Eisenfeldern platziert und produzieren automatisch Eisenerz.
+- Das HUB nimmt Erz auf, versorgt Schmelzen automatisch und lagert erzeugte Eisenbarren ein. Für diesen ersten Prototyp sind keine Laufbänder nötig.
+- Gebäude sind zunächst kostenlos; Stromversorgung, Handabbau/-crafting, Upgrades und Missionsziele sind Erweiterungen.

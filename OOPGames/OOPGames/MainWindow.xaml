@@ -5,35 +5,49 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:OOPGames"
         mc:Ignorable="d"
-        Title="OOP Games" ResizeMode="CanResizeWithGrip" MinWidth="400" MinHeight="300" Closed="Window_Closed" KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown">
-    
+        Title="OOP Games" ResizeMode="CanResizeWithGrip" MinWidth="400" MinHeight="300" Closed="Window_Closed" KeyDown="Window_KeyDown" StateChanged="Window_StateChanged">
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="10,5,10,5"/>
         </Style>
+        <!-- Two-part switch "Normale Ansicht | Vollbild": radio buttons that look like toggle buttons.
+             Not focusable, so a click on the switch never takes the keyboard focus away from where it was. -->
+        <Style x:Key="ViewSwitchStyle" TargetType="RadioButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+            <Setter Property="Padding" Value="10,5,10,5"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="GroupName" Value="ViewMode"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+        </Style>
     </Window.Resources>
-    
-    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="5,5,5,5">
+
+    <Grid x:Name="RootGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="5,5,5,5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="1*"/>
-            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition x:Name="SideColumn" Width="1*"/>
         </Grid.ColumnDefinitions>
         <Grid Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.RowDefinitions>
                 <RowDefinition Height="1*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Canvas x:Name="PaintCanvas" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="5,5,5,5" MouseDown="PaintCanvas_MouseDown"/>
-            <Grid Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Canvas x:Name="PaintCanvas" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="5,5,5,5" MouseDown="PaintCanvas_MouseDown" SizeChanged="PaintCanvas_SizeChanged"
+                    Focusable="True" FocusVisualStyle="{x:Null}"/>
+            <!-- Stays visible in fullscreen: with the side column hidden it spans the whole width below the game. -->
+            <Grid x:Name="ControlRow" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="1*"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="StartGame" Grid.Column="0" Content="Start New Game" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,5,5,5" Click="StartGame_Click"/>
-                <TextBox x:Name="Status" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="5,5,5,5" FontSize="18"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="5,5,5,5">
+                    <RadioButton x:Name="NormalViewButton" Content="Normale Ansicht" ToolTip="Normale Ansicht (F11)" Style="{StaticResource ViewSwitchStyle}" IsChecked="True" Checked="NormalViewButton_Checked"/>
+                    <RadioButton x:Name="FullscreenButton" Content="Vollbild" ToolTip="Vollbild (F11)" Style="{StaticResource ViewSwitchStyle}" Checked="FullscreenButton_Checked"/>
+                </StackPanel>
+                <TextBox x:Name="Status" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="5,5,5,5" FontSize="18"/>
             </Grid>
         </Grid>
-        <Grid Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid x:Name="SidePanel" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="1*"/>
