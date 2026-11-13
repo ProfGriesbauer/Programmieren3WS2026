@@ -26,6 +26,16 @@ namespace OOPGames
             new SolidColorBrush(Color.FromArgb(65, 110, 190, 255));
         private static readonly Brush EnemyDamageRangeBrush =
             new SolidColorBrush(Color.FromArgb(60, 245, 70, 70));
+        private static readonly Brush EntityHitboxFillBrush =
+            new SolidColorBrush(Color.FromArgb(35, 144, 238, 144));
+        private static readonly Brush EntityHitboxStrokeBrush =
+            new SolidColorBrush(Color.FromArgb(240, 144, 238, 144));
+        private static readonly Brush EnemySightRangeFillBrush =
+            new SolidColorBrush(Color.FromArgb(10, 255, 255, 255));
+        private static readonly Brush EnemySightRangeStrokeBrush =
+            new SolidColorBrush(Color.FromArgb(210, 255, 255, 255));
+        private static readonly Brush EnemyPathBrush =
+            new SolidColorBrush(Color.FromArgb(230, 255, 215, 0));
         private static readonly Brush EnemyAttackFlashBrush =
             new SolidColorBrush(Color.FromArgb(40, 255, 40, 40));
         private static readonly Brush EnemyAttackFlashStroke =
@@ -148,6 +158,17 @@ namespace OOPGames
 
             if (field.ShowDamageRanges)
             {
+                foreach (PursuerEnemy enemy in field.Enemies)
+                {
+                    if (enemy.IsAlive)
+                    {
+                        AddEnemyPath(worldCanvas, enemy.PathHistory, left, top);
+                        AddSightRange(worldCanvas,
+                            enemy.PositionX - left, enemy.PositionY - top,
+                            PursuerEnemy.SightRange);
+                    }
+                }
+
                 AddDamageCone(worldCanvas, PlayerDamageRangeBrush,
                     field.Player.PositionX - left, field.Player.PositionY - top,
                     ArenaField.PlayerAttackRange,
@@ -234,11 +255,34 @@ namespace OOPGames
                     enemy.PositionX - left, enemy.PositionY - top - enemyHeight / 2 - 10);
             }
 
+            if (field.ShowDamageRanges)
+            {
+                AddEntityHitbox(worldCanvas,
+                    field.Player.PositionX - left, field.Player.PositionY - top,
+                    field.Player.Size);
+                foreach (PursuerEnemy enemy in field.Enemies)
+                {
+                    if (enemy.IsAlive)
+                    {
+                        AddEntityHitbox(worldCanvas,
+                            enemy.PositionX - left, enemy.PositionY - top, enemy.Size);
+                    }
+                }
+            }
+
             canvas.Children.Add(worldCanvas);
-            PaintPlayerHealth(canvas, field.Player);
+            PaintPlayerHealth(canvas, field.Player, field.Score);
+            if (field.ShowDamageRanges)
+            {
+                PaintLegend(canvas, width, height);
+            }
+            if (field.ShowDebugHud)
+            {
+                PaintDebugHud(canvas, field, width, height);
+            }
         }
 
-        private static void PaintPlayerHealth(Canvas canvas, PlayerCharacter player)
+        private static void PaintPlayerHealth(Canvas canvas, PlayerCharacter player, int score)
         {
             const double width = 220;
             const double height = 26;
@@ -281,6 +325,24 @@ namespace OOPGames
             Canvas.SetLeft(border, 16);
             Canvas.SetTop(border, 16);
             canvas.Children.Add(border);
+
+            Border scoreLabel = new Border
+            {
+                Padding = new Thickness(8, 3, 8, 3),
+                Background = new SolidColorBrush(Color.FromArgb(210, 40, 45, 50)),
+                BorderBrush = Brushes.White,
+                BorderThickness = new Thickness(1),
+                Child = new TextBlock
+                {
+                    Text = "Kills: " + score,
+                    Foreground = Brushes.White,
+                    FontWeight = FontWeights.Bold
+                },
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(scoreLabel, width + 28);
+            Canvas.SetTop(scoreLabel, 16);
+            canvas.Children.Add(scoreLabel);
         }
 
         private static void AddDamageRange(
@@ -297,6 +359,182 @@ namespace OOPGames
             Canvas.SetLeft(range, centerX - radius);
             Canvas.SetTop(range, centerY - radius);
             canvas.Children.Add(range);
+        }
+
+        private static void AddEntityHitbox(
+            Canvas canvas, double centerX, double centerY, double size)
+        {
+            double diameter = size;
+            Ellipse hitbox = new Ellipse
+            {
+                Width = diameter,
+                Height = diameter,
+                Fill = EntityHitboxFillBrush,
+                Stroke = EntityHitboxStrokeBrush,
+                StrokeThickness = 2,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(hitbox, centerX - diameter / 2);
+            Canvas.SetTop(hitbox, centerY - diameter / 2);
+            canvas.Children.Add(hitbox);
+        }
+
+        private static void AddSightRange(
+            Canvas canvas, double centerX, double centerY, double radius)
+        {
+            double diameter = radius * 2;
+            Ellipse range = new Ellipse
+            {
+                Width = diameter,
+                Height = diameter,
+                Fill = EnemySightRangeFillBrush,
+                Stroke = EnemySightRangeStrokeBrush,
+                StrokeThickness = 2,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(range, centerX - radius);
+            Canvas.SetTop(range, centerY - radius);
+            canvas.Children.Add(range);
+        }
+
+        private static void AddEnemyPath(
+            Canvas canvas, IReadOnlyList<Point> path, double left, double top)
+        {
+            if (path.Count < 2)
+            {
+                return;
+            }
+
+            PointCollection points = new PointCollection();
+            foreach (Point point in path)
+            {
+                points.Add(new Point(point.X - left, point.Y - top));
+            }
+
+            canvas.Children.Add(new Polyline
+            {
+                Points = points,
+                Stroke = EnemyPathBrush,
+                StrokeThickness = 2,
+                IsHitTestVisible = false
+            });
+        }
+
+        private static void PaintDebugHud(Canvas canvas, ArenaField field,
+            double canvasWidth, double canvasHeight)
+        {
+            StackPanel content = new StackPanel();
+            AddDebugText(content, "DEBUG-STATISTIKEN", true);
+            AddDebugText(content, string.Format(
+                "Position: X {0:0}, Y {1:0}",
+                field.Player.PositionX, field.Player.PositionY));
+            AddDebugText(content, string.Format(
+                "Spielgeschwindigkeit: {0:0.0} / {1:0.0}",
+                field.Player.currentSpeed, field.Player.MaxSpeed));
+            AddDebugText(content, "Blickrichtung: " + GetFacingLabel(field.Player.Facing));
+            double aimAngle = Math.Atan2(field.AimDirectionY, field.AimDirectionX)
+                * 180 / Math.PI;
+            AddDebugText(content, string.Format("Zielwinkel: {0:0}°", aimAngle));
+            AddDebugText(content, string.Format(
+                "Spielerschaden: {0} je Schlag", ArenaField.PlayerAttackDamage));
+            AddDebugText(content, string.Format(
+                "Gegnerschaden: {0} je {1:0} s bei Kontakt",
+                PursuerEnemy.ContactDamagePerHit,
+                PursuerEnemy.ContactDamageIntervalMilliseconds / 1000.0));
+            AddDebugText(content, string.Format(
+                "Gegner: {0}   Kills: {1}", field.Enemies.Count, field.Score));
+            AddDebugText(content, string.Format(
+                "Angriffsreichweite: {0:0}", ArenaField.PlayerAttackRange));
+            AddDebugText(content, string.Format(
+                "Gegner-Sichtweite: {0:0}", PursuerEnemy.SightRange));
+
+            Border panel = CreateDebugPanel(content, canvasWidth, canvasHeight);
+            Canvas.SetLeft(panel, 16);
+            Canvas.SetTop(panel, 52);
+            canvas.Children.Add(panel);
+        }
+
+        private static void PaintLegend(Canvas canvas, double canvasWidth, double canvasHeight)
+        {
+            StackPanel content = new StackPanel();
+            AddDebugText(content, "LEGENDE", true);
+            AddLegendItem(content, PlayerDamageRangeBrush, "Spieler-Angriffsbereich");
+            AddLegendItem(content, EnemyDamageRangeBrush, "Gegner-Kontaktbereich");
+            AddLegendItem(content, EntityHitboxStrokeBrush, "Hitboxen");
+            AddLegendItem(content, EnemySightRangeStrokeBrush, "Gegner-Sichtweite");
+            AddLegendItem(content, EnemyPathBrush, "Gegnerpfad");
+
+            Border panel = CreateDebugPanel(content, canvasWidth, canvasHeight);
+            Canvas.SetLeft(panel, Math.Max(16, canvasWidth - panel.DesiredSize.Width - 16));
+            Canvas.SetTop(panel, 52);
+            canvas.Children.Add(panel);
+        }
+
+        private static Border CreateDebugPanel(StackPanel content,
+            double canvasWidth, double canvasHeight)
+        {
+            Border panel = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(220, 30, 34, 38)),
+                BorderBrush = Brushes.White,
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8),
+                Child = content,
+                IsHitTestVisible = false
+            };
+            panel.Measure(new Size(Math.Max(0, canvasWidth - 32),
+                Math.Max(0, canvasHeight - 60)));
+            return panel;
+        }
+
+        private static void AddDebugText(StackPanel panel, string text, bool isHeader = false)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = text,
+                Foreground = Brushes.White,
+                FontWeight = isHeader ? FontWeights.Bold : FontWeights.Normal,
+                Margin = new Thickness(0, 1, 0, 1)
+            });
+        }
+
+        private static void AddLegendItem(StackPanel panel, Brush color, string label)
+        {
+            DockPanel row = new DockPanel { LastChildFill = true };
+            Rectangle swatch = new Rectangle
+            {
+                Width = 12,
+                Height = 12,
+                Fill = color,
+                Stroke = Brushes.White,
+                StrokeThickness = 0.5,
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            DockPanel.SetDock(swatch, Dock.Left);
+            row.Children.Add(swatch);
+            row.Children.Add(new TextBlock
+            {
+                Text = label,
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            panel.Children.Add(row);
+        }
+
+        private static string GetFacingLabel(PlayerFacing facing)
+        {
+            switch (facing)
+            {
+                case PlayerFacing.Back:
+                    return "Hinten";
+                case PlayerFacing.Left:
+                    return "Links";
+                case PlayerFacing.Right:
+                    return "Rechts";
+                default:
+                    return "Vorne";
+            }
         }
 
         private static void AddDamageCone(
@@ -498,6 +736,14 @@ namespace OOPGames
                     && _zoomInputField.IsGameStarted)
                 {
                     _zoomInputField.ToggleDamageRanges();
+                    e.Handled = true;
+                    return;
+                }
+
+                if (e.Key == Key.H && _zoomInputField != null
+                    && _zoomInputField.IsGameStarted)
+                {
+                    _zoomInputField.ToggleDebugHud();
                     e.Handled = true;
                     return;
                 }

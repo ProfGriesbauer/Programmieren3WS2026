@@ -18,6 +18,7 @@ namespace OOPGames
         private const double ZoomStep = 0.1;
         public const double PlayerAttackRange = 80;
         public const double PlayerAttackHalfAngleRadians = Math.PI / 6;
+        public const int PlayerAttackDamage = 10;
         private const double EnemySpawnDistance = 250;
         private const double EnemySpawnAngleStep = 2.399963229728653;
         private readonly List<PursuerEnemy> _enemies = new List<PursuerEnemy>();
@@ -28,6 +29,8 @@ namespace OOPGames
         public bool IsGameStarted { get; private set; }
         public bool HasActiveGame { get; private set; }
         public bool ShowDamageRanges { get; private set; }
+        public bool ShowDebugHud { get; private set; }
+        public int Score { get; private set; }
         public double AimDirectionX { get; private set; }
         public double AimDirectionY { get; private set; } = 1;
         public double ZoomLevel { get; private set; } = 1.0;
@@ -52,6 +55,8 @@ namespace OOPGames
             ResetPlayer();
             ZoomLevel = 1.0;
             ShowDamageRanges = false;
+            ShowDebugHud = false;
+            Score = 0;
             AimDirectionX = 0;
             AimDirectionY = 1;
             IsGameStarted = false;
@@ -73,6 +78,11 @@ namespace OOPGames
         public void ToggleDamageRanges()
         {
             ShowDamageRanges = !ShowDamageRanges;
+        }
+
+        public void ToggleDebugHud()
+        {
+            ShowDebugHud = !ShowDebugHud;
         }
 
         public void SetAimDirection(double aimX, double aimY)
@@ -209,7 +219,13 @@ namespace OOPGames
 
             if (target != null)
             {
-                target.TakeDamage(10);
+                target.TakeDamage(PlayerAttackDamage);
+                if (!target.IsAlive)
+                {
+                    _enemies.Remove(target);
+                    Score++;
+                    SpawnEnemy();
+                }
             }
 
             Player.StartAttack();
