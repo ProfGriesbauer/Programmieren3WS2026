@@ -42,7 +42,8 @@ Diese Reihenfolge hält die erste Version überschaubar und ermoeglicht trotzdem
 | Lager | Speichert Gegenstände und puffert Produktionsketten | Gegenstände | Gespeicherte Gegenstände | Empfohlen |
 | Assembler | Stellt komplexe Produkte aus mehreren Zutaten her | Mehrere Rezeptzutaten, Strom | Komplexes Bauteil | Später |
 | Kohlekraftwerk | Erzeugt mehr Strom aus Kohle; benoetigt eine Brennstoffversorgung | Kohle, ggf. Wasser | Strom | Später |
-| Splitter / Merger | Teilt bzw. vereinigt Gegenstandsflüsse | Laufbandstroeme | Laufbandstroeme | Später |
+| Splitter | Verteilt Gegenstände fair auf zwei Ausgänge | Ein Laufband | Zwei Laufbänder | Später |
+| Merger | Vereinigt Gegenstände aus zwei Eingängen | Zwei Laufbänder | Ein Laufband | Später |
 
 ### Miner und Rohstoffgewinnung
 
@@ -97,9 +98,13 @@ Ein Verbraucher ohne Strom pausiert und behält seine Eingaben. Generatoren zeig
 
 ### Laufbänder und Transporterweiterungen
 
-Laufbänder bewegen Gegenstände in einer festgelegten Richtung und aktualisieren ihre Bewegung in Spielticks. für die erste Version sollten Anfang, Ende, Richtung, belegte Plätze und Transportgrenze eindeutig definiert sein.
+Laufbänder bewegen Gegenstände in einer festgelegten Richtung und aktualisieren ihre Bewegung in Spielticks. Für die erste Version sollten Anfang, Ende, Richtung, belegte Plätze und Transportgrenze eindeutig definiert sein.
 
-Hoehere Laufbandstufen koennen mehr Gegenstände pro Zeit transportieren. Splitter und Merger sind sinnvolle spätere Ergänzungen, aber nicht Voraussetzung für die erste Produktionskette.
+Höhere Laufbandstufen können mehr Gegenstände pro Zeit transportieren. Splitter und Merger erweitern das Netz später um Abzweigungen und Zusammenführungen.
+
+Der Splitter nimmt einen Eingang an und verteilt Gegenstände abwechselnd auf zwei Ausgänge. Ist ein Ausgang blockiert oder voll, darf er Gegenstände über den freien Ausgang weiterleiten. Sind beide blockiert, bleibt das Gut im Eingang; kein Gegenstand darf dupliziert oder verworfen werden.
+
+Der Merger nimmt zwei Eingänge an und gibt beide auf ein Ausgangsband. Er bedient die Eingänge fair abwechselnd. Ist das Ausgangsband voll, wartet er, ohne Gegenstände aus den Eingängen zu entfernen. Ein Beispiel für eine Produktionskette ist ein Erzband, das per Splitter zwei Schmelzen versorgt; deren Ausgaben werden danach per Merger auf einem Barrenband gesammelt. Der zusätzliche Durchsatz entsteht nur, wenn beide Schmelzen und die anschließenden Bänder ausreichend Kapazität besitzen.
 
 ## Gemeinsamer Produktionsablauf
 
@@ -140,13 +145,35 @@ Welche Werte sich pro Stufe ändern und wie viele Stufen es gibt, ist noch offen
 
 ## Visuelle Gestaltung
 
+Eine interaktive Konzeptansicht mit eigenständigen SVG-Maschinenmodellen liegt in [Gebaeude_Designvorschau.html](./Gebaeude_Designvorschau.html). Sie zeigt die Gebäude aus schräger Draufsicht und macht die Förderwege von Laufband, Splitter und Merger anhand eines Produktionsbeispiels sichtbar.
+
 - Gebäude erhalten aus der Vogelperspektive unterscheidbare Silhouetten und klar erkennbare Grundfarben.
-- Der Miner zeigt einen Bohrkopf oder Foerderarm; die Schmelze einen Ofen mit warmem Licht; der Konstruktor eine kompakte Werkmaschine.
+- Der Miner hat eine reduzierte, eindeutige Silhouette: genau zwei deutlich getrennte Standfüße, einen kompakten Motorrahmen und einen großen zentralen Bohrer mit sichtbarer spiralförmiger Bohrschnecke und Spitze.
+- Andere Modelle vermeiden strenge quaderförmige Blockaufbauten und folgen denselben Gestaltungsprinzipien wie der Miner: klare Silhouette, wenige gut platzierte Bauteile und sichtbare, funktionsgerechte Mechanik.
+- Die Schmelze ist ein runder Ofenkörper mit glühender Öffnung und gebogenen Abzügen; der Konstruktor ein offener Drehtisch mit Werkzeug und Gelenkarmen; der Assembler kombiniert mehrere runde Fertigungstische um einen zentralen Antrieb.
+- Das Lager verwendet zylindrische Silos mit gewölbten Deckeln, der Generator einen runden Kessel mit Brennkammer und gebogenen Abzügen. Strommast und Transportteile setzen ebenfalls auf abgerundete Formen und klare Funktionsführung statt dekorativer Blockfundamente.
+- Die Form bleibt der Funktion untergeordnet: Förderstrecken dürfen für Richtungswechsel abknicken, während Maschinenkörper organische Rundungen und erkennbare Arbeitsmechanik zeigen.
 - Der Assembler wirkt groesser und komplexer als der Konstruktor.
 - Lager zeigen ihre Groesse oder Stufe durch zusätzliche Container oder Regale.
 - Laufbandstufen koennen unterschiedliche, gut unterscheidbare Farben erhalten.
+- Splitter und Merger zeigen ihre Ein- und Ausgänge durch klar sichtbare, abgewinkelte Bandführungen; Materialrichtung bleibt auch in der kompakten Draufsicht lesbar.
 - Animationen wie Bohrbewegung, Ofenglow oder bewegte Gegenstände sollen den Betriebszustand unterstützen, nicht nur dekorativ sein.
 - Einblendungen oder Symbole machen "arbeitet", "wartet" und "blockiert" auch ohne geoeffnetes Menü erkennbar.
+- Gegenstands- und Stromanschlüsse sind im Prototyp farblich getrennt markiert: Eingänge grün, Ausgänge gelb, Strom blau. Die Symbole zeigen die Funktion, legen aber noch keine endgültigen Weltkoordinaten fest.
+
+### Vorläufige Draufsicht, Raster und Anschlüsse
+
+Die Designvorschau enthält ein schematisches Rasterbeispiel, in dem Gebäude-Footprints, Seitenanschlüsse und einzelne Laufbandfelder als 1x1-Kacheln gezeigt werden. Es ist eine Layout-Idee und noch keine verbindliche Platzierungsregel. Die Vorschau verwendet 32-Pixel-Kacheln als vorläufige Referenz, angelehnt an die vorhandene Kartenansicht; Rastermaß, Footprints und Drehung müssen mit der Spielumgebung abgestimmt werden.
+
+- Gebäude behalten einen rechteckigen, kollisionsfreien Footprint; Details der Illustration dürfen nicht als zusätzliche belegte Felder interpretiert werden.
+- Anschlüsse liegen an einer der vier Footprint-Seiten und sollen direkt an eine angrenzende Laufbandkachel anschließen. Richtung und erlaubte Drehung sind pro Gebäude in der Weltlogik festzulegen.
+- Miner: Rohstoffvorkommen unter dem Footprint, ein Gegenstandsausgang und ein separater Stromanschluss.
+- Schmelze und Konstruktor: je mindestens ein Gegenstandseingang, ein Ausgang und Stromanschluss. Mehrere Zutaten können beim Konstruktor je nach Rezept zusätzliche Eingänge erfordern.
+- Assembler: mehrere getrennte Gegenstandseingänge, ein Ausgang und Stromanschluss.
+- Lager: Gegenstandsein- und -ausgang; die konkrete Transferlogik muss Überschreiben bei vollem Lager verhindern.
+- Verbrennungsgenerator: Brennstoffeingang und Stromabgabe. Strommast: Anschluss ans Stromnetz; kein Gegenstandstransport.
+- Laufband: ein Eingangs- und ein Ausgangsanschluss; Splitter: ein Eingang und zwei Ausgänge; Merger: zwei Eingänge und ein Ausgang.
+- Stromleitungen/Netzverbindungen sind visuell von Gegenstandsbändern zu trennen. Symbole in der Vorschau sind Orientierungshilfen und ersetzen keine festgelegte Port-API.
 
 ## Noch gemeinsam festzulegen
 
@@ -193,3 +220,16 @@ Die folgenden Punkte werden benoetigt, sobald Gebäude mit den parallel entwicke
 - **Itemtransfer:** Die aktuelle Gebäudeschicht nutzt `G5_IItemEndpoint` fuer typisierte Eingaben, Ausgaben und Bestand. Mit den Laufbändern ist zu klären, ob Transfer weiterhin in Mengen pro Tick oder ueber belegte Rasterfelder und Bandrichtung modelliert wird.
 - **Stromnetz:** Die aktuelle Implementierung verbindet Verbraucher ueber die Reichweite von `G5_PowerPole` und verteilt Generatorleistung pro Tick. Falls die Spielumgebung bereits Stromnetze oder Leitungsverbindungen modelliert, soll diese Logik dort integriert statt parallel doppelt gefuehrt werden.
 - **Gemeinsame Balance:** Tickdauer, Produktionszeiten, Kapazitäten, Baukosten, Stromwerte, Rohstoff-Endlichkeit und Rezeptliste werden mit allen drei Entwicklern abgestimmt, sobald Umgebung und Bedienung konkretere Vorgaben liefern.
+
+### Splitter und Merger
+
+- Ein Splitter erhält genau einen Bandzulauf und hat zwei Ausgänge. Er wechselt nach erfolgreicher Übergabe den bevorzugten Ausgang, damit beide Zweige fair bedient werden.
+- Ist ein Zweig blockiert, darf der Splitter über den anderen freien Zweig liefern. Sind beide blockiert, bleibt das Gut am Zulauf; es wird weder dupliziert noch verworfen.
+- Ein Merger hat zwei Bandzuläufe und einen Ausgang. Er wechselt zwischen den Zuläufen, sofern dort Gut anliegt und das Ausgangsband freie Kapazität hat.
+- Bei vollem Ausgang wartet das Gut im jeweiligen Zulauf. Die Übergabe muss atomar sein, damit beim Zusammenführen keine Gegenstände verloren gehen oder überschrieben werden.
+- Der Beispielaufbau in der Designvorschau führt einen Erzstrom über einen Splitter zu zwei Schmelzen und sammelt deren Barren mit einem Merger wieder auf einem Band.
+
+
+### Noch hinzufügen
+
+Verbrennungsgenerator für verschiedene Rohstoffe (Holz, Kohle, Gas, Uran) aus
