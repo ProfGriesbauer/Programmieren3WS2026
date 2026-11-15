@@ -72,6 +72,9 @@ namespace OOPGames
                 case G1C_WorldLocation.ClothingStore: return "Bekleidungsgeschäft";
                 case G1C_WorldLocation.Bank: return "Bank";
                 case G1C_WorldLocation.FurnitureStore: return "Möbelhaus";
+                case G1C_WorldLocation.Arcade: return "Spielhalle";      // Patrick Lupierz – 15.11.2026
+                case G1C_WorldLocation.BikeShop: return "Fahrradladen";  // Patrick Lupierz – 15.11.2026
+                case G1C_WorldLocation.GrandmaHouse: return "Omas Haus"; // Patrick Lupierz – 15.11.2026
                 default: return "Stadt";
             }
         }

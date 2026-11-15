@@ -13,7 +13,12 @@ namespace OOPGames
         GasStation,
         ClothingStore,
         Bank,
-        FurnitureStore
+        FurnitureStore,
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Spielhalle und Fahrradladen (am Ende angefügt,
+        // damit die Zahlenwerte älterer Spielstände gleich bleiben)
+        Arcade,
+        BikeShop,
+        GrandmaHouse // Änderung durch: Patrick Lupierz – 15.11.2026 – Omas Haus
     }
 
     public interface IG1C_WorldMap

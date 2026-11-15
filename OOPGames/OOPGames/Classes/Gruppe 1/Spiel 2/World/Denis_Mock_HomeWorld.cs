@@ -64,6 +64,9 @@ namespace OOPGames
             _objects.Add(new G1C_WorldObject("Poster", "obj_poster_ad", 9, 0, 1, 1, true, G1C_InteractionType.Inspect,
                 "Ein großes, leicht vergilbtes Poster:\n\"Hier könnte Ihre Werbung stehen.\"",
                 "Darunter hat jemand mit Kuli geschrieben:\n\"Steht sie aber nicht.\" – Das war bestimmt Oma."));
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Urlaubsfoto als zweites, anderes Wandbild
+            _objects.Add(new G1C_WorldObject("Urlaubsfoto", "obj_picture_sea", 3, 0, 1, 1, true, G1C_InteractionType.Inspect,
+                "Ein Foto vom letzten Familienurlaub am Meer.\nOma schaut als Einzige nicht in die Kamera."));
         }
 
         public List<G1C_FurnitureLocation> AvailableFurnitureLocations(G1C_Item item, G1C_Player player)

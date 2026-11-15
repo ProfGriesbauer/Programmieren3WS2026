@@ -51,6 +51,10 @@ namespace OOPGames
         // fehlen sie in älteren Spielständen, bleiben sie 0 und werden beim Laden sinnvoll ergänzt.
         public int BankInterestDay { get; set; }
         public int BankInterestTotal { get; set; }
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Fahrrad und Spielhallen-Rekorde
+        public bool RidingBike { get; set; }
+        public string ActiveBike { get; set; }
+        public Dictionary<string, int> ArcadeHighscores { get; set; }
     }
 
     // =====================================================

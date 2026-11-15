@@ -43,10 +43,21 @@ namespace OOPGames
         {
             switch (GetTile(x, y))
             {
-                case '.': return (x + y) % 2 == 0 ? "tile_home_floor" : "tile_home_floor_alt";
+                // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Teppich vor dem Bett, eigene Seitenwände
+                case '.':
+                    if (IsRug(x, y)) return "tile_rug_home_" + G1C_TileMask.Of(x, y, IsRug);
+                    return (x + y) % 2 == 0 ? "tile_home_floor" : "tile_home_floor_alt";
                 case 'E': return "tile_home_exit";
-                default: return "tile_home_wall";
+                default:
+                    if (y == 0) return "tile_home_wall";
+                    return "tile_wallside_home_" + (x == 0 ? "l" : x == Width - 1 ? "r" : "b");
             }
+        }
+
+        // Entwickler: Patrick Lupierz – Teppichfläche im Zuhause (nur Bodengrafik, bleibt begehbar)
+        private bool IsRug(int x, int y)
+        {
+            return x >= 3 && x <= 6 && y >= 6 && y <= 8 && GetTile(x, y) == '.';
         }
 
         // Entwickler: Denis Mock

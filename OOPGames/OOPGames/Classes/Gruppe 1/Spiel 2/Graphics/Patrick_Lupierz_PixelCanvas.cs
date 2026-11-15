@@ -51,6 +51,25 @@ namespace OOPGames
             _pixels[y * Width + x] = Pack(c);
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026 – Pixel lesen und transparent machen (Radspeichen,
+        // vergrößertes Fahrrad auf dem Dach des Fahrradladens)
+        public Color Get(int x, int y)
+        {
+            if (!InBounds(x, y)) return Color.FromArgb(0, 0, 0, 0);
+            uint p = _pixels[y * Width + x];
+            return Color.FromArgb((byte)(p >> 24), (byte)(p >> 16), (byte)(p >> 8), (byte)p);
+        }
+
+        public void ClearEllipse(double cx, double cy, double rx, double ry)
+        {
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                {
+                    double dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry;
+                    if (dx * dx + dy * dy <= 1.0) _pixels[y * Width + x] = 0;
+                }
+        }
+
         public void FillRect(int x, int y, int w, int h, Color c)
         {
             for (int yy = y; yy < y + h; yy++)

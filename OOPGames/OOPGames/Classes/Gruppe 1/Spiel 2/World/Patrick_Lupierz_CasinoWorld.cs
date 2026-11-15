@@ -66,10 +66,10 @@ namespace OOPGames
             {
                 _objects.Add(new G1C_WorldObject("Spielautomat", "obj_slot_machine", x, 8, 1, 1, true, G1C_InteractionType.Slots, slotLines));
             }
-            _objects.Add(new G1C_WorldObject("Greifautomat", "obj_claw_machine", 7, 7, 2, 2, true,
-                G1C_InteractionType.Claw,
-                "Im Greifautomaten liegen Gewinne für deine Sammlung.",
-                "Wähle mit [A]/[D] ein Item, setze mit [W]/[S] und starte mit [E]."));
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Der Greifautomat steht jetzt in der Spielhalle
+            // (G1C_BuildingInteriorWorld.BuildArcade); an seiner Stelle ein Hinweisschild.
+            _objects.Add(new G1C_WorldObject("Hinweisschild", "obj_sign_post", 7, 7, 1, 1, true, G1C_InteractionType.Inspect,
+                "\"Der Greifautomat ist in die neue Spielhalle umgezogen!\"\nDie Spielhalle steht in der mittleren Straße."));
 
             // --- Bar (rechts unten) ---
             string[] barLines =

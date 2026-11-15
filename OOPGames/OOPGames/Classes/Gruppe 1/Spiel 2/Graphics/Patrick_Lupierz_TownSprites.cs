@@ -41,7 +41,7 @@ namespace OOPGames
                 case "tile_city_forest": return Forest();
                 case "tile_city_bridge": return Bridge();
                 case "tile_gas_floor": return Floor(Rgb(0xD8DCE0));
-                case "tile_gas_wall": return Wall(Rgb(0xF08030));
+                case "tile_gas_wall": return Wall(Rgb(0xD02830)); // Patrick Lupierz – 15.11.2026: rot
                 case "tile_clothing_floor": return Floor(Rgb(0xF0D8C0));
                 case "tile_clothing_wall": return Wall(Rgb(0xE870A0));
                 case "tile_bank_floor": return Floor(Rgb(0xD8D0B8));
@@ -54,7 +54,9 @@ namespace OOPGames
                 case "building_hospital": return Building(Rgb(0x58B8D8), Rgb(0xFFFFFF), Rgb(0xFFFFFF), "cross");
                 case "building_market": return Building(Rgb(0x3890E0), Rgb(0xF8F8F8), Rgb(0x3890E0), "bag");
                 case "building_casino": return Building(Rgb(0x8040B0), Rgb(0xF8E8B0), Rgb(0x402060), "chip");
-                case "building_gas_station": return Building(Rgb(0xF08030), Rgb(0xE8E8E8), Rgb(0x303848), "drop");
+                // Änderung durch: Patrick Lupierz – 15.11.2026 – Tankstelle rot, Omas Haus mit lila Dach
+                case "building_gas_station": return Building(Rgb(0xD02830), Rgb(0xF4F0EC), Rgb(0xD02830), "drop");
+                case "building_grandma": return Building(Rgb(0x8858A0), Rgb(0xF8ECE0), Rgb(0x8858A0), "");
                 case "building_clothing": return Building(Rgb(0xE870A0), Rgb(0xFFF4E0), Rgb(0x804060), "shirt");
                 case "building_library": return Building(Rgb(0x5868A8), Rgb(0xE8DCC0), Rgb(0x5868A8), "");
                 case "building_townhouse": return Building(Rgb(0xC86848), Rgb(0xF0E0B8), Rgb(0xC86848), "");
@@ -64,6 +66,8 @@ namespace OOPGames
                 case "building_cinema": return Building(Rgb(0x484868), Rgb(0xD8C8B0), Rgb(0xD03848), "chip");
                 case "building_warehouse": return Building(Rgb(0x788888), Rgb(0xC8C0A8), Rgb(0x788888), "");
                 case "building_post": return Building(Rgb(0xE8B838), Rgb(0xF8F0D8), Rgb(0x3060A8), "bag");
+                case "building_arcade": return ArcadeBuilding();       // Patrick Lupierz – 15.11.2026
+                case "building_bike_shop": return BikeShopBuilding();  // Patrick Lupierz – 15.11.2026
                 case "obj_city_tree": return Tree();
                 case "obj_street_lamp": return Lamp();
                 case "obj_trash": return TrashCan();
@@ -202,6 +206,13 @@ namespace OOPGames
         // Aufgabe: Haus mit schrägem Dach, Fenstern, Tür in Kachelspalte 3 (dort betritt der Spieler es) und Schild.
         private static BitmapSource Building(Color roof, Color wall, Color sign, string icon)
         {
+            return BuildingCanvas(roof, wall, sign, icon).ToBitmap();
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Zeichnung als Canvas, damit Spielhalle und
+        // Fahrradladen Details (Neon, Fahrrad auf dem Dach) ergänzen können.
+        private static G1C_PixelCanvas BuildingCanvas(Color roof, Color wall, Color sign, string icon)
+        {
             G1C_PixelCanvas c = new G1C_PixelCanvas(96, 80);
             for (int y = 2; y < 38; y++)
             {
@@ -236,6 +247,40 @@ namespace OOPGames
                 for (int x = 5; x < 92; x += 6) c.FillRect(x, 37, 2, 2, Gold);
             }
             c.AddOutline(Outline);
+            return c;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Spielhalle – dunkle Fassade, Neonbänder, leuchtender Schriftzug-Kasten mit Joystick.
+        private static BitmapSource ArcadeBuilding()
+        {
+            G1C_PixelCanvas c = BuildingCanvas(Rgb(0x302048), Rgb(0x403058), Rgb(0x181020), "");
+            Color pink = Rgb(0xF860D0), cyan = Rgb(0x50E0F8), gold = Rgb(0xF8D040);
+            for (int x = 5; x < 92; x += 4) c.FillRect(x, 37, 2, 2, x % 8 == 1 ? pink : cyan);   // Lichterkette
+            c.FillRect(34, 41, 28, 12, Outline); c.FillRect(35, 42, 26, 10, Rgb(0x181020));
+            c.FillRect(37, 44, 22, 1, pink); c.FillRect(37, 49, 22, 1, cyan);
+            c.FillRect(46, 45, 3, 3, Rgb(0x202020)); c.FillRect(47, 43, 1, 2, Rgb(0xE84040));      // Joystick
+            c.Set(52, 46, gold); c.Set(55, 46, pink);
+            c.FillRect(4, 66, 88, 1, pink);
+            return c.ToBitmap();
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Fahrradladen – grünes Dach mit großem Werbe-Fahrrad auf dem Dachfirst.
+        private static BitmapSource BikeShopBuilding()
+        {
+            G1C_PixelCanvas c = BuildingCanvas(Rgb(0x389858), Rgb(0xF8F0E0), Rgb(0x286838), "");
+            G1C_PixelCanvas bike = G1C_DecorSprites.BikeSide("bike_red");
+            c.FillRect(46, 20, 2, 8, Rgb(0x606870));                                               // Halterung
+            for (int y = 0; y < bike.Height; y++)
+                for (int x = 0; x < bike.Width; x++)
+                {
+                    Color p = bike.Get(x, y);
+                    if (p.A == 0) continue;
+                    c.FillRect(26 + x * 2, 2 + y * 2, 2, 2, p);                                     // doppelt groß
+                }
+            c.FillRect(36, 42, 24, 11, Outline); c.FillRect(37, 43, 22, 9, Rgb(0x286838));
+            c.FillRect(40, 46, 16, 3, Rgb(0xF8F8F8));
             return c.ToBitmap();
         }
 

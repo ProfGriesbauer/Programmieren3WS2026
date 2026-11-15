@@ -17,6 +17,7 @@ namespace OOPGames
         Title,      // Hauptmenü, Speicherplätze, Charaktererstellung
         ListMenu,   // Laden, Inventar, Kleiderschrank
         Phone,      // Klapphandy
-        Map         // Stadtkarte
+        Map,        // Stadtkarte
+        Arcade      // Änderung durch: Patrick Lupierz – 15.11.2026 – Spiel an einem Automaten der Spielhalle
     }
 }

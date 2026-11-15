@@ -84,7 +84,8 @@ namespace OOPGames
             run("NPC", "Mama und Oma haben eigene Fragen und Antworten", NpcFamilyIndividualTopics);
             run("NPC", "Jede Weltfigur hat ein Gesprächsprofil", NpcEveryWorldNpcHasProfile);
             run("NPC", "Gespräch mit Mama bietet Fragen an, Wiederholung ändert Antwort", NpcConversationTopics);
-            run("NPC", "Taschengeld nur nach Gespräch mit beiden, einmal pro Tag", NpcPocketMoney);
+            run("NPC", "Taschengeld: einmal pro Tag, danach Nein; am nächsten Tag wieder", NpcPocketMoney);
+            run("NPC", "Mama und Oma werden auch nach Beleidigungen nie Gegner", NpcFamilyNeverHostile);
 
             // ---- Gebäude und Geschäfte
             run("Geschäfte", "Öffnungszeiten der Läden, Tankstelle durchgehend", ShopHours);
@@ -108,6 +109,28 @@ namespace OOPGames
 
             // ---- Spielzustände
             run("Zustände", "Inventar und Handy öffnen und schließen", StatesMenus);
+
+            // ---- Erweiterung 15.11.2026: Pavillon, Bank, Fahrrad, Spielhalle
+            run("Gebäude", "Pavillon: von unten begehbar, Rückseite und Säulen massiv", BuildingsPavilion);
+            run("Bank", "Bank hat Bankierin, Berater und Wachmann mit eigenen Themen", BankStaff);
+            run("Fahrrad", "Startfahrrad, Auf-/Absteigen nur draußen, schneller, Absteigen im Gebäude", BikeRiding);
+            run("Fahrrad", "Fahrradladen: alle Farben ausgestellt, Kauf nur einmal, Ladenschluss", BikeShopBuy);
+            run("Spielhalle", "5 Automaten, max. 9 Spiele, Gast-Automat, Greifautomat umgezogen", ArcadeLayout);
+            run("Spielhalle", "Einsatz 5 Chips, Belohnung genau einmal (Pong-Sieg gegen KI)", ArcadeFeeAndReward);
+            run("Spielhalle", "Sternenjäger: Treffer zählt, Schiff verliert Leben", ArcadeStarHunter);
+            run("Spielhalle", "Schlange: Frucht verlängert, Wand beendet", ArcadeSnake);
+            run("Spielhalle", "Ziegelbrecher: Stein zerstört, 3 verlorene Bälle beenden", ArcadeBrickBreaker);
+            run("Spielhalle", "Pong-KI berechnet Auftreffpunkt mit Wandabpraller", ArcadePongAi);
+            run("Spielhalle", "Gast-Automat: fremdes Framework-Spiel finden, spielen, zeichnen, belohnen", ArcadeGuestGame);
+            run("Spielhalle", "Automat im Spiel starten, Ergebnis, Rekord gespeichert", ArcadeInGameFlow);
+
+            // ---- Erweiterung 15.11.2026 (3. Schritt): Omas Haus, Tankstelle, Innenräume, Vögel, Schlafen
+            run("NPC", "Omas Haus ist betretbar, Oma und Katzen wohnen darin", NpcGrandmaHouse);
+            run("Geschäfte", "Tankstelle: rot, zwei Zapfsäulen, Einkauf durchs Fenster (auch nachts)", ShopGasStationWindow);
+            run("Grafik", "Innenwände links/rechts/unten und Teppichteile haben eigene Grafiken", GraphicsWallsAndRugs);
+            run("Grafik", "Jeder Innenraum hat ein eigenes, untersuchbares Wandbild", GraphicsWallPictures);
+            run("Grafik", "Vögel sitzen oben auf dem Baum (hohe Grafik, unten transparent)", GraphicsBirds);
+            run("Zustände", "Schlafen: Schlafzustand, Steuerung gesperrt, danach wieder frei", StatesSleeping);
 
             WriteReport(results);
             return results;
@@ -160,7 +183,8 @@ namespace OOPGames
         private static IEnumerable<IG1C_WorldScene> AllScenes(G1C_GameManager game)
         {
             return new IG1C_WorldScene[] { game.Home, game.Exterior, game.World, game.Hospital, game.Market, game.GasStation,
-                                            game.ClothingStore, game.Bank, game.FurnitureStore };
+                                            game.ClothingStore, game.Bank, game.FurnitureStore, game.Arcade, game.BikeShop,
+                                            game.GrandmaHouse };
         }
 
         // ------------------------------------------------------------------ Bewegung
@@ -300,8 +324,10 @@ namespace OOPGames
                 Check(game.Phone.Contacts.Contains(c), name + " fehlt im Handy");
             }
             Check(game.Home.Objects.OfType<G1C_Npc>().Any(n => n.Name == G1C_FamilyNpcRoster.MotherName), "Mama steht nicht im Zuhause");
-            Check(game.Exterior.Objects.OfType<G1C_Npc>().Any(n => n.Name == G1C_FamilyNpcRoster.GrandmaName), "Oma steht nicht in der Stadt");
-            Equal(3, game.Exterior.Objects.Count(o => o.Name == "Omas Katze"), "Anzahl Katzen der Oma");
+            Check(game.GrandmaHouse.Objects.OfType<G1C_Npc>().Any(n => n.Name == G1C_FamilyNpcRoster.GrandmaName), "Oma ist nicht in ihrem Haus");
+            Check(!game.Exterior.Objects.OfType<G1C_Npc>().Any(n => n.Name == G1C_FamilyNpcRoster.GrandmaName), "Oma läuft draußen herum");
+            Equal(3, game.GrandmaHouse.Objects.Count(o => o is G1C_Animal && o.SpriteId.StartsWith("animal_cat")), "Anzahl Katzen der Oma");
+            Check(game.Exterior.Objects.Any(o => o.SpriteId == "building_grandma"), "Omas Haus fehlt in der Stadt");
         }
 
         private static void NpcFamilyIndividualTopics()
@@ -343,25 +369,53 @@ namespace OOPGames
             Check(first != c.Line && c.Line.Length > 0, "Wiederholte Frage liefert keine neue Antwort");
         }
 
-        private static void NpcPocketMoney()
+        private static int AskPocketMoney(G1C_GameManager game, string name)
         {
-            G1C_FamilyPocketMoney pocket = new G1C_FamilyPocketMoney();
-            G1C_MoneyManager money = new G1C_MoneyManager(100);
-            Equal((bool?)false, pocket.TryGive(1, money, new Random(1)), "ohne Gespräche");
-            pocket.MarkTalk(true, 1);
-            pocket.MarkTalk(false, 1);
-            bool? first = pocket.TryGive(1, money, new FixedRandom(0.1));
-            Equal((bool?)true, first, "nach Gespräch mit beiden (Glückswurf)");
-            Equal(125, money.Balance, "Kontostand nach Taschengeld");
-            Equal((bool?)null, pocket.TryGive(1, money, new FixedRandom(0.1)), "zweite Bitte am selben Tag");
-            Equal(125, money.Balance, "kein doppeltes Taschengeld");
+            G1C_Conversation c = game.Npcs.Conversation;
+            c.Open(game.Npcs.Find(name), null);
+            int index = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Hast du Taschengeld"));
+            Check(index >= 0, name + ": Option 'Hast du Taschengeld für mich?' fehlt");
+            int before = game.Money.Balance;
+            c.Choose(index);
+            c.Close();
+            return game.Money.Balance - before;
         }
 
-        private sealed class FixedRandom : Random
+        private static void NpcPocketMoney()
         {
-            private readonly double _value;
-            public FixedRandom(double value) { _value = value; }
-            public override double NextDouble() { return _value; }
+            G1C_GameManager game = RunningGame();
+            SetHour(game, 1, 12);
+            Equal(25, AskPocketMoney(game, G1C_FamilyNpcRoster.MotherName), "Mama, erste Bitte");
+            Equal(0, AskPocketMoney(game, G1C_FamilyNpcRoster.MotherName), "Mama, zweite Bitte am selben Tag");
+            Equal(20, AskPocketMoney(game, G1C_FamilyNpcRoster.GrandmaName), "Oma, erste Bitte");
+            Equal(0, AskPocketMoney(game, G1C_FamilyNpcRoster.GrandmaName), "Oma, zweite Bitte am selben Tag");
+
+            G1C_GameManager loaded = new G1C_GameManager(); // Speichern/Laden darf nicht erneut auszahlen
+            loaded.ApplySave(game.CreateSave());
+            Equal(0, AskPocketMoney(loaded, G1C_FamilyNpcRoster.MotherName), "Mama nach Laden am selben Tag");
+            SetHour(loaded, 2, 9);
+            Equal(25, AskPocketMoney(loaded, G1C_FamilyNpcRoster.MotherName), "Mama am nächsten Tag");
+        }
+
+        private static void NpcFamilyNeverHostile()
+        {
+            G1C_GameManager game = RunningGame();
+            foreach (string name in new[] { G1C_FamilyNpcRoster.MotherName, G1C_FamilyNpcRoster.GrandmaName })
+            {
+                G1C_NpcCharacter member = game.Npcs.Find(name);
+                G1C_Conversation c = game.Npcs.Conversation;
+                for (int i = 0; i < 8; i++)
+                {
+                    c.Open(member, null);
+                    int talk = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Lass uns plaudern"));
+                    c.Choose(talk);
+                    int insult = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Du kannst"));
+                    if (insult >= 0) c.Choose(insult);
+                    c.Close();
+                }
+                G1C_RelationshipStatus s = member.Relationship.Status;
+                Check(!G1C_NpcRelationship.IsHostile(s) && !G1C_NpcRelationship.IsRival(s), name + " ist jetzt " + s);
+            }
         }
 
         // ------------------------------------------------------------------ Geschäfte
@@ -607,6 +661,382 @@ namespace OOPGames
             Equal(G1C_GameState.Menu, game.State, "Menü öffnen");
             game.HandleInput(G1C_InputEvent.FromKey(Key.B));
             Equal(G1C_GameState.MainGame, game.State, "Menü schließen");
+        }
+
+        // ------------------------------------------------------------------ Erweiterung 15.11.2026
+
+        private static G1C_GameManager GameAt(G1C_WorldLocation location, int x, int y, G1C_Direction facing, int hour = 12)
+        {
+            G1C_GameManager game = RunningGame();
+            SetHour(game, 1, hour);
+            G1C_SaveData save = game.CreateSave();
+            save.Location = (int)location; save.X = x; save.Y = y; save.Facing = (int)facing;
+            game.ApplySave(save);
+            Check(game.Player.TileX == x && game.Player.TileY == y, "Testposition " + x + "," + y + " in " + location + " nicht begehbar");
+            return game;
+        }
+
+        private static void BuildingsPavilion()
+        {
+            G1C_ExteriorWorld city = new G1C_ExteriorWorld();
+            G1C_CollisionManager collision = new G1C_CollisionManager(city);
+            List<G1C_WorldObject> pavilions = city.Objects.Where(o => o.SpriteId == "building_pavilion").ToList();
+            Check(pavilions.Count == 2, "Anzahl Pavillons: " + pavilions.Count);
+            foreach (G1C_WorldObject p in pavilions)
+            {
+                Check(!p.Solid, "Pavillon-Objekt ist massiv");
+                for (int dy = 1; dy <= 3; dy++)
+                {
+                    Check(!collision.IsBlocked(p.X + 1, p.Y + dy) && !collision.IsBlocked(p.X + 2, p.Y + dy), "Unter dem Pavillon blockiert (Zeile " + dy + ")");
+                    Check(collision.IsBlocked(p.X, p.Y + dy) && collision.IsBlocked(p.X + 3, p.Y + dy), "Säulenseite begehbar (Zeile " + dy + ")");
+                }
+                for (int dx = 0; dx < 4; dx++) Check(collision.IsBlocked(p.X + dx, p.Y), "Rückseite begehbar");
+            }
+        }
+
+        private static void BankStaff()
+        {
+            G1C_GameManager game = new G1C_GameManager();
+            string[] staff = { "Bankierin Frida", "Bankberater Karl", "Wachmann Bodo" };
+            foreach (string name in staff)
+            {
+                Check(game.Bank.Objects.OfType<G1C_Npc>().Any(n => n.Name == name), name + " steht nicht in der Bank");
+                Check(game.Npcs.Find(name) != null, name + " hat kein Gesprächsprofil");
+            }
+            Check(game.Npcs.Find("Bankberater Karl").Personality.Topics.Count >= 3, "Karl ohne eigene Themen");
+            Check(game.Bank.Objects.Count(o => o.SpriteId == "obj_chair") >= 3 && game.Bank.Objects.Any(o => o.SpriteId == "obj_home_table"),
+                  "Bank ohne Tisch/Stühle");
+        }
+
+        private static void BikeRiding()
+        {
+            G1C_ExteriorMap map = new G1C_GameManager().Exterior.Map;
+            G1C_GameManager probe = new G1C_GameManager();
+            G1C_ParkedBike stand = probe.Exterior.ParkedBike;
+            Check(stand != null, "Kein Fahrrad vor dem Haus");
+            Check(probe.Exterior.Objects.Count(o => o.Occupies(stand.X, stand.Y)) == 1, "Fahrrad überlappt ein anderes Objekt");
+
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, stand.X, stand.Y + 1, G1C_Direction.Up);
+            Check(game.Inventory.Has(G1C_BikeSystem.StarterBike), "Startfahrrad fehlt im Inventar");
+            Equal("obj_bike_red", stand.SpriteId == null ? "" : game.Exterior.ParkedBike.SpriteId, "Grafik am Ständer");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Check(game.Bikes.Riding, "Aufsteigen am Ständer fehlgeschlagen");
+            Equal("obj_bike_stand", game.Exterior.ParkedBike.SpriteId, "Ständer leer beim Fahren");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E)); // Dialog schließen
+            while (game.State == G1C_GameState.Dialogue) game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            game.Update();
+            Equal(G1C_BikeSystem.RidingStepTicks, game.Player.StepTicks, "Schritt-Ticks mit Fahrrad");
+
+            G1C_BikeSystem bikes = new G1C_BikeSystem();
+            G1C_Inventory inventory = new G1C_Inventory();
+            inventory.Add("bike_red");
+            bikes.TryMount(inventory, "bike_red", G1C_WorldLocation.Market);
+            Check(!bikes.Riding, "Fahren im Gebäude erlaubt");
+            bikes.TryMount(inventory, "bike_blue", G1C_WorldLocation.Exterior);
+            Check(!bikes.Riding, "Fremdes Fahrrad fahrbar");
+
+            // ins Casino fahren -> automatisch absteigen
+            G1C_GameManager door = GameAt(G1C_WorldLocation.Exterior, map.DoorX(G1C_WorldLocation.Casino), map.DoorY(G1C_WorldLocation.Casino) + 1, G1C_Direction.Up);
+            door.Bikes.TryMount(door.Inventory, G1C_BikeSystem.StarterBike, G1C_WorldLocation.Exterior);
+            door.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_WorldLocation.Casino, door.CurrentLocation, "Ort nach Betreten");
+            Check(!door.Bikes.Riding, "Im Casino noch auf dem Fahrrad");
+        }
+
+        private static void BikeShopBuy()
+        {
+            G1C_GameManager game = new G1C_GameManager();
+            foreach (string id in new[] { "bike_red", "bike_blue", "bike_green", "bike_yellow", "bike_black" })
+                Check(game.BikeShop.Objects.Any(o => o.SpriteId == "obj_" + id), id + " nicht ausgestellt");
+            Check(game.Exterior.Objects.Any(o => o.SpriteId == "building_bike_shop"), "Fahrradladen fehlt in der Stadt");
+            G1C_MoneyManager money = new G1C_MoneyManager(1000);
+            G1C_Inventory inventory = new G1C_Inventory();
+            G1C_Item blue = G1C_ItemCatalog.Get("bike_blue");
+            G1C_Shop.Buy(blue, money, inventory);
+            Equal(1000 - G1C_Shop.PriceWithMarkup(blue.Price), money.Balance, "Preis blaues Fahrrad");
+            G1C_Shop.Buy(blue, money, inventory);
+            Equal(1, inventory.Count("bike_blue"), "Fahrrad doppelt gekauft");
+            Check(!G1C_Shop.For(G1C_WorldLocation.BikeShop).IsOpen(20), "Fahrradladen um 20 Uhr offen");
+            Check(game.Npcs.Find("Radhändler Rudi") != null, "Radhändler ohne Profil");
+        }
+
+        private static void ArcadeLayout()
+        {
+            G1C_GameManager game = new G1C_GameManager();
+            Equal(5, G1C_ArcadeCatalog.Cabinets.Count, "Anzahl Automaten");
+            Check(G1C_ArcadeCatalog.Cabinets.All(c => c.Games.Count <= G1C_ArcadeCatalog.MaxGamesPerCabinet), "Mehr als 9 Spiele");
+            Check(G1C_ArcadeCatalog.Cabinets.Count(c => c.IsGuestCabinet) == 1, "Kein Gast-Automat");
+            foreach (G1C_ArcadeCabinet c in G1C_ArcadeCatalog.Cabinets)
+                Check(game.Arcade.Objects.Any(o => o.Name == c.Name && o.Interaction == G1C_InteractionType.Arcade), c.Name + " fehlt in der Spielhalle");
+            Check(game.Arcade.Objects.Any(o => o.Interaction == G1C_InteractionType.Claw), "Greifautomat fehlt in der Spielhalle");
+            Check(!game.World.Objects.Any(o => o.Interaction == G1C_InteractionType.Claw), "Greifautomat steht noch im Casino");
+            Check(game.Exterior.Objects.Any(o => o.SpriteId == "building_arcade"), "Spielhalle fehlt in der Stadt");
+            Equal("tile_arcade_floor", game.Arcade.Map.GetTileSpriteId(5, 5), "Spielhallenboden");
+        }
+
+        private static void ArcadeFeeAndReward()
+        {
+            G1C_MoneyManager money = new G1C_MoneyManager(100);
+            G1C_PongDuel pong = new G1C_PongDuel(money, new Random(3));
+            pong.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(95, money.Balance, "Einsatz abgebucht");
+            for (int i = 0; i < G1C_PongDuel.WinningScore; i++) { pong.DebugShoot(true); pong.MoveBall(); }
+            Check(pong.IsOver, "Spiel nach 5 Punkten nicht beendet");
+            int expected = G1C_ArcadeGame.RewardFor(G1C_PongDuel.WinningScore * 100 + 200, 25);
+            Equal(95 + expected, money.Balance, "Belohnung");
+            for (int i = 0; i < 10; i++) pong.Update();
+            pong.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+            Equal(95 + expected, money.Balance, "doppelte Belohnung");
+            Check(pong.WantsExit, "Verlassen mit Q");
+            G1C_MoneyManager poor = new G1C_MoneyManager(3);
+            G1C_SnakeGame snake = new G1C_SnakeGame(poor, new Random(1));
+            Check(!snake.StartRound() && poor.Balance == 3, "Start ohne genug Chips");
+            Equal(G1C_ArcadeGame.MaxReward, G1C_ArcadeGame.RewardFor(1000000, 10), "Belohnungsdeckel");
+        }
+
+        private static void ArcadeStarHunter()
+        {
+            G1C_StarHunter game = new G1C_StarHunter(new G1C_MoneyManager(100), new Random(5));
+            Check(game.StartRound(), "Start");
+            Equal(3, game.Lives, "Leben zu Beginn");
+            game.DebugPlaceTargetAboveShip();
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            for (int i = 0; i < 40 && game.Score == 0; i++) game.Update();
+            Check(game.Score >= 10, "Treffer ohne Punkte (Score " + game.Score + ")");
+        }
+
+        private static void ArcadeSnake()
+        {
+            G1C_SnakeGame snake = new G1C_SnakeGame(new G1C_MoneyManager(100), new Random(2));
+            snake.StartRound();
+            int[] head = snake.Head;
+            snake.DebugPlaceFood(head[0] + 1, head[1]);
+            snake.Advance();
+            Equal(4, snake.Length, "Länge nach Frucht");
+            Equal(10, snake.Score, "Punkte nach Frucht");
+            snake.HandleInput(G1C_InputEvent.FromKey(Key.A)); // Umkehr ist verboten
+            for (int i = 0; i < G1C_SnakeGame.GridW + 2 && snake.IsPlaying; i++) snake.Advance();
+            Check(snake.IsOver, "Wand beendet das Spiel nicht");
+        }
+
+        private static void ArcadeBrickBreaker()
+        {
+            G1C_BrickBreaker game = new G1C_BrickBreaker(new G1C_MoneyManager(100), new Random(4));
+            game.StartRound();
+            int before = game.BricksLeft;
+            game.DebugAimAtBrick(G1C_BrickBreaker.BrickRows - 1, 3);
+            game.MoveBall();
+            Equal(before - 1, game.BricksLeft, "Steine nach Treffer");
+            Check(game.Score > 0, "Punkte nach Treffer");
+            for (int i = 0; i < 3; i++) { game.DebugDropBall(); game.MoveBall(); }
+            Check(game.IsOver, "Spiel nach 3 verlorenen Bällen nicht beendet");
+        }
+
+        private static void ArcadePongAi()
+        {
+            Equal(20.0, G1C_PongAI.PredictY(0, 10, 1, -1, 30, 100), "Auftreffpunkt mit Abpraller oben");
+            Equal(50.0, G1C_PongAI.PredictY(0, 50, 2, 0, 100, 100), "gerader Ball");
+            G1C_PongAI ai = new G1C_PongAI(new Random(1), 0);
+            double moved = ai.Move(50, 100, 20, 3, 0, 200, 100);
+            Check(Math.Abs(moved - 50) <= G1C_PongAI.MaxSpeed + 1e-9 && moved < 50, "KI bewegt sich nicht begrenzt zum Ziel");
+        }
+
+        // ---- Hilfsklassen: ein winziges Framework-Spiel "einer anderen Gruppe" für den Gast-Automaten
+        private sealed class FakeField : IGameField
+        {
+            public int Moves;
+            public bool CanBePaintedBy(IPaintGame painter) { return painter is FakePainter; }
+        }
+
+        private sealed class FakeRules : IGameRules
+        {
+            private FakeField _field = new FakeField();
+            public string Name { get { return "Testspiel einer Gruppe"; } }
+            public IGameField CurrentField { get { return _field; } }
+            public bool MovesPossible { get { return _field.Moves < 4; } }
+            public void DoMove(IPlayMove move) { _field.Moves++; }
+            public void ClearField() { _field = new FakeField(); }
+            public int CheckIfPLayerWon() { return _field.Moves >= 2 ? 1 : -1; }
+        }
+
+        private sealed class FakePainter : IPaintGame
+        {
+            public string Name { get { return "Testmaler"; } }
+            public void PaintGameField(System.Windows.Controls.Canvas canvas, IGameField currentField)
+            {
+                canvas.Children.Clear();
+                canvas.Children.Add(new System.Windows.Shapes.Rectangle { Width = 40, Height = 40, Fill = System.Windows.Media.Brushes.Red });
+            }
+        }
+
+        private sealed class FakeMove : IPlayMove
+        {
+            public FakeMove(int number) { PlayerNumber = number; }
+            public int PlayerNumber { get; }
+        }
+
+        private class FakePlayer : IGamePlayer
+        {
+            public string Name { get { return "Testspieler"; } }
+            public int PlayerNumber { get; private set; }
+            public void SetPlayerNumber(int playerNumber) { PlayerNumber = playerNumber; }
+            public bool CanBeRuledBy(IGameRules rules) { return rules is FakeRules; }
+            public virtual IGamePlayer Clone() { return new FakePlayer(); }
+        }
+
+        private sealed class FakeHuman : FakePlayer, IHumanGamePlayer
+        {
+            public IPlayMove GetMove(IMoveSelection selection, IGameField field) { return selection is IKeySelection ? new FakeMove(PlayerNumber) : null; }
+            public override IGamePlayer Clone() { return new FakeHuman(); }
+        }
+
+        private sealed class FakeComputer : FakePlayer, IComputerGamePlayer
+        {
+            public IPlayMove GetMove(IGameField field) { return new FakeMove(PlayerNumber); }
+            public override IGamePlayer Clone() { return new FakeComputer(); }
+        }
+
+        private static void ArcadeGuestGame()
+        {
+            List<G1C_GuestGameEntry> found = G1C_GuestGameCatalog.Discover(
+                new IGameRules[] { new FakeRules(), new G1C_CasinoRules() },
+                new IPaintGame[] { new G1C_CasinoPainter(), new FakePainter() },
+                new IGamePlayer[] { new FakeHuman(), new FakeComputer(), new G1C_CasinoHumanPlayer() });
+            Equal(1, found.Count, "gefundene Gastspiele (eigenes Casino muss fehlen)");
+            Check(found[0].HasComputerOpponent, "Computergegner nicht erkannt");
+
+            G1C_MoneyManager money = new G1C_MoneyManager(100);
+            G1C_GuestGameHost host = new G1C_GuestGameHost(money, new Random(1), found[0]);
+            host.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Check(host.Running, "Gastspiel startet nicht: " + host.LastError);
+            Equal(95, money.Balance, "Einsatz Gast-Automat");
+            host.HandleInput(G1C_InputEvent.FromKey(Key.Space)); // Spielerzug, danach Computerzug -> Spieler 1 gewinnt
+            Check(!host.Running, "Gastspiel nicht beendet");
+            Equal((int?)1, host.Winner, "Gewinner");
+            Equal(95 + G1C_GuestGameHost.WinReward, money.Balance, "Belohnung Gast-Automat");
+            host.Update();
+            Equal(95 + G1C_GuestGameHost.WinReward, money.Balance, "doppelte Belohnung Gast-Automat");
+            Check(host.Frame != null && host.Frame.PixelWidth > 0, "Gastspiel wurde nicht gezeichnet");
+        }
+
+        private static void ArcadeInGameFlow()
+        {
+            G1C_ArcadeCabinet duel = G1C_ArcadeCatalog.Cabinets.First(c => c.Name == "Automat Duell");
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Arcade, duel.X, duel.Y + 1, G1C_Direction.Up);
+            Check(game.CurrentHint.Contains("spielen"), "Hinweis am Automaten: '" + game.CurrentHint + "'");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_GameState.ListMenu, game.State, "Spielauswahl");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_GameState.Arcade, game.State, "Automatenspiel aktiv");
+            G1C_PongDuel pong = game.ActiveGame as G1C_PongDuel;
+            Check(pong != null, "falsches Spiel gestartet");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            for (int i = 0; i < G1C_PongDuel.WinningScore; i++) { pong.DebugShoot(true); pong.MoveBall(); }
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+            Equal(G1C_GameState.Result, game.State, "Ergebnisanzeige nach dem Automaten");
+            int record;
+            Check(game.ArcadeHighscores.TryGetValue("Pong-Duell", out record) && record == 700, "Rekord nicht gespeichert");
+            G1C_GameManager loaded = new G1C_GameManager();
+            loaded.ApplySave(game.CreateSave());
+            Check(loaded.ArcadeHighscores.ContainsKey("Pong-Duell"), "Rekord nach Laden verloren");
+        }
+
+        private static void NpcGrandmaHouse()
+        {
+            G1C_GameManager probe = new G1C_GameManager();
+            G1C_ExteriorMap map = probe.Exterior.Map;
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, map.DoorX(G1C_WorldLocation.GrandmaHouse),
+                                          map.DoorY(G1C_WorldLocation.GrandmaHouse) + 1, G1C_Direction.Up);
+            Check(game.CurrentHint.Contains("Omas Haus"), "Hinweis vor Omas Tür: '" + game.CurrentHint + "'");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_WorldLocation.GrandmaHouse, game.CurrentLocation, "Ort nach Betreten");
+            Check(game.CurrentWorld.Objects.OfType<G1C_Npc>().Any(n => n.Name == G1C_FamilyNpcRoster.GrandmaName), "Oma nicht zu Hause");
+            G1C_GameManager talk = GameAt(G1C_WorldLocation.GrandmaHouse, 4, 3, G1C_Direction.Down);
+            talk.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_GameState.Conversation, talk.State, "Gespräch mit Oma in ihrem Haus");
+        }
+
+        private static void ShopGasStationWindow()
+        {
+            G1C_GameManager probe = new G1C_GameManager();
+            Equal(2, probe.Exterior.Objects.Count(o => o.SpriteId == "obj_fuel_pump"), "Anzahl Zapfsäulen");
+            G1C_ShopWindow window = probe.Exterior.Objects.OfType<G1C_ShopWindow>().FirstOrDefault();
+            Check(window != null && window.ShopLocation == G1C_WorldLocation.GasStation, "Verkaufsfenster fehlt");
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, window.X, window.Y + 1, G1C_Direction.Up, 3);
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_GameState.Conversation, game.State, "Gespräch am Fenster");
+            Equal("Tankwart Olli", game.Npcs.Conversation.Npc.Name, "Gesprächspartner am Fenster");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.D1));
+            Equal(G1C_GameState.ListMenu, game.State, "Warenliste am Fenster");
+            Check(game.ListMenu.Rows.Any(r => r.Text.Contains("Energydrink")), "Sortiment der Tankstelle fehlt");
+            int before = game.Money.Balance;
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Check(game.Money.Balance < before, "Kauf um 3 Uhr nachts am Fenster fehlgeschlagen");
+            Check(probe.Exterior.Objects.Any(o => o.SpriteId == "building_gas_station"), "Tankstellengebäude fehlt");
+        }
+
+        private static void GraphicsWallsAndRugs()
+        {
+            G1C_GameManager game = new G1C_GameManager();
+            IG1C_WorldMap bank = game.Bank.Map;
+            Check(bank.GetTileSpriteId(0, 5).EndsWith("_l") && bank.GetTileSpriteId(bank.Width - 1, 5).EndsWith("_r"), "Seitenwände Bank");
+            Check(bank.GetTileSpriteId(3, bank.Height - 1).EndsWith("_b"), "Unterwand Bank");
+            Check(bank.GetTileSpriteId(5, 0).StartsWith("tile_bank_wall"), "Rückwand Bank");
+            Equal("tile_wallside_home_l", game.Home.Map.GetTileSpriteId(0, 4), "Seitenwand Zuhause");
+            string corner = bank.GetTileSpriteId(6, 7), middle = bank.GetTileSpriteId(7, 7);
+            Check(corner.StartsWith("tile_rug_bank_") && corner != middle, "Teppich besteht nicht aus Rand-/Mittelteilen");
+            Check(game.Home.Map.GetTileSpriteId(4, 7).StartsWith("tile_rug_home_"), "Teppich im Zuhause fehlt");
+            foreach (string id in new[] { corner, middle, "tile_wallside_bank_l", "tile_wallside_home_r", "tile_rug_home_6" })
+                Check(HasBuiltInSprite(id), "Grafik fehlt: " + id);
+        }
+
+        private static void GraphicsWallPictures()
+        {
+            G1C_GameManager game = new G1C_GameManager();
+            List<string> motifs = new List<string>();
+            foreach (G1C_BuildingInteriorWorld room in new[] { game.Hospital, game.Market, game.GasStation, game.ClothingStore,
+                                                                game.Bank, game.FurnitureStore, game.BikeShop, game.GrandmaHouse })
+            {
+                G1C_WorldObject pic = room.Objects.FirstOrDefault(o => o.SpriteId != null && o.SpriteId.StartsWith("obj_picture_"));
+                Check(pic != null && pic.Interaction == G1C_InteractionType.Inspect, room.Location + " ohne Wandbild");
+                Check(room.Map.IsWalkable(pic.X, pic.Y + 1) && room.ObjectAt(pic.X, pic.Y + 1) == null, room.Location + ": Bild nicht erreichbar");
+                motifs.Add(pic.SpriteId);
+            }
+            Check(motifs.Distinct().Count() == motifs.Count, "Wandbilder wiederholen sich: " + string.Join(", ", motifs));
+        }
+
+        private static void GraphicsBirds()
+        {
+            G1C_SpriteLibrary sprites = new G1C_SpriteLibrary(Path.Combine(Path.GetTempPath(), "g1c_no_assets"));
+            Check(sprites.GetAspect("animal_bird_0") >= 1.5, "Vogel nicht als hohe Grafik (sitzt am Boden)");
+            double over = (sprites.GetAspect("animal_bird_0") - sprites.GetAspect("obj_city_tree")) * 16; // Pixel über der Krone
+            Check(over >= 6 && over <= 12, "Vogel sitzt nicht auf der Kronenspitze (Überstand " + over + " px)");
+            System.Windows.Media.Imaging.BitmapSource bird = sprites.Get("animal_bird_1");
+            System.Windows.Media.Imaging.FormatConvertedBitmap bgra = new System.Windows.Media.Imaging.FormatConvertedBitmap(
+                bird, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+            byte[] px = new byte[4];
+            bgra.CopyPixels(new System.Windows.Int32Rect(bird.PixelWidth / 2, bird.PixelHeight - 2, 1, 1), px, 4, 0);
+            Equal((byte)0, px[3], "Unterer Bereich des Vogels ist nicht transparent");
+        }
+
+        private static void StatesSleeping()
+        {
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Home, 2, 3, G1C_Direction.Up, 23);
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));            // Bett (2,2)
+            Equal(G1C_GameState.ListMenu, game.State, "Schlafmenü");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));            // 06:00
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Escape));
+            Check(game.IsSleeping, "Kein Schlafzustand");
+            Equal(6, game.Clock.Hour, "Aufwachzeit");
+            int x = game.Player.TileX;
+            game.HandleInput(G1C_InputEvent.FromKey(Key.D));
+            for (int i = 0; i < 10; i++) game.Update();
+            Equal(x, game.Player.TileX, "Bewegung während des Schlafens");
+            for (int i = 0; i < G1C_GameManager.SleepAnimationTicks; i++) game.Update();
+            Check(!game.IsSleeping, "Schlafzustand endet nicht");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.D));
+            for (int i = 0; i < 10; i++) game.Update();
+            Equal(x + 1, game.Player.TileX, "Nach dem Aufwachen keine Bewegung");
         }
 
         // ------------------------------------------------------------------ Bericht

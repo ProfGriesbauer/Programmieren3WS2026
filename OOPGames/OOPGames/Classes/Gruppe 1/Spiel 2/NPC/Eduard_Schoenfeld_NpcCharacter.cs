@@ -40,6 +40,14 @@ namespace OOPGames
         // (siehe G1C_DialogueTopic); leer = bisheriges Gesprächsverhalten.
         public List<G1C_DialogueTopic> Topics { get; } = new List<G1C_DialogueTopic>();
 
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Familie (Mama, Oma): wird nie Gegner oder Rivale,
+        // lehnt Geldbitten nur freundlich ab (MoneyRefusal) – ohne Vertrauensverlust.
+        public bool IsFamily { get; set; }
+        public string[] MoneyRefusal { get; set; } = new string[0];
+        // Taschengeld der Familie: einmal pro Spieltag, danach nur noch MoneyRefusal
+        public int PocketMoney { get; set; }
+        public string PocketMoneyLine { get; set; } = "";
+
         /// <summary>Lena: Gesprächsaufgabe „zu einer Pause überreden“.</summary>
         public bool HasPauseTask { get; set; }
 

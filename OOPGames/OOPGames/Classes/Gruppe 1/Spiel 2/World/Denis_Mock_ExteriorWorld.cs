@@ -14,6 +14,7 @@ namespace OOPGames
         public IReadOnlyList<G1C_WorldObject> Objects { get { return _objects; } }
         public IReadOnlyList<G1C_Npc> TownNpcs { get { return _townNpcs; } }
         public IReadOnlyList<G1C_Animal> Animals { get { return _animals; } }
+        public G1C_ParkedBike ParkedBike { get; private set; } // Patrick Lupierz – 15.11.2026
         IG1C_WorldMap IG1C_WorldScene.Grid { get { return Map; } }
 
         public int PlayerStartX { get { return Map.HomeDoorX; } }
@@ -37,15 +38,18 @@ namespace OOPGames
 
             AddBuilding("Bibliothek", "building_library", columns[0], 14);
             AddBuilding("Zuhause", "building_home", columns[1], 14, G1C_WorldLocation.Home);
-            AddBuilding("Wohnhaus", "building_townhouse", columns[2], 14);
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Wohnhaus neben dem Zuhause ist Omas Haus (betretbar)
+            AddBuilding("Omas Haus", "building_grandma", columns[2], 14, G1C_WorldLocation.GrandmaHouse);
             AddBuilding("Café", "building_cafe", columns[3], 14);
             AddBuilding("Krankenhaus", "building_hospital", columns[4], 14, G1C_WorldLocation.Hospital);
             AddBuilding("Blumenladen", "building_flower_shop", columns[5], 14);
 
             AddBuilding("Feuerwache", "building_fire_station", columns[0], 32);
-            AddBuilding("Bürgerhaus", "building_townhouse", columns[1], 32);
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Bürgerhaus wird Fahrradladen (Fahrrad auf dem Dach),
+            // Kino wird Spielhalle (Arcade). Die Positionen bleiben gleich, damit Straßen und Wege unverändert bleiben.
+            AddBuilding("Fahrradladen", "building_bike_shop", columns[1], 32, G1C_WorldLocation.BikeShop);
             AddBuilding("Bekleidungsgeschäft", "building_clothing", columns[2], 32, G1C_WorldLocation.ClothingStore);
-            AddBuilding("Kino", "building_cinema", columns[3], 32);
+            AddBuilding("Spielhalle", "building_arcade", columns[3], 32, G1C_WorldLocation.Arcade);
             AddBuilding("Tankstelle", "building_gas_station", columns[4], 32, G1C_WorldLocation.GasStation);
             AddBuilding("Wohnhaus", "building_townhouse", columns[5], 32);
 
@@ -66,12 +70,14 @@ namespace OOPGames
 
             foreach (G1C_WorldLocation building in new[] { G1C_WorldLocation.Home, G1C_WorldLocation.Hospital,
                          G1C_WorldLocation.ClothingStore, G1C_WorldLocation.GasStation, G1C_WorldLocation.Market,
-                         G1C_WorldLocation.Casino, G1C_WorldLocation.Bank, G1C_WorldLocation.FurnitureStore })
+                         G1C_WorldLocation.Casino, G1C_WorldLocation.Bank, G1C_WorldLocation.FurnitureStore,
+                         G1C_WorldLocation.Arcade, G1C_WorldLocation.BikeShop, G1C_WorldLocation.GrandmaHouse })
             {
                 int doorX = Map.DoorX(building);
                 int doorY = Map.DoorY(building);
                 AddProp("Laterne", "obj_street_lamp", doorX - 2, doorY + 1, G1C_InteractionType.None);
-                if (building != G1C_WorldLocation.Home && building != G1C_WorldLocation.Hospital)
+                if (building != G1C_WorldLocation.Home && building != G1C_WorldLocation.Hospital &&
+                    building != G1C_WorldLocation.GrandmaHouse)
                     AddProp("Mülleimer", "obj_trash", doorX + 2, doorY + 1, G1C_InteractionType.Trash);
             }
             AddProp("Laterne", "obj_street_lamp", 29, 20, G1C_InteractionType.None);
@@ -104,7 +110,10 @@ namespace OOPGames
             AddAnimal("Katze", "animal_cat", 26, 40, 2, 9);
             AddAnimal("Katze", "animal_cat", 88, 40, 2, 8);
 
-            AddGrandmaGarden(30, 14); // Änderung durch: Patrick Lupierz – 15.11.2026
+            AddGasStationForecourt(); // Änderung durch: Patrick Lupierz – 15.11.2026 – Oma wohnt jetzt in ihrem Haus
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrrad vor dem Spielerhaus (links neben dem Eingang)
+            ParkedBike = new G1C_ParkedBike(Map.DoorX(G1C_WorldLocation.Home) - 1, Map.DoorY(G1C_WorldLocation.Home) + 1);
+            _objects.Add(ParkedBike);
 
             // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – lesbare Schilder in der Stadt
             AddSign("Ortsschild", Map.DoorX(G1C_WorldLocation.Home) + 2, Map.DoorY(G1C_WorldLocation.Home) + 1,
@@ -130,26 +139,30 @@ namespace OOPGames
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026
-        // Aufgabe: Oma wohnt im Wohnhaus neben dem Spielerhaus und steht davor im Vorgarten, umgeben von
-        //          ihren drei Katzen. Sie läuft nicht umher (kein Eintrag in _townNpcs). Das Wohnhaus hat
-        //          noch keinen Innenraum (offen im Backlog).
-        private void AddGrandmaGarden(int buildingX, int roadY)
+        // Aufgabe: Vorplatz der Tankstelle: zwei rote Zapfsäulen und ein Verkaufsfenster (Nachtschalter) an der
+        //          Fassade, durch das man mit Tankwart Olli spricht und einkauft – ohne das Gebäude zu betreten.
+        private void AddGasStationForecourt()
         {
-            G1C_WorldObject house = _objects.Find(o => o.X == buildingX && o.SpriteId == "building_townhouse" && o.Y < roadY);
-            if (house == null) return;
-            int y = house.Y + house.Height;
-            int x = house.X + 1;
-            while (x < house.X + house.Width && (!Map.IsWalkable(x, y) || Map.IsDoorApproach(x, y) || ObjectAt(x, y) != null)) x++;
-            if (x >= house.X + house.Width) return;
-            _objects.Add(new G1C_Npc(G1C_FamilyNpcRoster.GrandmaName, G1C_FamilyNpcRoster.GrandmaSkin, x, y,
-                                     G1C_Direction.Down, G1C_InteractionType.Talk));
-            int cats = 0;
-            for (int dx = 1; dx <= 4 && cats < 3; dx++)
+            int doorX = Map.DoorX(G1C_WorldLocation.GasStation);
+            int doorY = Map.DoorY(G1C_WorldLocation.GasStation);
+            _objects.Add(new G1C_ShopWindow("Tankwart Olli", "obj_sales_window", doorX + 1, doorY, G1C_WorldLocation.GasStation));
+            string[] pumpLines =
             {
-                int catX = x + dx;
-                if (!Map.IsWalkable(catX, y) || ObjectAt(catX, y) != null) continue;
-                AddAnimal("Omas Katze", "animal_cat", catX, y, 2, 7 + cats);
-                cats++;
+                "Zapfsäule: Super 1,89 Chips pro Liter, Diesel 1,79.",
+                "Leider hast du kein Auto. Nur ein Fahrrad. Das tankt man mit Snacks."
+            };
+            AddForecourtObject("Zapfsäule 1", "obj_fuel_pump", doorX - 3, doorY + 2, pumpLines);
+            AddForecourtObject("Zapfsäule 2", "obj_fuel_pump", doorX + 3, doorY + 2, pumpLines);
+        }
+
+        private void AddForecourtObject(string name, string sprite, int x, int y, string[] lines)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                int tx = x + (x < Map.DoorX(G1C_WorldLocation.GasStation) ? -i : i);
+                if (!Map.IsWalkable(tx, y) || Map.IsDoorApproach(tx, y) || ObjectAt(tx, y) != null) continue;
+                _objects.Add(new G1C_WorldObject(name, sprite, tx, y, 1, 1, true, G1C_InteractionType.Inspect, lines));
+                return;
             }
         }
 
@@ -166,10 +179,15 @@ namespace OOPGames
         }
 
         // Entwickler: Patrick Lupierz
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Änderung: Pavillon ist unterbegehbar.
+        // Massiv sind nur Rückseite und die beiden Säulenseiten; der Eingang liegt unten (Mitte).
+        // Das Objekt selbst ist nicht massiv; das Dach wird über die Figur gezeichnet (Sortierung nach Unterkante).
         private void AddPavilion(int x, int y)
         {
-            Map.AddSolidFootprint(x, y, 4, 4);
-            _objects.Add(new G1C_WorldObject("Parkpavillon", "building_pavilion", x, y, 4, 4, true, G1C_InteractionType.None));
+            Map.AddSolidFootprint(x, y, 4, 1);          // Rückseite
+            Map.AddSolidFootprint(x, y + 1, 1, 3);      // linke Säulen
+            Map.AddSolidFootprint(x + 3, y + 1, 1, 3);  // rechte Säulen
+            _objects.Add(new G1C_WorldObject("Parkpavillon", "building_pavilion", x, y, 4, 4, false, G1C_InteractionType.None));
         }
 
         // Entwickler: Patrick Lupierz – Laternen und Mülleimer nur auf freie, begehbare Kacheln stellen

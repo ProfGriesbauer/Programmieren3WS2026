@@ -5,8 +5,8 @@ Erstellt: 15.11.2026 – Patrick Lupierz (KI-gestützt mit Claude Code, geprüft
 **Quelle:** ausschließlich `Scrum/SprintPlanning.md` (einzige Datei der SprintPlanning-Dokumentation; ein Unterordner
 `Scrum/SprintPlanning/` existiert nicht). GitHub-Issues wurden nicht verwendet. Die Originaldatei bleibt unverändert.
 
-**Prüfgrundlage:** Quellcode-Durchsicht und der automatisierte Selbsttest `G1C_SelfTest` (30 Tests, Stand 15.11.2026:
-30/30 BESTANDEN, siehe `Plans/Testbericht_2026-11-15.md`). Manuelle Bedienung im echten Hauptfenster konnte der
+**Prüfgrundlage:** Quellcode-Durchsicht und der automatisierte Selbsttest `G1C_SelfTest` (Stand 15.11.2026, 2. Arbeitsschritt:
+43/43 BESTANDEN, siehe `Plans/Testbericht_2026-11-15.md`). Manuelle Bedienung im echten Hauptfenster konnte der
 KI-Agent nicht durchführen; solche Punkte sind ausdrücklich als nicht geprüft gekennzeichnet.
 
 Statuswerte: VOLLSTÄNDIG UMGESETZT · TEILWEISE UMGESETZT · FEHLERHAFT · NUR GRAFISCH VORHANDEN · NICHT IMPLEMENTIERT ·
@@ -16,11 +16,11 @@ NICHT ÜBERPRÜFBAR · ÜBERHOLT. Priorität: H = hoch, M = mittel, N = niedrig.
 
 | Status | Anzahl |
 |--------|-------:|
-| VOLLSTÄNDIG UMGESETZT | 14 |
-| TEILWEISE UMGESETZT | 15 |
+| VOLLSTÄNDIG UMGESETZT | 17 |
+| TEILWEISE UMGESETZT | 13 |
 | FEHLERHAFT | 0 (Issue 6 war fehlerhaft und wurde am 15.11.2026 behoben) |
 | NUR GRAFISCH VORHANDEN | 0 |
-| NICHT IMPLEMENTIERT | 1 |
+| NICHT IMPLEMENTIERT | 0 (Arcade C11 am 15.11.2026, 2. Arbeitsschritt, umgesetzt) |
 | NICHT ÜBERPRÜFBAR | 4 |
 | ÜBERHOLT | 0 |
 | **Summe** | **34** |
@@ -64,13 +64,13 @@ NICHT ÜBERPRÜFBAR · ÜBERHOLT. Priorität: H = hoch, M = mittel, N = niedrig.
 | C6 | Bäume: man kann durchlaufen | teilweise | VOLLSTÄNDIG UMGESETZT (war FEHLERHAFT) | Ursache gefunden: `ObjectAt` liefert nur das oberste Objekt – ein nicht massiver Vogel auf einem Baum machte die Kachel begehbar. `G1C_CollisionManager.IsBlocked` prüft jetzt alle massiven Objekte | – | "Bäume, Gebäude, Pavillons und NPCs blockieren" BESTANDEN (vorher FEHLGESCHLAGEN) | – | Patrick Lupierz |
 | C7 | NPC-Herausforderung zum Kartenspielen | teilweise | TEILWEISE UMGESETZT | Pokerduell über Gespräch (Rivalen-Optionen in `G1C_Conversation`) | Blackjack-Herausforderung, Ablauf manuell prüfen | – | M | Eduard Schoenfeld |
 | C8 | Item-Icons, Verkaufsautomat, +5 %, F3 mit 12 %, Systemnachricht 5 s | teilweise | TEILWEISE UMGESETZT | `G1C_Shop.PriceWithMarkup`, `BuyVendingItem`, `NotifySystemMessage` (125 Ticks = 5 s) | Ausblenden der Nachricht und F3-Pfad manuell prüfen | Kauf/Aufschlag-Test BESTANDEN | N | _eintragen_ |
-| C9 | Karte M / Menü B; Mama und Oma mit Nummer, eigenem Zuhause, 3 Katzen; Taschengeld-Chance | offen | TEILWEISE UMGESETZT | NEU: `G1C_FamilyNpcRoster` (Mama im Spielerhaus, Oma Gerda vor ihrem Wohnhaus mit 3 Katzen, beide von Beginn an im Handy), `G1C_FamilyPocketMoney` (nach Gespräch mit beiden, 1x pro Tag, 60 % → 25 Chips) | Innenraum für Omas Haus; Taschengeld-Tag wird nicht gespeichert | 4 NPC-Tests BESTANDEN | H | Patrick Lupierz |
+| C9 | Karte M / Menü B; Mama und Oma mit Nummer, eigenem Zuhause, 3 Katzen; Taschengeld-Chance | offen | VOLLSTÄNDIG UMGESETZT (3. Schritt: Omas Haus) | NEU: `G1C_FamilyNpcRoster` (Mama im Spielerhaus, Oma Gerda vor ihrem Wohnhaus mit 3 Katzen, beide von Beginn an im Handy), `G1C_FamilyPocketMoney` (nach Gespräch mit beiden, 1x pro Tag, 60 % → 25 Chips) | Innenraum für Omas Haus; Taschengeld-Tag wird nicht gespeichert | 4 NPC-Tests BESTANDEN | H | Patrick Lupierz |
 | C10 | Startbildschirm | erledigt | VOLLSTÄNDIG UMGESETZT | `G1C_StartFlow`, `G1C_StartView` | nicht erneut manuell geprüft | – | – | _eintragen_ |
-| C11 | Arcade mit 5 Automaten, Spiele anderer Gruppen | offen | NICHT IMPLEMENTIERT | kein Ort/Gebäude vorhanden | neuer `G1C_WorldLocation`-Eintrag, Innenraum, Claw Machine verschieben; Spiele anderer Gruppen erst nach Freigabe | – | H | _eintragen_ |
+| C11 | Arcade mit 5 Automaten, Spiele anderer Gruppen | offen | VOLLSTÄNDIG UMGESETZT (2. Schritt) | Spielhalle (ehem. Kino) mit dunklem Neon-Boden/-Wänden; 4 Automaten mit eigenen Spielen (Sternenjäger im Galaga-Genre, Schlange, Ziegelbrecher, Pong-Duell gegen KI), Gast-Automat in der Mitte lädt Framework-Spiele anderer Gruppen dynamisch (`G1C_GuestGameCatalog`, max. 9), Bild im Automatenfenster, Chips als Belohnung, Greifautomat umgezogen, Highscore-Tafel (gespeichert) | Bedienung im echten Fenster manuell prüfen | 9 Spielhallen-Tests BESTANDEN; 9 echte Gruppenspiele starten und zeichnen fehlerfrei | – | Patrick Lupierz |
 | C12 | Alle Gebäude auf der Karte; dynamisch speicherbar | offen | TEILWEISE UMGESETZT | alle betretbaren Gebäude stehen auf der Karte; `G1C_SaveData` speichert NPCs, Aufgaben, Bank inkl. Zinstag (NEU) | laufende Minispiele und Familien-Taschengeld werden nicht gespeichert | Speichern/Laden im Zinstest BESTANDEN | M | _eintragen_ |
 | C13 | Blackjack Split und Double | teilweise | TEILWEISE UMGESETZT | `PlayerSplit`, `PlayerDouble` vorhanden | Ablauf automatisiert testen | – | M | _eintragen_ |
 | C14 | Minimap, Stadtkarte, Ortsname beim Darüberfahren | teilweise | TEILWEISE UMGESETZT | Karte + Klickauswahl; Hover nicht möglich: Framework liefert keine Mausbewegung (nur Klick) | – (Framework-Grenze, dokumentiert) | – | N | _eintragen_ |
-| C15 | Aufwachzeit beim Schlafen wählen | teilweise | TEILWEISE UMGESETZT | Auswahl vorhanden; NEU: Schlafanimation (Abdunkeln + "Zzz", Steuerung gesperrt) und Tageswechsel mit Zinsen | Figur liegend im Bett zeigen; Animation manuell prüfen | Zinstest über Tageswechsel BESTANDEN | M | Patrick Lupierz |
+| C15 | Aufwachzeit beim Schlafen wählen | teilweise | VOLLSTÄNDIG UMGESETZT (3. Schritt: Figur liegt im Bett) | Auswahl vorhanden; NEU: Schlafanimation (Abdunkeln + "Zzz", Steuerung gesperrt) und Tageswechsel mit Zinsen | Figur liegend im Bett zeigen; Animation manuell prüfen | Zinstest über Tageswechsel BESTANDEN | M | Patrick Lupierz |
 | C16 | Bank und Geldhai | teilweise | TEILWEISE UMGESETZT | NEU: 2 % Zinsen/Tag ohne Doppelzahlung, Kontostand- und Kontoauszugszeile (`G1C_FinanceManager`) | Bank optisch verbessern; Ansprechen durch den Geldhai beim Vorbeilaufen prüfen | 3 Banktests BESTANDEN | H | Patrick Lupierz |
 | C17 | Möbelgeschäft und Einrichten | teilweise | TEILWEISE UMGESETZT | `OpenFurnishMenu`, `PlaceFurniture`, Speicherung | Kauf/Platzierung manuell prüfen, Test ergänzen | – | N | _eintragen_ |
 
@@ -101,3 +101,35 @@ Nicht Teil der 34 SprintPlanning-Einträge, aber für den Backlog ausgewertet:
 - **Noch offen:** Arcade (C11), Fahrrad, Tankstellen-Neugestaltung, Pavillon, Innenwände/Bett/Teppiche, Omas Innenraum, NPC-Tagesabläufe (Backlog 19), Wetter (30), Friseur (29).
 - **Abhängig von anderen Funktionen:** Claw Machine verschieben → braucht Arcade; Fahrrad-Geschwindigkeit → braucht Inventar-Item "Fahrrad"; Spiele anderer Gruppen in der Arcade → braucht deren Freigabe.
 - **Nicht übernommen:** "echte KI als Option" (C5) – würde externe Dienste/Bibliotheken erfordern, die laut Agents.md nicht freigegeben sind; Hover-Anzeige auf der Karte (C14) – Framework liefert keine Mausbewegung, Änderung am Framework wäre nötig.
+
+
+## F. Nachtrag 15.11.2026 – 2. Arbeitsschritt (Wünsche von Patrick Lupierz)
+
+| Wunsch | Status | Nachweis |
+|--------|--------|----------|
+| Mama und Oma werden nie Gegner | VOLLSTÄNDIG UMGESETZT | `G1C_NpcPersonality.IsFamily`, `G1C_NpcRelationship.Classify`; Test "werden auch nach Beleidigungen nie Gegner" |
+| Taschengeld fragen; wer schon gegeben hat, sagt Nein | VOLLSTÄNDIG UMGESETZT | einmal pro Spieltag je Person (Mama 25, Oma 20 Chips), danach Nein; Tag in `G1C_NpcMemory.PocketMoneyDay` gespeichert; Test inkl. Speichern/Laden. Ersetzt die frühere Regel aus C9 ("mit beiden gesprochen, 60 %") |
+| Bank: Mitarbeiter | VOLLSTÄNDIG UMGESETZT | Bankberater Karl (Konto + eigene Themen), Wachmann Bodo, Bankierin Frida (jetzt sichtbar: Schalter mit Durchreiche) |
+| Stühle, Tische, Betten realistischer | VOLLSTÄNDIG UMGESETZT (Grafik) | neue Pixel-Art für Stuhl, Tisch, Bett, Krankenbett, Theke; gestreckte Sitzbänke durch Stühle ersetzt; Render geprüft |
+| Fahrradladen mit Fahrrad auf dem Dach | VOLLSTÄNDIG UMGESETZT | `building_bike_shop`, Innenraum mit 5 ausgestellten Rädern, Rudi; Räder kaufbar (einmalig), im Inventar, fahrbar (3 statt 5 Ticks/Feld), Ständer vor dem Haus |
+| Pavillon unterbegehbar | VOLLSTÄNDIG UMGESETZT | Rückseite + Säulen massiv, Mitte begehbar, Dach wird über der Figur gezeichnet; Test + Render |
+| Arcade mit allen Implementierungen | VOLLSTÄNDIG UMGESETZT | siehe C11 |
+
+Weiterhin offen: Omas Innenraum, Innenwände links/rechts, Teppiche, Vogelgrafik, rote Tankstelle mit Zapfsäulen,
+liegende Schlaffigur, manuelle Prüfung im Hauptfenster.
+
+## G. Nachtrag 15.11.2026 – 3. Arbeitsschritt ("alles Offene bearbeiten")
+
+| Offener Punkt | Status | Nachweis |
+|---------------|--------|----------|
+| Omas Haus (C9) | VOLLSTÄNDIG UMGESETZT | Wohnhaus neben dem Zuhause ist "Omas Haus" (lila Dach, betretbar). Innen: Oma, ihre drei Katzen Schnurrbert, Mausi, Herr Doktor Krallmann (animiert), Sessel, Teetisch, Bett, Bücherregal, Katzenbild, Blümchentapete, Dielen. Oma steht nicht mehr draußen. Tests "Omas Haus ist betretbar …", "Mama und Oma existieren …" |
+| Innenwände links/rechts | VOLLSTÄNDIG UMGESETZT | Seiten- und Unterwände zeigen jetzt die Mauerkrone in Raumfarbe (`tile_wallside_<raum>_<l/r/b>`) statt der gedrehten Rückwand – in allen Innenräumen und im Zuhause. Test + Render |
+| Teppiche | VOLLSTÄNDIG UMGESETZT | Teppiche aus Rand-/Eck-/Mittelteilen mit Bordüre, Fransen und Rautenmuster (`G1C_TileMask`), Farbe je Raum; neuer Teppich im Zuhause |
+| Poster und Wanddekoration | VOLLSTÄNDIG UMGESETZT | Jeder Innenraum hat ein eigenes, untersuchbares Wandbild (Gesundheit, Angebote, Urlaub, Mode, Zinsen, Berge, Radrennen, Katzen); Zuhause zusätzlich Urlaubsfoto. Test: keine Wiederholung |
+| Vogelgrafik | VOLLSTÄNDIG UMGESETZT | Fehlerbild: Vogel lag als Fleck ohne Kontur auf dem Baumstamm am Boden. Jetzt Rotkehlchen mit Kontur, sitzt auf der Kronenspitze. Test + Render |
+| Rote Tankstelle, 2 Zapfsäulen, Fensterverkauf | VOLLSTÄNDIG UMGESETZT | Gebäude und Innenwände rot, zwei Zapfsäulen (untersuchbar, massiv), Verkaufsfenster (`G1C_ShopWindow`) an der Fassade: Gespräch mit Tankwart Olli und Einkauf ohne Betreten, rund um die Uhr. Test (Kauf um 3 Uhr) |
+| Liegende Schlaffigur | VOLLSTÄNDIG UMGESETZT | Während der Schlafanimation liegt die Figur gedreht im Bett unter der Decke; Steuerung gesperrt, danach frei. Test + Render |
+| Manuelle Prüfung im Hauptfenster (A9) | NICHT ÜBERPRÜFBAR | Der KI-Agent kann das WPF-Fenster nicht bedienen. Ersatz: Logiktests (49/49), Offscreen-Renderings mit dem echten Painter, 9 echte Gruppenspiele im Gast-Automaten. Checkliste: `Plans/Testbericht_2026-11-15.md` |
+
+Damit sind alle bekannten offenen Implementierungsaufgaben umgesetzt. Offen bleiben nur Punkte, die außerhalb des Codes
+liegen: Freigaben durch Team/Dozent (B1, B4, B7) und der manuelle Durchlauf im Hauptfenster (A9).

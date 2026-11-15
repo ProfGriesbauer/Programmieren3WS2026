@@ -69,3 +69,26 @@ unverändert; Statusänderungen stehen hier. Doppelte Wünsche wurden zusammenge
 | 44 | Als Spieler möchte ich Oma in ihrem Haus mit drei Katzen besuchen. | Innenraum Wohnhaus, Oma drinnen, 3 Katzen | M | 34 | _eintragen_ | offen |
 | 45 | Als Spieler möchte ich, dass sich die Figur zum Schlafen ins Bett legt. | liegende Figur im Bett während der Schlafanimation | N | – | _eintragen_ | offen (Abdunkel-Animation vorhanden) |
 | 46 | Als Spieler möchte ich, dass Familien-Taschengeld und Minispielstände gespeichert werden. | Speichern/Laden ohne doppeltes Taschengeld (SprintPlanning C12) | N | 34 | _eintragen_ | offen |
+
+## Ergänzung 2 – 15.11.2026 (Patrick Lupierz, KI-gestützt)
+
+| ID | Neuer Stand |
+|----|-------------|
+| 34 | geändert auf Wunsch: Familie wird nie Gegner; Taschengeld einmal pro Tag je Person, danach "Nein" (gespeichert). Erledigt (Tests). |
+| 38 | Spielhalle erledigt: 4 eigene Spiele, Gast-Automat für Spiele anderer Gruppen (9 gefunden und lauffähig), Greifautomat umgezogen, Highscores. Manuelle Fensterprüfung offen. |
+| 40 | Fahrrad erledigt: Ständer vor dem Haus, Fahrradladen mit Rad auf dem Dach, 5 Farben, Inventar, schneller fahren, Absteigen in Gebäuden. |
+| 41 | Pavillon erledigt: neue Grafik, nur von unten begehbar. |
+| 42 | teilweise: Bett, Tisch, Stuhl, Krankenbett, Theke neu; Innenwände und Teppiche offen. |
+| 47 | NEU – Als Spieler möchte ich in der Bank mit mehreren Mitarbeitern sprechen. Erledigt (Karl, Bodo, Frida). |
+
+## Ergänzung 3 – 15.11.2026 (Patrick Lupierz, KI-gestützt)
+
+| ID | Neuer Stand |
+|----|-------------|
+| 39 | Tankstelle erledigt: rot, zwei Zapfsäulen, Verkaufsfenster mit Olli (24 h). |
+| 42 | Innenräume erledigt: Seitenwände, Teppiche aus Teilstücken, Wandbilder je Raum, Möbelgrafiken. |
+| 43 | Vogelgrafik erledigt: sitzt auf der Baumkrone, mit Kontur. |
+| 44 | Omas Haus erledigt: betretbar, Oma und drei Katzen wohnen darin. |
+| 45 | Schlafen erledigt: Figur liegt während der Animation im Bett. |
+| 46 | teilweise: Taschengeld-Tag wird gespeichert (NPC-Erinnerung); laufende Minispiele werden bewusst nicht gespeichert (Runde endet beim Verlassen). |
+| – | Offen außerhalb des Codes: manueller Test im Hauptfenster; Freigaben (Agents.md Abschnitt 0, Stadtgröße). |

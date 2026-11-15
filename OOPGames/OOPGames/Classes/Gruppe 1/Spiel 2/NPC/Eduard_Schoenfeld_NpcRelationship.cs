@@ -78,6 +78,9 @@ namespace OOPGames
         public static G1C_RelationshipStatus Classify(int trust, int respect, G1C_NpcMemory memory, G1C_NpcPersonality personality)
         {
             if (memory.Conversations == 0 && memory.DuelsTotal == 0) return G1C_RelationshipStatus.Unknown;
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Familie bleibt immer mindestens Freund
+            if (personality != null && personality.IsFamily)
+                return trust >= 80 ? G1C_RelationshipStatus.GoodFriend : G1C_RelationshipStatus.Friend;
             if (trust < 12 && memory.Insults >= 3) return G1C_RelationshipStatus.ArchEnemy;
             if (trust < 25) return G1C_RelationshipStatus.Opponent;
 

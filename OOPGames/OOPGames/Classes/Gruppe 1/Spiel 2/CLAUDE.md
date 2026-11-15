@@ -40,7 +40,8 @@ Data flow: input → `G1C_CasinoHumanPlayer` builds `G1C_CasinoMove` → `G1C_Ca
 | `Player/` | Player, movement, animation, customizable `PlayerProfile` |
 | `NPC/` | Eduard's system: roster, conversations, memory, relationships, tasks, money, speech bubbles, casino event reactions; Denis's city roster and exterior roaming |
 | `CasinoGames/` | `CasinoGameBase` + Roulette, Blackjack (split/double), Poker (+`PokerHandEvaluator`), Slots, ClawMachine, Cards |
-| `AI/` | Roulette/Blackjack/Poker opponents |
+| `AI/` | Roulette/Blackjack/Poker/Pong opponents |
+| `Arcade/` | `G1C_ArcadeGame` base (fee 5, reward once, max 30), StarHunter, Snake, BrickBreaker, PongDuel, `G1C_ArcadeCatalog` (5 cabinets, ≤9 games), `G1C_GuestGameHost`/`G1C_GuestGameCatalog` (plays other groups' registered framework games via `OOPGamesManager.Singleton`, CanBePaintedBy/CanBeRuledBy) |
 | `UI/` | Renderer, HUD, DialogueBox, CasinoMenu, ResultScreen, MapView, PhoneView, CardView, StartView, Conversation/NpcOverlay views |
 | `Graphics/` | `SpriteLibrary` (sprite-ID → image, PNG override), `BuiltInSprites`, `TownSprites`, `NpcSprites`, `WorldSprites`, `PixelCanvas` |
 | `Assets/` | README only. Custom art: drop `<Sprite-ID>.png` into `G1Casino_Assets/` next to the exe; no csproj change needed |
@@ -60,8 +61,11 @@ Keep logic, rendering and collision separate; sprites are referenced by ID only 
 ## Known discrepancies / gotchas
 
 - The pasted/original AGENTS text says ".NET 6", but the csproj targets `net10.0-windows` and Agents.md says .NET 10. The csproj is the truth and may not be changed.
-- Status of every SprintPlanning item: [Plans/SprintPlanning_Issue_Auswertung.md](Plans/SprintPlanning_Issue_Auswertung.md); open work: backlog IDs 38–46 (arcade, gas station redesign, bike, pavilion, interiors, birds, Oma's interior). Verify against code before reporting status (§16.2).
+- Status of every SprintPlanning item: [Plans/SprintPlanning_Issue_Auswertung.md](Plans/SprintPlanning_Issue_Auswertung.md); all code tasks from SprintPlanning/Agents.md are implemented as of 15.11.2026; only approvals (Agents.md §0, city size) and a manual run in the real main window remain.
+- Interior floors/walls: back wall `tile_<set>_wall`, side/bottom walls `tile_wallside_<set>_<l|r|b>`, rugs `tile_rug_<set>_<mask>` (`G1C_TileMask`), all generated in `G1C_DecorSprites`. Exterior shop windows: `G1C_ShopWindow` (name = seller profile, `ShopLocation` = assortment/hours). Verify against code before reporting status (§16.2).
 - Input: the framework only forwards `KeyDown`. Continuous walking polls `Keyboard.IsKeyDown` in the tick (`G1C_InputManager.HeldDirection`); the painter moves keyboard focus to the canvas (`FocusCanvas`) so arrow keys/Space don't hit framework controls.
 - Collision must check *all* solid objects on a tile (`G1C_CollisionManager`) – `ObjectAt` returns only the topmost (e.g. a bird on a tree).
 - Day change goes through `G1C_GameManager.ApplyNewDay()` (bank interest, guarded per day). Shop hours live only in `G1C_Shop`.
+- New `G1C_WorldLocation` values must be appended at the end (save files store the int). Adding a location touches: enum, `G1C_ExteriorMap.DoorTiles`, `AddBuilding` in ExteriorWorld, `G1C_BuildingInteriorWorld` (switch + tile set), `SceneTransitionManager.DisplayName`, GameManager world property + transition ctor, self-test `AllScenes`.
+- Family NPCs (`Personality.IsFamily`) never become hostile; pocket money once per game day (`NpcMemory.PocketMoneyDay`). Bikes: `G1C_BikeSystem` (ownership in inventory, category `Fahrzeug`).
 - NPC individual dialogue: add `G1C_DialogueTopic`s to `Personality.Topics` (see `G1C_FamilyNpcRoster`, `G1C_ShopNpcRoster`); max 4 options per screen.

@@ -24,7 +24,8 @@ namespace OOPGames
         private readonly G1C_TrashSystem _trash = new G1C_TrashSystem();
         private readonly Random _random = new Random();
         private int _gameStartBalance;
-        private G1C_InteractionType _activeGameType; // Änderung durch: Eduard Schoenfeld – für NPC-Reaktionen
+        private G1C_InteractionType _activeGameType;
+        private G1C_WorldLocation _shopLocation; // Änderung durch: Patrick Lupierz – 15.11.2026 – Laden des letzten Verkäufers // Änderung durch: Eduard Schoenfeld – für NPC-Reaktionen
 
         public G1C_GameState State { get; private set; } = G1C_GameState.Title;
         public G1C_HomeWorld Home { get; } = new G1C_HomeWorld();
@@ -38,6 +39,12 @@ namespace OOPGames
         public G1C_BuildingInteriorWorld ClothingStore { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.ClothingStore);
         public G1C_BuildingInteriorWorld Bank { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.Bank);
         public G1C_BuildingInteriorWorld FurnitureStore { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.FurnitureStore);
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Spielhalle, Fahrradladen, Fahrrad, Highscores
+        public G1C_BuildingInteriorWorld Arcade { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.Arcade);
+        public G1C_BuildingInteriorWorld BikeShop { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.BikeShop);
+        public G1C_BuildingInteriorWorld GrandmaHouse { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.GrandmaHouse);
+        public G1C_BikeSystem Bikes { get; } = new G1C_BikeSystem();
+        public Dictionary<string, int> ArcadeHighscores { get; private set; } = new Dictionary<string, int>();
         public G1C_Player Player { get; }
         public G1C_MoneyManager Money { get; } = new G1C_MoneyManager();
         public G1C_FinanceManager Finance { get; } = new G1C_FinanceManager();
@@ -72,7 +79,8 @@ namespace OOPGames
         public G1C_GameManager()
         {
             _sceneTransitions = new G1C_SceneTransitionManager(Home, Exterior, World, Hospital, Market, GasStation,
-                                                               ClothingStore, Bank, FurnitureStore);
+                                                               ClothingStore, Bank, FurnitureStore, Arcade, BikeShop,
+                                                               GrandmaHouse);
             Player = new G1C_Player(Home.PlayerStartX, Home.PlayerStartY, G1C_Direction.Down);
             _movement = CreateMovement();
             _interactions = new G1C_InteractionManager(World);
@@ -80,6 +88,9 @@ namespace OOPGames
             Npcs.Clock = Clock; // Änderung durch: Patrick Lupierz – 15.11.2026
             _exteriorNpcRoaming = new G1C_ExteriorNpcRoamingSystem(Exterior, Player, _random); // Erweiterung durch Denis Mock
             Phone = new G1C_Phone(Npcs);
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Ständer zeigt das aktive Rad oder ist leer, wenn man fährt
+            if (Exterior.ParkedBike != null)
+                Exterior.ParkedBike.SpriteSelector = () => Bikes.Riding ? "obj_bike_stand" : "obj_" + Bikes.ActiveBikeId;
         }
 
         // Änderung durch: Denis Mock – Türhinweise richten sich nach der aktuell aktiven Welt.
@@ -99,6 +110,12 @@ namespace OOPGames
                 {
                     case G1C_InteractionType.Trash: return "[E] Mülleimer durchsuchen";
                     case G1C_InteractionType.Inspect: return "[E] " + target.Name + " ansehen";
+                    case G1C_InteractionType.Arcade:
+                        return target.Name == G1C_ArcadeCatalog.HighscoreBoardName ? "[E] Highscores ansehen" : "[E] " + target.Name + " spielen";
+                    case G1C_InteractionType.Bike: return Bikes.Riding ? "[E] Fahrrad abstellen" : "[E] Aufs Fahrrad steigen";
+                    case G1C_InteractionType.Claw:
+                        if (CurrentLocation == G1C_WorldLocation.Arcade) return "[E] Greifautomat";
+                        break;
                     case G1C_InteractionType.Shop: return "[E] Einkaufen";
                     case G1C_InteractionType.Vending: return "[E] Automat  [F3] Kaffee kaufen";
                     case G1C_InteractionType.Wardrobe: return "[E] Umziehen";
@@ -285,17 +302,28 @@ namespace OOPGames
                 _movement.ClearQueue();
                 _movement = CreateMovement();
                 Npcs.Bubbles.Clear();
+                // Änderung durch: Patrick Lupierz – 15.11.2026 – in Gebäuden wird nicht Fahrrad gefahren
+                if (Bikes.Riding && CurrentLocation != G1C_WorldLocation.Exterior)
+                {
+                    Bikes.Dismount();
+                    NotifySystemMessage("Du stellst dein Fahrrad vor der Tür ab.");
+                }
                 return;
             }
 
             G1C_WorldObject target = FindTarget();
             if (target == null) return;
             target.OnInteract(Player);
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Verkaufsfenster außen nutzen das Sortiment ihres Ladens
+            G1C_ShopWindow window = target as G1C_ShopWindow;
+            _shopLocation = window != null ? window.ShopLocation : CurrentLocation;
 
             switch (target.Interaction)
             {
                 case G1C_InteractionType.Trash: SearchTrash(target); return;
                 case G1C_InteractionType.Inspect: OpenDialogue(target.Name, target.Lines, null); return; // Patrick Lupierz – 15.11.2026
+                case G1C_InteractionType.Arcade: OpenCabinet(target); return;                            // Patrick Lupierz – 15.11.2026
+                case G1C_InteractionType.Bike: UseParkedBike(); return;                                  // Patrick Lupierz – 15.11.2026
                 case G1C_InteractionType.Shop:
                     // Änderung durch: Patrick Lupierz – 15.11.2026 – Verkäufer mit Profil führen erst ein Gespräch
                     if (Npcs.TryStartConversation(target)) State = G1C_GameState.Conversation;
@@ -320,7 +348,8 @@ namespace OOPGames
                 return;
             }
 
-            if (CurrentLocation != G1C_WorldLocation.Casino) return;
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Minispiele auch in der Spielhalle (Greifautomat)
+            if (CurrentLocation != G1C_WorldLocation.Casino && CurrentLocation != G1C_WorldLocation.Arcade) return;
 
             switch (target.Interaction)
             {
@@ -410,7 +439,7 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz
         private void OpenShop()
         {
-            G1C_Shop shop = G1C_Shop.For(CurrentLocation);
+            G1C_Shop shop = G1C_Shop.For(_shopLocation); // Patrick Lupierz – 15.11.2026: auch Verkaufsfenster
             if (shop == null) return;
             if (!shop.IsOpen(Clock.Hour))
             {
@@ -551,7 +580,7 @@ namespace OOPGames
             foreach (G1C_Item item in shop.ItemIds.Select(G1C_ItemCatalog.Get))
             {
                 G1C_Item current = item;
-                bool owned = item.Slot != G1C_ClothingSlot.None && Inventory.Has(item.Id);
+                bool owned = item.IsUnique && Inventory.Has(item.Id); // Patrick Lupierz – 15.11.2026: auch Fahrräder
                 rows.Add(new G1C_MenuRow
                 {
                     Text = item.Name, Right = owned ? "gekauft" : G1C_Shop.PriceWithMarkup(item.Price) + " Chips",
@@ -640,6 +669,14 @@ namespace OOPGames
         private void UseItem(G1C_Item item)
         {
             if (!item.IsUsable) { ListMenu.Message = item.Description; return; }
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrrad wird nicht verbraucht, sondern auf-/abgestiegen
+            if (item.Category == G1C_ItemCategory.Fahrzeug)
+            {
+                ListMenu.Message = Bikes.Riding && Bikes.ActiveBikeId == item.Id
+                    ? Bikes.Dismount()
+                    : Bikes.TryMount(Inventory, item.Id, CurrentLocation);
+                return;
+            }
             if (Inventory.Remove(item.Id)) ListMenu.Message = Buffs.Apply(item, Clock.TotalTicks);
         }
 
@@ -748,6 +785,8 @@ namespace OOPGames
             Finance.RestoreInterest(0, 0, Clock.Day); // Patrick Lupierz – 15.11.2026
             Home.RestoreFurniture(null);
             foreach (string clothing in new[] { Profile.Top, Profile.Pants, Profile.Shoes }) Inventory.Add(clothing);
+            Inventory.Add(G1C_BikeSystem.StarterBike); // Patrick Lupierz – 15.11.2026: das Fahrrad vor dem Haus gehört dir
+            Bikes.Restore(false, G1C_BikeSystem.StarterBike);
             Player.Skin = Profile.SkinId;
             Npcs.PlayerName = Profile.Name;
             OpenDialogue("Willkommen", new[]
@@ -774,7 +813,9 @@ namespace OOPGames
                 }).ToList(),
                 Tasks = Npcs.Tasks.Tasks.Select(t => t.Capture()).ToList(),
                 Messages = Phone.Messages, Trash = _trash.SearchedOnDay,
-                BankInterestDay = Finance.LastInterestDay, BankInterestTotal = Finance.TotalInterestPaid
+                BankInterestDay = Finance.LastInterestDay, BankInterestTotal = Finance.TotalInterestPaid,
+                RidingBike = Bikes.Riding, ActiveBike = Bikes.ActiveBikeId,
+                ArcadeHighscores = new Dictionary<string, int>(ArcadeHighscores)
             };
         }
 
@@ -814,11 +855,18 @@ namespace OOPGames
 
             _sceneTransitions.Restore((G1C_WorldLocation)data.Location);
             IG1C_WorldScene scene = CurrentWorld;
-            bool free = scene.Grid.IsWalkable(data.X, data.Y) && scene.ObjectAt(data.X, data.Y) == null;
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – gleiche Regel wie beim Laufen (nicht massive Objekte wie
+            // der Pavillon oder Tiere blockieren nicht)
+            bool free = !new G1C_CollisionManager(scene).IsBlocked(data.X, data.Y);
             if (free) Player.Teleport(data.X, data.Y, (G1C_Direction)data.Facing);
             else Player.Teleport(scene.PlayerStartX, scene.PlayerStartY, G1C_Direction.Down);
             _movement = CreateMovement();
             Player.Skin = Profile.SkinId;
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrrad und Highscores; ältere Spielstände bekommen
+            // das Fahrrad vor dem Haus nachträglich
+            if (!Inventory.Has(G1C_BikeSystem.StarterBike)) Inventory.Add(G1C_BikeSystem.StarterBike);
+            Bikes.Restore(data.RidingBike && CurrentLocation == G1C_WorldLocation.Exterior, data.ActiveBike);
+            ArcadeHighscores = data.ArcadeHighscores != null ? new Dictionary<string, int>(data.ArcadeHighscores) : new Dictionary<string, int>();
             State = G1C_GameState.MainGame;
         }
 
@@ -853,8 +901,73 @@ namespace OOPGames
             }
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Spielhallen-Automat bedienen: Spielauswahl (max. 9), Gast-Automat mit Spielen anderer Gruppen,
+        //          Highscore-Tafel. Die Spiele selbst laufen wie alle Minispiele über ActiveGame.
+        private void OpenCabinet(G1C_WorldObject target)
+        {
+            if (target.Name == G1C_ArcadeCatalog.HighscoreBoardName)
+            {
+                OpenDialogue("Highscore-Tafel", new[] { HighscoreText() }, null);
+                return;
+            }
+            G1C_ArcadeCabinet cabinet = G1C_ArcadeCatalog.Find(target.Name);
+            if (cabinet == null) return;
+            if (cabinet.IsGuestCabinet)
+            {
+                List<G1C_GuestGameEntry> guests = G1C_GuestGameCatalog.DiscoverRegistered();
+                ListMenu.Open(cabinet.Name + " – Spiele anderer Gruppen", () => guests.Select(entry => new G1C_MenuRow
+                {
+                    Text = entry.Name, Right = G1C_GuestGameHost.EntryFee + " Chips",
+                    Detail = entry.HasComputerOpponent ? "Gegen den Computer. Sieg: " + G1C_GuestGameHost.WinReward + " Chips."
+                                                       : "Zu zweit am Automaten (keine Belohnung).",
+                    Run = () => StartArcadeGame(new G1C_GuestGameHost(Money, _random, entry))
+                }).ToList());
+                if (guests.Count == 0) ListMenu.Message = "Zurzeit sind keine Spiele anderer Gruppen registriert.";
+            }
+            else
+            {
+                ListMenu.Open(cabinet.Name + " – Spiel wählen", () => cabinet.Games.Select(game => new G1C_MenuRow
+                {
+                    Text = game.Title, Right = G1C_ArcadeGame.EntryFee + " Chips", Detail = game.Description +
+                        (ArcadeHighscores.ContainsKey(game.Title) ? " Rekord: " + ArcadeHighscores[game.Title] : ""),
+                    Run = () => StartArcadeGame(game.Create(Money, _random))
+                }).ToList());
+            }
+            State = G1C_GameState.ListMenu;
+        }
+
+        private string HighscoreText()
+        {
+            if (ArcadeHighscores.Count == 0) return "Noch keine Rekorde. Sei der Erste!";
+            return string.Join("\n", ArcadeHighscores.OrderByDescending(h => h.Value).Take(4).Select(h => h.Key + ": " + h.Value + " Punkte"));
+        }
+
+        private void StartArcadeGame(G1C_CasinoGameBase game)
+        {
+            _gameStartBalance = Money.Balance;
+            _activeGameType = G1C_InteractionType.Arcade;
+            ActiveGame = game;
+            State = G1C_GameState.Arcade;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026 – Fahrradständer vor dem Haus
+        private void UseParkedBike()
+        {
+            string message = Bikes.Riding ? Bikes.Dismount() : Bikes.TryMount(Inventory, Bikes.ActiveBikeId, CurrentLocation);
+            OpenDialogue("Fahrrad", new[] { message }, null);
+        }
+
         private void EndMinigame()
         {
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Rekorde der Spielhalle merken
+            G1C_ArcadeGame arcade = ActiveGame as G1C_ArcadeGame;
+            if (arcade != null && arcade.BestScore > 0)
+            {
+                int best;
+                ArcadeHighscores.TryGetValue(arcade.Name, out best);
+                ArcadeHighscores[arcade.Name] = Math.Max(best, arcade.BestScore);
+            }
             Result.Show(ActiveGame.Name, _gameStartBalance, Money.Balance);
             // Änderung durch: Eduard Schoenfeld – NPCs reagieren auf das tatsächliche Ergebnis
             Npcs.OnMinigameFinished(_activeGameType, Money.Balance - _gameStartBalance);
@@ -881,7 +994,7 @@ namespace OOPGames
                 Clock.Advance();
                 ApplyNewDay();
                 Buffs.Update(Clock.TotalTicks);
-                if (!Player.IsMoving) Player.StepTicks = Buffs.StepTicks;
+                if (!Player.IsMoving) Player.StepTicks = Bikes.StepTicks(Buffs.StepTicks); // Patrick Lupierz – Fahrrad
                 Phone.HourlyUpdate(Clock, Profile.Name, Money.Balance, _random);
             }
 
@@ -894,6 +1007,11 @@ namespace OOPGames
             {
                 if (exploring) _exteriorNpcRoaming.Update(TickCount);
                 foreach (G1C_Animal animal in Exterior.Animals) animal.UpdateAnimation(TickCount);
+            }
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Tiere in Innenräumen (Omas Katzen) bewegen sich auch
+            else
+            {
+                foreach (G1C_Animal animal in CurrentWorld.Objects.OfType<G1C_Animal>()) animal.UpdateAnimation(TickCount);
             }
         }
     }

@@ -31,6 +31,9 @@ namespace OOPGames
             { G1C_WorldLocation.Hospital, 'K' }, { G1C_WorldLocation.Market, 'S' },
             { G1C_WorldLocation.GasStation, 'T' }, { G1C_WorldLocation.ClothingStore, 'B' },
             { G1C_WorldLocation.Bank, 'F' }, { G1C_WorldLocation.FurnitureStore, 'M' },
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Türen von Spielhalle und Fahrradladen
+            { G1C_WorldLocation.Arcade, 'A' }, { G1C_WorldLocation.BikeShop, 'R' },
+            { G1C_WorldLocation.GrandmaHouse, 'O' }, // Patrick Lupierz – 15.11.2026
         };
 
         private readonly char[,] _tiles;

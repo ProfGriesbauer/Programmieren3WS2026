@@ -256,7 +256,9 @@ namespace OOPGames
             {
                 AddOption("Konto verwalten.", RequestBankMenu);
                 AddOption("Wie funktioniert das Konto?", ExplainBank);
-                AddOption("Lass uns plaudern.", SmallTalk);
+                // Änderung durch: Patrick Lupierz – 15.11.2026 – Bankmitarbeiter mit eigenen Themen
+                if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0));
+                else AddOption("Lass uns plaudern.", SmallTalk);
                 AddOption("Ich gehe wieder.", Close);
                 return;
             }
@@ -305,8 +307,9 @@ namespace OOPGames
 
             if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0)); // Patrick Lupierz – 15.11.2026
             AddOption("Lass uns plaudern.", SmallTalk);
-            bool goodFriendOffer = Status == G1C_RelationshipStatus.GoodFriend && PlayerBroke;
-            AddOption(goodFriendOffer ? "Ja, ein paar Chips wären toll." : "Kannst du mir etwas Geld geben?", AskForMoney);
+            bool goodFriendOffer = Status == G1C_RelationshipStatus.GoodFriend && PlayerBroke && !Npc.Personality.IsFamily;
+            AddOption(Npc.Personality.IsFamily ? "Hast du Taschengeld für mich?" // Patrick Lupierz – 15.11.2026
+                      : goodFriendOffer ? "Ja, ein paar Chips wären toll." : "Kannst du mir etwas Geld geben?", AskForMoney);
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026
@@ -466,6 +469,27 @@ namespace OOPGames
         // Entwickler: Eduard Schoenfeld
         private void AskForMoney()
         {
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Familie: einmal pro Spieltag Taschengeld,
+            // danach einfach Nein. Kein Vertrauensverlust, keine Feindschaft.
+            if (Npc.Personality.IsFamily)
+            {
+                int day = _system.Clock != null ? _system.Clock.Day : 1;
+                G1C_NpcPersonality p = Npc.Personality;
+                if (Memory.PocketMoneyDay != day && p.PocketMoney > 0)
+                {
+                    Memory.PocketMoneyDay = day;
+                    _system.Money.Deposit(p.PocketMoney);
+                    AddNotice("+" + p.PocketMoney + " Chips", true);
+                    Say(p.PocketMoneyLine, G1C_NpcExpression.Happy);
+                }
+                else
+                {
+                    string[] no = p.MoneyRefusal;
+                    Say(no.Length > 0 ? no[Memory.MoneyRequests++ % no.Length] : "Nein.", G1C_NpcExpression.Thoughtful);
+                }
+                ShowRoot();
+                return;
+            }
             G1C_MoneyRequestResult result = _system.MoneyRequests.Handle(Npc, _system.Money, Tick, _system.Reputation);
             if (result.Granted) AddNotice("+" + result.Amount + " Chips", true);
             Adjust(result.TrustDelta, 0);
@@ -481,7 +505,9 @@ namespace OOPGames
 
         private void ExplainBank()
         {
-            Say("Du kannst Chips einzahlen und später wieder abheben.\nDas Konto wird mit deinem Spielstand gespeichert.", G1C_NpcExpression.Thoughtful);
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Zinsen erwähnt
+            Say("Du kannst Chips einzahlen und abheben. Jeden Spieltag gibt es " + G1C_FinanceManager.InterestPercentPerDay +
+                " % Zinsen\nauf dein Guthaben. Das Konto wird mit deinem Spielstand gespeichert.", G1C_NpcExpression.Thoughtful);
         }
 
         private void BorrowFromShark()

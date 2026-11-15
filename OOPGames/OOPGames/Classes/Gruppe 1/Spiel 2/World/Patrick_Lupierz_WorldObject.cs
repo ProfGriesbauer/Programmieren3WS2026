@@ -5,7 +5,9 @@ namespace OOPGames
     {
         None, Talk, Bartender, Roulette, Blackjack, Poker, Slots, Claw, Trash, Shop, Vending,
         Wardrobe, Bed, Bank, LoanShark, FurnitureShop, Furnish,
-        Inspect // Änderung durch: Patrick Lupierz – 15.11.2026 – Schilder, Poster, Sticker: Text aus Lines anzeigen
+        Inspect, // Änderung durch: Patrick Lupierz – 15.11.2026 – Schilder, Poster, Sticker: Text aus Lines anzeigen
+        Arcade,  // Änderung durch: Patrick Lupierz – 15.11.2026 – Spielautomat der Spielhalle (Name = Automat)
+        Bike     // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrradständer vor dem Haus (auf-/absteigen)
     }
 
     /// <summary>

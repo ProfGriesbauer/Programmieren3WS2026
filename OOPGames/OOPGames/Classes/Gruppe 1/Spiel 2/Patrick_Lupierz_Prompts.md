@@ -1932,3 +1932,52 @@ als verantwortlicher Entwickler bestätigt):
   Vogelgrafik, liegende Schlaffigur.
 - Build 0 Fehler/0 Warnungen; Selbsttest 30/30 bestanden (ohne Fenster ausgeführt); Bedienung im echten Fenster nicht
   getestet. Details: `Plans/Testbericht_2026-11-15.md`, `Plans/SprintPlanning_Issue_Auswertung.md`. Kein Commit.
+
+### Prompt 8
+
+Datum: 15.11.2026
+Werkzeug: Claude Code (VS-Code-Erweiterung)
+Modell: Claude Opus 5.5
+
+```text
+oma und mama dürfen niemals zum gegner werden sie sollen einfach nein sagen nachdem man nach geld gefragt hat. bank braucht mitarbeiter und stühle und tische so wie betten sollen realistischer ausswehen , fahradladen erstellen mit fahrad auf dem dach, pavelion als untergehabres objekt, arcade hinzufügen mit allen implementaaationen
+```
+
+### Prompt 9 (während der Umsetzung von Prompt 8)
+
+Datum: 15.11.2026
+Werkzeug: Claude Code (VS-Code-Erweiterung)
+Modell: Claude Opus 5.5
+
+```text
+[erneut eingefügt: Arbeitsauftrag aus Prompt 7, unverändert]
+ man solll oma und mama nach taschen geld fragen können aber wenn sie schon was gegeben hat soll sie einfach nein sagen
+```
+
+Ergebnisvermerk zu Prompt 8 und 9 (alle Änderungen mit „Entwickler/Änderung durch: Patrick Lupierz“ markiert):
+
+- **Übernommen:** Familie nie Gegner (`IsFamily`); Taschengeld einmal pro Spieltag je Person, danach Nein (gespeichert);
+  Bankmitarbeiter Karl und Bodo mit eigenen Themen, Schalter mit Durchreiche; neue Grafiken für Stuhl, Tisch, Bett,
+  Krankenbett, Theke; Fahrradladen (Rad auf dem Dach, 5 Farben, Rudi), Fahrradsystem (`G1C_BikeSystem`, Ständer vor dem
+  Haus, schneller fahren); unterbegehbarer Pavillon mit neuer Grafik; Spielhalle mit Sternenjäger, Schlange, Ziegelbrecher,
+  Pong-Duell (`G1C_PongAI`), Gast-Automat für Framework-Spiele anderer Gruppen, Highscores, Greifautomat umgezogen.
+- **Angepasst:** Kino → Spielhalle, Bürgerhaus → Fahrradladen (gleiche Positionen, damit die Straßen unverändert bleiben).
+- **Nebenbei behoben:** Spielstand-Position unter nicht massiven Objekten fiel auf den Startpunkt zurück; Bankierin Frida war
+  hinter dem Schalter unsichtbar.
+- Build 0/0, Selbsttest 43/43, 9 Gast-Spiele lauffähig. Bedienung im echten Fenster nicht getestet. Kein Commit.
+
+### Prompt 10
+
+Datum: 15.11.2026
+Werkzeug: Claude Code (VS-Code-Erweiterung)
+Modell: Claude Opus 5.5
+
+```text
+ok alles offene noch bearbeiten
+```
+
+Ergebnisvermerk (alle Änderungen mit „Entwickler/Änderung durch: Patrick Lupierz“ markiert): Omas Haus mit Innenraum, Oma
+und drei Katzen; Seitenwände und zusammengesetzte Teppiche in allen Innenräumen und im Zuhause; Wandbilder je Raum; neue
+Vogelgrafik auf der Baumkrone; rote Tankstelle mit zwei Zapfsäulen und Verkaufsfenster (`G1C_ShopWindow`); schlafende Figur
+im Bett; Tiere in Innenräumen animiert. Build 0/0, Selbsttest 49/49 bestanden, Szenen gerendert und geprüft.
+Nicht möglich: Bedienung im echten Hauptfenster durch den Agenten. Kein Commit.

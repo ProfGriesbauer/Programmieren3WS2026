@@ -4,7 +4,8 @@ using System.Linq;
 
 namespace OOPGames
 {
-    public enum G1C_ItemCategory { Kleidung, Lebensmittel, Getraenk, Verbrauch, Quest, Moebel, Sonstiges }
+    // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrzeug (Fahrräder) am Ende ergänzt
+    public enum G1C_ItemCategory { Kleidung, Lebensmittel, Getraenk, Verbrauch, Quest, Moebel, Sonstiges, Fahrzeug }
 
     public enum G1C_ClothingSlot { None, Top, Pants, Shoes, Hat }
 
@@ -31,7 +32,10 @@ namespace OOPGames
         public int FurnitureHeight { get; set; } = 1;
         public string IconId { get { return "item_" + Id; } }
 
-        public bool IsUsable { get { return BuffId != null || Cures.Length > 0; } }
+        public bool IsUsable { get { return BuffId != null || Cures.Length > 0 || Category == G1C_ItemCategory.Fahrzeug; } }
+
+        /// <summary>Kleidung und Fahrräder besitzt man nur einmal.</summary>
+        public bool IsUnique { get { return Slot != G1C_ClothingSlot.None || Category == G1C_ItemCategory.Fahrzeug; } }
     }
 
     // Entwickler: Patrick Lupierz – alle Gegenstände des Spiels an einer Stelle
@@ -89,6 +93,13 @@ namespace OOPGames
                 Furniture("furniture_table", "Beistelltisch", "obj_home_table", 2, 1, 220),
                 Furniture("furniture_shelf", "Bücherregal", "obj_store_shelf", 2, 2, 280),
                 Furniture("furniture_bed", "Bett", "obj_home_bed", 2, 1, 350),
+
+                // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Fahrräder (Farbe = Rahmenfarbe der Grafik)
+                Bike("bike_red", "Rotes Fahrrad", 0, 0xD83030),
+                Bike("bike_blue", "Blaues Fahrrad", 320, 0x3060C8),
+                Bike("bike_green", "Grünes Fahrrad", 320, 0x38A050),
+                Bike("bike_yellow", "Gelbes Fahrrad", 350, 0xE8C030),
+                Bike("bike_black", "Schwarzes Rennrad", 480, 0x303038),
             };
             return list.ToDictionary(i => i.Id);
         }
@@ -102,6 +113,16 @@ namespace OOPGames
         private static G1C_Item Clothing(string id, string name, G1C_ClothingSlot slot, int price, uint color)
         {
             return new G1C_Item { Id = id, Name = name, Description = "Kleidung – am Kleiderschrank anziehen.", Category = G1C_ItemCategory.Kleidung, Price = price, Slot = slot, Color = color };
+        }
+
+        // Entwickler: Patrick Lupierz – 15.11.2026
+        private static G1C_Item Bike(string id, string name, int price, uint color)
+        {
+            return new G1C_Item
+            {
+                Id = id, Name = name, Category = G1C_ItemCategory.Fahrzeug, Price = price, Color = color,
+                Description = "Fahrrad – im Inventar [E] zum Auf-/Absteigen (nur draußen). Fährt fast doppelt so schnell."
+            };
         }
 
         private static G1C_Item Furniture(string id, string name, string sprite, int width, int height, int price)
@@ -279,6 +300,10 @@ namespace OOPGames
                 case G1C_WorldLocation.Market:
                     return new G1C_Shop { Name = "Supermarkt", OpenFrom = 7, OpenUntil = 21,
                         ItemIds = new[] { "water", "apple", "snack", "sandwich", "coffee" } };
+                // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrradladen
+                case G1C_WorldLocation.BikeShop:
+                    return new G1C_Shop { Name = "Fahrradladen", OpenFrom = 9, OpenUntil = 18,
+                        ItemIds = new[] { "bike_red", "bike_blue", "bike_green", "bike_yellow", "bike_black" } };
                 case G1C_WorldLocation.FurnitureStore:
                     return new G1C_Shop { Name = "Möbelhaus", OpenFrom = 9, OpenUntil = 19,
                         ItemIds = new[] { "furniture_plant", "furniture_chair", "furniture_table", "furniture_shelf", "furniture_bed" } };
@@ -291,13 +316,14 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026 – alle Orte mit Laden (für CLOSED-Schilder und Selbsttest)
         public static readonly G1C_WorldLocation[] Locations =
         {
-            G1C_WorldLocation.GasStation, G1C_WorldLocation.ClothingStore, G1C_WorldLocation.Market, G1C_WorldLocation.FurnitureStore
+            G1C_WorldLocation.GasStation, G1C_WorldLocation.ClothingStore, G1C_WorldLocation.Market, G1C_WorldLocation.FurnitureStore,
+            G1C_WorldLocation.BikeShop
         };
 
         // Entwickler: Patrick Lupierz – Kauf: erst abbuchen, dann ins Inventar. Kleidung gibt es nur einmal.
         public static string Buy(G1C_Item item, G1C_MoneyManager money, G1C_Inventory inventory)
         {
-            if (item.Slot != G1C_ClothingSlot.None && inventory.Has(item.Id)) return "Das besitzt du schon.";
+            if (item.IsUnique && inventory.Has(item.Id)) return "Das besitzt du schon."; // Patrick Lupierz – 15.11.2026: auch Fahrräder
             int price = PriceWithMarkup(item.Price);
             if (!money.TryWithdraw(price)) return "Nicht genug Chips.";
             inventory.Add(item.Id);

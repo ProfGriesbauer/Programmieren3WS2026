@@ -170,9 +170,20 @@ namespace OOPGames
             }
 
             G1C_Player player = game.Player;
-            drawables.Add(new KeyValuePair<double, System.Action>(player.VisualY + 1.01,
-                () => DrawEntity(r, _animation.GetSpriteId(player), player.VisualX, player.VisualY, 1, 1,
-                                 tileSize, mapX, mapY)));
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – beim Fahrradfahren sitzt die Figur auf dem Rad
+            bool riding = scrolling && game.Bikes.Riding;
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – beim Schlafen liegt die Figur im Bett
+            G1C_WorldObject bed = game.IsSleeping && game.CurrentLocation == G1C_WorldLocation.Home
+                ? world.Objects.FirstOrDefault(o => o.Interaction == G1C_InteractionType.Bed) : null;
+            if (bed != null)
+                drawables.Add(new KeyValuePair<double, System.Action>(bed.Y + bed.Height + 0.02,
+                    () => DrawSleeper(r, player.Skin, bed, tileSize, mapX, mapY)));
+            else drawables.Add(new KeyValuePair<double, System.Action>(player.VisualY + 1.01, () =>
+            {
+                if (riding) DrawBike(r, game.Bikes.RideSpriteId(player.Facing), player.VisualX, player.VisualY, tileSize, mapX, mapY);
+                DrawEntity(r, _animation.GetSpriteId(player), player.VisualX, player.VisualY - (riding ? 0.2 : 0), 1, 1,
+                           tileSize, mapX, mapY);
+            }));
 
             foreach (KeyValuePair<double, System.Action> d in drawables.OrderBy(d => d.Key))
             {
@@ -215,6 +226,32 @@ namespace OOPGames
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Schlafende Figur: Front-Grafik um 90° gedreht, Kopf auf dem linken Kissen, Decke über dem Körper.
+        private void DrawSleeper(G1C_Renderer r, string skin, G1C_WorldObject bed, double tileSize, double mapX, double mapY)
+        {
+            double bedTop = mapY + (bed.Y + bed.Height) * tileSize - bed.Width * tileSize * _sprites.GetAspect(bed.SpriteId);
+            double size = tileSize * 0.95;
+            double cx = mapX + bed.X * tileSize + tileSize * 0.75;
+            double cy = bedTop + tileSize * 0.6;
+            r.Sprite(G1C_PlayerAnimation.GetStandingSpriteId(skin, G1C_Direction.Down), cx - size / 2, cy - size / 2, size, size, -90);
+            double blanketX = mapX + bed.X * tileSize + tileSize * 0.95;
+            double blanketW = bed.Width * tileSize - tileSize * 1.1;
+            r.FillRect(blanketX, cy - size * 0.36, blanketW, size * 0.72, Color.FromRgb(0x48, 0x78, 0xC0));
+            r.FillRect(blanketX, cy - size * 0.36, tileSize * 0.12, size * 0.72, Color.FromRgb(0x88, 0xB0, 0xE8));
+            r.Text("Z z", cx - tileSize * 0.2, bedTop - tileSize * 0.6, tileSize * 0.4, Color.FromRgb(0xF8, 0xF8, 0xF8));
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Fahrrad unter der Figur (Seitenansicht breiter als eine Kachel, Frontansicht schmal)
+        private void DrawBike(G1C_Renderer r, string spriteId, double tileX, double tileY, double tileSize, double mapX, double mapY)
+        {
+            double width = tileSize * (spriteId.EndsWith("_side") ? 1.3 : 0.6);
+            double height = width * _sprites.GetAspect(spriteId);
+            double bottom = mapY + (tileY + 1) * tileSize;
+            r.Sprite(spriteId, mapX + (tileX + 0.5) * tileSize - width / 2, bottom - height, width, height);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
         // Aufgabe: CLOSED-Schild an der Tür jedes gerade geschlossenen Ladens. Welche Läden geschlossen sind,
         //          entscheidet allein die Spiellogik (G1C_GameManager.ClosedShops); hier wird nur gezeichnet.
         private void DrawClosedSigns(G1C_Renderer r, G1C_GameManager game, double tileSize, double mapX, double mapY)
@@ -239,7 +276,7 @@ namespace OOPGames
             int left = game.SleepUntilTick - game.TickCount;
             int elapsed = G1C_GameManager.SleepAnimationTicks - left;
             double fade = System.Math.Min(1.0, System.Math.Min(elapsed, left) / 15.0);
-            byte alpha = (byte)(230 * fade);
+            byte alpha = (byte)(160 * fade); // Patrick Lupierz – schwächer, damit die schlafende Figur sichtbar bleibt
             r.FillRect(0, G1C_GameHUD.Height, G1C_Renderer.ScreenWidth, G1C_Renderer.ScreenHeight - G1C_GameHUD.Height,
                        Color.FromArgb(alpha, 8, 10, 32));
             double baseY = G1C_Renderer.ScreenHeight / 2;

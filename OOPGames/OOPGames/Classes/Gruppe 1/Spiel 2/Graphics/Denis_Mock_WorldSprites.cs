@@ -333,37 +333,79 @@ namespace OOPGames
         }
 
         // Entwickler: Denis Mock
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Änderung: Der Pavillon sah aus wie ein Schild
+        // (helle Tafel zwischen zwei Pfosten). Jetzt: Walmdach mit Ziegelreihen, Spitze und Laterne, vier Säulen
+        // und darunter freie Fläche. Der untere Bereich ist transparent, damit man die Figur darunter sieht.
         private static BitmapSource Pavilion()
         {
-            G1C_PixelCanvas canvas = new G1C_PixelCanvas(64, 48);
-            canvas.FillRect(4, 8, 56, 6, Rgb(0xB8, 0x70, 0x48));
-            canvas.FillRect(8, 14, 4, 31, Rgb(0x78, 0x50, 0x38));
-            canvas.FillRect(52, 14, 4, 31, Rgb(0x78, 0x50, 0x38));
-            canvas.FillRect(14, 16, 36, 24, Rgb(0xD8, 0xC8, 0x98));
-            canvas.DrawRectBorder(14, 16, 36, 24, Rgb(0x58, 0x48, 0x38));
+            G1C_PixelCanvas canvas = new G1C_PixelCanvas(64, 80);
+            Color roof = Rgb(0xB0, 0x48, 0x38), roofLight = Rgb(0xD0, 0x68, 0x50), roofDark = Rgb(0x80, 0x30, 0x28);
+            Color pillar = Rgb(0xF0, 0xE8, 0xD8), pillarShade = Rgb(0xC0, 0xB4, 0xA0), outline = Rgb(0x38, 0x28, 0x28);
+
+            // hintere Säulen (unter dem Dach, kürzer und dunkler = weiter hinten)
+            canvas.FillRect(12, 30, 3, 26, pillarShade);
+            canvas.FillRect(49, 30, 3, 26, pillarShade);
+            // Walmdach
+            for (int y = 3; y < 30; y++)
+            {
+                int inset = System.Math.Max(0, (15 - y) * 2);
+                Color row = y < 7 ? roofLight : (y % 5 == 0 ? roofDark : roof);
+                canvas.FillRect(1 + inset, y, 62 - 2 * inset, 1, row);
+            }
+            canvas.FillRect(1, 29, 62, 2, Rgb(0xE8, 0xD8, 0xB8));   // Traufkante
+            canvas.FillRect(1, 31, 62, 2, roofDark);                 // Schatten unter der Traufe
+            canvas.FillRect(30, 0, 4, 4, Rgb(0xE8, 0xC0, 0x40));     // Dachspitze
+            canvas.FillRect(31, 33, 2, 3, outline);                  // Laterne
+            canvas.FillRect(29, 36, 6, 5, Rgb(0xF8, 0xD8, 0x70));
+            canvas.DrawRectBorder(29, 36, 6, 5, outline);
+            // vordere Säulen mit Sockel und Kapitell
+            foreach (int x in new[] { 2, 56 })
+            {
+                canvas.FillRect(x, 33, 6, 44, pillar);
+                canvas.FillRect(x + 4, 33, 2, 44, pillarShade);
+                canvas.FillRect(x - 1, 33, 8, 3, Rgb(0xD8, 0xCC, 0xB8));
+                canvas.FillRect(x - 1, 75, 8, 4, Rgb(0xA8, 0xA0, 0x90));
+                canvas.DrawRectBorder(x, 33, 6, 44, outline);
+            }
+            canvas.AddOutline(outline);
             return canvas.ToBitmap();
         }
 
         // Entwickler: Denis Mock
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – flachere, realistischere Theke (helle Arbeitsplatte,
+        // Front mit Kassettenfüllungen, Sockelleiste). Die alte Grafik war so hoch, dass sie Verkäufer verdeckte.
         private static BitmapSource Counter()
         {
-            G1C_PixelCanvas canvas = new G1C_PixelCanvas(48, 24);
-            canvas.FillRect(1, 5, 46, 17, Rgb(0x90, 0x58, 0x38));
-            canvas.FillRect(1, 5, 46, 5, Rgb(0xC0, 0x88, 0x50));
-            canvas.DrawRectBorder(1, 5, 46, 17, Rgb(0x48, 0x30, 0x28));
+            G1C_PixelCanvas canvas = new G1C_PixelCanvas(48, 16);
+            canvas.FillRect(0, 0, 48, 5, Rgb(0xD8, 0xA8, 0x70));                 // Arbeitsplatte
+            canvas.FillRect(0, 0, 48, 1, Rgb(0xF0, 0xC8, 0x90));
+            canvas.FillRect(0, 5, 48, 9, Rgb(0x90, 0x58, 0x38));                 // Front
+            for (int x = 3; x < 46; x += 11) canvas.DrawRectBorder(x, 7, 8, 5, Rgb(0x68, 0x40, 0x28));
+            canvas.FillRect(0, 14, 48, 2, Rgb(0x50, 0x34, 0x24));                // Sockel
+            canvas.AddOutline(Rgb(0x38, 0x24, 0x20));
             return canvas.ToBitmap();
         }
 
         // Entwickler: Denis Mock
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – realistischeres Krankenbett: Metallrahmen mit
+        // Gitter am Kopfende, Kissen, mintgrüne Decke mit Umschlag, Rollen, Bodenschatten.
         private static BitmapSource MedicalBed()
         {
             G1C_PixelCanvas canvas = new G1C_PixelCanvas(48, 32);
-            canvas.FillRect(3, 5, 42, 23, Rgb(0xE8, 0xE8, 0xD8));
-            canvas.DrawRectBorder(3, 5, 42, 23, Rgb(0x50, 0x68, 0x70));
-            canvas.FillRect(6, 8, 11, 9, Rgb(0xF8, 0xF8, 0xF0));
-            canvas.FillRect(18, 9, 27, 16, Rgb(0x88, 0xC8, 0xD0));
-            canvas.FillRect(5, 28, 3, 4, Rgb(0x48, 0x58, 0x60));
-            canvas.FillRect(40, 28, 3, 4, Rgb(0x48, 0x58, 0x60));
+            Color metal = Rgb(0xB8, 0xC4, 0xC8), metalDark = Rgb(0x70, 0x80, 0x88);
+            canvas.FillRect(4, 31, 40, 1, Rgb(0x50, 0x58, 0x60));
+            canvas.FillRect(2, 2, 3, 26, metal);                          // Kopfgitter
+            for (int y = 4; y < 26; y += 4) canvas.FillRect(2, y, 3, 1, metalDark);
+            canvas.FillRect(4, 6, 41, 20, metalDark);                     // Rahmen
+            canvas.FillRect(5, 7, 39, 18, Rgb(0xF4, 0xF4, 0xEC));         // Laken
+            canvas.FillRect(6, 9, 10, 13, Rgb(0xFF, 0xFF, 0xFF));         // Kissen
+            canvas.FillRect(15, 9, 1, 13, Rgb(0xC8, 0xC8, 0xC0));
+            canvas.FillRect(18, 8, 26, 16, Rgb(0x88, 0xC8, 0xB8));        // Decke
+            canvas.FillRect(18, 8, 3, 16, Rgb(0xB8, 0xE8, 0xD8));         // Umschlag
+            canvas.FillRect(18, 22, 26, 2, Rgb(0x60, 0xA0, 0x90));
+            canvas.FillRect(44, 6, 2, 20, metal);                         // Fußende
+            foreach (int x in new[] { 6, 40 }) { canvas.FillRect(x, 26, 2, 3, metalDark); canvas.FillRect(x - 1, 29, 4, 2, Rgb(0x30, 0x30, 0x38)); }
+            canvas.AddOutline(Rgb(0x38, 0x40, 0x48));
             return canvas.ToBitmap();
         }
 
@@ -397,20 +439,29 @@ namespace OOPGames
         }
 
         // Entwickler: Denis Mock
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – realistischerer Stuhl: Lehne mit Sprossen,
+        // gepolsterte Sitzfläche mit Lichtkante, vier Beine (hintere dunkler), Bodenschatten.
         private static BitmapSource Chair()
         {
             G1C_PixelCanvas canvas = new G1C_PixelCanvas(16, 20);
-            canvas.FillRect(2, 2, 12, 9, Rgb(0x90, 0x58, 0x38));
-            canvas.DrawRectBorder(2, 2, 12, 9, Rgb(0x48, 0x30, 0x28));
-            canvas.FillRect(3, 10, 10, 4, Rgb(0xB8, 0x80, 0x48));
-            canvas.FillRect(4, 14, 2, 6, Rgb(0x58, 0x38, 0x28));
-            canvas.FillRect(10, 14, 2, 6, Rgb(0x58, 0x38, 0x28));
+            Color wood = Rgb(0x9A, 0x60, 0x38), woodDark = Rgb(0x60, 0x3C, 0x24), woodLight = Rgb(0xC8, 0x8C, 0x58);
+            canvas.FillRect(3, 19, 10, 1, Rgb(0x50, 0x40, 0x38));        // Schatten
+            canvas.FillRect(3, 1, 10, 2, woodLight);                     // Lehne oben
+            canvas.FillRect(3, 3, 2, 8, wood); canvas.FillRect(11, 3, 2, 8, wood);
+            canvas.FillRect(6, 3, 1, 7, woodDark); canvas.FillRect(9, 3, 1, 7, woodDark); // Sprossen
+            canvas.FillRect(5, 13, 1, 5, woodDark); canvas.FillRect(10, 13, 1, 5, woodDark); // hintere Beine
+            canvas.FillRect(2, 10, 12, 4, Rgb(0xB0, 0x40, 0x40));        // Polster
+            canvas.FillRect(2, 10, 12, 1, Rgb(0xD8, 0x68, 0x60));
+            canvas.FillRect(2, 13, 12, 1, Rgb(0x80, 0x28, 0x28));
+            canvas.FillRect(2, 14, 2, 5, wood); canvas.FillRect(12, 14, 2, 5, wood); // vordere Beine
+            canvas.AddOutline(Rgb(0x38, 0x24, 0x20));
             return canvas.ToBitmap();
         }
 
         // Entwickler: Denis Mock
         private static BitmapSource Animal(string kind, int frame)
         {
+            if (kind == "bird") return PerchedBird(frame); // Änderung durch: Patrick Lupierz – 15.11.2026
             G1C_PixelCanvas canvas = new G1C_PixelCanvas(16, 16);
             if (kind == "duck")
             {
@@ -465,24 +516,78 @@ namespace OOPGames
         }
 
         // Entwickler: Denis Mock
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – realistischeres Bett: Kopfteil mit Kassetten,
+        // Matratze, zwei Kissen mit Schatten, Steppdecke mit Umschlag und Karomuster, Fußteil, Bodenschatten.
         private static BitmapSource Bed()
         {
             G1C_PixelCanvas canvas = new G1C_PixelCanvas(32, 24);
-            canvas.FillRect(1, 3, 30, 20, Rgb(0x58, 0x38, 0x30));
-            canvas.DrawRectBorder(1, 3, 30, 20, Rgb(0x38, 0x28, 0x28));
-            canvas.FillRect(4, 6, 24, 14, Rgb(0x68, 0x88, 0xB8));
-            canvas.FillRect(5, 6, 9, 6, Rgb(0xE8, 0xE0, 0xC8));
+            Color wood = Rgb(0x8A, 0x5A, 0x34), woodDark = Rgb(0x5E, 0x3A, 0x22), woodLight = Rgb(0xB8, 0x80, 0x4C);
+            Color quilt = Rgb(0x48, 0x78, 0xC0), quiltLight = Rgb(0x88, 0xB0, 0xE8), quiltDark = Rgb(0x30, 0x58, 0x98);
+            canvas.FillRect(2, 23, 28, 1, Rgb(0x50, 0x40, 0x38));
+            canvas.FillRect(1, 0, 30, 6, wood);                          // Kopfteil
+            canvas.FillRect(1, 0, 30, 1, woodLight);
+            canvas.FillRect(4, 2, 10, 2, woodDark); canvas.FillRect(18, 2, 10, 2, woodDark);
+            canvas.FillRect(1, 6, 30, 15, woodDark);                     // Rahmen
+            canvas.FillRect(3, 6, 26, 14, Rgb(0xF0, 0xEC, 0xE0));        // Laken
+            for (int x = 5; x <= 17; x += 12)
+            {
+                canvas.FillRect(x, 7, 10, 5, Rgb(0xFF, 0xFF, 0xFF));     // Kissen
+                canvas.FillRect(x, 11, 10, 1, Rgb(0xC8, 0xC4, 0xB8));
+                canvas.FillRect(x + 1, 8, 3, 1, Rgb(0xE8, 0xE4, 0xD8));
+            }
+            canvas.FillRect(3, 13, 26, 7, quilt);                        // Decke
+            canvas.FillRect(3, 13, 26, 2, quiltLight);                   // Umschlag
+            for (int y = 16; y < 20; y += 3)
+                for (int x = 5; x < 28; x += 4) canvas.Set(x, y, quiltDark);
+            canvas.FillRect(27, 15, 2, 5, quiltDark);                    // Seitenschatten
+            canvas.FillRect(1, 20, 30, 3, wood);                         // Fußteil
+            canvas.FillRect(1, 20, 30, 1, woodLight);
+            canvas.AddOutline(Rgb(0x30, 0x20, 0x18));
             return canvas.ToBitmap();
         }
 
         // Entwickler: Denis Mock
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – realistischerer Tisch: Holzmaserung, Lichtkante,
+        // sichtbare Zarge, vier Beine (hintere dunkler), Tischdecke-Läufer mit Vase, Bodenschatten.
         private static BitmapSource Table()
         {
             G1C_PixelCanvas canvas = new G1C_PixelCanvas(32, 16);
-            canvas.FillRect(2, 2, 28, 8, Rgb(0xA0, 0x68, 0x38));
-            canvas.DrawRectBorder(2, 2, 28, 8, Rgb(0x48, 0x30, 0x28));
-            canvas.FillRect(5, 10, 3, 6, Rgb(0x58, 0x38, 0x28));
-            canvas.FillRect(24, 10, 3, 6, Rgb(0x58, 0x38, 0x28));
+            Color wood = Rgb(0xA8, 0x70, 0x40), woodDark = Rgb(0x60, 0x3C, 0x24), woodLight = Rgb(0xD0, 0x98, 0x60);
+            canvas.FillRect(3, 15, 26, 1, Rgb(0x50, 0x40, 0x38));
+            canvas.FillRect(6, 10, 2, 5, woodDark); canvas.FillRect(24, 10, 2, 5, woodDark); // hintere Beine
+            canvas.FillRect(1, 2, 30, 7, wood);                          // Platte
+            canvas.FillRect(1, 2, 30, 1, woodLight);
+            canvas.FillRect(4, 4, 9, 1, Rgb(0x90, 0x5C, 0x34)); canvas.FillRect(17, 6, 10, 1, Rgb(0x90, 0x5C, 0x34));
+            canvas.FillRect(11, 3, 10, 5, Rgb(0xE8, 0xE0, 0xD0));        // Läufer
+            canvas.FillRect(15, 0, 3, 4, Rgb(0x58, 0x88, 0xC8));         // Vase
+            canvas.Set(16, 0, Rgb(0xE8, 0x60, 0x70));
+            canvas.FillRect(1, 9, 30, 2, woodDark);                      // Zarge
+            canvas.FillRect(2, 11, 2, 4, wood); canvas.FillRect(28, 11, 2, 4, wood); // vordere Beine
+            canvas.AddOutline(Rgb(0x38, 0x24, 0x20));
+            return canvas.ToBitmap();
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Vogel-Korrektur. Der alte Vogel (16x16, blaue Flügelflächen ohne Kontur) lag auf dem Baumstamm
+        //          am Boden und verdeckte ihn. Jetzt: kleines Rotkehlchen in Seitenansicht mit Kontur, das OBEN auf der
+        //          Baumkrone sitzt (hohe, unten transparente Grafik wie der Baum, unten bündig gezeichnet).
+        //          Frame 0 = sitzt, Frame 1 = Kopf geneigt und Flügel leicht geöffnet.
+        private static BitmapSource PerchedBird(int frame)
+        {
+            G1C_PixelCanvas canvas = new G1C_PixelCanvas(16, 40); // Baum ist 16x30: Füße (Zeile 11) liegen auf der Kronenspitze
+            Color back = Rgb(0x70, 0x58, 0x40), breast = Rgb(0xE8, 0x78, 0x38), belly = Rgb(0xF0, 0xE0, 0xC8);
+            int head = frame == 0 ? 2 : 3;
+            canvas.FillRect(5, 5, 7, 5, back);                       // Körper
+            canvas.FillRect(6, 7, 5, 3, breast);                     // rote Brust
+            canvas.FillRect(7, 9, 3, 1, belly);
+            canvas.FillRect(9, head, 4, 4, back);                    // Kopf
+            canvas.FillRect(10, head + 2, 2, 2, breast);
+            canvas.Set(11, head + 1, Rgb(0x10, 0x10, 0x10));         // Auge
+            canvas.FillRect(13, head + 2, 2, 1, Rgb(0xD8, 0xA8, 0x40)); // Schnabel
+            canvas.FillRect(2, 5, 3, 2, back);                       // Schwanz
+            if (frame == 1) canvas.FillRect(4, 3, 4, 2, Rgb(0x58, 0x44, 0x30)); // Flügel angehoben
+            canvas.FillRect(7, 10, 1, 2, Rgb(0x40, 0x30, 0x20)); canvas.FillRect(9, 10, 1, 2, Rgb(0x40, 0x30, 0x20));
+            canvas.AddOutline(Rgb(0x28, 0x20, 0x18));
             return canvas.ToBitmap();
         }
 

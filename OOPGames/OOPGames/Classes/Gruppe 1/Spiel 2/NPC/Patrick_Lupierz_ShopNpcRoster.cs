@@ -16,7 +16,97 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz
         public static List<G1C_NpcCharacter> Create()
         {
-            return new List<G1C_NpcCharacter> { Jana(), Olli(), Mia() };
+            return new List<G1C_NpcCharacter> { Jana(), Olli(), Mia(), Karl(), Bodo(), Rudi(), Paula() };
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Bankberater, Wachmann, Radhändler, Spielhallen-Aufsicht.
+        // Skins entsprechen den Weltfiguren in G1C_BuildingInteriorWorld (BuildBank, BuildBikeShop, BuildArcade).
+        public const string KarlSkin = "pc-303030-F0C8A0-2C3C68-282830-181818-x";
+        public const string BodoSkin = "pc-201810-C89068-384858-282838-101010-202838";
+        public const string RudiSkin = "pc-A06030-E8B890-38A050-404858-603020-F0C030";
+        public const string PaulaSkin = "pc-F860D0-F0C8A0-282838-383848-F8F8F8-x";
+
+        private static G1C_NpcCharacter Karl()
+        {
+            G1C_NpcPersonality p = new G1C_NpcPersonality
+            {
+                Role = "Bankberater", Traits = "korrekt, zahlenverliebt, trocken",
+                Generosity = 0.1, Pride = 0.5, RiskAppetite = 0.0, RefusesMoneyByRule = true,
+                FirstMeeting = "Guten Tag. Karl, Anlageberatung. Ich berate gern. Ich lache selten.",
+                GeneralInfo = "Zinseszins ist das achte Weltwunder. Die anderen sieben verzinsen sich nicht.",
+                PersonalStory = "Ich habe mein erstes Sparbuch mit sechs eröffnet. Mit acht hatte ich ein Portfolio."
+            };
+            p.Topics.Add(new G1C_DialogueTopic("Wie viel bringen die Zinsen?", c =>
+                "Jeden Spieltag " + G1C_FinanceManager.InterestPercentPerDay + " % auf dein Guthaben, abgerundet auf ganze Chips. " +
+                "Aus 1000 werden nach einem Tag 1020, danach rechnen wir mit 1020 weiter.", G1C_NpcExpression.Thoughtful));
+            p.Topics.Add(new G1C_DialogueTopic("Lohnt sich das Casino?", G1C_DialogueTopic.Cycle(
+                "Rechnerisch nie. Beim Roulette verlieren Sie im Schnitt 2,7 % pro Einsatz. Bei uns gewinnen Sie 2 % pro Tag.",
+                "Ich wiederhole mich ungern: nein.")));
+            p.Topics.Add(new G1C_DialogueTopic("Was ist mit dem Geldhai draußen?", G1C_DialogueTopic.Cycle(
+                "250 leihen, 300 zurückzahlen: 20 % Aufschlag. Wir nennen so etwas unseriös.",
+                "Wir haben ihn mehrfach gebeten, nicht vor unserer Tür zu stehen. Er steht trotzdem da.")));
+            return new G1C_NpcCharacter("Bankberater Karl", KarlSkin, p, 500, 45, 40);
+        }
+
+        private static G1C_NpcCharacter Bodo()
+        {
+            G1C_NpcPersonality p = new G1C_NpcPersonality
+            {
+                Role = "Wachmann", Traits = "wortkarg, aufmerksam, heimlicher Katzenfan",
+                Generosity = 0.2, Pride = 0.4, RiskAppetite = 0.1, RefusesMoneyByRule = true,
+                FirstMeeting = "Hm. Willkommen in der Bank. Keine Mützen. Ach, meine zählt nicht.",
+                GeneralInfo = "Der Tresor ist sicher. Fragen Sie nicht, wie sicher.",
+                PersonalStory = "Ich wollte eigentlich Tierpfleger werden. Jetzt bewache ich Geld. Geld miaut nicht."
+            };
+            p.Topics.Add(new G1C_DialogueTopic("Ist hier schon mal eingebrochen worden?", G1C_DialogueTopic.Cycle(
+                "Einmal. Ein Waschbär. Er kam nicht weit.", "Der Waschbär hat Hausverbot. Wie alle anderen auch.")));
+            p.Topics.Add(new G1C_DialogueTopic("Wie ist die Nachtschicht?", G1C_DialogueTopic.ByTime(
+                "Ich habe gerade Feierabend gehabt. Sieht man mir an, oder?",
+                "Tagsüber ist es ruhig. Nachts auch. Ich mag ruhig.",
+                "Bald wird es dunkel. Dann zähle ich Laternen.",
+                "Psst. Nachts flüstern wir hier.")));
+            return new G1C_NpcCharacter("Wachmann Bodo", BodoSkin, p, 60, 40, 45);
+        }
+
+        private static G1C_NpcCharacter Rudi()
+        {
+            G1C_NpcPersonality p = new G1C_NpcPersonality
+            {
+                Role = "Radhändler", Traits = "begeistert, sportlich, redet gern über Gangschaltungen",
+                Generosity = 0.4, Pride = 0.4, RiskAppetite = 0.5,
+                FirstMeeting = "Servus! Rudi mein Name, Räder mein Spiel. Das große Rad auf dem Dach? Hab ich selbst raufgetragen.",
+                GeneralInfo = "Mit dem Rad bist du fast doppelt so schnell. Nur draußen, drinnen bitte schieben.",
+                PersonalStory = "Ich bin mal mit dem Rad bis ans Meer gefahren. Dann ist mir eingefallen, dass wir keins haben."
+            };
+            p.Topics.Add(new G1C_DialogueTopic("Wann habt ihr offen?", c => Hours(G1C_WorldLocation.BikeShop)));
+            p.Topics.Add(new G1C_DialogueTopic("Welches Rad empfiehlst du?", c =>
+                c.Money != null && c.Money.Balance >= 500
+                    ? "Das schwarze Rennrad! Leicht, schnell, sieht aus wie Mitternacht."
+                    : "Blau oder Grün – solide Räder für faire Chips. Dein rotes vor dem Haus tut's aber auch."));
+            p.Topics.Add(new G1C_DialogueTopic("Wie fahre ich Fahrrad?", c =>
+                "Im Inventar [I] dein Rad wählen und [E] drücken – oder am Ständer vor deinem Haus [E]. Absteigen genauso."));
+            return new G1C_NpcCharacter("Radhändler Rudi", RudiSkin, p, 120, 45, 35);
+        }
+
+        private static G1C_NpcCharacter Paula()
+        {
+            G1C_NpcPersonality p = new G1C_NpcPersonality
+            {
+                Role = "Spielhallen-Aufsicht", Traits = "Highscore-Jägerin, schnell gelangweilt, hilfsbereit",
+                Generosity = 0.3, Pride = 0.6, RiskAppetite = 0.6,
+                FirstMeeting = "Hi! Paula. Ich passe auf die Automaten auf. Und auf meinen Rekord.",
+                GeneralInfo = "Jedes Spiel kostet 5 Chips. Gute Punktzahlen bringen Chips zurück, bis zu 30 pro Runde.",
+                PersonalStory = "Ich habe beim Sternenjäger mal Welle 12 erreicht. Seitdem nennen mich alle Captain."
+            };
+            p.Topics.Add(new G1C_DialogueTopic("Was ist der Gast-Automat?", c =>
+                "Der in der Mitte! Da laufen Spiele aus anderen Gruppen, die beim Spielsystem angemeldet sind. Gewinnst du gegen den Computer, gibt's 20 Chips."));
+            p.Topics.Add(new G1C_DialogueTopic("Hast du einen Tipp?", G1C_DialogueTopic.Cycle(
+                "Sternenjäger: Bleib in Bewegung, die Sturzflieger zielen auf deine alte Position.",
+                "Ziegelbrecher: Triff den Ball mit dem Schlägerrand, dann fliegt er schräg.",
+                "Pong: Die KI ist langsamer als du. Spiel steil, dann kommt sie nicht hinterher.")));
+            p.Topics.Add(new G1C_DialogueTopic("Wo ist der Greifautomat?", c =>
+                "Rechts an der Wand. Der ist aus dem Casino zu uns umgezogen – hier passt er auch viel besser hin."));
+            return new G1C_NpcCharacter("Aufsicht Paula", PaulaSkin, p, 80, 45, 35);
         }
 
         private static string Hours(G1C_WorldLocation location)

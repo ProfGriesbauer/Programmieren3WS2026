@@ -50,9 +50,16 @@ In der Bank kannst du Chips einzahlen und abheben; der Geldhai verleiht einmalig
 die mit 300 Chips zurückzuzahlen sind. Möbel kaufst du im Möbelhaus und platzierst sie zuhause
 über den Einrichtungsplan.
 
-Zuhause wartet **Mama**, im Haus rechts daneben wohnt **Oma Gerda** mit ihren drei Katzen; beide stehen von Anfang an im
-Handy. Über "Ich hab da eine Frage ..." haben sie (und die Verkäufer) eigene Themen; wer heute mit beiden gesprochen hat,
-kann einmal pro Tag nach Taschengeld fragen. Läden mit Öffnungszeiten sind danach abgeschlossen und zeigen ein
+Zuhause wartet **Mama**, im Haus rechts daneben wohnt **Oma Gerda** (betretbar) mit ihren drei Katzen; beide stehen von Anfang an im
+Handy. Über "Ich hab da eine Frage ..." haben sie (und die Verkäufer) eigene Themen. Beide geben einmal pro Spieltag
+Taschengeld (Mama 25, Oma 20 Chips) und sagen danach einfach Nein; zum Gegner werden sie nie.
+
+**Spielhalle** (mittlere Straße): vier Automaten mit Sternenjäger, Schlange, Ziegelbrecher und Pong-Duell (5 Chips pro
+Spiel, gute Punkte bringen bis zu 30 Chips), in der Mitte der Gast-Automat mit den Spielen der anderen Gruppen, dazu
+Greifautomat und Highscore-Tafel. **Fahrrad:** steht vor dem Haus ([E] auf-/absteigen, auch über das Inventar), fährt
+fast doppelt so schnell; weitere Farben gibt es im Fahrradladen (Fahrrad auf dem Dach). Unter den Pavillon im Park kann
+man von unten hineinlaufen. **Oma Gerda** wohnt im Haus rechts neben deinem, zusammen mit ihren drei Katzen.
+Die rote **Tankstelle** hat zwei Zapfsäulen und ein Verkaufsfenster: dort mit [E] bei Olli einkaufen, ohne hineinzugehen. Läden mit Öffnungszeiten sind danach abgeschlossen und zeigen ein
 CLOSED-Schild (die Tankstelle hat immer offen). Das Bankguthaben wächst pro Spieltag um 2 %. Schilder, Poster und Sticker
 lassen sich mit **E** ansehen.
 

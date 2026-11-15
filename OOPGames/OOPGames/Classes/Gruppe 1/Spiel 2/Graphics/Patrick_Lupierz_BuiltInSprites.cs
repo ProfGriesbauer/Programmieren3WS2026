@@ -477,6 +477,8 @@ namespace OOPGames
         {
             G1C_PixelCanvas c = new G1C_PixelCanvas(16, 16);
             G1C_Item item = G1C_ItemCatalog.Get(id);
+            // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrräder nutzen dieselbe Grafik wie in der Welt
+            if (item != null && item.Category == G1C_ItemCategory.Fahrzeug) return G1C_DecorSprites.BikeSide(id);
             if (item != null && item.Slot != G1C_ClothingSlot.None)
             {
                 Color clothing = Color.FromRgb((byte)(item.Color >> 16), (byte)(item.Color >> 8), (byte)item.Color);

@@ -35,6 +35,9 @@ namespace OOPGames
         public bool PhoneNumberGiven { get; set; }
         public int TrashSeenCount { get; set; }
         public int LastTrashSeenDay { get; set; } = -1;
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Spieltag des letzten Taschengelds (Familie);
+        // wird mitgespeichert, damit nach dem Laden nicht doppelt gezahlt wird.
+        public int PocketMoneyDay { get; set; }
 
         public int DuelsTotal { get { return DuelsWonByPlayer + DuelsLostByPlayer; } }
     }

@@ -83,6 +83,13 @@ namespace OOPGames
             return null;
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026 – gehaltene Taste für Echtzeit-Arcadespiele (im Tick abgefragt)
+        public static bool IsKeyHeld(Key key)
+        {
+            try { return Keyboard.IsKeyDown(key); }
+            catch (System.InvalidOperationException) { return false; }
+        }
+
         private static bool IsHeld(G1C_Direction d)
         {
             switch (d)
