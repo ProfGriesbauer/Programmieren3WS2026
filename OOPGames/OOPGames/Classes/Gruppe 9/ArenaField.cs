@@ -19,8 +19,8 @@ namespace OOPGames
         public const double PlayerAttackRange = 80;
         public const double PlayerAttackHalfAngleRadians = Math.PI / 6;
         public const int PlayerAttackDamage = 10;
-        private const double EnemySpawnDistance = 250;
-        private const double EnemySpawnAngleStep = 2.399963229728653;
+        private const double EnemySpawnVisibilityMargin = 50;
+        private const int EnemySpawnPositionAttemptLimit = 10000;
         private readonly List<PursuerEnemy> _enemies = new List<PursuerEnemy>();
 
         // The field owns the current player instance.
@@ -28,6 +28,7 @@ namespace OOPGames
         public IReadOnlyList<PursuerEnemy> Enemies { get { return _enemies; } }
         public bool IsGameStarted { get; private set; }
         public bool HasActiveGame { get; private set; }
+        public bool IsGameOver { get { return HasActiveGame && !Player.IsAlive; } }
         public bool ShowDamageRanges { get; private set; }
         public bool ShowDebugHud { get; private set; }
         public int Score { get; private set; }
@@ -46,8 +47,9 @@ namespace OOPGames
             // Resetting starts the player at the center of the arena.
             Player = new PlayerCharacter(MapWidth / 2, MapHeight / 2);
             _enemies.Clear();
+            Point spawnPosition = GetRandomEnemySpawnPosition(Player);
             _enemies.Add(new PursuerEnemy(
-                Player.PositionX + EnemySpawnDistance, Player.PositionY, Player.MaxSpeed));
+                spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
         }
 
         public void ResetGame()
@@ -66,6 +68,19 @@ namespace OOPGames
         public void StartNewGame()
         {
             ResetGame();
+            StartGame();
+        }
+
+        public void RestartGame()
+        {
+            double zoomLevel = ZoomLevel;
+            bool showDamageRanges = ShowDamageRanges;
+            bool showDebugHud = ShowDebugHud;
+
+            ResetGame();
+            ZoomLevel = zoomLevel;
+            ShowDamageRanges = showDamageRanges;
+            ShowDebugHud = showDebugHud;
             StartGame();
         }
 
@@ -99,7 +114,7 @@ namespace OOPGames
 
         public bool ContinueGame()
         {
-            if (!HasActiveGame)
+            if (!HasActiveGame || !Player.IsAlive)
             {
                 return false;
             }
@@ -121,6 +136,13 @@ namespace OOPGames
 
         public void UpdatePlayerPosition()
         {
+            if (!IsGameStarted)
+            {
+                return;
+            }
+
+            double previousX = Player.PositionX;
+            double previousY = Player.PositionY;
             double directionX = 0;
             double directionY = 0;
 
@@ -129,17 +151,48 @@ namespace OOPGames
             if (Keyboard.IsKeyDown(Key.A) || Keyboard.IsKeyDown(Key.Left)) directionX -= 1;
             if (Keyboard.IsKeyDown(Key.D) || Keyboard.IsKeyDown(Key.Right)) directionX += 1;
 
-            Player.Move(directionX, directionY,
-                new Rect(WallThickness, WallThickness,
-                    MapWidth - 2 * WallThickness, MapHeight - 2 * WallThickness));
+            Rect movementBounds = new Rect(WallThickness, WallThickness,
+                MapWidth - 2 * WallThickness, MapHeight - 2 * WallThickness);
+            Player.Move(directionX, directionY, movementBounds);
+            if (OverlapsAnotherEntity(Player))
+            {
+                Player.PositionX = previousX;
+                Player.PositionY = previousY;
+                Player.Move(0, 0, movementBounds);
+            }
         }
 
         public void UpdateEnemyPositions()
         {
+            if (!IsGameStarted)
+            {
+                return;
+            }
+
+            Rect movementBounds = new Rect(WallThickness, WallThickness,
+                MapWidth - 2 * WallThickness, MapHeight - 2 * WallThickness);
             foreach (PursuerEnemy enemy in _enemies)
             {
+                if (!enemy.IsAlive)
+                {
+                    continue;
+                }
+
+                double previousX = enemy.PositionX;
+                double previousY = enemy.PositionY;
                 enemy.UpdateBehavior(this);
-                enemy.TryDamagePlayerOnContact(Player);
+                if (OverlapsAnotherEntity(enemy))
+                {
+                    enemy.PositionX = previousX;
+                    enemy.PositionY = previousY;
+                    enemy.Move(0, 0, movementBounds);
+                }
+                enemy.TryAttackPlayerInRange(Player);
+            }
+
+            if (!Player.IsAlive)
+            {
+                IsGameStarted = false;
             }
         }
 
@@ -150,33 +203,86 @@ namespace OOPGames
                 return;
             }
 
-            double angle = _enemies.Count * EnemySpawnAngleStep;
-            double positionX = Player.PositionX + Math.Cos(angle) * EnemySpawnDistance;
-            double positionY = Player.PositionY + Math.Sin(angle) * EnemySpawnDistance;
-            double minimumX = WallThickness + 17;
-            double maximumX = MapWidth - WallThickness - 17;
-            double minimumY = WallThickness + 17;
-            double maximumY = MapHeight - WallThickness - 17;
+            Point spawnPosition = GetRandomEnemySpawnPosition(Player);
+            _enemies.Add(new PursuerEnemy(
+                spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
+        }
 
-            if (positionX < minimumX || positionX > maximumX
-                || positionY < minimumY || positionY > maximumY)
+        private Point GetRandomEnemySpawnPosition(PlayerCharacter player)
+        {
+            double radius = PursuerEnemy.HitboxSize / 2;
+            double minimumX = WallThickness + radius;
+            double maximumX = MapWidth - WallThickness - radius;
+            double minimumY = WallThickness + radius;
+            double maximumY = MapHeight - WallThickness - radius;
+            double minimumDistance = PursuerEnemy.SightRange + EnemySpawnVisibilityMargin;
+            double minimumDistanceSquared = minimumDistance * minimumDistance;
+
+            for (int attempt = 0; attempt < EnemySpawnPositionAttemptLimit; attempt++)
             {
-                double towardCenterX = MapWidth / 2 - Player.PositionX;
-                double towardCenterY = MapHeight / 2 - Player.PositionY;
-                double length = Math.Sqrt(
-                    towardCenterX * towardCenterX + towardCenterY * towardCenterY);
-                if (length > 0)
+                double positionX = minimumX + Random.Shared.NextDouble() * (maximumX - minimumX);
+                double positionY = minimumY + Random.Shared.NextDouble() * (maximumY - minimumY);
+                double offsetX = positionX - player.PositionX;
+                double offsetY = positionY - player.PositionY;
+                if (offsetX * offsetX + offsetY * offsetY >= minimumDistanceSquared)
                 {
-                    positionX = Player.PositionX
-                        + towardCenterX / length * EnemySpawnDistance;
-                    positionY = Player.PositionY
-                        + towardCenterY / length * EnemySpawnDistance;
+                    if (!OverlapsAnyEnemy(positionX, positionY, PursuerEnemy.HitboxSize))
+                    {
+                        return new Point(positionX, positionY);
+                    }
                 }
             }
 
-            positionX = Math.Max(minimumX, Math.Min(maximumX, positionX));
-            positionY = Math.Max(minimumY, Math.Min(maximumY, positionY));
-            _enemies.Add(new PursuerEnemy(positionX, positionY, Player.MaxSpeed));
+            throw new InvalidOperationException(
+                "Could not find a free enemy spawn position without overlapping another entity.");
+        }
+
+        private bool OverlapsAnotherEntity(Entity entity)
+        {
+            if (!ReferenceEquals(entity, Player) && Player.IsAlive
+                && HitboxesOverlap(entity.PositionX, entity.PositionY, entity.Size,
+                    Player.PositionX, Player.PositionY, Player.Size))
+            {
+                return true;
+            }
+
+            foreach (PursuerEnemy otherEnemy in _enemies)
+            {
+                if (!ReferenceEquals(entity, otherEnemy) && otherEnemy.IsAlive
+                    && HitboxesOverlap(entity.PositionX, entity.PositionY, entity.Size,
+                        otherEnemy.PositionX, otherEnemy.PositionY, otherEnemy.Size))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool OverlapsAnyEnemy(double positionX, double positionY, double size)
+        {
+            foreach (PursuerEnemy enemy in _enemies)
+            {
+                if (enemy.IsAlive
+                    && HitboxesOverlap(positionX, positionY, size,
+                        enemy.PositionX, enemy.PositionY, enemy.Size))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HitboxesOverlap(
+            double firstX, double firstY, double firstSize,
+            double secondX, double secondY, double secondSize)
+        {
+            double minimumDistance = (firstSize + secondSize) / 2;
+            double offsetX = firstX - secondX;
+            double offsetY = firstY - secondY;
+            return offsetX * offsetX + offsetY * offsetY
+                < minimumDistance * minimumDistance;
         }
 
         public void AttackWithPlayer(double aimX, double aimY)

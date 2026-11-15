@@ -1,6 +1,7 @@
 //P06.11.2026
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,9 +15,17 @@ namespace OOPGames
     // Draws the arena every frame and keeps the player's world position at screen center.
     public sealed class PainterG9 : IPaintGame2
     {
+        private const double PlayerAttackFlashDurationMilliseconds = 80;
+        private const double PlayerAttackFlashGapMilliseconds = 40;
+        private readonly Queue<Point> _playerAttackFlashQueue = new Queue<Point>();
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
         private Canvas _zoomInputCanvas;
+        private PlayerCharacter _attackFlashPlayer;
+        private Point _activePlayerAttackDirection;
+        private long _activePlayerAttackTimestamp;
+        private long _nextPlayerAttackFlashTimestamp;
+        private bool _isPlayerAttackFlashActive;
 
         // Reusable brushes avoid creating new colors for every frame.
         private static readonly Brush FloorBrush = new SolidColorBrush(Color.FromRgb(55, 93, 65));
@@ -24,6 +33,10 @@ namespace OOPGames
         private static readonly Brush WallBrush = new SolidColorBrush(Color.FromRgb(55, 57, 62));
         private static readonly Brush PlayerDamageRangeBrush =
             new SolidColorBrush(Color.FromArgb(65, 110, 190, 255));
+        private static readonly Brush PlayerAttackFlashBrush =
+            new SolidColorBrush(Color.FromArgb(120, 110, 190, 255));
+        private static readonly Brush PlayerAttackFlashStrokeBrush =
+            new SolidColorBrush(Color.FromArgb(240, 220, 245, 255));
         private static readonly Brush EnemyDamageRangeBrush =
             new SolidColorBrush(Color.FromArgb(60, 245, 70, 70));
         private static readonly Brush EntityHitboxFillBrush =
@@ -41,6 +54,8 @@ namespace OOPGames
         private static readonly Brush EnemyAttackFlashStroke =
             new SolidColorBrush(Color.FromArgb(220, 255, 70, 50));
         private static readonly object StartMenuTag = new object();
+        private static readonly object PauseMenuTag = new object();
+        private static readonly object GameOverMenuTag = new object();
         private static readonly AnimationProfile BoxingKnightProfile = new AnimationProfile(
             "BoxingKnight",
             new[] { "Character", "BoxingKnight", "BoxingKnightSpritesheet.png" },
@@ -61,7 +76,10 @@ namespace OOPGames
         private SpriteSheetAnimator _playerAnimator;
         private AnimationProfile _playerAnimatorProfile;
         private SpriteSheetAnimator _enemyAnimator;
+        private ArenaField _pauseMenuField;
         private bool _showAnimationMenu;
+        private double _pauseMenuCanvasWidth;
+        private double _pauseMenuCanvasHeight;
 
         public string Name { get { return "Arena Survival"; } }
 
@@ -72,6 +90,7 @@ namespace OOPGames
             _playerAnimatorProfile = null;
             _enemyAnimator = null;
             _showAnimationMenu = false;
+            ClearPlayerAttackFlashes();
         }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
@@ -96,13 +115,25 @@ namespace OOPGames
                 return;
             }
 
-            if (!field.IsGameStarted)
+            if (!field.IsGameStarted && !field.HasActiveGame)
             {
                 if (!ReferenceEquals(canvas.Tag, StartMenuTag))
                 {
                     PaintStartMenu(canvas, field, width, height);
                 }
                 return;
+            }
+
+            if (!field.IsGameStarted)
+            {
+                object menuTag = field.IsGameOver ? GameOverMenuTag : PauseMenuTag;
+                if (ReferenceEquals(canvas.Tag, menuTag)
+                    && ReferenceEquals(_pauseMenuField, field)
+                    && _pauseMenuCanvasWidth == width
+                    && _pauseMenuCanvasHeight == height)
+                {
+                    return;
+                }
             }
 
             AttachZoomInput(canvas, field);
@@ -162,10 +193,16 @@ namespace OOPGames
                 {
                     if (enemy.IsAlive)
                     {
-                        AddEnemyPath(worldCanvas, enemy.PathHistory, left, top);
+                        AddPlannedEnemyPath(worldCanvas, enemy, field, left, top);
                         AddSightRange(worldCanvas,
                             enemy.PositionX - left, enemy.PositionY - top,
-                            PursuerEnemy.SightRange);
+                            PursuerEnemy.SightRange, false);
+                        if (enemy.HasSeenPlayer)
+                        {
+                            AddSightRange(worldCanvas,
+                                enemy.PositionX - left, enemy.PositionY - top,
+                                enemy.CurrentSightRange, true);
+                        }
                     }
                 }
 
@@ -174,6 +211,15 @@ namespace OOPGames
                     ArenaField.PlayerAttackRange,
                     field.AimDirectionX, field.AimDirectionY,
                     ArenaField.PlayerAttackHalfAngleRadians);
+                if (TryGetPlayerAttackFlash(field.Player, out Point attackDirection))
+                {
+                    AddDamageCone(worldCanvas, PlayerAttackFlashBrush,
+                        field.Player.PositionX - left, field.Player.PositionY - top,
+                        ArenaField.PlayerAttackRange,
+                        attackDirection.X, attackDirection.Y,
+                        ArenaField.PlayerAttackHalfAngleRadians,
+                        PlayerAttackFlashStrokeBrush);
+                }
             }
 
             string animationName = GetPlayerAnimationName(
@@ -211,7 +257,7 @@ namespace OOPGames
                 {
                     AddDamageRange(worldCanvas, EnemyDamageRangeBrush,
                         enemy.PositionX - left, enemy.PositionY - top,
-                        (enemy.Size + field.Player.Size) / 2);
+                        PursuerEnemy.AttackRange);
                 }
 
                 if (_enemyAnimator == null)
@@ -279,6 +325,14 @@ namespace OOPGames
             if (field.ShowDebugHud)
             {
                 PaintDebugHud(canvas, field, width, height);
+            }
+            if (!field.IsGameStarted)
+            {
+                PaintStartMenu(canvas, field, width, height, true, field.IsGameOver);
+                canvas.Tag = field.IsGameOver ? GameOverMenuTag : PauseMenuTag;
+                _pauseMenuField = field;
+                _pauseMenuCanvasWidth = width;
+                _pauseMenuCanvasHeight = height;
             }
         }
 
@@ -380,44 +434,58 @@ namespace OOPGames
         }
 
         private static void AddSightRange(
-            Canvas canvas, double centerX, double centerY, double radius)
+            Canvas canvas, double centerX, double centerY, double radius, bool dashed)
         {
             double diameter = radius * 2;
             Ellipse range = new Ellipse
             {
                 Width = diameter,
                 Height = diameter,
-                Fill = EnemySightRangeFillBrush,
+                Fill = dashed ? Brushes.Transparent : EnemySightRangeFillBrush,
                 Stroke = EnemySightRangeStrokeBrush,
                 StrokeThickness = 2,
                 IsHitTestVisible = false
             };
+            if (dashed)
+            {
+                range.StrokeDashArray = new DoubleCollection { 5, 3 };
+            }
             Canvas.SetLeft(range, centerX - radius);
             Canvas.SetTop(range, centerY - radius);
             canvas.Children.Add(range);
         }
 
-        private static void AddEnemyPath(
-            Canvas canvas, IReadOnlyList<Point> path, double left, double top)
+        private static void AddPlannedEnemyPath(
+            Canvas canvas, PursuerEnemy enemy, ArenaField field, double left, double top)
         {
-            if (path.Count < 2)
+            Point start = new Point(enemy.PositionX - left, enemy.PositionY - top);
+            Point destination = enemy.GetPlannedDestination(field);
+            Point end = new Point(destination.X - left, destination.Y - top);
+            if (start == end)
             {
                 return;
             }
 
-            PointCollection points = new PointCollection();
-            foreach (Point point in path)
-            {
-                points.Add(new Point(point.X - left, point.Y - top));
-            }
-
             canvas.Children.Add(new Polyline
             {
-                Points = points,
+                Points = new PointCollection { start, end },
                 Stroke = EnemyPathBrush,
                 StrokeThickness = 2,
+                StrokeDashArray = new DoubleCollection { 5, 3 },
                 IsHitTestVisible = false
             });
+
+            const double markerSize = 6;
+            Ellipse destinationMarker = new Ellipse
+            {
+                Width = markerSize,
+                Height = markerSize,
+                Fill = EnemyPathBrush,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(destinationMarker, end.X - markerSize / 2);
+            Canvas.SetTop(destinationMarker, end.Y - markerSize / 2);
+            canvas.Children.Add(destinationMarker);
         }
 
         private static void PaintDebugHud(Canvas canvas, ArenaField field,
@@ -438,15 +506,18 @@ namespace OOPGames
             AddDebugText(content, string.Format(
                 "Spielerschaden: {0} je Schlag", ArenaField.PlayerAttackDamage));
             AddDebugText(content, string.Format(
-                "Gegnerschaden: {0} je {1:0} s bei Kontakt",
-                PursuerEnemy.ContactDamagePerHit,
-                PursuerEnemy.ContactDamageIntervalMilliseconds / 1000.0));
+                "Gegnerschaden: {0} je {1:0} s in Reichweite",
+                PursuerEnemy.AttackDamagePerHit,
+                PursuerEnemy.AttackIntervalMilliseconds / 1000.0));
             AddDebugText(content, string.Format(
                 "Gegner: {0}   Kills: {1}", field.Enemies.Count, field.Score));
             AddDebugText(content, string.Format(
                 "Angriffsreichweite: {0:0}", ArenaField.PlayerAttackRange));
             AddDebugText(content, string.Format(
-                "Gegner-Sichtweite: {0:0}", PursuerEnemy.SightRange));
+                "Gegner-Angriffsreichweite: {0:0}", PursuerEnemy.AttackRange));
+            AddDebugText(content, string.Format(
+                "Sichtweite: {0:0} (+{1:0} nach Erkennen)",
+                PursuerEnemy.SightRange, PursuerEnemy.SightRangeAfterDetectionBonus));
 
             Border panel = CreateDebugPanel(content, canvasWidth, canvasHeight);
             Canvas.SetLeft(panel, 16);
@@ -459,10 +530,10 @@ namespace OOPGames
             StackPanel content = new StackPanel();
             AddDebugText(content, "LEGENDE", true);
             AddLegendItem(content, PlayerDamageRangeBrush, "Spieler-Angriffsbereich");
-            AddLegendItem(content, EnemyDamageRangeBrush, "Gegner-Kontaktbereich");
+            AddLegendItem(content, EnemyDamageRangeBrush, "Gegner-Angriffsbereich");
             AddLegendItem(content, EntityHitboxStrokeBrush, "Hitboxen");
             AddLegendItem(content, EnemySightRangeStrokeBrush, "Gegner-Sichtweite");
-            AddLegendItem(content, EnemyPathBrush, "Gegnerpfad");
+            AddLegendItem(content, EnemyPathBrush, "Geplanter Gegnerweg");
 
             Border panel = CreateDebugPanel(content, canvasWidth, canvasHeight);
             Canvas.SetLeft(panel, Math.Max(16, canvasWidth - panel.DesiredSize.Width - 16));
@@ -539,7 +610,7 @@ namespace OOPGames
 
         private static void AddDamageCone(
             Canvas canvas, Brush fill, double centerX, double centerY, double radius,
-            double directionX, double directionY, double halfAngle)
+            double directionX, double directionY, double halfAngle, Brush stroke = null)
         {
             double direction = Math.Atan2(directionY, directionX);
             Point center = new Point(centerX, centerY);
@@ -564,6 +635,8 @@ namespace OOPGames
             {
                 Data = geometry,
                 Fill = fill,
+                Stroke = stroke,
+                StrokeThickness = stroke == null ? 0 : 2,
                 IsHitTestVisible = false
             };
             canvas.Children.Add(cone);
@@ -572,7 +645,7 @@ namespace OOPGames
         private static void PaintEnemyAttackEffect(
             Canvas canvas, PursuerEnemy enemy, double centerX, double centerY)
         {
-            double radius = enemy.Size * 1.25;
+            double radius = PursuerEnemy.AttackRange;
             Ellipse flash = new Ellipse
             {
                 Width = radius * 2,
@@ -644,15 +717,26 @@ namespace OOPGames
             if (ReferenceEquals(window, _zoomInputWindow))
             {
                 _zoomInputField = field;
+                if (!ReferenceEquals(canvas, _zoomInputCanvas))
+                {
+                    if (_zoomInputCanvas != null)
+                    {
+                        _zoomInputCanvas.MouseDown -= OnAttackMouseDown;
+                    }
+                    canvas.MouseDown += OnAttackMouseDown;
+                }
                 _zoomInputCanvas = canvas;
                 return;
             }
 
+            if (_zoomInputCanvas != null)
+            {
+                _zoomInputCanvas.MouseDown -= OnAttackMouseDown;
+            }
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
                 _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
-                _zoomInputWindow.PreviewMouseLeftButtonDown -= OnAttackMouseDown;
                 _zoomInputWindow.PreviewMouseMove -= OnAimMouseMove;
                 _zoomInputWindow.Closed -= OnZoomWindowClosed;
             }
@@ -662,9 +746,9 @@ namespace OOPGames
             _zoomInputCanvas = canvas;
             if (_zoomInputWindow != null)
             {
+                _zoomInputCanvas.MouseDown += OnAttackMouseDown;
                 _zoomInputWindow.PreviewKeyDown += OnZoomKeyDown;
                 _zoomInputWindow.PreviewMouseWheel += OnZoomMouseWheel;
-                _zoomInputWindow.PreviewMouseLeftButtonDown += OnAttackMouseDown;
                 _zoomInputWindow.PreviewMouseMove += OnAimMouseMove;
                 _zoomInputWindow.Closed += OnZoomWindowClosed;
             }
@@ -672,6 +756,11 @@ namespace OOPGames
 
         private void OnAttackMouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.ChangedButton != MouseButton.Left)
+            {
+                return;
+            }
+
             if (_zoomInputField == null || !_zoomInputField.IsGameStarted
                 || !_zoomInputField.Player.IsAlive || _zoomInputCanvas == null)
             {
@@ -689,7 +778,69 @@ namespace OOPGames
             double aimX = clickPosition.X - _zoomInputCanvas.ActualWidth / 2;
             double aimY = clickPosition.Y - _zoomInputCanvas.ActualHeight / 2;
             _zoomInputField.AttackWithPlayer(aimX, aimY);
-            e.Handled = true;
+            if (_zoomInputField.ShowDamageRanges)
+            {
+                QueuePlayerAttackFlash(_zoomInputField.Player,
+                    new Point(_zoomInputField.AimDirectionX, _zoomInputField.AimDirectionY));
+            }
+        }
+
+        private void QueuePlayerAttackFlash(PlayerCharacter player, Point direction)
+        {
+            EnsureAttackFlashPlayer(player);
+            _playerAttackFlashQueue.Enqueue(direction);
+        }
+
+        private bool TryGetPlayerAttackFlash(PlayerCharacter player, out Point direction)
+        {
+            EnsureAttackFlashPlayer(player);
+            long now = Stopwatch.GetTimestamp();
+
+            if (_isPlayerAttackFlashActive)
+            {
+                if (Stopwatch.GetElapsedTime(_activePlayerAttackTimestamp, now)
+                    .TotalMilliseconds < PlayerAttackFlashDurationMilliseconds)
+                {
+                    direction = _activePlayerAttackDirection;
+                    return true;
+                }
+
+                _isPlayerAttackFlashActive = false;
+                _nextPlayerAttackFlashTimestamp = now
+                    + (long)(PlayerAttackFlashGapMilliseconds * Stopwatch.Frequency / 1000);
+            }
+
+            if (_playerAttackFlashQueue.Count > 0
+                && now >= _nextPlayerAttackFlashTimestamp)
+            {
+                _activePlayerAttackDirection = _playerAttackFlashQueue.Dequeue();
+                _activePlayerAttackTimestamp = now;
+                _isPlayerAttackFlashActive = true;
+                direction = _activePlayerAttackDirection;
+                return true;
+            }
+
+            direction = default(Point);
+            return false;
+        }
+
+        private void EnsureAttackFlashPlayer(PlayerCharacter player)
+        {
+            if (ReferenceEquals(_attackFlashPlayer, player))
+            {
+                return;
+            }
+
+            ClearPlayerAttackFlashes();
+            _attackFlashPlayer = player;
+        }
+
+        private void ClearPlayerAttackFlashes()
+        {
+            _playerAttackFlashQueue.Clear();
+            _isPlayerAttackFlashActive = false;
+            _activePlayerAttackTimestamp = 0;
+            _nextPlayerAttackFlashTimestamp = 0;
         }
 
         private void OnAimMouseMove(object sender, MouseEventArgs e)
@@ -736,6 +887,10 @@ namespace OOPGames
                     && _zoomInputField.IsGameStarted)
                 {
                     _zoomInputField.ToggleDamageRanges();
+                    if (!_zoomInputField.ShowDamageRanges)
+                    {
+                        ClearPlayerAttackFlashes();
+                    }
                     e.Handled = true;
                     return;
                 }
@@ -748,7 +903,16 @@ namespace OOPGames
                     return;
                 }
 
-                _zoomInputField?.HandleZoomKey(e.Key);
+                if (_zoomInputField != null)
+                {
+                    _zoomInputField.HandleZoomKey(e.Key);
+                    if (!_zoomInputField.IsGameStarted
+                        && _zoomInputCanvas != null
+                        && (e.Key == Key.K || e.Key == Key.L))
+                    {
+                        _zoomInputCanvas.Tag = null;
+                    }
+                }
             }
         }
 
@@ -758,17 +922,24 @@ namespace OOPGames
                 && _zoomInputField != null)
             {
                 _zoomInputField.HandleZoomWheel(e.Delta);
+                if (!_zoomInputField.IsGameStarted && _zoomInputCanvas != null)
+                {
+                    _zoomInputCanvas.Tag = null;
+                }
                 e.Handled = true;
             }
         }
 
         private void OnZoomWindowClosed(object sender, EventArgs e)
         {
+            if (_zoomInputCanvas != null)
+            {
+                _zoomInputCanvas.MouseDown -= OnAttackMouseDown;
+            }
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
                 _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
-                _zoomInputWindow.PreviewMouseLeftButtonDown -= OnAttackMouseDown;
                 _zoomInputWindow.PreviewMouseMove -= OnAimMouseMove;
                 _zoomInputWindow.Closed -= OnZoomWindowClosed;
                 _zoomInputWindow = null;
@@ -867,11 +1038,25 @@ namespace OOPGames
                 String.Join(System.IO.Path.DirectorySeparatorChar.ToString(), relativePath));
         }
 
-        private void PaintStartMenu(Canvas canvas, ArenaField field, double width, double height)
+        private void PaintStartMenu(
+            Canvas canvas, ArenaField field, double width, double height,
+            bool overlayGame = false, bool isGameOver = false)
         {
-            canvas.Children.Clear();
-            canvas.ClipToBounds = true;
-            canvas.Background = new SolidColorBrush(Color.FromRgb(12, 17, 26));
+            if (overlayGame)
+            {
+                canvas.Children.Add(new Rectangle
+                {
+                    Width = width,
+                    Height = height,
+                    Fill = new SolidColorBrush(Color.FromArgb(160, 0, 0, 0))
+                });
+            }
+            else
+            {
+                canvas.Children.Clear();
+                canvas.ClipToBounds = true;
+                canvas.Background = new SolidColorBrush(Color.FromRgb(12, 17, 26));
+            }
 
             Border panel = new Border
             {
@@ -923,7 +1108,7 @@ namespace OOPGames
 
             contents.Children.Add(new TextBlock
             {
-                Text = "ARENA PAUSED",
+                Text = isGameOver ? "GAME OVER" : "ARENA PAUSED",
                 FontSize = 28,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White,
@@ -932,17 +1117,22 @@ namespace OOPGames
             });
             contents.Children.Add(new TextBlock
             {
-                Text = "Your game is paused",
+                Text = isGameOver ? "Your run has ended" : "Your game is paused",
                 FontSize = 15,
                 Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 20)
             });
-            contents.Children.Add(CreateMenuButton("Spiel fortsetzen",
+            contents.Children.Add(CreateMenuButton(
+                isGameOver ? "Erneut spielen" : "Spiel fortsetzen",
                 new SolidColorBrush(Color.FromRgb(43, 91, 125)),
                 (sender, e) =>
                 {
-                    if (!field.ContinueGame())
+                    if (isGameOver)
+                    {
+                        field.RestartGame();
+                    }
+                    else if (!field.ContinueGame())
                     {
                         MessageBox.Show("Kein aktives Spiel gefunden.",
                             "Spiel fortsetzen", MessageBoxButton.OK, MessageBoxImage.Information);

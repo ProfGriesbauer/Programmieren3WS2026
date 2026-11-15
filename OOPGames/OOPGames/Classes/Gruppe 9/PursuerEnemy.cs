@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
@@ -8,31 +7,87 @@ namespace OOPGames
 {
     public sealed class PursuerEnemy : NonPlayerCharacter
     {
-        public const int ContactDamagePerHit = 10;
-        public const int ContactDamageIntervalMilliseconds = 1000;
+        public const double AttackRange = 60;
+        public const int AttackDamagePerHit = 10;
+        public const int AttackIntervalMilliseconds = 1000;
         public const double SightRange = 200;
+        public const double SightRangeAfterDetectionBonus = 50;
+        public const double HitboxSize = 34;
+        private const double GameTickDurationSeconds = 0.04;
         private const double WanderSpeedMultiplier = 0.5;
         private const double MinimumWanderDurationSeconds = 1.5;
         private const double WanderDurationVarianceSeconds = 2.5;
-        private const int MaximumPathPoints = 200;
-        private static readonly TimeSpan ContactDamageInterval =
-            TimeSpan.FromMilliseconds(ContactDamageIntervalMilliseconds);
+        private static readonly TimeSpan AttackInterval =
+            TimeSpan.FromMilliseconds(AttackIntervalMilliseconds);
         private static readonly TimeSpan AttackVisualDuration = TimeSpan.FromMilliseconds(250);
-        private readonly List<Point> _pathHistory = new List<Point>();
-        private long _lastContactDamageTimestamp;
+        private long _lastAttackTimestamp;
         private long _attackTimestamp;
         private long _nextWanderDirectionChange;
+        private bool _hasSeenPlayer;
         private double _wanderDirectionX;
         private double _wanderDirectionY;
 
         public PursuerEnemy(double x, double y, double playerSpeed)
-            : base(x, y, 30, playerSpeed * 0.75, 34, Brushes.Crimson)
+            : base(x, y, 30, playerSpeed * 0.75, HitboxSize, Brushes.Crimson)
         {
             ChooseWanderDirection();
-            RecordPathPosition();
         }
 
-        public IReadOnlyList<Point> PathHistory { get { return _pathHistory; } }
+        public double CurrentSightRange
+        {
+            get
+            {
+                return _hasSeenPlayer
+                    ? SightRange + SightRangeAfterDetectionBonus
+                    : SightRange;
+            }
+        }
+
+        public bool HasSeenPlayer { get { return _hasSeenPlayer; } }
+
+        public Point GetPlannedDestination(ArenaField field)
+        {
+            if (field == null)
+            {
+                throw new ArgumentNullException(nameof(field));
+            }
+
+            Point currentPosition = new Point(PositionX, PositionY);
+            PlayerCharacter player = field.Player;
+            if (!IsAlive || !player.IsAlive || currentSpeed == 0)
+            {
+                return currentPosition;
+            }
+
+            double offsetX = player.PositionX - PositionX;
+            double offsetY = player.PositionY - PositionY;
+            double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
+            if (distance <= CurrentSightRange)
+            {
+                double stoppingDistance = GetMinimumSeparation(player);
+                if (distance <= stoppingDistance)
+                {
+                    return currentPosition;
+                }
+
+                double travelDistance = distance - stoppingDistance;
+                return new Point(
+                    PositionX + offsetX / distance * travelDistance,
+                    PositionY + offsetY / distance * travelDistance);
+            }
+
+            long remainingTicks = _nextWanderDirectionChange - Stopwatch.GetTimestamp();
+            if (remainingTicks <= 0)
+            {
+                return currentPosition;
+            }
+
+            double remainingSeconds = (double)remainingTicks / Stopwatch.Frequency;
+            double travel = currentSpeed * WanderSpeedMultiplier
+                * remainingSeconds / GameTickDurationSeconds;
+            return ClampToMovementBounds(currentPosition,
+                _wanderDirectionX, _wanderDirectionY, travel);
+        }
 
         public bool IsAttacking
         {
@@ -43,7 +98,7 @@ namespace OOPGames
             }
         }
 
-        public void TryDamagePlayerOnContact(PlayerCharacter player)
+        public void TryAttackPlayerInRange(PlayerCharacter player)
         {
             if (player == null)
             {
@@ -52,24 +107,24 @@ namespace OOPGames
 
             double offsetX = player.PositionX - PositionX;
             double offsetY = player.PositionY - PositionY;
-            double contactDistance = (Size + player.Size) / 2;
+            double attackRangeSquared = AttackRange * AttackRange;
             if (!IsAlive || !player.IsAlive
-                || offsetX * offsetX + offsetY * offsetY > contactDistance * contactDistance)
+                || offsetX * offsetX + offsetY * offsetY > attackRangeSquared)
             {
-                _lastContactDamageTimestamp = 0;
+                _lastAttackTimestamp = 0;
                 return;
             }
 
             long now = Stopwatch.GetTimestamp();
-            if (_lastContactDamageTimestamp != 0
-                && Stopwatch.GetElapsedTime(_lastContactDamageTimestamp, now)
-                    < ContactDamageInterval)
+            if (_lastAttackTimestamp != 0
+                && Stopwatch.GetElapsedTime(_lastAttackTimestamp, now)
+                    < AttackInterval)
             {
                 return;
             }
 
-            player.TakeDamage(ContactDamagePerHit);
-            _lastContactDamageTimestamp = now;
+            player.TakeDamage(AttackDamagePerHit);
+            _lastAttackTimestamp = now;
             _attackTimestamp = now;
         }
 
@@ -98,12 +153,14 @@ namespace OOPGames
                 ArenaField.MapHeight - 2 * ArenaField.WallThickness);
 
             double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-            if (distance > SightRange)
+            if (distance > CurrentSightRange)
             {
+                _hasSeenPlayer = false;
                 UpdateWanderBehavior(movementBounds);
                 return;
             }
 
+            _hasSeenPlayer = true;
             FacePlayer(offsetX, offsetY);
             if (currentSpeed == 0)
             {
@@ -111,7 +168,7 @@ namespace OOPGames
                 return;
             }
 
-            double stoppingDistance = (Size + player.Size) / 2;
+            double stoppingDistance = GetMinimumSeparation(player);
             if (distance <= stoppingDistance)
             {
                 Move(0, 0, movementBounds);
@@ -122,7 +179,6 @@ namespace OOPGames
             Move(offsetX / distance * travel / currentSpeed,
                 offsetY / distance * travel / currentSpeed, movementBounds);
             FacePlayer(offsetX, offsetY);
-            RecordPathPosition();
         }
 
         private void UpdateWanderBehavior(System.Windows.Rect movementBounds)
@@ -148,20 +204,21 @@ namespace OOPGames
                 Move(_wanderDirectionX * WanderSpeedMultiplier,
                     _wanderDirectionY * WanderSpeedMultiplier, movementBounds);
             }
-            RecordPathPosition();
         }
 
-        private void RecordPathPosition()
+        private Point ClampToMovementBounds(
+            Point start, double directionX, double directionY, double distance)
         {
-            Point position = new Point(PositionX, PositionY);
-            if (_pathHistory.Count == 0 || _pathHistory[_pathHistory.Count - 1] != position)
-            {
-                _pathHistory.Add(position);
-                if (_pathHistory.Count > MaximumPathPoints)
-                {
-                    _pathHistory.RemoveAt(0);
-                }
-            }
+            double radius = Size / 2;
+            double minimumX = ArenaField.WallThickness + radius;
+            double maximumX = ArenaField.MapWidth - ArenaField.WallThickness - radius;
+            double minimumY = ArenaField.WallThickness + radius;
+            double maximumY = ArenaField.MapHeight - ArenaField.WallThickness - radius;
+            double destinationX = start.X + directionX * distance;
+            double destinationY = start.Y + directionY * distance;
+            return new Point(
+                Math.Max(minimumX, Math.Min(maximumX, destinationX)),
+                Math.Max(minimumY, Math.Min(maximumY, destinationY)));
         }
 
         private void ChooseWanderDirection()
@@ -201,6 +258,11 @@ namespace OOPGames
             Facing = Math.Abs(offsetX) >= Math.Abs(offsetY)
                 ? (offsetX < 0 ? PlayerFacing.Left : PlayerFacing.Right)
                 : (offsetY < 0 ? PlayerFacing.Back : PlayerFacing.Front);
+        }
+
+        private double GetMinimumSeparation(PlayerCharacter player)
+        {
+            return (Size + player.Size) / 2;
         }
     }
 }
