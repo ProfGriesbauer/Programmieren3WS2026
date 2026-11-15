@@ -28,6 +28,8 @@ namespace OOPGames
                 case G1C_WorldLocation.Market: BuildMarket(); break;
                 case G1C_WorldLocation.GasStation: BuildGasStation(); break;
                 case G1C_WorldLocation.ClothingStore: BuildClothingStore(); break;
+                case G1C_WorldLocation.Bank: BuildBank(); break;
+                case G1C_WorldLocation.FurnitureStore: BuildFurnitureStore(); break;
                 default: throw new System.ArgumentOutOfRangeException(nameof(location));
             }
         }
@@ -65,6 +67,7 @@ namespace OOPGames
             AddFurniture("Regal", "obj_store_shelf", 2, 6, 2, 2);
             AddFurniture("Verkaufstheke", "obj_counter", 9, 4, 3, 1, G1C_InteractionType.Shop);
             AddSeller("Tankwart Olli", "dealer_green", 10, 3);
+            AddFurniture("Verkaufsautomat", "obj_vending_machine", 13, 8, 1, 1, G1C_InteractionType.Vending);
             AddFurniture("M\u00fclleimer", "obj_trash", 13, 9, 1, 1, G1C_InteractionType.Trash);
         }
 
@@ -81,6 +84,26 @@ namespace OOPGames
             AddFurniture("Pflanze", "obj_plant", 2, 9, 1, 1);
         }
 
+        private void BuildBank()
+        {
+            AddFurniture("Schalter", "obj_counter", 8, 3, 5, 1);
+            AddFurniture("Sitzbank", "obj_chair", 3, 5, 2, 1);
+            AddFurniture("Sitzbank", "obj_chair", 11, 5, 2, 1);
+            AddFurniture("Tresor", "obj_clinic_cabinet", 2, 2, 2, 2);
+            AddSeller("Bankierin Frida", "dealer_blue", 10, 2, G1C_InteractionType.Bank);
+            AddFurniture("Pflanze", "obj_plant", 13, 2, 1, 1);
+        }
+
+        private void BuildFurnitureStore()
+        {
+            AddFurniture("Regal mit Pflanzen", "obj_store_shelf", 2, 2, 2, 2);
+            AddFurniture("Regal mit Tischen", "obj_store_shelf", 5, 2, 2, 2);
+            AddFurniture("Regal mit Stühlen", "obj_store_shelf", 8, 2, 2, 2);
+            AddFurniture("Verkaufstheke", "obj_counter", 10, 6, 3, 1);
+            AddSeller("Möbelhändlerin Lotte", "guest", 11, 5, G1C_InteractionType.FurnitureShop);
+            AddFurniture("Pflanze", "obj_plant", 13, 2, 1, 1);
+        }
+
         // Entwickler: Denis Mock
         private void AddFurniture(string name, string sprite, int x, int y, int width, int height,
                                   G1C_InteractionType interaction = G1C_InteractionType.None)
@@ -89,9 +112,10 @@ namespace OOPGames
         }
 
         // Entwickler: Patrick Lupierz – Verkäufer steht hinter der Theke und öffnet ebenfalls den Laden
-        private void AddSeller(string name, string skin, int x, int y)
+        private void AddSeller(string name, string skin, int x, int y,
+                               G1C_InteractionType interaction = G1C_InteractionType.Shop)
         {
-            _objects.Add(new G1C_Npc(name, skin, x, y, G1C_Direction.Down, G1C_InteractionType.Shop));
+            _objects.Add(new G1C_Npc(name, skin, x, y, G1C_Direction.Down, interaction));
         }
 
         // Entwickler: Denis Mock
@@ -140,7 +164,9 @@ namespace OOPGames
             // Änderung durch: Patrick Lupierz – Kachelsatz je Gebäude (hospital, market, gas, clothing)
             string set = _location == G1C_WorldLocation.Hospital ? "hospital"
                        : _location == G1C_WorldLocation.GasStation ? "gas"
-                       : _location == G1C_WorldLocation.ClothingStore ? "clothing" : "market";
+                       : _location == G1C_WorldLocation.ClothingStore ? "clothing"
+                       : _location == G1C_WorldLocation.Bank ? "bank"
+                       : _location == G1C_WorldLocation.FurnitureStore ? "furniture" : "market";
             if (tile == '#') return "tile_" + set + "_wall";
             if (tile == 'r') return "tile_interior_rug";
             return "tile_" + set + "_floor";

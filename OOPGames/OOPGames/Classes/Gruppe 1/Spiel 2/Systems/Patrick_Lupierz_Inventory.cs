@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace OOPGames
 {
-    public enum G1C_ItemCategory { Kleidung, Lebensmittel, Getraenk, Verbrauch, Quest, Sonstiges }
+    public enum G1C_ItemCategory { Kleidung, Lebensmittel, Getraenk, Verbrauch, Quest, Moebel, Sonstiges }
 
     public enum G1C_ClothingSlot { None, Top, Pants, Shoes, Hat }
 
@@ -26,6 +26,10 @@ namespace OOPGames
         public string[] Cures { get; set; } = new string[0]; // beendet diese Effekte
         public G1C_ClothingSlot Slot { get; set; }
         public uint Color { get; set; }                    // Kleidungsfarbe 0xRRGGBB
+        public string FurnitureSpriteId { get; set; }
+        public int FurnitureWidth { get; set; } = 1;
+        public int FurnitureHeight { get; set; } = 1;
+        public string IconId { get { return "item_" + Id; } }
 
         public bool IsUsable { get { return BuffId != null || Cures.Length > 0; } }
     }
@@ -79,6 +83,12 @@ namespace OOPGames
                 Clothing("hat_red_cap", "Rote Mütze", G1C_ClothingSlot.Hat, 90, 0xD83030),
                 Clothing("hat_blue_cap", "Blaue Mütze", G1C_ClothingSlot.Hat, 90, 0x3060C8),
                 Clothing("hat_black_beanie", "Schwarze Beanie", G1C_ClothingSlot.Hat, 110, 0x282830),
+
+                Furniture("furniture_plant", "Topfpflanze", "obj_plant", 1, 1, 80),
+                Furniture("furniture_chair", "Stuhl", "obj_chair", 1, 1, 125),
+                Furniture("furniture_table", "Beistelltisch", "obj_home_table", 2, 1, 220),
+                Furniture("furniture_shelf", "Bücherregal", "obj_store_shelf", 2, 2, 280),
+                Furniture("furniture_bed", "Bett", "obj_home_bed", 2, 1, 350),
             };
             return list.ToDictionary(i => i.Id);
         }
@@ -92,6 +102,16 @@ namespace OOPGames
         private static G1C_Item Clothing(string id, string name, G1C_ClothingSlot slot, int price, uint color)
         {
             return new G1C_Item { Id = id, Name = name, Description = "Kleidung – am Kleiderschrank anziehen.", Category = G1C_ItemCategory.Kleidung, Price = price, Slot = slot, Color = color };
+        }
+
+        private static G1C_Item Furniture(string id, string name, string sprite, int width, int height, int price)
+        {
+            return new G1C_Item
+            {
+                Id = id, Name = name, Description = "Möbelstück – im Zuhause über den Einrichtungsplan platzieren.",
+                Category = G1C_ItemCategory.Moebel, Price = price, FurnitureSpriteId = sprite,
+                FurnitureWidth = width, FurnitureHeight = height
+            };
         }
     }
 
@@ -259,6 +279,9 @@ namespace OOPGames
                 case G1C_WorldLocation.Market:
                     return new G1C_Shop { Name = "Supermarkt", OpenFrom = 7, OpenUntil = 21,
                         ItemIds = new[] { "water", "apple", "snack", "sandwich", "coffee" } };
+                case G1C_WorldLocation.FurnitureStore:
+                    return new G1C_Shop { Name = "Möbelhaus", OpenFrom = 9, OpenUntil = 19,
+                        ItemIds = new[] { "furniture_plant", "furniture_chair", "furniture_table", "furniture_shelf", "furniture_bed" } };
                 default: return null;
             }
         }
@@ -269,10 +292,13 @@ namespace OOPGames
         public static string Buy(G1C_Item item, G1C_MoneyManager money, G1C_Inventory inventory)
         {
             if (item.Slot != G1C_ClothingSlot.None && inventory.Has(item.Id)) return "Das besitzt du schon.";
-            if (!money.TryWithdraw(item.Price)) return "Nicht genug Chips.";
+            int price = PriceWithMarkup(item.Price);
+            if (!money.TryWithdraw(price)) return "Nicht genug Chips.";
             inventory.Add(item.Id);
-            return item.Name + " gekauft (-" + item.Price + " Chips).";
+            return item.Name + " gekauft (-" + price + " Chips).";
         }
+
+        public static int PriceWithMarkup(int price) { return (price * 105 + 99) / 100; }
 
         public static string Sell(G1C_Item item, G1C_MoneyManager money, G1C_Inventory inventory)
         {

@@ -56,6 +56,9 @@ namespace OOPGames
             AddBuilding("Casino", "building_casino", columns[4], 50, G1C_WorldLocation.Casino);
             AddBuilding("Wohnhaus", "building_townhouse", columns[5], 50);
 
+            AddBuilding("Bank", "building_bank", 40, 14, G1C_WorldLocation.Bank);
+            AddBuilding("Möbelhaus", "building_furniture", 74, 32, G1C_WorldLocation.FurnitureStore);
+
             Map.AddPark(22, 18, 14, 5);
             Map.AddPark(58, 36, 14, 5);
             AddPavilion(23, 18);
@@ -63,7 +66,7 @@ namespace OOPGames
 
             foreach (G1C_WorldLocation building in new[] { G1C_WorldLocation.Home, G1C_WorldLocation.Hospital,
                          G1C_WorldLocation.ClothingStore, G1C_WorldLocation.GasStation, G1C_WorldLocation.Market,
-                         G1C_WorldLocation.Casino })
+                         G1C_WorldLocation.Casino, G1C_WorldLocation.Bank, G1C_WorldLocation.FurnitureStore })
             {
                 int doorX = Map.DoorX(building);
                 int doorY = Map.DoorY(building);
@@ -87,6 +90,7 @@ namespace OOPGames
             AddTownNpc("Kurier Paul", "dealer_green", G1C_WorldLocation.Hospital);
             AddTownNpc("Gärtner Sam", "bartender", G1C_WorldLocation.Market);
             AddTownNpc("Studentin Lea", "dealer_blue", G1C_WorldLocation.Casino);
+            AddTownNpc("Geldhai Viktor", "dealer_red", G1C_WorldLocation.Bank, G1C_InteractionType.LoanShark);
 
             AddAnimal("Ente", "animal_duck", RiverBank(8, -3), 8, 2, 8);
             AddAnimal("Ente", "animal_duck", RiverBank(24, 3), 24, 2, 10);
@@ -153,12 +157,13 @@ namespace OOPGames
 
         // Entwickler: Denis Mock
         // Änderung durch: Patrick Lupierz – Stadtbewohner starten neben dem Eingang ihres Viertels.
-        private void AddTownNpc(string name, string skin, G1C_WorldLocation near)
+        private void AddTownNpc(string name, string skin, G1C_WorldLocation near,
+                                G1C_InteractionType interaction = G1C_InteractionType.Talk)
         {
             int x = Map.DoorX(near) + 3;
             int y = Map.DoorY(near) + 2;
             while (!Map.IsWalkable(x, y) || ObjectAt(x, y) != null) x++;
-            G1C_Npc npc = new G1C_Npc(name, skin, x, y, G1C_Direction.Down, G1C_InteractionType.Talk);
+            G1C_Npc npc = new G1C_Npc(name, skin, x, y, G1C_Direction.Down, interaction);
             _townNpcs.Add(npc);
             _objects.Add(npc);
         }

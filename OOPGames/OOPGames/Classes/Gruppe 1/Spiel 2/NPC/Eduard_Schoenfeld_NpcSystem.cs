@@ -17,10 +17,11 @@ namespace OOPGames
         private readonly Dictionary<G1C_NpcCharacter, G1C_Npc> _worldNpcs = new Dictionary<G1C_NpcCharacter, G1C_Npc>();
 
         // Entwickler: Eduard Schoenfeld
-        public G1C_NpcSystem(G1C_CasinoWorld casino, G1C_MoneyManager money, Random random)
+        public G1C_NpcSystem(G1C_CasinoWorld casino, G1C_MoneyManager money, G1C_FinanceManager finance, Random random)
         {
             if (casino == null) throw new ArgumentNullException(nameof(casino));
             Money = money ?? throw new ArgumentNullException(nameof(money));
+            Finance = finance ?? throw new ArgumentNullException(nameof(finance));
             Random = random ?? new Random();
 
             // Erweiterung durch Denis Mock: Profile der Stadtbewohner im gemeinsamen Gesprächssystem.
@@ -41,6 +42,7 @@ namespace OOPGames
         }
 
         public G1C_MoneyManager Money { get; }
+        public G1C_FinanceManager Finance { get; }
         public Random Random { get; }
         public int Tick { get; private set; }
         public int Reputation { get; private set; } = 50;
@@ -98,7 +100,7 @@ namespace OOPGames
                               interaction == G1C_InteractionType.Poker;
             G1C_Npc worldNpc = WorldNpcOf(character);
             if (worldNpc != null) Bubbles.Remove(worldNpc);
-            Conversation.Open(character, offersGame ? interaction : (G1C_InteractionType?)null);
+            Conversation.Open(character, offersGame ? interaction : (G1C_InteractionType?)null, interaction);
             return true;
         }
 

@@ -17,6 +17,8 @@ namespace OOPGames
         public double Scale { get; set; } = 1.0;
         public double OffsetX { get; set; }
         public double OffsetY { get; set; }
+        public double VirtualWidth { get; set; } = G1C_Renderer.BaseScreenWidth;
+        public double VirtualHeight { get; set; } = G1C_Renderer.BaseScreenHeight;
 
         public double ToVirtualX(double canvasX) { return (canvasX - OffsetX) / Scale; }
         public double ToVirtualY(double canvasY) { return (canvasY - OffsetY) / Scale; }
@@ -44,14 +46,14 @@ namespace OOPGames
     }
 
     /// <summary>
-    /// Zeichnet ausschließlich auf das vom Framework übergebene Canvas.
-    /// Alle Koordinaten sind virtuell (480x320) und werden auf die Canvas-Größe skaliert,
-    /// damit das Spiel bei jeder Fenstergröße passt.
+    /// Zeichnet in einer gleichmäßig skalierten virtuellen Fläche, deren Größe sich an das Canvas anpasst.
     /// </summary>
     public class G1C_Renderer
     {
-        public const double ScreenWidth = 480;
-        public const double ScreenHeight = 320;
+        public const double BaseScreenWidth = 480;
+        public const double BaseScreenHeight = 320;
+        public static double ScreenWidth { get; private set; } = BaseScreenWidth;
+        public static double ScreenHeight { get; private set; } = BaseScreenHeight;
 
         private static readonly FontFamily UiFont = new FontFamily("Consolas, Segoe UI Symbol");
         private readonly Dictionary<Color, SolidColorBrush> _brushes = new Dictionary<Color, SolidColorBrush>();
@@ -59,6 +61,7 @@ namespace OOPGames
 
         public G1C_SpriteLibrary Sprites { get; }
         public G1C_Viewport Viewport { get; private set; } = new G1C_Viewport();
+        private Geometry _previousClip;
 
         public G1C_Renderer(G1C_SpriteLibrary sprites)
         {
@@ -72,25 +75,43 @@ namespace OOPGames
 
             double cw = canvas.ActualWidth;
             double ch = canvas.ActualHeight;
-            if (cw < 1 || ch < 1)
+            if (double.IsNaN(cw) || double.IsInfinity(cw) || double.IsNaN(ch) ||
+                double.IsInfinity(ch) || cw < 1 || ch < 1)
             {
-                cw = ScreenWidth;
-                ch = ScreenHeight;
+                cw = BaseScreenWidth;
+                ch = BaseScreenHeight;
             }
 
-            double scale = Math.Min(cw / ScreenWidth, ch / ScreenHeight);
+            double scale = Math.Min(cw / BaseScreenWidth, ch / BaseScreenHeight);
+            ScreenWidth = cw / scale;
+            ScreenHeight = ch / scale;
             Viewport = new G1C_Viewport
             {
                 Scale = scale,
-                OffsetX = (cw - ScreenWidth * scale) / 2,
-                OffsetY = (ch - ScreenHeight * scale) / 2
+                VirtualWidth = ScreenWidth,
+                VirtualHeight = ScreenHeight
             };
 
             canvas.Children.Clear();
             canvas.Background = Brushes.Black;
+            canvas.ClipToBounds = true;
+            canvas.Clip = new RectangleGeometry(new Rect(0, 0, cw, ch));
         }
 
         private double S { get { return Viewport.Scale; } }
+
+        public void ClipToVirtualRect(double x, double y, double width, double height)
+        {
+            _previousClip = _canvas.Clip;
+            _canvas.Clip = new RectangleGeometry(new Rect(
+                Viewport.OffsetX + x * S, Viewport.OffsetY + y * S, width * S, height * S));
+        }
+
+        public void RestoreClip()
+        {
+            _canvas.Clip = _previousClip;
+            _previousClip = null;
+        }
 
         private SolidColorBrush Brush(Color color)
         {
@@ -159,6 +180,23 @@ namespace OOPGames
                 block.Width = width * S;
                 block.TextAlignment = TextAlignment.Center;
             }
+            Place(block, x, y);
+        }
+
+        public void WrappedText(string text, double x, double y, double size, Color color, double width,
+                                TextAlignment alignment = TextAlignment.Left)
+        {
+            TextBlock block = new TextBlock
+            {
+                Text = text ?? "",
+                FontFamily = UiFont,
+                FontSize = Math.Max(1, size * S),
+                FontWeight = FontWeights.Bold,
+                Foreground = Brush(color),
+                Width = Math.Max(0, width * S),
+                TextAlignment = alignment,
+                TextWrapping = TextWrapping.Wrap
+            };
             Place(block, x, y);
         }
 

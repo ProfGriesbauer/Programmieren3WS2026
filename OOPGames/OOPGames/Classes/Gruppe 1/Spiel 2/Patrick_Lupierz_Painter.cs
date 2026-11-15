@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace OOPGames
@@ -76,6 +77,7 @@ namespace OOPGames
                 else if (game.State == G1C_GameState.Conversation) _conversationView.Draw(r, game.Npcs); // Änderung durch: Eduard Schoenfeld
                 else if (game.State == G1C_GameState.ListMenu) _listMenuView.Draw(r, game);
                 else if (game.State == G1C_GameState.Phone) _phoneView.Draw(r, game);
+                else if (game.State == G1C_GameState.Map) game.MapView.Draw(r, game.Exterior, game.Player);
             }
             else
             {
@@ -91,6 +93,15 @@ namespace OOPGames
             IG1C_WorldScene world = game.CurrentWorld;
             IG1C_WorldMap map = world.Grid;
             bool scrolling = game.CurrentLocation == G1C_WorldLocation.Exterior;
+            r.ClipToVirtualRect(0, G1C_GameHUD.Height, G1C_Renderer.ScreenWidth,
+                                G1C_Renderer.ScreenHeight - G1C_GameHUD.Height);
+            Color backdrop = game.CurrentLocation == G1C_WorldLocation.Casino
+                ? Color.FromRgb(0x3A, 0x2A, 0x4A)
+                : game.CurrentLocation == G1C_WorldLocation.Home
+                    ? Color.FromRgb(0x78, 0x58, 0x38)
+                    : Color.FromRgb(0x48, 0x50, 0x58);
+            r.FillRect(0, G1C_GameHUD.Height, G1C_Renderer.ScreenWidth,
+                       G1C_Renderer.ScreenHeight - G1C_GameHUD.Height, backdrop);
             // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Reparatur "Figur unsichtbar":
             // mapX/mapY bezeichneten bisher die Ecke des Kartenausschnitts, Figuren rechnen aber ab der
             // Kartenecke. Dadurch lagen sie außerhalb des Bildes, sobald die Kamera scrollte. Jetzt ist
@@ -160,6 +171,8 @@ namespace OOPGames
             // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Reaktions-Sprechblasen gibt es jetzt auf jeder Karte
             _npcOverlay.DrawBubbles(r, game.Npcs, mapX, mapY, tileSize);
             if (inCasino) _npcOverlay.DrawTaskStatus(r, game.Npcs);
+            r.RestoreClip();
+            if (scrolling) game.MapView.DrawMinimap(r, game.Exterior, game.Player);
         }
 
         // Entwickler: Patrick Lupierz

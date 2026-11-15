@@ -8,31 +8,24 @@
     "net7.0": []
   },
   "packageFolders": {
-    "C:\\Users\\Patrick\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\denis\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Patrick\\Desktop\\gitrepo\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
+      "projectUniqueName": "C:\\Users\\denis\\OneDrive\\30 - 3. Semester\\50 - Programmieren 3\\GIT Repository\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
       "projectName": "Griesl_HouseExample",
-      "projectPath": "C:\\Users\\Patrick\\Desktop\\gitrepo\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
-      "packagesPath": "C:\\Users\\Patrick\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Patrick\\Desktop\\gitrepo\\HouseExample\\Griesl_HouseExample\\obj\\",
+      "projectPath": "C:\\Users\\denis\\OneDrive\\30 - 3. Semester\\50 - Programmieren 3\\GIT Repository\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
+      "packagesPath": "C:\\Users\\denis\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\denis\\OneDrive\\30 - 3. Semester\\50 - Programmieren 3\\GIT Repository\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\Patrick\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\denis\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net7.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {

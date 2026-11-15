@@ -36,14 +36,19 @@ namespace OOPGames
         public G1C_BuildingInteriorWorld Market { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.Market);
         public G1C_BuildingInteriorWorld GasStation { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.GasStation);
         public G1C_BuildingInteriorWorld ClothingStore { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.ClothingStore);
+        public G1C_BuildingInteriorWorld Bank { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.Bank);
+        public G1C_BuildingInteriorWorld FurnitureStore { get; } = new G1C_BuildingInteriorWorld(G1C_WorldLocation.FurnitureStore);
         public G1C_Player Player { get; }
         public G1C_MoneyManager Money { get; } = new G1C_MoneyManager();
+        public G1C_FinanceManager Finance { get; } = new G1C_FinanceManager();
         public G1C_DialogueBox Dialogue { get; } = new G1C_DialogueBox();
         public G1C_ResultScreen Result { get; } = new G1C_ResultScreen();
         public G1C_CasinoMenu Menu { get; } = new G1C_CasinoMenu();
         public G1C_CasinoGameBase ActiveGame { get; private set; }
         public int TickCount { get; private set; }
         public int GamesPlayed { get; private set; }
+        public string SystemMessage { get; private set; } = "";
+        public int SystemMessageEndTick { get; private set; }
 
         // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Charaktere, Gespräche, Aufgaben, Ruf
         public G1C_NpcSystem Npcs { get; }
@@ -55,15 +60,17 @@ namespace OOPGames
         public G1C_StartFlow Start { get; } = new G1C_StartFlow();
         public G1C_ListMenu ListMenu { get; } = new G1C_ListMenu();
         public G1C_Phone Phone { get; }
+        public G1C_MapView MapView { get; } = new G1C_MapView();
 
         // Änderung durch: Denis Mock – Ein neues Spiel startet im Zuhause.
         public G1C_GameManager()
         {
-            _sceneTransitions = new G1C_SceneTransitionManager(Home, Exterior, World, Hospital, Market, GasStation, ClothingStore);
+            _sceneTransitions = new G1C_SceneTransitionManager(Home, Exterior, World, Hospital, Market, GasStation,
+                                                               ClothingStore, Bank, FurnitureStore);
             Player = new G1C_Player(Home.PlayerStartX, Home.PlayerStartY, G1C_Direction.Down);
             _movement = CreateMovement();
             _interactions = new G1C_InteractionManager(World);
-            Npcs = new G1C_NpcSystem(World, Money, _random); // Änderung durch: Eduard Schoenfeld
+            Npcs = new G1C_NpcSystem(World, Money, Finance, _random); // Änderung durch: Eduard Schoenfeld
             _exteriorNpcRoaming = new G1C_ExteriorNpcRoamingSystem(Exterior, Player, _random); // Erweiterung durch Denis Mock
             Phone = new G1C_Phone(Npcs);
         }
@@ -83,8 +90,13 @@ namespace OOPGames
                 {
                     case G1C_InteractionType.Trash: return "[E] Mülleimer durchsuchen";
                     case G1C_InteractionType.Shop: return "[E] Einkaufen";
+                    case G1C_InteractionType.Vending: return "[E] Automat  [F3] Kaffee kaufen";
                     case G1C_InteractionType.Wardrobe: return "[E] Umziehen";
                     case G1C_InteractionType.Bed: return "[E] Schlafen";
+                    case G1C_InteractionType.Furnish: return "[E] Zuhause einrichten";
+                    case G1C_InteractionType.Bank: return "[E] Mit der Bankierin sprechen";
+                    case G1C_InteractionType.LoanShark: return "[E] Mit dem Geldhai sprechen";
+                    case G1C_InteractionType.FurnitureShop: return "[E] Mit der Möbelhändlerin sprechen";
                 }
                 if (CurrentLocation == G1C_WorldLocation.Casino) return _interactions.GetHint(Player);
                 return target is G1C_Npc ? "[E] Mit " + target.Name + " sprechen" : "";
@@ -101,7 +113,7 @@ namespace OOPGames
                 return State == G1C_GameState.MainGame || State == G1C_GameState.Dialogue ||
                        State == G1C_GameState.Menu || State == G1C_GameState.Result ||
                        State == G1C_GameState.Conversation || State == G1C_GameState.ListMenu ||
-                       State == G1C_GameState.Phone;
+                       State == G1C_GameState.Phone || State == G1C_GameState.Map;
             }
         }
 
@@ -166,6 +178,14 @@ namespace OOPGames
                     if (isKey) HandlePhoneRequest(Phone.HandleKey(input.Key, Clock));
                     break;
 
+                case G1C_GameState.Map:
+                    if (isKey && input.Key == Key.B)
+                        State = G1C_GameState.Menu;
+                    else if (isKey && (input.Key == Key.M || G1C_InputManager.IsBack(input.Key)))
+                        State = G1C_GameState.MainGame;
+                    else if (!isKey) MapView.SelectAt(input.X, input.Y, Exterior);
+                    break;
+
                 case G1C_GameState.Result:
                     if (!isKey || G1C_InputManager.IsConfirm(input.Key) || G1C_InputManager.IsBack(input.Key))
                     {
@@ -195,7 +215,18 @@ namespace OOPGames
             {
                 Interact();
             }
-            else if (key == Key.M)
+            else if (key == Key.F3)
+            {
+                G1C_WorldObject target = FindTarget();
+                if (target != null && target.Interaction == G1C_InteractionType.Vending)
+                    BuyVendingItem(G1C_ItemCatalog.Get("coffee"), true);
+            }
+            else if (key == Key.M && CurrentLocation == G1C_WorldLocation.Exterior)
+            {
+                MapView.ClearSelection();
+                State = G1C_GameState.Map;
+            }
+            else if (key == Key.B || key == Key.M)
             {
                 State = G1C_GameState.Menu;
             }
@@ -233,9 +264,13 @@ namespace OOPGames
             {
                 case G1C_InteractionType.Trash: SearchTrash(target); return;
                 case G1C_InteractionType.Shop: OpenShop(); return;
+                case G1C_InteractionType.Vending: OpenVending(); return;
                 case G1C_InteractionType.Wardrobe: OpenWardrobe(); return;
                 case G1C_InteractionType.Bed:
-                    OpenDialogue("Bett", new[] { "Bis zum nächsten Morgen (06:00 Uhr) schlafen?" }, Clock.SkipToMorning);
+                    OpenSleepMenu();
+                    return;
+                case G1C_InteractionType.Furnish:
+                    OpenFurnishMenu();
                     return;
             }
 
@@ -256,6 +291,7 @@ namespace OOPGames
                 case G1C_InteractionType.Blackjack:
                 case G1C_InteractionType.Poker:
                 case G1C_InteractionType.Slots:
+                case G1C_InteractionType.Claw:
                     G1C_InteractionType game = target.Interaction;
                     OpenDialogue(target.Name, target.Lines, () => StartMinigame(game));
                     break;
@@ -281,6 +317,17 @@ namespace OOPGames
 
             if (conversation.IsOpen) return;
             G1C_InteractionType? game = conversation.TakeRequestedGame();
+            G1C_ConversationAction action = conversation.TakeRequestedAction();
+            if (action == G1C_ConversationAction.BankMenu)
+            {
+                OpenBankMenu();
+                return;
+            }
+            if (action == G1C_ConversationAction.FurnitureShop)
+            {
+                OpenShop();
+                return;
+            }
             State = G1C_GameState.MainGame;
             if (game.HasValue) StartMinigame(game.Value);
         }
@@ -320,6 +367,108 @@ namespace OOPGames
             State = G1C_GameState.ListMenu;
         }
 
+        private void OpenVending()
+        {
+            ListMenu.Open("Verkaufsautomat", VendingRows);
+            State = G1C_GameState.ListMenu;
+        }
+
+        private void OpenBankMenu()
+        {
+            ListMenu.Open("Bankkonto", BankRows);
+            State = G1C_GameState.ListMenu;
+        }
+
+        private List<G1C_MenuRow> BankRows()
+        {
+            int[] amounts = { 25, 100, 250 };
+            List<G1C_MenuRow> rows = new List<G1C_MenuRow>();
+            foreach (int amount in amounts)
+            {
+                int current = amount;
+                rows.Add(new G1C_MenuRow
+                {
+                    Text = "Einzahlen: " + current + " Chips",
+                    Right = "Bargeld " + Money.Balance,
+                    Detail = "Chips vom Bargeld auf dein Bankkonto übertragen.",
+                    Run = () => ListMenu.Message = Finance.Deposit(Money, current)
+                        ? current + " Chips eingezahlt."
+                        : "Nicht genug Bargeld."
+                });
+            }
+            rows.Add(new G1C_MenuRow
+            {
+                Text = "Alles Bargeld einzahlen", Right = Money.Balance + " Chips",
+                Detail = "Den gesamten Bargeldbestand aufs Bankkonto übertragen.",
+                Run = () =>
+                {
+                    int amount = Money.Balance;
+                    ListMenu.Message = amount > 0 && Finance.Deposit(Money, amount)
+                        ? amount + " Chips eingezahlt."
+                        : "Kein Bargeld zum Einzahlen.";
+                }
+            });
+            foreach (int amount in amounts)
+            {
+                int current = amount;
+                rows.Add(new G1C_MenuRow
+                {
+                    Text = "Abheben: " + current + " Chips",
+                    Right = "Konto " + Finance.Savings,
+                    Detail = "Chips vom Bankkonto ins Bargeld übertragen.",
+                    Run = () => ListMenu.Message = Finance.Withdraw(Money, current)
+                        ? current + " Chips abgehoben."
+                        : "Nicht genug Guthaben."
+                });
+            }
+            rows.Add(new G1C_MenuRow
+            {
+                Text = "Alles abheben", Right = Finance.Savings + " Chips",
+                Detail = "Das gesamte Bankguthaben ins Bargeld übertragen.",
+                Run = () =>
+                {
+                    int amount = Finance.Savings;
+                    ListMenu.Message = amount > 0 && Finance.Withdraw(Money, amount)
+                        ? amount + " Chips abgehoben."
+                        : "Kein Guthaben zum Abheben.";
+                }
+            });
+            return rows;
+        }
+
+        private List<G1C_MenuRow> VendingRows()
+        {
+            string[] itemIds = { "coffee", "water", "snack" };
+            return itemIds.Select(id => G1C_ItemCatalog.Get(id)).Select(item => new G1C_MenuRow
+            {
+                Text = item.Name,
+                Right = G1C_Shop.PriceWithMarkup(item.Price) + " Chips",
+                Detail = item.Description + "  F3 kauft Kaffee mit 12 % Chance auf ein Extra.",
+                SpriteId = item.IconId,
+                Run = () => ListMenu.Message = BuyVendingItem(item, false)
+            }).ToList();
+        }
+
+        private string BuyVendingItem(G1C_Item item, bool extraChance)
+        {
+            int before = Inventory.Count(item.Id);
+            string message = G1C_Shop.Buy(item, Money, Inventory);
+            if (extraChance && Inventory.Count(item.Id) > before && _random.NextDouble() < 0.12)
+            {
+                Inventory.Add(item.Id);
+                NotifySystemMessage("Du hast Glück: Beim Runterfallen wurde ein weiteres Item runtergestoßen.");
+                return message + " Ein weiteres Item ist heruntergefallen!";
+            }
+            NotifySystemMessage(message);
+            return message;
+        }
+
+        private void NotifySystemMessage(string message)
+        {
+            SystemMessage = message;
+            SystemMessageEndTick = TickCount + 125;
+        }
+
         private List<G1C_MenuRow> ShopRows(G1C_Shop shop)
         {
             List<G1C_MenuRow> rows = new List<G1C_MenuRow>();
@@ -329,7 +478,8 @@ namespace OOPGames
                 bool owned = item.Slot != G1C_ClothingSlot.None && Inventory.Has(item.Id);
                 rows.Add(new G1C_MenuRow
                 {
-                    Text = item.Name, Right = owned ? "gekauft" : item.Price + " Chips", Detail = item.Description,
+                    Text = item.Name, Right = owned ? "gekauft" : G1C_Shop.PriceWithMarkup(item.Price) + " Chips",
+                    Detail = item.Description, SpriteId = item.IconId,
                     Run = () => ListMenu.Message = G1C_Shop.Buy(current, Money, Inventory)
                 });
             }
@@ -352,6 +502,23 @@ namespace OOPGames
             State = G1C_GameState.ListMenu;
         }
 
+        private void OpenSleepMenu()
+        {
+            int[] wakeHours = { 6, 8, 12, 18 };
+            ListMenu.Open("Schlafen bis ...", () => wakeHours.Select(hour => new G1C_MenuRow
+            {
+                Text = hour.ToString("00") + ":00 Uhr",
+                Right = hour <= Clock.Hour ? "morgen" : "heute",
+                Detail = "Bis " + hour.ToString("00") + ":00 Uhr schlafen.",
+                Run = () =>
+                {
+                    Clock.SkipUntilHour(hour);
+                    ListMenu.Message = "Du bist aufgewacht. Es ist " + Clock.TimeText + " Uhr.";
+                }
+            }).ToList());
+            State = G1C_GameState.ListMenu;
+        }
+
         private List<G1C_MenuRow> InventoryRows()
         {
             List<G1C_MenuRow> rows = new List<G1C_MenuRow>();
@@ -363,7 +530,7 @@ namespace OOPGames
                 {
                     Text = item.Name + " x" + Inventory.Count(item.Id),
                     Right = worn ? "angezogen" : (item.IsUsable ? "[E] benutzen" : item.Category.ToString()),
-                    Detail = item.Description, Run = () => UseItem(current)
+                    Detail = item.Description, SpriteId = item.IconId, Run = () => UseItem(current)
                 });
             }
             return rows;
@@ -380,6 +547,47 @@ namespace OOPGames
         {
             ListMenu.Open("Kleiderschrank", WardrobeRows);
             State = G1C_GameState.ListMenu;
+        }
+
+        private void OpenFurnishMenu()
+        {
+            ListMenu.Open("Zuhause einrichten", () => Inventory.Items
+                .Where(item => item.Category == G1C_ItemCategory.Moebel)
+                .Select(item =>
+                {
+                    G1C_Item current = item;
+                    return new G1C_MenuRow
+                    {
+                        Text = current.Name + " x" + Inventory.Count(current.Id),
+                        Right = "[E] Platzieren",
+                        Detail = current.Description,
+                        SpriteId = current.IconId,
+                        Run = () => OpenFurniturePlacement(current)
+                    };
+                }).ToList());
+            State = G1C_GameState.ListMenu;
+        }
+
+        private void OpenFurniturePlacement(G1C_Item item)
+        {
+            ListMenu.Open("Platz für " + item.Name, () =>
+                Home.AvailableFurnitureLocations(item, Player).Select(location =>
+                {
+                    G1C_FurnitureLocation current = location;
+                    return new G1C_MenuRow
+                    {
+                        Text = "Bereich " + (current.X + 1) + ", " + (current.Y + 1),
+                        Detail = item.FurnitureWidth + "x" + item.FurnitureHeight + " Kacheln",
+                        Run = () =>
+                        {
+                            if (Home.PlaceFurniture(item, current.X, current.Y, Player) && Inventory.Remove(item.Id))
+                                ListMenu.Message = item.Name + " wurde aufgestellt.";
+                            else
+                                ListMenu.Message = "Der Platz ist nicht mehr frei oder das Möbel fehlt.";
+                        }
+                    };
+                }).ToList());
+            if (ListMenu.Rows.Count == 0) ListMenu.Message = "Kein passender freier Platz.";
         }
 
         private List<G1C_MenuRow> WardrobeRows()
@@ -435,6 +643,8 @@ namespace OOPGames
         private void BeginNewGame()
         {
             Profile = Start.Profile;
+            Finance.Restore(0, 0);
+            Home.RestoreFurniture(null);
             foreach (string clothing in new[] { Profile.Top, Profile.Pants, Profile.Shoes }) Inventory.Add(clothing);
             Player.Skin = Profile.SkinId;
             Npcs.PlayerName = Profile.Name;
@@ -453,6 +663,7 @@ namespace OOPGames
             {
                 Profile = Profile, Location = (int)CurrentLocation, X = Player.TileX, Y = Player.TileY, Facing = (int)Player.Facing,
                 Coins = Money.Balance, Inventory = new Dictionary<string, int>(Inventory.Counts), Buffs = Buffs.Active.ToList(),
+                BankSavings = Finance.Savings, LoanOwed = Finance.LoanOwed, HomeFurniture = Home.PlacedFurniture.ToList(),
                 ClockTicks = Clock.TotalTicks, PlayTicks = TickCount, GamesPlayed = GamesPlayed, Reputation = Npcs.Reputation,
                 Npcs = Npcs.Characters.Select(c => new G1C_SaveNpc
                 {
@@ -472,6 +683,8 @@ namespace OOPGames
             Profile = data.Profile;
             Money.Restore(data.Coins);
             Inventory.Restore(data.Inventory);
+            Finance.Restore(data.BankSavings, data.LoanOwed);
+            Home.RestoreFurniture(data.HomeFurniture);
             Buffs.Restore(data.Buffs);
             Clock.TotalTicks = data.ClockTicks;
             TickCount = Math.Max(0, data.PlayTicks);
@@ -529,6 +742,10 @@ namespace OOPGames
                     ActiveGame = new G1C_Slots(Money, _random);
                     State = G1C_GameState.Slots;
                     break;
+                case G1C_InteractionType.Claw:
+                    ActiveGame = new G1C_ClawMachine(Money, _random, Inventory);
+                    State = G1C_GameState.Claw;
+                    break;
             }
         }
 
@@ -555,7 +772,7 @@ namespace OOPGames
             if (ActiveGame != null) ActiveGame.Update();
 
             // Änderung durch: Patrick Lupierz – zentrale Uhr, Effekte und SMS; im Pausenmenü steht die Zeit
-            if (State != G1C_GameState.Menu)
+            if (State != G1C_GameState.Menu && State != G1C_GameState.Map)
             {
                 Clock.Advance();
                 Buffs.Update(Clock.TotalTicks);

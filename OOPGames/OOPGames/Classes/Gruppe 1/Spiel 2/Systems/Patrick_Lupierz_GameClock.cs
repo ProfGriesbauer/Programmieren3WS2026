@@ -59,9 +59,15 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz – Schlafen: vorspulen bis zum nächsten Morgen (06:00)
         public void SkipToMorning()
         {
-            int morning = 6 * TicksPerHour;
-            int today = TotalTicks % TicksPerDay;
-            TotalTicks += today < morning ? morning - today : TicksPerDay - today + morning;
+            SkipUntilHour(6);
+        }
+
+        public void SkipUntilHour(int hour)
+        {
+            if (hour < 0 || hour > 23) throw new ArgumentOutOfRangeException(nameof(hour));
+            int target = TotalTicks / TicksPerDay * TicksPerDay + hour * TicksPerHour;
+            if (target <= TotalTicks) target += TicksPerDay;
+            TotalTicks = target;
         }
 
         // Entwickler: Patrick Lupierz

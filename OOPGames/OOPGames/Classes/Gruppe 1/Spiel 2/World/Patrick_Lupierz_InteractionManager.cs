@@ -39,6 +39,7 @@ namespace OOPGames
                 case G1C_InteractionType.Blackjack: return "[E] Blackjack spielen";
                 case G1C_InteractionType.Poker: return "[E] Poker spielen";
                 case G1C_InteractionType.Slots: return "[E] Spielautomat";
+                case G1C_InteractionType.Claw: return "[E] Greifautomat";
                 case G1C_InteractionType.Bartender: return "[E] Mit dem Barkeeper sprechen";
                 default: return "[E] Sprechen";
             }

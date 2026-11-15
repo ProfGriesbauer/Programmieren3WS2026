@@ -35,10 +35,20 @@ den Spieler. Fehlt Player 2, stürzt das Framework bei der ersten Eingabe ab.
 | W A S D / Pfeiltasten | Laufen (in Spielen: Einsatz / Auswahl)    |
 | E                     | Interagieren, Bestätigen, Weiter          |
 | Q / Esc               | Abbrechen, Minispiel verlassen            |
-| M                     | Menü                                      |
+| M                     | Stadtkarte (draußen)                      |
+| B                     | Menü                                      |
 | P                     | Handy (Kontakte, SMS, Uhr, Aufgaben, Speichern) |
 | I                     | Inventar                                  |
 | Maus                  | Knöpfe und Roulette-Felder anklicken      |
+
+In der Stadt zeigt die Minimap Straßen und Gebäude in der Nähe. **M** öffnet die Stadtkarte;
+ein Klick auf ein Gebäude zeigt dessen Namen. Am Bett kann die Aufwachzeit gewählt werden.
+Im Casino bietet der Greifautomat eine animierte Item-Chance. Verkaufsautomaten verkaufen
+Kaffee, Wasser und Snacks; **F3** kauft dort Kaffee mit 12 % Chance auf ein zweites Item.
+Ladenpreise enthalten einen Aufschlag von 5 %. Beim Blackjack sind **3** = Split und **4** = Double.
+In der Bank kannst du Chips einzahlen und abheben; der Geldhai verleiht einmalig 250 Chips,
+die mit 300 Chips zurückzuzahlen sind. Möbel kaufst du im Möbelhaus und platzierst sie zuhause
+über den Einrichtungsplan.
 
 Leertaste und Enter **nicht** benutzen: Nach dem Start hat der Button "Start New Game" den Fokus,
 diese Tasten würden das Spiel neu starten. Falls die Pfeiltasten nicht reagieren, WASD verwenden.

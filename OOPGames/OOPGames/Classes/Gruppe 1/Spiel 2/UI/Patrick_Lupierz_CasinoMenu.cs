@@ -2,20 +2,23 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
-    /// <summary>Menü mit Steuerung und Spielinformationen (öffnen/schließen mit [M]).</summary>
+    /// <summary>Menü mit Steuerung und Spielinformationen (öffnen/schließen mit [B]).</summary>
     public class G1C_CasinoMenu
     {
         /// <summary>Gibt true zurück, wenn das Menü geschlossen werden soll.</summary>
         public bool ShouldClose(Key key)
         {
-            return key == Key.M || G1C_InputManager.IsBack(key) || G1C_InputManager.IsConfirm(key);
+            return key == Key.B || G1C_InputManager.IsBack(key) || G1C_InputManager.IsConfirm(key);
         }
 
         public void Draw(G1C_Renderer r, G1C_GameManager game)
         {
-            r.DrawPanel(60, 40, 360, 240);
-            r.Text("MENÜ", 60, 50, 16, G1C_UiColors.PanelBorder, 360);
-            r.Text("Chips: " + game.Money.Balance + "    Gespielte Runden: " + game.GamesPlayed, 76, 76, 11, G1C_UiColors.Text);
+            double x = (G1C_Renderer.ScreenWidth - 360) / 2;
+            double y = (G1C_Renderer.ScreenHeight - 240) / 2;
+            r.DrawPanel(x, y, 360, 240);
+            r.Text("MENÜ", x, y + 10, 16, G1C_UiColors.PanelBorder, 360);
+            r.Text("Chips: " + game.Money.Balance + "    Gespielte Runden: " + game.GamesPlayed,
+                   x + 16, y + 36, 11, G1C_UiColors.Text);
 
             string[] lines =
             {
@@ -23,7 +26,8 @@ namespace OOPGames
                 "  W A S D / Pfeiltasten  Laufen",
                 "  E                      Interagieren / Weiter",
                 "  Q / Esc                Abbrechen / Zurück",
-                "  M                      Menü (pausiert die Uhr)",
+                "  M                      Stadtkarte (im Freien)",
+                "  B                      Menü (pausiert die Uhr)",
                 "  P / I                  Handy / Inventar",
                 "In den Spielen: Tasten oder Knöpfe anklicken.",
                 "Wenig Chips? Jobs an der Bar, Pfand im Laden.",
@@ -33,9 +37,9 @@ namespace OOPGames
             };
             for (int i = 0; i < lines.Length; i++)
             {
-                r.Text(lines[i], 76, 100 + i * 14, 10, G1C_UiColors.Text);
+                r.Text(lines[i], x + 16, y + 60 + i * 14, 10, G1C_UiColors.Text);
             }
-            r.Text("[M] / [Q] Schließen", 60, 258, 11, G1C_UiColors.PanelBorder, 360);
+            r.Text("[B] / [Q] Schließen", x, y + 218, 11, G1C_UiColors.PanelBorder, 360);
         }
     }
 }

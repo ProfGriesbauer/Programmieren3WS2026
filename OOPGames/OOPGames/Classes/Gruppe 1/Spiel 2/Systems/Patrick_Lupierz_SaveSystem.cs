@@ -34,7 +34,10 @@ namespace OOPGames
         public int Y { get; set; }
         public int Facing { get; set; }
         public int Coins { get; set; }
+        public int BankSavings { get; set; }
+        public int LoanOwed { get; set; }
         public Dictionary<string, int> Inventory { get; set; }
+        public List<G1C_PlacedFurniture> HomeFurniture { get; set; }
         public List<G1C_ActiveBuff> Buffs { get; set; }
         public int ClockTicks { get; set; }
         public int PlayTicks { get; set; }
@@ -58,7 +61,7 @@ namespace OOPGames
     public static class G1C_SaveSystem
     {
         public const int SlotCount = 3;
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public static string Folder { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "G1Casino_Saves");
 
@@ -92,7 +95,7 @@ namespace OOPGames
             {
                 if (slot < 1 || slot > SlotCount || !File.Exists(FileOf(slot))) return null;
                 G1C_SaveData data = JsonSerializer.Deserialize<G1C_SaveData>(File.ReadAllText(FileOf(slot)));
-                bool valid = data != null && data.Version == CurrentVersion && data.Profile != null &&
+                bool valid = data != null && data.Version >= 1 && data.Version <= CurrentVersion && data.Profile != null &&
                              G1C_PlayerProfile.IsValidName(data.Profile.Name) && data.Coins >= 0 && data.ClockTicks >= 0 &&
                              Enum.IsDefined(typeof(G1C_WorldLocation), data.Location) &&
                              Enum.IsDefined(typeof(G1C_Direction), data.Facing);

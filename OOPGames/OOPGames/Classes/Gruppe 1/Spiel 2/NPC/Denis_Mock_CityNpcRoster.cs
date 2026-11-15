@@ -46,7 +46,43 @@ namespace OOPGames
                     GeneralInfo = "Vom südlichen Weg kommst du schnell wieder auf die Hauptstraße.",
                     PersonalStory = "Ich studiere Stadtplanung und zeichne gern Karten.",
                     GeneralMonologues = new[] { "Ein kurzer Spaziergang hilft beim Nachdenken.", "Ich sollte später noch in die Bibliothek." }
-                }, 80, 50, 25)
+                }, 80, 50, 25),
+                new G1C_NpcCharacter("Geldhai Viktor", "dealer_red", new G1C_NpcPersonality
+                {
+                    Role = "Kreditgeber",
+                    Traits = "aufdringlich, geschäftstüchtig",
+                    Generosity = 0.1,
+                    Pride = 0.7,
+                    RiskAppetite = 0.9,
+                    FirstMeeting = "Psst. Du brauchst Chips? Ich kann dir sofort welche leihen.",
+                    GeneralInfo = "Ich leihe 250 Chips. Der feste Rückzahlungsbetrag beträgt 300.",
+                    PersonalStory = "Ich kenne jeden, der hier auf Pump spielt. Zahlen ist besser als Weglaufen.",
+                    GeneralMonologues = new[] { "Ein Kredit ist kein Geschenk.", "Ich bin gleich wieder an der Bank." }
+                }, 35, 45, 600),
+                new G1C_NpcCharacter("Bankierin Frida", "dealer_blue", new G1C_NpcPersonality
+                {
+                    Role = "Bankierin",
+                    Traits = "sorgfältig, geduldig",
+                    Generosity = 0.4,
+                    Pride = 0.3,
+                    RiskAppetite = 0.1,
+                    FirstMeeting = "Willkommen. Ich bin Frida und helfe dir gern mit deinem Konto.",
+                    GeneralInfo = "Einzahlungen bleiben sicher auf deinem Konto und sind jederzeit verfügbar.",
+                    PersonalStory = "Ich prüfe jede Buchung sorgfältig, damit dein Kontostand stimmt.",
+                    GeneralMonologues = new[] { "Ein guter Überblick hilft beim Sparen.", "Alle Buchungen sind ordentlich erfasst." }
+                }, 60, 65, 0),
+                new G1C_NpcCharacter("Möbelhändlerin Lotte", "guest", new G1C_NpcPersonality
+                {
+                    Role = "Möbelhändlerin",
+                    Traits = "kreativ, freundlich",
+                    Generosity = 0.6,
+                    Pride = 0.4,
+                    RiskAppetite = 0.2,
+                    FirstMeeting = "Hallo! Suchst du etwas Schönes für dein Zuhause?",
+                    GeneralInfo = "Pflanzen, Stühle und größere Möbel passen in verschiedene freie Bereiche.",
+                    PersonalStory = "Ich richte kleine Räume so ein, dass sie trotzdem gemütlich wirken.",
+                    GeneralMonologues = new[] { "Heute ist ein guter Tag zum Umdekorieren.", "Ein Zimmer wirkt mit Pflanzen gleich freundlicher." }
+                }, 65, 60, 0)
             };
         }
     }

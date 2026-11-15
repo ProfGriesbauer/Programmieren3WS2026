@@ -4,6 +4,8 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
+    public enum G1C_ConversationAction { None, BankMenu, FurnitureShop }
+
     // =====================================================
     // Klasse: G1C_ConversationOption
     // Entwickler: Eduard Schoenfeld
@@ -57,6 +59,7 @@ namespace OOPGames
         private readonly List<G1C_ConversationOption> _options = new List<G1C_ConversationOption>();
         private readonly List<G1C_Notice> _notices = new List<G1C_Notice>();
         private G1C_InteractionType? _gameOffered;
+        private G1C_InteractionType? _serviceOffered;
 
         public G1C_Conversation(G1C_NpcSystem system)
         {
@@ -78,16 +81,20 @@ namespace OOPGames
 
         /// <summary>Gewähltes Minispiel; wird nach dem Schließen vom GameManager gestartet.</summary>
         public G1C_InteractionType? RequestedGame { get; private set; }
+        public G1C_ConversationAction RequestedAction { get; private set; }
 
         // ------------------------------------------------------------------ Steuerung
 
         // Entwickler: Eduard Schoenfeld
         // Aufgabe: Gespräch beginnen – Erinnerung aktualisieren, Begrüßung wählen, Optionen anbieten.
-        public void Open(G1C_NpcCharacter npc, G1C_InteractionType? gameOffered)
+        public void Open(G1C_NpcCharacter npc, G1C_InteractionType? gameOffered,
+                         G1C_InteractionType? serviceOffered = null)
         {
             Npc = npc ?? throw new ArgumentNullException(nameof(npc));
             _gameOffered = gameOffered;
+            _serviceOffered = serviceOffered;
             RequestedGame = null;
+            RequestedAction = G1C_ConversationAction.None;
             _notices.Clear();
             IsOpen = true;
             ViaPhone = false;
@@ -144,6 +151,13 @@ namespace OOPGames
             G1C_InteractionType? game = RequestedGame;
             RequestedGame = null;
             return game;
+        }
+
+        public G1C_ConversationAction TakeRequestedAction()
+        {
+            G1C_ConversationAction action = RequestedAction;
+            RequestedAction = G1C_ConversationAction.None;
+            return action;
         }
 
         public void UpdateNotices(int tick)
@@ -233,6 +247,41 @@ namespace OOPGames
                 AddOption("Lass uns plaudern.", SmallTalk);
                 AddOption("Wie läuft es bei dir?", AskHowAreYou);
                 AddOption("Ich muss auflegen.", Close);
+                return;
+            }
+
+            if (_serviceOffered == G1C_InteractionType.Bank)
+            {
+                AddOption("Konto verwalten.", RequestBankMenu);
+                AddOption("Wie funktioniert das Konto?", ExplainBank);
+                AddOption("Lass uns plaudern.", SmallTalk);
+                AddOption("Ich gehe wieder.", Close);
+                return;
+            }
+
+            if (_serviceOffered == G1C_InteractionType.LoanShark)
+            {
+                if (_system.Finance.LoanOwed > 0)
+                {
+                    AddOption("50 Chips zurückzahlen.", () => RepayLoan(50));
+                    AddOption("Alles zurückzahlen.", () => RepayLoan(_system.Finance.LoanOwed));
+                }
+                else
+                {
+                    AddOption("250 Chips leihen.", BorrowFromShark);
+                    AddOption("Konditionen erklären.", ExplainLoan);
+                }
+                AddOption("Lass uns plaudern.", SmallTalk);
+                AddOption("Ich gehe wieder.", Close);
+                return;
+            }
+
+            if (_serviceOffered == G1C_InteractionType.FurnitureShop)
+            {
+                AddOption("Möbel ansehen.", RequestFurnitureShop);
+                AddOption("Was passt in mein Zuhause?", ExplainFurniture);
+                AddOption("Lass uns plaudern.", SmallTalk);
+                AddOption("Ich gehe wieder.", Close);
                 return;
             }
 
@@ -369,6 +418,54 @@ namespace OOPGames
             Adjust(result.TrustDelta, 0);
             Say(result.Reply, result.Expression);
             ShowRoot();
+        }
+
+        private void RequestBankMenu()
+        {
+            RequestedAction = G1C_ConversationAction.BankMenu;
+            Close();
+        }
+
+        private void ExplainBank()
+        {
+            Say("Du kannst Chips einzahlen und später wieder abheben.\nDas Konto wird mit deinem Spielstand gespeichert.", G1C_NpcExpression.Thoughtful);
+        }
+
+        private void BorrowFromShark()
+        {
+            int oldDebt = _system.Finance.LoanOwed;
+            string reply = _system.Finance.Borrow(_system.Money);
+            if (oldDebt == 0 && _system.Finance.LoanOwed > 0)
+            {
+                Adjust(1, 0);
+                Npc.TrySetMood(G1C_NpcMood.Happy, Tick);
+            }
+            Say(reply, oldDebt == 0 ? G1C_NpcExpression.Happy : G1C_NpcExpression.Thoughtful);
+            ShowRoot();
+        }
+
+        private void RepayLoan(int amount)
+        {
+            string reply = _system.Finance.Repay(_system.Money, amount);
+            Say(reply, _system.Finance.LoanOwed == 0 ? G1C_NpcExpression.Happy : G1C_NpcExpression.Thoughtful);
+            ShowRoot();
+        }
+
+        private void ExplainLoan()
+        {
+            Say("Ich zahle dir einmalig 250 Chips aus.\nDu schuldest mir dafür insgesamt 300 Chips. Kein zweiter Kredit, solange der erste offen ist.",
+                G1C_NpcExpression.Thoughtful);
+        }
+
+        private void RequestFurnitureShop()
+        {
+            RequestedAction = G1C_ConversationAction.FurnitureShop;
+            Close();
+        }
+
+        private void ExplainFurniture()
+        {
+            Say("Such dir Möbel aus. Zuhause kannst du sie am Einrichtungsplan\nan einem freien Platz aufstellen.", G1C_NpcExpression.Happy);
         }
 
         // Entwickler: Eduard Schoenfeld

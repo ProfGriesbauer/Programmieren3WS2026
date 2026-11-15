@@ -11,7 +11,9 @@ namespace OOPGames
         Market,
         // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – weitere Geschäfte
         GasStation,
-        ClothingStore
+        ClothingStore,
+        Bank,
+        FurnitureStore
     }
 
     public interface IG1C_WorldMap

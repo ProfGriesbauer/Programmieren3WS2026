@@ -44,6 +44,12 @@ namespace OOPGames
                 case "tile_gas_wall": return Wall(Rgb(0xF08030));
                 case "tile_clothing_floor": return Floor(Rgb(0xF0D8C0));
                 case "tile_clothing_wall": return Wall(Rgb(0xE870A0));
+                case "tile_bank_floor": return Floor(Rgb(0xD8D0B8));
+                case "tile_bank_wall": return Wall(Rgb(0x486078));
+                case "tile_furniture_floor": return Floor(Rgb(0xE0C898));
+                case "tile_furniture_wall": return Wall(Rgb(0x805838));
+                case "building_bank": return Building(Rgb(0x507080), Rgb(0xE8D8B8), Rgb(0xD0B858), "chip");
+                case "building_furniture": return Building(Rgb(0xA07848), Rgb(0xF0D8B0), Rgb(0x785038), "chair");
                 case "building_home": return Building(Rgb(0xE05040), Rgb(0xF8F0D8), Rgb(0xE05040), "");
                 case "building_hospital": return Building(Rgb(0x58B8D8), Rgb(0xFFFFFF), Rgb(0xFFFFFF), "cross");
                 case "building_market": return Building(Rgb(0x3890E0), Rgb(0xF8F8F8), Rgb(0x3890E0), "bag");
@@ -61,6 +67,7 @@ namespace OOPGames
                 case "obj_city_tree": return Tree();
                 case "obj_street_lamp": return Lamp();
                 case "obj_trash": return TrashCan();
+                case "obj_vending_machine": return VendingMachine();
                 case "obj_wardrobe": return Wardrobe();
                 case "obj_mirror": return Mirror();
                 case "obj_clothes_rack": return ClothesRack();
@@ -262,6 +269,11 @@ namespace OOPGames
                 case "shirt":
                     c.FillRect(x + 2, y + 1, 4, 6, white); c.FillRect(x, y + 1, 2, 2, white); c.FillRect(x + 6, y + 1, 2, 2, white);
                     break;
+                case "chair":
+                    c.FillRect(x + 2, y, 4, 1, white); c.FillRect(x + 2, y + 1, 1, 3, white);
+                    c.FillRect(x + 1, y + 4, 6, 1, white); c.FillRect(x + 2, y + 5, 1, 2, white);
+                    c.FillRect(x + 5, y + 5, 1, 2, white);
+                    break;
             }
         }
 
@@ -300,6 +312,24 @@ namespace OOPGames
             c.FillRect(6, 9, 1, 8, Rgb(0x4A7860)); c.FillRect(9, 9, 1, 8, Rgb(0x4A7860));
             c.FillRect(2, 4, 12, 3, Rgb(0x4A7860));
             c.FillRect(6, 2, 4, 2, Rgb(0x4A7860));
+            c.AddOutline(Outline);
+            return c.ToBitmap();
+        }
+
+        private static BitmapSource VendingMachine()
+        {
+            G1C_PixelCanvas c = new G1C_PixelCanvas(16, 28);
+            c.FillRect(2, 1, 12, 26, Rgb(0x485878));
+            c.FillRect(3, 2, 10, 3, Rgb(0x90B8D8));
+            c.FillRect(4, 6, 8, 10, Rgb(0x202838));
+            c.FillRect(5, 7, 2, 3, Rgb(0xA85838));
+            c.FillRect(8, 7, 2, 3, Rgb(0xD8A848));
+            c.FillRect(5, 11, 2, 3, Rgb(0x58A8D8));
+            c.FillRect(8, 11, 2, 3, Rgb(0x68B868));
+            c.FillRect(11, 8, 1, 2, Gold);
+            c.FillRect(4, 18, 8, 5, Rgb(0x181820));
+            c.FillRect(6, 19, 4, 2, Rgb(0x707078));
+            c.FillRect(4, 24, 8, 1, Rgb(0x788898));
             c.AddOutline(Outline);
             return c.ToBitmap();
         }

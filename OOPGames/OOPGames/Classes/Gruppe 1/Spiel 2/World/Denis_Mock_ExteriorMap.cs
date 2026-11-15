@@ -30,6 +30,7 @@ namespace OOPGames
             { G1C_WorldLocation.Home, 'H' }, { G1C_WorldLocation.Casino, 'C' },
             { G1C_WorldLocation.Hospital, 'K' }, { G1C_WorldLocation.Market, 'S' },
             { G1C_WorldLocation.GasStation, 'T' }, { G1C_WorldLocation.ClothingStore, 'B' },
+            { G1C_WorldLocation.Bank, 'F' }, { G1C_WorldLocation.FurnitureStore, 'M' },
         };
 
         private readonly char[,] _tiles;

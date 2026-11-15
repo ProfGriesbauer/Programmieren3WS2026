@@ -10,11 +10,13 @@ namespace OOPGames
         Poker,
         Blackjack,
         Slots,
+        Claw,
         Result,     // Ergebnis nach einem Minispiel
         // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Gespräch mit Porträt und Antwortoptionen
         Conversation,
         Title,      // Hauptmenü, Speicherplätze, Charaktererstellung
         ListMenu,   // Laden, Inventar, Kleiderschrank
-        Phone       // Klapphandy
+        Phone,      // Klapphandy
+        Map         // Stadtkarte
     }
 }

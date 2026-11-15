@@ -60,21 +60,27 @@ namespace OOPGames
         {
             if (!IsOpen) return;
 
-            r.DrawPanel(6, 236, 468, 80);
+            double width = G1C_Renderer.ScreenWidth - 12;
+            double panelHeight = 84;
+            double x = 6;
+            double y = G1C_Renderer.ScreenHeight - panelHeight - 4;
+            r.DrawPanel(x, y, width, panelHeight);
             if (Speaker.Length > 0)
             {
-                r.DrawPanel(14, 220, 8 + Speaker.Length * 8, 22);
-                r.Text(Speaker, 20, 224, 11, G1C_UiColors.PanelBorder);
+                double speakerWidth = Math.Min(width - 16, 16 + Speaker.Length * 8);
+                r.DrawPanel(x + 8, y - 16, speakerWidth, 22);
+                r.Text(Speaker, x + 14, y - 12, 11, G1C_UiColors.PanelBorder);
             }
-            r.Text(CurrentText, 18, 248, 12, G1C_UiColors.Text);
+            r.WrappedText(CurrentText, x + 12, y + 12, 11, G1C_UiColors.Text, width - 24);
 
             if (IsChoicePage)
             {
-                r.Text("[E] Ja     [Q] Nein", 300, 294, 11, G1C_UiColors.PanelBorder);
+                r.Text("[E] Ja     [Q] Nein", G1C_Renderer.ScreenWidth - 170, y + panelHeight - 20,
+                       10, G1C_UiColors.PanelBorder, 156);
             }
             else if ((tick / 8) % 2 == 0)
             {
-                r.Text("▼ [E]", 420, 294, 11, G1C_UiColors.Loss); // blinkender Weiter-Pfeil
+                r.Text("▼ [E]", G1C_Renderer.ScreenWidth - 64, y + panelHeight - 20, 10, G1C_UiColors.Loss);
             }
         }
     }

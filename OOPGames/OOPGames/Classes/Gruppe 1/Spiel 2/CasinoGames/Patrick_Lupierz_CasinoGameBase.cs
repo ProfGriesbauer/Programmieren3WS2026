@@ -143,14 +143,16 @@ namespace OOPGames
         {
             r.FillRect(0, 0, G1C_Renderer.ScreenWidth, 28, G1C_UiColors.HeaderBar);
             r.Text(Name, 8, 5, 15, G1C_UiColors.Gold);
-            r.Sprite("chip", 340, 8, 12, 12);
-            r.Text("Chips: " + Money.Balance, 356, 5, 15, G1C_UiColors.TextLight);
+            double balanceX = G1C_Renderer.ScreenWidth - 124;
+            r.Sprite("chip", balanceX, 8, 12, 12);
+            r.Text("Chips: " + Money.Balance, balanceX + 16, 5, 15, G1C_UiColors.TextLight);
         }
 
         private void DrawMessage(G1C_Renderer r)
         {
-            r.DrawPanel(4, 262, 472, 28);
-            r.Text(Message, 10, 268, 11, G1C_UiColors.Text);
+            double y = G1C_Renderer.ScreenHeight - 58;
+            r.DrawPanel(4, y, G1C_Renderer.ScreenWidth - 8, 28);
+            r.WrappedText(Message, 10, y + 6, 10, G1C_UiColors.Text, G1C_Renderer.ScreenWidth - 20);
         }
 
         private static void DrawButton(G1C_Renderer r, G1C_Button b)
@@ -163,7 +165,7 @@ namespace OOPGames
         /// <summary>Hilfsfunktion: Knopfreihe gleichmäßig über die Bildschirmbreite verteilen.</summary>
         protected void AddButtonRow(params G1C_Button[] buttons)
         {
-            const double y = 294;
+            double y = G1C_Renderer.ScreenHeight - 26;
             double width = (G1C_Renderer.ScreenWidth - 8 - (buttons.Length - 1) * 4) / buttons.Length;
             for (int i = 0; i < buttons.Length; i++)
             {

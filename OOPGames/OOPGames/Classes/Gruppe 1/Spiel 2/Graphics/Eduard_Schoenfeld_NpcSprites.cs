@@ -10,7 +10,7 @@ namespace OOPGames
     // Entwickler: Eduard Schoenfeld
     // Erstellt: 12.11.2026
     // Beschreibung: Eingebaute Grafiken des NPC-Systems:
-    //   - portrait_<skin>_<ausdruck>: Kopf und Oberkörper aus dem vorhandenen Front-Sprite
+    //   - portrait_<skin>_<ausdruck>: Kopf und Oberkörper aus dem 24x24-Front-Sprite
     //     "<skin>_down_0", doppelt aufgelöst und um einen Gesichtsausdruck ergänzt. Haare, Haut
     //     und Kleidung kommen 1:1 aus dem Sprite, daher bleibt der Charakter wiedererkennbar.
     //   - item_glass, item_lost_chip: Gegenstände für Sammelaufgaben.
@@ -20,8 +20,8 @@ namespace OOPGames
     public static class G1C_NpcSprites
     {
         private const int Scale = 2;
-        private const int BaseSize = 16;
-        private const int CropRows = 13; // Kopf + Oberkörper des 16x16-Sprites
+        private const int BaseSize = 24;
+        private const int CropRows = 18; // Kopf + Oberkörper des 24x24-Sprites
 
         // Entwickler: Eduard Schoenfeld
         public static BitmapSource Create(string id, G1C_SpriteLibrary library)
@@ -67,8 +67,8 @@ namespace OOPGames
                     dst[y * w + x] = src[(y / Scale) * BaseSize + x / Scale];
 
             // Farben aus dem Sprite übernehmen: Haut (Wange) und Augenfarbe
-            uint skin = src[6 * BaseSize + 5];
-            uint eye = src[4 * BaseSize + 6];
+            uint skin = src[6 * BaseSize + 10];
+            uint eye = src[5 * BaseSize + 9];
             uint mouth = Darken(skin, 0.6);
             DrawExpression(dst, w, h, expression, skin, eye, mouth);
 
@@ -78,53 +78,55 @@ namespace OOPGames
             return bitmap;
         }
 
-        // Koordinaten in doppelter Auflösung: Augen bei x 12–13 / 18–19, y 8–11; Brauen y 6–7; Mund y 12–14.
+        // Koordinaten in doppelter Auflösung; Ausdrucksdetails liegen auf dem vergrößerten Kopf-Sprite.
         private static void DrawExpression(uint[] p, int w, int h, G1C_NpcExpression expression, uint skin, uint eye, uint mouth)
         {
             Action<int, int, uint> set = (x, y, c) => { if (x >= 0 && y >= 0 && x < w && y < h) p[y * w + x] = c; };
             Action clearEyes = () =>
             {
-                for (int y = 8; y <= 11; y++) { set(12, y, skin); set(13, y, skin); set(18, y, skin); set(19, y, skin); }
+                for (int y = 10; y <= 14; y++)
+                    for (int x = 18; x <= 20; x++) { set(x, y, skin); set(x + 10, y, skin); }
             };
 
             switch (expression)
             {
                 case G1C_NpcExpression.Happy:
                     clearEyes();
-                    foreach (int ox in new[] { 11, 17 }) { set(ox, 10, eye); set(ox + 1, 9, eye); set(ox + 2, 9, eye); set(ox + 3, 10, eye); }
-                    set(13, 12, mouth); set(18, 12, mouth);
-                    for (int x = 14; x <= 17; x++) set(x, 13, mouth);
+                    foreach (int ox in new[] { 17, 27 }) { set(ox, 13, eye); set(ox + 1, 12, eye); set(ox + 2, 12, eye); set(ox + 3, 13, eye); }
+                    set(21, 20, mouth); set(28, 20, mouth);
+                    for (int x = 22; x <= 27; x++) set(x, 22, mouth);
                     break;
 
                 case G1C_NpcExpression.Angry:
-                    set(11, 6, eye); set(12, 6, eye); set(13, 7, eye); set(14, 7, eye); // Brauen fallen zur Mitte
-                    set(17, 7, eye); set(18, 7, eye); set(19, 6, eye); set(20, 6, eye);
-                    set(13, 14, mouth); set(18, 14, mouth);
-                    for (int x = 14; x <= 17; x++) set(x, 13, mouth);
+                    set(17, 8, eye); set(19, 9, eye); set(21, 10, eye);
+                    set(27, 10, eye); set(29, 9, eye); set(31, 8, eye);
+                    set(21, 23, mouth); set(28, 23, mouth);
+                    for (int x = 22; x <= 27; x++) set(x, 22, mouth);
                     break;
 
                 case G1C_NpcExpression.Sad:
-                    set(11, 7, eye); set(12, 7, eye); set(13, 6, eye);                 // Brauen steigen zur Mitte
-                    set(18, 6, eye); set(19, 7, eye); set(20, 7, eye);
-                    set(12, 12, 0xFF70B8F0); set(12, 13, 0xFF70B8F0);                // Träne
-                    set(14, 14, mouth); set(15, 13, mouth); set(16, 13, mouth); set(17, 14, mouth);
+                    set(17, 10, eye); set(19, 9, eye); set(21, 8, eye);
+                    set(27, 8, eye); set(29, 9, eye); set(31, 10, eye);
+                    set(17, 15, 0xFF70B8F0); set(17, 16, 0xFF70B8F0);
+                    set(22, 23, mouth); set(23, 22, mouth); set(26, 22, mouth); set(27, 23, mouth);
                     break;
 
                 case G1C_NpcExpression.Surprised:
-                    for (int y = 7; y <= 12; y++) { set(12, y, eye); set(13, y, eye); set(18, y, eye); set(19, y, eye); }
-                    set(12, 8, 0xFFF8F8F8); set(18, 8, 0xFFF8F8F8);                  // Glanzpunkte
-                    set(14, 13, mouth); set(15, 13, mouth); set(13, 14, mouth); set(16, 14, mouth);
-                    set(14, 15, mouth); set(15, 15, mouth);
+                    for (int y = 9; y <= 15; y++)
+                        for (int x = 18; x <= 20; x++) { set(x, y, eye); set(x + 10, y, eye); }
+                    set(19, 10, 0xFFF8F8F8); set(29, 10, 0xFFF8F8F8);
+                    set(24, 21, mouth); set(25, 21, mouth); set(23, 22, mouth); set(26, 22, mouth);
+                    set(24, 23, mouth); set(25, 23, mouth);
                     break;
 
                 case G1C_NpcExpression.Thoughtful:
-                    for (int y = 8; y <= 11; y++) { set(12, y, skin); set(18, y, skin); }  // Blick zur Seite
-                    set(18, 7, eye); set(19, 6, eye); set(20, 7, eye);                // eine Braue hochgezogen (unter dem Haaransatz)
-                    for (int x = 15; x <= 18; x++) set(x, 13, mouth);
+                    for (int y = 10; y <= 14; y++) { set(18, y, skin); set(28, y, skin); }
+                    set(29, 9, eye); set(30, 8, eye); set(31, 9, eye);
+                    for (int x = 22; x <= 28; x++) set(x, 22, mouth);
                     break;
 
                 default: // Neutral
-                    for (int x = 14; x <= 17; x++) set(x, 13, mouth);
+                    for (int x = 22; x <= 27; x++) set(x, 21, mouth);
                     break;
             }
         }

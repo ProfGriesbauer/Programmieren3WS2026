@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Windows.Media;
 
 namespace OOPGames
@@ -15,10 +14,7 @@ namespace OOPGames
     public class G1C_ConversationView
     {
         private const double OptionX = 122;
-        private const double OptionY = 238;
         private const double OptionHeight = 16;
-        private const double OptionWidth = 348;
-        private const int CharsPerLine = 60;
 
         private static readonly Color TrustColor = Color.FromRgb(0x38, 0xB0, 0x48);
         private static readonly Color RespectColor = Color.FromRgb(0x40, 0x70, 0xD8);
@@ -29,8 +25,10 @@ namespace OOPGames
         // Aufgabe: Welche Option liegt unter einem Klick (virtuelle Koordinaten)? -1 = keine.
         public static int OptionAt(double x, double y, int optionCount)
         {
-            if (x < OptionX || x > OptionX + OptionWidth || y < OptionY) return -1;
-            int index = (int)((y - OptionY) / OptionHeight);
+            double optionY = G1C_Renderer.ScreenHeight - 82;
+            double optionWidth = G1C_Renderer.ScreenWidth - OptionX - 8;
+            if (x < OptionX || x > OptionX + optionWidth || y < optionY) return -1;
+            int index = (int)((y - optionY) / OptionHeight);
             return index < optionCount ? index : -1;
         }
 
@@ -40,40 +38,45 @@ namespace OOPGames
             G1C_Conversation c = npcs.Conversation;
             if (!c.IsOpen || c.Npc == null) return;
             G1C_NpcCharacter npc = c.Npc;
+            double screenWidth = G1C_Renderer.ScreenWidth;
+            double panelY = G1C_Renderer.ScreenHeight - 138;
+            double optionY = panelY + 56;
+            double optionWidth = screenWidth - OptionX - 8;
 
             DrawStatusStrip(r, npc, npcs.Reputation);
-            DrawNotices(r, c.Notices);
+            DrawNotices(r, c.Notices, panelY - 54);
 
-            r.DrawPanel(6, 182, 468, 134);
+            r.DrawPanel(6, panelY, screenWidth - 12, 134);
 
             // Porträt mit aktuellem Gesichtsausdruck
-            r.DrawRect(14, 190, 100, 84, PortraitBack, G1C_UiColors.PanelBorder, 2);
-            r.Sprite(G1C_NpcSprites.PortraitId(npc.Skin, c.Expression), 16, 194, 96, 78);
-            r.Text(npc.Name, 10, 278, 10, G1C_UiColors.PanelBorder, 108);
-            r.Text(npc.Personality.Role, 10, 292, 8, G1C_UiColors.Text, 108);
+            r.DrawRect(14, panelY + 8, 100, 84, PortraitBack, G1C_UiColors.PanelBorder, 2);
+            r.Sprite(G1C_NpcSprites.PortraitId(npc.Skin, c.Expression), 16, panelY + 12, 96, 78);
+            r.Text(npc.Name, 10, panelY + 96, 10, G1C_UiColors.PanelBorder, 108);
+            r.Text(npc.Personality.Role, 10, panelY + 110, 8, G1C_UiColors.Text, 108);
 
-            List<string> lines = Wrap(c.Line, CharsPerLine);
-            for (int i = 0; i < lines.Count && i < 3; i++)
-            {
-                r.Text(lines[i], OptionX, 190 + i * 14, 10, G1C_UiColors.Text);
-            }
+            r.WrappedText(c.Line, OptionX, panelY + 8, 10, G1C_UiColors.Text, optionWidth - 4);
 
             for (int i = 0; i < c.Options.Count; i++)
             {
-                double y = OptionY + i * OptionHeight;
-                if (i == c.Selected) r.DrawRect(OptionX - 2, y, OptionWidth, OptionHeight - 1, SelectedRow, G1C_UiColors.PanelInner, 1);
-                r.Text((i + 1) + "  " + c.Options[i].Text, OptionX + 2, y + 2, 10, G1C_UiColors.Text);
+                double y = optionY + i * OptionHeight;
+                if (i == c.Selected) r.DrawRect(OptionX - 2, y, optionWidth, OptionHeight - 1, SelectedRow, G1C_UiColors.PanelInner, 1);
+                r.WrappedText((i + 1) + "  " + c.Options[i].Text, OptionX + 2, y + 2, 9,
+                              G1C_UiColors.Text, optionWidth - 6);
             }
-            r.Text("[1-4] oder [W]/[S] + [E] wählen    [Q] Gespräch beenden", OptionX, 304, 8, G1C_UiColors.Disabled);
+            r.Text("[1-4] oder [W]/[S] + [E] wählen    [Q] Gespräch beenden",
+                   OptionX, panelY + 122, 8, G1C_UiColors.Disabled);
         }
 
         private static void DrawStatusStrip(G1C_Renderer r, G1C_NpcCharacter npc, int reputation)
         {
-            r.DrawPanel(6, 148, 468, 32);
-            DrawBar(r, 14, 154, "Vertrauen", npc.Relationship.Trust, TrustColor);
-            DrawBar(r, 14, 166, "Respekt", npc.Relationship.Respect, RespectColor);
-            r.Text("Beziehung: " + G1C_NpcRelationship.DisplayName(npc.Relationship.Status), 214, 153, 9, G1C_UiColors.PanelBorder);
-            r.Text("Stimmung: " + G1C_NpcCharacter.MoodName(npc.Mood) + "   Ruf im Casino: " + reputation, 214, 165, 9, G1C_UiColors.Text);
+            double statusY = G1C_Renderer.ScreenHeight - 172;
+            r.DrawPanel(6, statusY, G1C_Renderer.ScreenWidth - 12, 32);
+            DrawBar(r, 14, statusY + 6, "Vertrauen", npc.Relationship.Trust, TrustColor);
+            DrawBar(r, 14, statusY + 18, "Respekt", npc.Relationship.Respect, RespectColor);
+            r.Text("Beziehung: " + G1C_NpcRelationship.DisplayName(npc.Relationship.Status),
+                   214, statusY + 5, 9, G1C_UiColors.PanelBorder);
+            r.Text("Stimmung: " + G1C_NpcCharacter.MoodName(npc.Mood) + "   Ruf im Casino: " + reputation,
+                   214, statusY + 17, 9, G1C_UiColors.Text);
         }
 
         // Pixel-Leiste 0–100 in 20 Segmenten
@@ -87,39 +90,16 @@ namespace OOPGames
             r.Text(value.ToString(), barX + 106, y - 2, 8, G1C_UiColors.Text);
         }
 
-        private static void DrawNotices(G1C_Renderer r, IReadOnlyList<G1C_Notice> notices)
+        private static void DrawNotices(G1C_Renderer r, System.Collections.Generic.IReadOnlyList<G1C_Notice> notices,
+                                        double baseY)
         {
             for (int i = 0; i < notices.Count; i++)
             {
-                double y = 128 - i * 16;
+                double y = baseY - i * 16;
                 G1C_Notice n = notices[notices.Count - 1 - i]; // neuester unten
                 r.DrawRect(352, y, 120, 15, G1C_UiColors.PanelFill, n.Positive ? G1C_UiColors.Win : G1C_UiColors.Loss, 1.5);
                 r.Text(n.Text, 352, y + 2, 9, n.Positive ? G1C_UiColors.Win : G1C_UiColors.Loss, 120);
             }
-        }
-
-        // Einfacher Zeilenumbruch an Wortgrenzen; "\n" im Text wird übernommen
-        private static List<string> Wrap(string text, int maxChars)
-        {
-            List<string> result = new List<string>();
-            foreach (string paragraph in (text ?? "").Split('\n'))
-            {
-                string line = "";
-                foreach (string word in paragraph.Split(' '))
-                {
-                    if (line.Length > 0 && line.Length + 1 + word.Length > maxChars)
-                    {
-                        result.Add(line);
-                        line = word;
-                    }
-                    else
-                    {
-                        line = line.Length == 0 ? word : line + " " + word;
-                    }
-                }
-                result.Add(line);
-            }
-            return result;
         }
     }
 }

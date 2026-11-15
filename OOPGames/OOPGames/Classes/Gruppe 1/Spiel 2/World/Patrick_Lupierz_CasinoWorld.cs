@@ -66,6 +66,10 @@ namespace OOPGames
             {
                 _objects.Add(new G1C_WorldObject("Spielautomat", "obj_slot_machine", x, 8, 1, 1, true, G1C_InteractionType.Slots, slotLines));
             }
+            _objects.Add(new G1C_WorldObject("Greifautomat", "obj_claw_machine", 7, 7, 2, 2, true,
+                G1C_InteractionType.Claw,
+                "Im Greifautomaten liegen Gewinne für deine Sammlung.",
+                "Wähle mit [A]/[D] ein Item, setze mit [W]/[S] und starte mit [E]."));
 
             // --- Bar (rechts unten) ---
             string[] barLines =
@@ -83,7 +87,7 @@ namespace OOPGames
             _objects.Add(new G1C_Npc("Gast Lena", "guest", 11, 7, G1C_Direction.Left, G1C_InteractionType.Talk,
                 "Psst! Beim Blackjack halte ich ab 17 immer.",
                 "Und beim Poker: Wenn Max erhöht, hat er meistens etwas Gutes.",
-                "Mit [M] öffnest du übrigens das Menü mit allen Tasten."));
+                "Mit [B] öffnest du das Menü, [M] die Stadtkarte."));
 
             // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – durchsuchbarer Mülleimer
             _objects.Add(new G1C_WorldObject("M\u00fclleimer", "obj_trash", 11, 10, 1, 1, true, G1C_InteractionType.Trash));

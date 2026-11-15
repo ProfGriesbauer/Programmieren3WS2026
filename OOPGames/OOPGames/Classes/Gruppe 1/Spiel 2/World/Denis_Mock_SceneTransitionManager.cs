@@ -70,6 +70,8 @@ namespace OOPGames
                 case G1C_WorldLocation.Market: return "Supermarkt";
                 case G1C_WorldLocation.GasStation: return "Tankstelle";
                 case G1C_WorldLocation.ClothingStore: return "Bekleidungsgeschäft";
+                case G1C_WorldLocation.Bank: return "Bank";
+                case G1C_WorldLocation.FurnitureStore: return "Möbelhaus";
                 default: return "Stadt";
             }
         }

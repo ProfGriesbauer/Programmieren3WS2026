@@ -55,17 +55,19 @@ namespace OOPGames
         private const int ActionDelay = 18; // Pause zwischen KI-/Dealer-Zügen (ca. 0,7 s)
 
         private readonly G1C_BlackjackAI _ai;
-        private readonly G1C_BlackjackHand _playerHand = new G1C_BlackjackHand();
+        private readonly List<G1C_BlackjackHand> _playerHands = new List<G1C_BlackjackHand>();
+        private readonly List<int> _playerBets = new List<int>();
+        private readonly List<bool> _playerNaturals = new List<bool>();
+        private readonly List<string> _playerResults = new List<string>();
         private readonly G1C_BlackjackHand _aiHand = new G1C_BlackjackHand();
         private readonly G1C_BlackjackHand _dealerHand = new G1C_BlackjackHand();
         private G1C_Deck _deck;
 
         private Phase _phase = Phase.Betting;
         private int _timer;
-        private int _playerBet;
+        private int _activeHand;
         private int _aiBet;
         private bool _dealerRevealed;
-        private string _playerResult = "";
         private string _aiResult = "";
 
         public G1C_Blackjack(G1C_MoneyManager money, Random random) : base(money, random)
@@ -99,7 +101,9 @@ namespace OOPGames
 
                 case Phase.PlayerTurn:
                     if (key == Key.H || key == Key.D1 || key == Key.NumPad1) PlayerHit();
-                    else if (key == Key.S || key == Key.D2 || key == Key.NumPad2) PlayerStand();
+                    else if (key == Key.S) PlayerStand();
+                    else if (key == Key.D3 || key == Key.NumPad3) PlayerSplit();
+                    else if (key == Key.D4 || key == Key.NumPad4) PlayerDouble();
                     break;
 
                 case Phase.RoundOver:
@@ -124,28 +128,35 @@ namespace OOPGames
             // Bei wenigen Restkarten neu mischen, damit kein Stapel mitten in der Runde leer wird
             if (_deck.Remaining < 20) _deck = new G1C_Deck(Random);
 
-            _playerBet = Bet.Amount;
             _aiBet = _ai.DecideBet();
-            _playerHand.Clear();
+            _playerHands.Clear();
+            _playerHands.Add(new G1C_BlackjackHand());
+            _playerBets.Clear();
+            _playerBets.Add(Bet.Amount);
+            _playerNaturals.Clear();
+            _playerNaturals.Add(false);
+            _playerResults.Clear();
+            _playerResults.Add("");
+            _activeHand = 0;
             _aiHand.Clear();
             _dealerHand.Clear();
             _dealerRevealed = false;
-            _playerResult = "";
             _aiResult = "";
 
             for (int i = 0; i < 2; i++)
             {
-                _playerHand.Add(_deck.Draw());
+                CurrentPlayerHand.Add(_deck.Draw());
                 _aiHand.Add(_deck.Draw());
                 _dealerHand.Add(_deck.Draw());
             }
+            _playerNaturals[0] = CurrentPlayerHand.IsBlackjack;
 
             if (_dealerHand.IsBlackjack)
             {
                 Message = "Der Dealer hat Blackjack!";
                 Resolve();
             }
-            else if (_playerHand.IsBlackjack)
+            else if (CurrentPlayerHand.IsBlackjack)
             {
                 Message = "Blackjack! Jetzt spielt die KI.";
                 StartAiTurn();
@@ -153,32 +164,112 @@ namespace OOPGames
             else
             {
                 _phase = Phase.PlayerTurn;
-                Message = "Du hast " + _playerHand.Value + ". [H] Karte ziehen oder [S] Halten?";
+                Message = "Du hast " + CurrentPlayerHand.Value + ". [H] Karte ziehen oder [S] Halten?";
             }
         }
 
+        private G1C_BlackjackHand CurrentPlayerHand { get { return _playerHands[_activeHand]; } }
+
         private void PlayerHit()
         {
-            _playerHand.Add(_deck.Draw());
-            if (_playerHand.IsBust)
+            CurrentPlayerHand.Add(_deck.Draw());
+            _playerNaturals[_activeHand] = false;
+            if (CurrentPlayerHand.IsBust)
             {
-                Message = "Überkauft mit " + _playerHand.Value + "! Jetzt spielt die KI.";
-                StartAiTurn();
+                Message = "Hand " + (_activeHand + 1) + " überkauft mit " + CurrentPlayerHand.Value + ".";
+                FinishPlayerHand();
             }
-            else if (_playerHand.Value == 21)
+            else if (CurrentPlayerHand.Value == 21)
             {
-                Message = "21! Jetzt spielt die KI.";
-                StartAiTurn();
+                Message = "21 auf Hand " + (_activeHand + 1) + ".";
+                FinishPlayerHand();
             }
             else
             {
-                Message = "Du hast " + _playerHand.Value + ". [H] Karte ziehen oder [S] Halten?";
+                Message = "Hand " + (_activeHand + 1) + ": " + CurrentPlayerHand.Value + ". [H] Karte ziehen oder [S] Halten?";
             }
         }
 
         private void PlayerStand()
         {
-            Message = "Du hältst bei " + _playerHand.Value + ". Jetzt spielt die KI.";
+            Message = "Du hältst Hand " + (_activeHand + 1) + " bei " + CurrentPlayerHand.Value + ".";
+            FinishPlayerHand();
+        }
+
+        private void PlayerSplit()
+        {
+            G1C_BlackjackHand hand = CurrentPlayerHand;
+            if (_playerHands.Count >= 4 || hand.Cards.Count != 2 ||
+                hand.Cards[0].Rank != hand.Cards[1].Rank)
+            {
+                Message = "Split geht nur bei zwei gleichrangigen Karten (maximal vier Hände).";
+                return;
+            }
+            if (!Money.TryWithdraw(_playerBets[_activeHand]))
+            {
+                Message = "Nicht genug Chips für den zweiten Einsatz.";
+                return;
+            }
+
+            G1C_Card first = hand.Cards[0];
+            G1C_Card second = hand.Cards[1];
+            int bet = _playerBets[_activeHand];
+            hand.Clear();
+            hand.Add(first);
+            hand.Add(_deck.Draw());
+            G1C_BlackjackHand splitHand = new G1C_BlackjackHand();
+            splitHand.Add(second);
+            splitHand.Add(_deck.Draw());
+            _playerHands.Insert(_activeHand + 1, splitHand);
+            _playerBets.Insert(_activeHand + 1, bet);
+            _playerNaturals[_activeHand] = false;
+            _playerNaturals.Insert(_activeHand + 1, false);
+            _playerResults.Insert(_activeHand + 1, "");
+            if (CurrentPlayerHand.Value == 21)
+            {
+                Message = "21 auf Hand " + (_activeHand + 1) + ".";
+                FinishPlayerHand();
+                return;
+            }
+            Message = "Hand geteilt. Spiele Hand " + (_activeHand + 1) + ".";
+        }
+
+        private void PlayerDouble()
+        {
+            if (CurrentPlayerHand.Cards.Count != 2)
+            {
+                Message = "Verdoppeln geht nur mit den ersten zwei Karten der Hand.";
+                return;
+            }
+            int extraBet = _playerBets[_activeHand];
+            if (!Money.TryWithdraw(extraBet))
+            {
+                Message = "Nicht genug Chips zum Verdoppeln.";
+                return;
+            }
+
+            _playerBets[_activeHand] += extraBet;
+            _playerNaturals[_activeHand] = false;
+            CurrentPlayerHand.Add(_deck.Draw());
+            Message = "Einsatz verdoppelt. Hand " + (_activeHand + 1) + " ist beendet.";
+            FinishPlayerHand();
+        }
+
+        private void FinishPlayerHand()
+        {
+            _activeHand++;
+            while (_activeHand < _playerHands.Count &&
+                   (_playerHands[_activeHand].IsBust || _playerHands[_activeHand].Value == 21))
+            {
+                Message += " Hand " + (_activeHand + 1) + " ist automatisch beendet.";
+                _activeHand++;
+            }
+            if (_activeHand < _playerHands.Count)
+            {
+                Message += " Weiter mit Hand " + (_activeHand + 1) + ".";
+                return;
+            }
+            Message += " Jetzt spielt die KI.";
             StartAiTurn();
         }
 
@@ -213,7 +304,7 @@ namespace OOPGames
             }
 
             // Dealer: muss nicht ziehen, wenn alle Mitspieler überkauft sind
-            bool everyoneBust = _playerHand.IsBust && _aiHand.IsBust;
+            bool everyoneBust = _playerHands.TrueForAll(hand => hand.IsBust) && _aiHand.IsBust;
             if (!everyoneBust && DealerShouldHit(_dealerHand))
             {
                 _dealerHand.Add(_deck.Draw());
@@ -229,28 +320,32 @@ namespace OOPGames
         {
             _dealerRevealed = true;
 
-            int playerReturn = Payout(_playerHand, _playerBet);
-            if (playerReturn > 0) Money.Deposit(playerReturn);
-            _playerResult = DescribeResult(playerReturn, _playerBet);
+            int playerNet = 0;
+            for (int i = 0; i < _playerHands.Count; i++)
+            {
+                int handReturn = Payout(_playerHands[i], _playerBets[i], _playerNaturals[i]);
+                if (handReturn > 0) Money.Deposit(handReturn);
+                playerNet += handReturn - _playerBets[i];
+                _playerResults[i] = DescribeResult(handReturn, _playerBets[i]);
+            }
 
-            int aiReturn = Payout(_aiHand, _aiBet);
+            int aiReturn = Payout(_aiHand, _aiBet, _aiHand.IsBlackjack);
             _ai.Receive(aiReturn);
             _ai.RecordResult(aiReturn - _aiBet);
             _aiResult = DescribeResult(aiReturn, _aiBet);
 
-            int net = playerReturn - _playerBet;
             string dealerText = _dealerHand.IsBust ? "Dealer überkauft" : "Dealer: " + _dealerHand.Value;
-            Message = dealerText + ". Du: " + _playerResult + " (" + (net >= 0 ? "+" : "") + net + "). [E] Weiter, [Q] Verlassen";
+            Message = dealerText + ". Deine Hände: " + string.Join(", ", _playerResults) +
+                      " (" + (playerNet >= 0 ? "+" : "") + playerNet + " Chips). [E] Weiter, [Q] Verlassen";
             _phase = Phase.RoundOver;
         }
 
         /// <summary>Gesamtauszahlung inkl. Einsatz: Blackjack 3:2, Sieg 1:1, Gleichstand = Einsatz zurück.</summary>
-        private int Payout(G1C_BlackjackHand hand, int bet)
+        private int Payout(G1C_BlackjackHand hand, int bet, bool natural)
         {
             if (hand.IsBust) return 0;
-            if (hand.IsBlackjack && _dealerHand.IsBlackjack) return bet;
-            if (hand.IsBlackjack) return bet + bet * 3 / 2;
-            if (_dealerHand.IsBlackjack) return 0;
+            if (_dealerHand.IsBlackjack) return natural && hand.IsBlackjack ? bet : 0;
+            if (natural && hand.IsBlackjack) return bet + bet * 3 / 2;
             if (_dealerHand.IsBust || hand.Value > _dealerHand.Value) return bet * 2;
             if (hand.Value == _dealerHand.Value) return bet;
             return 0;
@@ -293,8 +388,15 @@ namespace OOPGames
             r.Text("Du", 260, 134, 11, G1C_UiColors.Gold);
             if (inRound)
             {
-                r.Text("Einsatz " + _playerBet + "  Wert " + _playerHand.Value + "  " + _playerResult, 260, 150, 10, Colors.White);
-                G1C_CardView.DrawHand(r, _playerHand.Cards, 260, 166, 30);
+                for (int i = 0; i < _playerHands.Count; i++)
+                {
+                    G1C_BlackjackHand hand = _playerHands[i];
+                    double y = 154 + i * 26;
+                    r.Text((i == _activeHand && _phase == Phase.PlayerTurn ? "► " : "") +
+                           (i + 1) + ": " + hand.Value + " / " + _playerBets[i] + " " + _playerResults[i],
+                           260, y, 8, Colors.White);
+                    G1C_CardView.DrawHand(r, hand.Cards, 386, y - 2, 16);
+                }
             }
             else
             {
@@ -308,7 +410,8 @@ namespace OOPGames
                                  Btn("[E] Austeilen", Key.E), Btn("[Q] Verlassen", Key.Q));
                     break;
                 case Phase.PlayerTurn:
-                    AddButtonRow(Btn("[H] Karte", Key.H), Btn("[S] Halten", Key.S));
+                    AddButtonRow(Btn("[H] Karte", Key.H), Btn("[S] Halten", Key.S),
+                                 Btn("[3] Split", Key.D3, CanSplit), Btn("[4] Double", Key.D4, CanDouble));
                     break;
                 case Phase.RoundOver:
                     AddButtonRow(Btn("[E] Neue Runde", Key.E), Btn("[Q] Verlassen", Key.Q));
@@ -318,5 +421,16 @@ namespace OOPGames
                     break;
             }
         }
+
+        private bool CanSplit
+        {
+            get
+            {
+                return _playerHands.Count < 4 && CurrentPlayerHand.Cards.Count == 2 &&
+                       CurrentPlayerHand.Cards[0].Rank == CurrentPlayerHand.Cards[1].Rank;
+            }
+        }
+
+        private bool CanDouble { get { return CurrentPlayerHand.Cards.Count == 2 && CurrentPlayerHand.Value != 21; } }
     }
 }

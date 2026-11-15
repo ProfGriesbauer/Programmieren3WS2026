@@ -171,6 +171,7 @@ namespace OOPGames
         public string Text { get; set; }
         public string Right { get; set; } = "";
         public string Detail { get; set; } = "";
+        public string SpriteId { get; set; }
         public Action Run { get; set; }
     }
 

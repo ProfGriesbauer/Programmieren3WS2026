@@ -6,7 +6,7 @@ using System.Windows.Media.Imaging;
 namespace OOPGames
 {
     /// <summary>
-    /// Erzeugt die eingebauten Pixel-Art-Grafiken (Stil: GBA, 16x16 Pixel pro Kachel).
+    /// Erzeugt die eingebauten Pixel-Art-Grafiken (16x16 Pixel pro Kachel, 24x24 pro Figur).
     /// Jede Grafik kann über eine PNG-Datei mit gleicher ID ersetzt werden (siehe G1C_SpriteLibrary).
     ///
     /// Figuren-IDs: "<skin>_<richtung>_<frame>", z.B. "player_left_1".
@@ -58,6 +58,7 @@ namespace OOPGames
                 case "tile_exit": return ExitMat();
                 case "obj_plant": return Plant();
                 case "obj_slot_machine": return SlotMachine();
+                case "obj_claw_machine": return ClawMachine();
                 case "obj_bar": return BarCounter();
                 case "obj_roulette_table": return RouletteTable();
                 case "obj_blackjack_table": return BlackjackTable();
@@ -73,6 +74,7 @@ namespace OOPGames
                 case "slot_diamond": return SlotDiamond();
                 case "slot_seven": return SlotSeven();
             }
+            if (id.StartsWith("item_", StringComparison.Ordinal)) return ItemIcon(id.Substring(5));
             return TryCreateCharacter(id);
         }
 
@@ -178,6 +180,28 @@ namespace OOPGames
             c.FillRect(1, 20, 14, 4, Hex(0x802020));
             c.FillRect(14, 7, 1, 6, Hex(0xA0A0A0));
             c.FillRect(13, 6, 2, 2, Hex(0xE02020));
+            c.AddOutline(OutlineColor);
+            return c;
+        }
+
+        private static G1C_PixelCanvas ClawMachine()
+        {
+            G1C_PixelCanvas c = new G1C_PixelCanvas(32, 40);
+            c.FillRect(2, 1, 28, 38, Hex(0x684898));
+            c.FillRect(4, 3, 24, 5, Hex(0xF0C848));
+            c.FillRect(5, 4, 22, 3, Hex(0x382050));
+            c.FillRect(5, 10, 22, 20, Hex(0xA8D8E8));
+            c.DrawRectBorder(5, 10, 22, 20, Hex(0x302840));
+            c.FillRect(6, 27, 20, 2, Hex(0x805838));
+            c.FillRect(15, 11, 2, 6, Hex(0x606878));
+            c.FillRect(12, 16, 8, 2, Hex(0x606878));
+            c.FillRect(12, 17, 2, 4, Hex(0xB8C0C8));
+            c.FillRect(18, 17, 2, 4, Hex(0xB8C0C8));
+            c.FillEllipse(9, 25, 3, 2, Hex(0xD85848));
+            c.FillEllipse(16, 24, 3, 2, Hex(0xE8C848));
+            c.FillEllipse(23, 25, 3, 2, Hex(0x58A868));
+            c.FillRect(9, 32, 14, 4, Hex(0x302840));
+            c.FillRect(13, 33, 6, 2, Hex(0x98A0A8));
             c.AddOutline(OutlineColor);
             return c;
         }
@@ -449,6 +473,107 @@ namespace OOPGames
             return c;
         }
 
+        private static G1C_PixelCanvas ItemIcon(string id)
+        {
+            G1C_PixelCanvas c = new G1C_PixelCanvas(16, 16);
+            G1C_Item item = G1C_ItemCatalog.Get(id);
+            if (item != null && item.Slot != G1C_ClothingSlot.None)
+            {
+                Color clothing = Color.FromRgb((byte)(item.Color >> 16), (byte)(item.Color >> 8), (byte)item.Color);
+                c.FillRect(4, 4, 8, 10, clothing);
+                c.FillRect(6, 2, 4, 3, clothing);
+                c.FillRect(2, 5, 3, 5, clothing);
+                c.FillRect(11, 5, 3, 5, clothing);
+            }
+            else if (id == "coffee")
+            {
+                c.FillRect(4, 4, 8, 9, White);
+                c.FillRect(5, 5, 6, 4, Hex(0x704020));
+                c.FillRect(12, 6, 2, 4, Hex(0xC8D0D8));
+                c.FillRect(6, 2, 1, 2, Hex(0xA8E0F0));
+                c.FillRect(9, 1, 1, 3, Hex(0xA8E0F0));
+            }
+            else if (id == "water")
+            {
+                c.FillRect(5, 3, 6, 2, Hex(0x78C0F0));
+                c.FillRect(4, 5, 8, 9, Hex(0x58A8E0));
+                c.FillRect(6, 6, 2, 6, Hex(0xC8F0FF));
+                c.FillRect(5, 8, 6, 2, White);
+            }
+            else if (id == "sandwich")
+            {
+                c.FillRect(3, 5, 10, 7, Hex(0xD8A858));
+                c.FillRect(4, 4, 8, 2, Hex(0xF0D090));
+                c.FillRect(4, 7, 8, 2, Hex(0x50A848));
+                c.FillRect(4, 9, 8, 2, Hex(0xC85038));
+            }
+            else if (id == "apple")
+            {
+                c.FillEllipse(8, 9, 6, 5, Hex(0xD83030));
+                c.FillRect(8, 2, 1, 3, Hex(0x704820));
+                c.FillEllipse(11, 4, 3, 1.5, Hex(0x48A848));
+                c.Set(5, 8, White);
+            }
+            else if (id == "bottle")
+            {
+                c.FillRect(6, 2, 4, 2, Hex(0xA0D8C8));
+                c.FillRect(5, 4, 6, 10, Hex(0x58A888));
+                c.FillRect(6, 5, 2, 7, Hex(0xC8F0E0));
+            }
+            else if (id == "lucky_coin")
+            {
+                c.FillEllipse(8, 8, 6, 6, GoldColor);
+                c.FillEllipse(8, 8, 4, 4, Hex(0xF8E080));
+                c.Set(8, 4, Hex(0xD8A848));
+                c.Set(8, 11, Hex(0xD8A848));
+            }
+            else if (id == "furniture_plant")
+            {
+                c.FillRect(5, 10, 6, 4, Hex(0xA86838));
+                c.FillRect(7, 5, 2, 6, Hex(0x388840));
+                c.FillRect(4, 5, 4, 2, Hex(0x58B858));
+                c.FillRect(8, 3, 4, 2, Hex(0x78D068));
+            }
+            else if (id == "furniture_chair")
+            {
+                c.FillRect(4, 4, 8, 2, Hex(0xA06838));
+                c.FillRect(4, 6, 2, 4, Hex(0xA06838));
+                c.FillRect(4, 10, 8, 2, Hex(0xC08850));
+                c.FillRect(5, 12, 2, 3, Hex(0x704820));
+                c.FillRect(10, 12, 2, 3, Hex(0x704820));
+            }
+            else if (id == "furniture_table")
+            {
+                c.FillRect(3, 6, 10, 3, Hex(0xB07840));
+                c.FillRect(4, 9, 2, 5, Hex(0x704820));
+                c.FillRect(10, 9, 2, 5, Hex(0x704820));
+            }
+            else if (id == "furniture_shelf")
+            {
+                c.FillRect(3, 2, 10, 12, Hex(0x805030));
+                c.FillRect(5, 4, 2, 3, Hex(0xD84838));
+                c.FillRect(8, 4, 3, 3, Hex(0x3868B8));
+                c.FillRect(4, 8, 3, 4, Hex(0x48A050));
+                c.FillRect(8, 8, 4, 4, Hex(0xD8B848));
+            }
+            else if (id == "furniture_bed")
+            {
+                c.FillRect(2, 5, 12, 7, Hex(0x6088C8));
+                c.FillRect(3, 4, 4, 3, White);
+                c.FillRect(2, 12, 2, 2, Hex(0x805030));
+                c.FillRect(12, 12, 2, 2, Hex(0x805030));
+            }
+            else
+            {
+                Color tint = item != null && item.Category == G1C_ItemCategory.Getraenk
+                    ? Hex(0x5098D0) : Hex(0xD8A848);
+                c.FillRect(4, 4, 8, 9, tint);
+                c.FillRect(6, 2, 4, 2, tint);
+            }
+            c.AddOutline(OutlineColor);
+            return c;
+        }
+
         // ------------------------------------------------------------------ Figuren
 
         private static G1C_PixelCanvas TryCreateCharacter(string id)
@@ -500,59 +625,69 @@ namespace OOPGames
         // Ansicht von vorne (down) oder von hinten (up)
         private static G1C_PixelCanvas CharacterFront(CharacterPalette p, int frame, bool back)
         {
-            G1C_PixelCanvas c = new G1C_PixelCanvas(16, 16);
+            G1C_PixelCanvas c = new G1C_PixelCanvas(24, 24);
             Color eye = Hex(0x202028);
 
             // Kopf
-            c.FillRect(4, 1, 8, 7, p.Skin);
+            c.FillRect(7, 2, 10, 8, p.Skin);
+            c.FillRect(5, 5, 2, 3, p.Skin);
+            c.FillRect(17, 5, 2, 3, p.Skin);
             if (back)
             {
-                c.FillRect(4, 0, 8, 7, p.Hair);
-                c.FillRect(3, 1, 1, 5, p.Hair);
-                c.FillRect(12, 1, 1, 5, p.Hair);
+                c.FillRect(7, 0, 10, 8, p.Hair);
+                c.FillRect(5, 2, 2, 5, p.Hair);
+                c.FillRect(17, 2, 2, 5, p.Hair);
             }
             else
             {
-                c.FillRect(4, 0, 8, 3, p.Hair);
-                c.FillRect(3, 1, 1, 4, p.Hair);
-                c.FillRect(12, 1, 1, 4, p.Hair);
-                c.FillRect(6, 4, 1, 2, eye);
-                c.FillRect(9, 4, 1, 2, eye);
+                c.FillRect(7, 0, 10, 3, p.Hair);
+                c.FillRect(5, 1, 3, 5, p.Hair);
+                c.FillRect(16, 1, 3, 4, p.Hair);
+                c.FillRect(8, 4, 3, 3, White);
+                c.FillRect(14, 4, 3, 3, White);
+                c.FillRect(9, 5, 1, 2, eye);
+                c.FillRect(15, 5, 1, 2, eye);
+                c.Set(12, 7, Darken(p.Skin, 0.8));
+                c.FillRect(11, 8, 3, 1, Darken(p.Skin, 0.7));
             }
 
             if (p.Hat.HasValue)
             {
-                c.FillRect(4, 0, 8, back ? 3 : 2, p.Hat.Value);
-                if (!back) c.FillRect(3, 2, 10, 1, Darken(p.Hat.Value, 0.7)); // Schirm
+                c.FillRect(7, 0, 10, back ? 4 : 3, p.Hat.Value);
+                if (!back) c.FillRect(5, 3, 14, 1, Darken(p.Hat.Value, 0.7));
             }
 
             // Oberkörper mit Weste
-            c.FillRect(4, 8, 8, 5, p.Shirt);
+            c.FillRect(7, 10, 10, 8, p.Shirt);
             if (!back)
             {
-                c.FillRect(4, 8, 2, 5, p.Vest);
-                c.FillRect(10, 8, 2, 5, p.Vest);
+                c.FillRect(7, 10, 2, 8, p.Vest);
+                c.FillRect(15, 10, 2, 8, p.Vest);
+                c.FillRect(10, 10, 4, 2, White);
+                c.FillRect(11, 12, 2, 5, GoldColor);
+                c.Set(9, 15, Darken(p.Vest, 0.75));
+                c.Set(15, 15, Darken(p.Vest, 0.75));
             }
             else
             {
-                c.FillRect(4, 8, 8, 5, p.Vest == p.Shirt ? p.Shirt : p.Vest);
+                c.FillRect(7, 10, 10, 8, p.Vest == p.Shirt ? p.Shirt : p.Vest);
             }
 
             // Arme schwingen beim Laufen leicht mit
-            int leftHand = frame == 1 ? 13 : 12;
-            int rightHand = frame == 2 ? 13 : 12;
-            c.FillRect(3, 8, 1, leftHand - 8, Darken(p.Shirt, 0.85));
-            c.FillRect(12, 8, 1, rightHand - 8, Darken(p.Shirt, 0.85));
-            c.Set(3, leftHand, p.Skin);
-            c.Set(12, rightHand, p.Skin);
+            int leftHand = frame == 1 ? 18 : 17;
+            int rightHand = frame == 2 ? 18 : 17;
+            c.FillRect(4, 11, 3, 5, Darken(p.Shirt, 0.85));
+            c.FillRect(17, 11, 3, 5, Darken(p.Shirt, 0.85));
+            c.FillRect(5, leftHand, 2, 2, p.Skin);
+            c.FillRect(17, rightHand, 2, 2, p.Skin);
 
             // Beine: Frame 1/2 heben jeweils einen Fuß an
-            int leftLeg = frame == 2 ? 1 : 2;
-            int rightLeg = frame == 1 ? 1 : 2;
-            c.FillRect(5, 13, 2, leftLeg, p.Pants);
-            c.FillRect(9, 13, 2, rightLeg, p.Pants);
-            c.FillRect(5, 13 + leftLeg, 2, 1, p.Shoes);
-            c.FillRect(9, 13 + rightLeg, 2, 1, p.Shoes);
+            int leftLeg = frame == 2 ? 3 : 4;
+            int rightLeg = frame == 1 ? 3 : 4;
+            c.FillRect(8, 18, 3, leftLeg, p.Pants);
+            c.FillRect(13, 18, 3, rightLeg, p.Pants);
+            c.FillRect(7, 18 + leftLeg, 4, 2, p.Shoes);
+            c.FillRect(13, 18 + rightLeg, 4, 2, p.Shoes);
 
             c.AddOutline(OutlineColor);
             return c;
@@ -561,48 +696,53 @@ namespace OOPGames
         // Seitenansicht nach rechts (links = gespiegelt)
         private static G1C_PixelCanvas CharacterSide(CharacterPalette p, int frame)
         {
-            G1C_PixelCanvas c = new G1C_PixelCanvas(16, 16);
+            G1C_PixelCanvas c = new G1C_PixelCanvas(24, 24);
 
             // Kopf
-            c.FillRect(5, 1, 7, 7, p.Skin);
-            c.FillRect(5, 0, 7, 3, p.Hair);
-            c.FillRect(5, 3, 3, 4, p.Hair);
-            c.FillRect(10, 4, 1, 2, Hex(0x202028));
+            c.FillRect(9, 2, 9, 8, p.Skin);
+            c.FillRect(7, 5, 2, 3, p.Skin);
+            c.FillRect(7, 0, 11, 3, p.Hair);
+            c.FillRect(7, 2, 4, 5, p.Hair);
+            c.FillRect(14, 4, 2, 3, White);
+            c.Set(15, 5, Hex(0x202028));
+            c.Set(12, 8, Darken(p.Skin, 0.7));
 
             if (p.Hat.HasValue)
             {
-                c.FillRect(5, 0, 7, 2, p.Hat.Value);
-                c.FillRect(10, 2, 3, 1, Darken(p.Hat.Value, 0.7));
+                c.FillRect(7, 0, 11, 3, p.Hat.Value);
+                c.FillRect(14, 3, 5, 1, Darken(p.Hat.Value, 0.7));
             }
 
             // Körper
-            c.FillRect(6, 8, 5, 5, p.Shirt);
-            c.FillRect(10, 8, 1, 5, p.Vest);
+            c.FillRect(9, 10, 8, 8, p.Shirt);
+            c.FillRect(15, 10, 2, 8, p.Vest);
+            c.FillRect(11, 10, 4, 2, White);
+            c.FillRect(12, 12, 2, 5, GoldColor);
 
             // Arm
-            int handX = frame == 1 ? 7 : (frame == 2 ? 9 : 8);
-            c.FillRect(8, 9, 2, 3, Darken(p.Shirt, 0.85));
-            c.Set(handX, 12, p.Skin);
+            int handX = frame == 1 ? 10 : (frame == 2 ? 13 : 12);
+            c.FillRect(8, 11, 2, 5, Darken(p.Shirt, 0.85));
+            c.FillRect(handX, 16, 2, 2, p.Skin);
 
             // Beine
             if (frame == 0)
             {
-                c.FillRect(7, 13, 3, 2, p.Pants);
-                c.FillRect(7, 15, 4, 1, p.Shoes);
+                c.FillRect(10, 18, 6, 4, p.Pants);
+                c.FillRect(10, 22, 7, 2, p.Shoes);
             }
             else if (frame == 1)
             {
-                c.FillRect(6, 13, 2, 2, p.Pants);
-                c.FillRect(9, 13, 2, 2, p.Pants);
-                c.FillRect(5, 15, 3, 1, p.Shoes);
-                c.FillRect(10, 15, 2, 1, p.Shoes);
+                c.FillRect(9, 18, 3, 4, p.Pants);
+                c.FillRect(14, 18, 3, 4, p.Pants);
+                c.FillRect(7, 22, 5, 2, p.Shoes);
+                c.FillRect(15, 22, 4, 2, p.Shoes);
             }
             else
             {
-                c.FillRect(7, 13, 2, 2, p.Pants);
-                c.FillRect(9, 13, 2, 1, p.Pants);
-                c.FillRect(7, 15, 2, 1, p.Shoes);
-                c.FillRect(10, 14, 2, 1, p.Shoes);
+                c.FillRect(10, 18, 3, 4, p.Pants);
+                c.FillRect(14, 18, 3, 3, p.Pants);
+                c.FillRect(9, 22, 4, 2, p.Shoes);
+                c.FillRect(14, 21, 5, 2, p.Shoes);
             }
 
             c.AddOutline(OutlineColor);
