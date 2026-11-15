@@ -4,7 +4,8 @@ namespace OOPGames
     public enum G1C_InteractionType
     {
         None, Talk, Bartender, Roulette, Blackjack, Poker, Slots, Claw, Trash, Shop, Vending,
-        Wardrobe, Bed, Bank, LoanShark, FurnitureShop, Furnish
+        Wardrobe, Bed, Bank, LoanShark, FurnitureShop, Furnish,
+        Inspect // Änderung durch: Patrick Lupierz – 15.11.2026 – Schilder, Poster, Sticker: Text aus Lines anzeigen
     }
 
     /// <summary>

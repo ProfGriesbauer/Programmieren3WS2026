@@ -54,6 +54,7 @@ namespace OOPGames
         private void Paint(Canvas canvas, G1C_CasinoField field)
         {
             if (canvas == null || field == null || field.Manager == null) return;
+            if (field.KeyboardFocusRequested) FocusCanvas(canvas, field);
 
             G1C_Renderer r = _renderer;
             r.BeginFrame(canvas);
@@ -69,6 +70,7 @@ namespace OOPGames
             if (game.IsWorldVisible || game.ActiveGame == null)
             {
                 DrawWorld(r, game);
+                if (game.IsSleeping) DrawSleep(r, game); // Patrick Lupierz – 15.11.2026
                 _hud.Draw(r, game);
 
                 if (game.State == G1C_GameState.Dialogue) game.Dialogue.Draw(r, game.TickCount);
@@ -83,6 +85,18 @@ namespace OOPGames
             {
                 game.ActiveGame.Draw(r);
             }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: WASD-/Pfeiltasten-Reparatur. Nach "Start New Game" hat der Button den Fokus (Leertaste/Enter
+        //          starten neu) und die Auswahllisten verbrauchen Pfeiltasten. Das übergebene Canvas wird deshalb
+        //          fokussierbar gemacht und erhält den Tastaturfokus; KeyDown erreicht weiter die MainWindow.
+        //          Es wird keine Framework-Datei geändert und kein eigenes Eingabe-Event abonniert.
+        private static void FocusCanvas(Canvas canvas, G1C_CasinoField field)
+        {
+            canvas.Focusable = true;
+            canvas.FocusVisualStyle = null;
+            if (canvas.IsVisible && canvas.Focus()) field.KeyboardFocusRequested = false;
         }
 
         // ------------------------------------------------------------------ Aktive Welt-Szene
@@ -166,6 +180,7 @@ namespace OOPGames
             }
 
             DrawDaylight(r, game, world, scrolling, tileSize, mapX, mapY);
+            if (scrolling) DrawClosedSigns(r, game, tileSize, mapX, mapY); // Patrick Lupierz – 15.11.2026
 
             // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Sprechblasen und Aufgabenanzeige
             // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Reaktions-Sprechblasen gibt es jetzt auf jeder Karte
@@ -196,6 +211,43 @@ namespace OOPGames
                 double y = mapY + (obj.Y - 0.5) * tileSize;
                 r.FillEllipse(x, y + tileSize, tileSize * 1.4, tileSize * 1.0, System.Windows.Media.Color.FromArgb(50, 255, 230, 140));
                 r.FillEllipse(x, y, tileSize * 0.5, tileSize * 0.5, System.Windows.Media.Color.FromArgb(120, 255, 240, 170));
+            }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: CLOSED-Schild an der Tür jedes gerade geschlossenen Ladens. Welche Läden geschlossen sind,
+        //          entscheidet allein die Spiellogik (G1C_GameManager.ClosedShops); hier wird nur gezeichnet.
+        private void DrawClosedSigns(G1C_Renderer r, G1C_GameManager game, double tileSize, double mapX, double mapY)
+        {
+            double width = tileSize * 1.4;
+            double height = width * _sprites.GetAspect("sign_closed");
+            foreach (G1C_WorldLocation shop in game.ClosedShops())
+            {
+                int doorX = game.Exterior.Map.DoorX(shop);
+                int doorY = game.Exterior.Map.DoorY(shop);
+                double x = mapX + (doorX + 0.5) * tileSize - width / 2;
+                double y = mapY + doorY * tileSize + tileSize * 0.2;
+                if (x + width < 0 || x > G1C_Renderer.ScreenWidth || y + height < G1C_GameHUD.Height || y > G1C_Renderer.ScreenHeight) continue;
+                r.Sprite("sign_closed", x, y, width, height);
+            }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Schlafanimation – Bild dunkelt ab und wieder auf, "Z z Z" steigt über der Figur auf.
+        private void DrawSleep(G1C_Renderer r, G1C_GameManager game)
+        {
+            int left = game.SleepUntilTick - game.TickCount;
+            int elapsed = G1C_GameManager.SleepAnimationTicks - left;
+            double fade = System.Math.Min(1.0, System.Math.Min(elapsed, left) / 15.0);
+            byte alpha = (byte)(230 * fade);
+            r.FillRect(0, G1C_GameHUD.Height, G1C_Renderer.ScreenWidth, G1C_Renderer.ScreenHeight - G1C_GameHUD.Height,
+                       Color.FromArgb(alpha, 8, 10, 32));
+            double baseY = G1C_Renderer.ScreenHeight / 2;
+            for (int i = 0; i < 3; i++)
+            {
+                double rise = (elapsed * 0.8 + i * 18) % 54;
+                r.Text(i == 1 ? "z" : "Z", G1C_Renderer.ScreenWidth / 2 + i * 14 - 14, baseY - rise, 14 + i * 4,
+                       Color.FromArgb((byte)(255 * fade), 0xF8, 0xF8, 0xF8));
             }
         }
 

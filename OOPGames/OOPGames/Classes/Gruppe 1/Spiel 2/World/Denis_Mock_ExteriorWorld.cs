@@ -103,6 +103,54 @@ namespace OOPGames
             AddAnimal("Katze", "animal_cat", 62, 24, 2, 8);
             AddAnimal("Katze", "animal_cat", 26, 40, 2, 9);
             AddAnimal("Katze", "animal_cat", 88, 40, 2, 8);
+
+            AddGrandmaGarden(30, 14); // Änderung durch: Patrick Lupierz – 15.11.2026
+
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – lesbare Schilder in der Stadt
+            AddSign("Ortsschild", Map.DoorX(G1C_WorldLocation.Home) + 2, Map.DoorY(G1C_WorldLocation.Home) + 1,
+                "Willkommen in Glücksstadt!\nCasino im Süden, Bank im Norden. [M] öffnet die Stadtkarte.",
+                "Kleingedruckt: Die Stadtverwaltung haftet nicht für Spielschulden.");
+            AddSign("Casinoschild", Map.DoorX(G1C_WorldLocation.Casino) - 3, Map.DoorY(G1C_WorldLocation.Casino) + 1,
+                "Casino Glücksstadt – Roulette, Blackjack, Poker, Spielautomaten.\nSpiel verantwortungsvoll. Das Haus gewinnt trotzdem.");
+            AddSign("Parkschild", 22, 23, "Stadtpark mit Pavillon.\nBitte die Enten nicht mit Chips füttern.");
+            AddSign("Oma Gerdas Briefkasten", 29, Map.DoorY(G1C_WorldLocation.Home) + 1,
+                "Auf dem Briefkasten steht: \"G. – Keine Werbung, keine Vertreter,\nkeine Fragen zum Handy.\"");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Untersuchbares Schild auf eine freie, begehbare Kachel stellen (sonst die nächste freie rechts).
+        private void AddSign(string name, int x, int y, params string[] lines)
+        {
+            for (int i = 0; i < 4; i++, x++)
+            {
+                if (!Map.IsWalkable(x, y) || Map.IsDoorApproach(x, y) || ObjectAt(x, y) != null) continue;
+                _objects.Add(new G1C_WorldObject(name, "obj_sign_post", x, y, 1, 1, true, G1C_InteractionType.Inspect, lines));
+                return;
+            }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Oma wohnt im Wohnhaus neben dem Spielerhaus und steht davor im Vorgarten, umgeben von
+        //          ihren drei Katzen. Sie läuft nicht umher (kein Eintrag in _townNpcs). Das Wohnhaus hat
+        //          noch keinen Innenraum (offen im Backlog).
+        private void AddGrandmaGarden(int buildingX, int roadY)
+        {
+            G1C_WorldObject house = _objects.Find(o => o.X == buildingX && o.SpriteId == "building_townhouse" && o.Y < roadY);
+            if (house == null) return;
+            int y = house.Y + house.Height;
+            int x = house.X + 1;
+            while (x < house.X + house.Width && (!Map.IsWalkable(x, y) || Map.IsDoorApproach(x, y) || ObjectAt(x, y) != null)) x++;
+            if (x >= house.X + house.Width) return;
+            _objects.Add(new G1C_Npc(G1C_FamilyNpcRoster.GrandmaName, G1C_FamilyNpcRoster.GrandmaSkin, x, y,
+                                     G1C_Direction.Down, G1C_InteractionType.Talk));
+            int cats = 0;
+            for (int dx = 1; dx <= 4 && cats < 3; dx++)
+            {
+                int catX = x + dx;
+                if (!Map.IsWalkable(catX, y) || ObjectAt(catX, y) != null) continue;
+                AddAnimal("Omas Katze", "animal_cat", catX, y, 2, 7 + cats);
+                cats++;
+            }
         }
 
         // Entwickler: Denis Mock

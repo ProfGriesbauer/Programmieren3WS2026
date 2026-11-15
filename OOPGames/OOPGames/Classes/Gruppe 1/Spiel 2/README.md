@@ -50,6 +50,15 @@ In der Bank kannst du Chips einzahlen und abheben; der Geldhai verleiht einmalig
 die mit 300 Chips zurückzuzahlen sind. Möbel kaufst du im Möbelhaus und platzierst sie zuhause
 über den Einrichtungsplan.
 
+Zuhause wartet **Mama**, im Haus rechts daneben wohnt **Oma Gerda** mit ihren drei Katzen; beide stehen von Anfang an im
+Handy. Über "Ich hab da eine Frage ..." haben sie (und die Verkäufer) eigene Themen; wer heute mit beiden gesprochen hat,
+kann einmal pro Tag nach Taschengeld fragen. Läden mit Öffnungszeiten sind danach abgeschlossen und zeigen ein
+CLOSED-Schild (die Tankstelle hat immer offen). Das Bankguthaben wächst pro Spieltag um 2 %. Schilder, Poster und Sticker
+lassen sich mit **E** ansehen.
+
+**Selbsttest (nur auf Aufruf):** Menü **B** öffnen, dann **F12**. Die Ergebnisse erscheinen als Liste und in
+`G1Casino_SelfTest.txt` neben der `OOPGames.exe`.
+
 Leertaste und Enter **nicht** benutzen: Nach dem Start hat der Button "Start New Game" den Fokus,
 diese Tasten würden das Spiel neu starten. Falls die Pfeiltasten nicht reagieren, WASD verwenden.
 

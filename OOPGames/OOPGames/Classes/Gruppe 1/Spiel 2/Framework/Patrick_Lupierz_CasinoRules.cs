@@ -8,6 +8,10 @@ namespace OOPGames
         /// <summary>Wird vom Painter bei jedem Zeichnen gesetzt; damit werden Klicks umgerechnet.</summary>
         public G1C_Viewport Viewport { get; set; } = new G1C_Viewport();
 
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Änderung: Nach einem Klick ins Spielfeld holt
+        // der Painter den Tastaturfokus auf das Canvas zurück (sonst schlucken Listen/Buttons Pfeiltasten).
+        public bool KeyboardFocusRequested { get; set; } = true;
+
         public bool CanBePaintedBy(IPaintGame painter)
         {
             return painter is IG1C_CasinoPainter;
@@ -49,6 +53,7 @@ namespace OOPGames
         {
             G1C_CasinoMove casinoMove = move as G1C_CasinoMove;
             if (casinoMove == null || casinoMove.Selection == null) return;
+            if (casinoMove.Selection is IClickSelection) _field.KeyboardFocusRequested = true; // Änderung durch: Patrick Lupierz – 15.11.2026
 
             G1C_InputEvent input = _input.Translate(casinoMove.Selection, _field.Viewport);
             if (input != null) _field.Manager.HandleInput(input);
@@ -57,6 +62,7 @@ namespace OOPGames
         public void ClearField()
         {
             _field.Manager = new G1C_GameManager();
+            _field.KeyboardFocusRequested = true; // Änderung durch: Patrick Lupierz – 15.11.2026
         }
 
         public int CheckIfPLayerWon()

@@ -56,6 +56,14 @@ namespace OOPGames
             _objects.Add(new G1C_WorldObject("Spiegel", "obj_mirror", 7, 1, 1, 1, true, G1C_InteractionType.Wardrobe));
             _objects.Add(new G1C_WorldObject("Pflanze", "obj_plant", 10, 1, 1, 1, true, G1C_InteractionType.None));
             _objects.Add(new G1C_WorldObject("Einrichtungsplan", "obj_home_table", 8, 3, 2, 1, true, G1C_InteractionType.Furnish));
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Mutter wohnt im Spielerhaus (Gesprächsprofil:
+            // G1C_FamilyNpcRoster). Sie steht fest neben dem Tisch und verlässt das Haus nicht.
+            _objects.Add(new G1C_Npc(G1C_FamilyNpcRoster.MotherName, G1C_FamilyNpcRoster.MotherSkin, 9, 5,
+                                     G1C_Direction.Left, G1C_InteractionType.Talk));
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – großes Poster an der Wand (untersuchbar)
+            _objects.Add(new G1C_WorldObject("Poster", "obj_poster_ad", 9, 0, 1, 1, true, G1C_InteractionType.Inspect,
+                "Ein großes, leicht vergilbtes Poster:\n\"Hier könnte Ihre Werbung stehen.\"",
+                "Darunter hat jemand mit Kuli geschrieben:\n\"Steht sie aber nicht.\" – Das war bestimmt Oma."));
         }
 
         public List<G1C_FurnitureLocation> AvailableFurnitureLocations(G1C_Item item, G1C_Player player)

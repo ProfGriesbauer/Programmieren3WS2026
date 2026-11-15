@@ -1,913 +1,1309 @@
-# AGENTS.md – Verbindliche Projektregeln für unser Casino-Spiel
+# AGENTS.md – Verbindliche Projektanweisungen für das Casino-Spiel
 
-**Projekt:** Casino Adventure – Pokémon-Rubin-inspirierte Stadt- und Casino-Welt
-**Studiengang:** Programmieren 3 – Wintersemester 2026/27  
-**Framework:** OOPGames – WPF, C#, .NET 10 (Windows)
+## 1. Deine Rolle und dein Hauptziel
 
-Diese Datei enthält die verbindlichen Regeln für alle Entwickler und KI-Agenten, die an diesem Projekt arbeiten.
+Du bist der KI-Entwicklungsassistent für unser C#- und WPF-Projekt im Rahmen von **Programmieren 3 – WS 2026/27**.
 
-Die offiziellen Projektanforderungen und das vorhandene Framework haben immer Vorrang vor zusätzlichen Projektwünschen.
+Deine Aufgabe ist es, das bestehende Spiel weiterzuentwickeln, Fehler zu beheben, neue Funktionen zu implementieren, die Grafikqualität zu verbessern und sämtliche dokumentierten Anforderungen und Ideen zu berücksichtigen.
 
-## 0. Harte Regeln und erweiterbare Inhalte
+Das Ziel ist ein umfangreiches, zusammenhängendes und funktionierendes 2D-Pixel-Art-Spiel, das sich optisch und atmosphärisch an Pokémon Rubin und Saphir für den Game Boy Advance orientiert.
 
-Änderung durch: Patrick Lupierz – Datum: 12.11.2026
+Das Spiel soll ein begehbares Casino mit NPCs, Gebäuden, Geschäften, interaktiven Gegenständen und verschiedenen Casino-Minispielen werden.
 
-Diese Datei unterscheidet zwei Arten von Regeln.
+**Wichtig:**
+- Arbeite immer mit dem vorhandenen Projekt und dessen tatsächlicher Struktur.
+- Untersuche zuerst den bestehenden Code, bevor du Änderungen vornimmst.
+- Bestehende funktionierende Funktionen dürfen nicht unnötig entfernt oder verschlechtert werden.
+- Setze Anforderungen vollständig um und nicht nur optisch.
+- Erfinde keine nicht vorhandenen Framework-Funktionen oder Schnittstellen.
+- Erstelle keine unnötigen doppelten Klassen oder Systeme.
+- Arbeite modular, nachvollziehbar und wartbar.
+- Dokumentiere, was du geändert hast und wie du es überprüft hast.
+- Wenn eine Anforderung mit den offiziellen Projektvorgaben kollidiert, haben die offiziellen Projektvorgaben Vorrang.
 
-**Harte Regeln** – gelten immer, dürfen nicht abgeschwächt, umgangen oder durch Erweiterungen ersetzt werden:
-
-- Abschnitt 2: Framework-Regeln.
-- Abschnitt 3: Erlaubte Verzeichnisse und Registrierung.
-- Abschnitt 4: Trennung von Logik und Darstellung, Rollen von Painter, Rules, Field und Player.
-- Abschnitt 7: Austauschbarkeit der Grafiken.
-- Abschnitte 14 und 16: Modularität und Codequalität.
-- Abschnitt 15: Entwicklerkennzeichnung.
-- Abschnitt 17: Vorgehen von KI-Agenten.
-- Abschnitt 18: Dokumentation (Prompts, Pläne, Backlog).
-- Abschnitt 19: Git- und Build-Regeln.
-
-**Erweiterbare Inhalte** – beschreiben den Mindestumfang des Spiels. Neue Funktionen dürfen hinzugefügt werden:
-
-- Abschnitt 1: Spielbereiche und Spielidee.
-- Abschnitte 5, 6, 8 und 9: Spielfigur, Kollision, Spielwelt und Interaktionen (z. B. weitere Karten, Gebäude, Innenräume, NPCs).
-- Abschnitte 10 und 11: weitere Minispiele oder KI-Gegner.
-- Abschnitte 12 und 13: weitere Spielzustände und Oberflächen (z. B. Hauptmenü, Handy, Inventar).
-
-Für jede Erweiterung gilt:
-
-1. Sie hält alle harten Regeln ein.
-2. Vorhandene Funktionen bleiben funktionsfähig; der beschriebene Mindestumfang darf nicht unterschritten werden.
-3. Sie wird im Product Backlog, in einem Plan unter `Plans/` und in der Prompt-Datei des verantwortlichen Teammitglieds dokumentiert.
-4. Neue Inhaltsregeln werden in dieser Datei ergänzt (Abschnitt 22). Die harten Regeln werden dabei nicht verändert.
-5. Braucht eine Erweiterung eine Framework-Änderung, gilt Abschnitt 17: abbrechen und mit Team und Dozent klären.
+Das langfristige Ziel ist ein vollständiges, spielbares und technisch sauberes Spiel.
 
 ---
 
-# 1. Allgemeine Projektbeschreibung
+# 2. Verbindliche technische Projektregeln
 
-Wir entwickeln ein umfangreiches 2D-Pixel-Art-Spiel, das sich optisch und spielerisch an Pokémon Rubin/Saphir für den Game Boy Advance orientiert.
+## 2.1 Technologien
 
-Der Spieler startet in seinem Zuhause und erkundet von dort eine quadratische Stadt mit begehbaren Straßen und Gassen. Das Casino ist ein betretbares Gebäude in dieser Außenwelt; seine vorhandenen Spielbereiche und Minispiele bleiben erhalten.
+Verwende ausschließlich die im Projekt vorgegebene technische Grundlage:
 
-Das Casino enthält verschiedene Spielbereiche, NPCs und interaktive Spieltische. An diesen Tischen kann der Spieler unterschiedliche Casino-Spiele gegen KI-Gegner spielen.
+- C#
+- .NET 6
+- WPF
+- Das vorgegebene OOPGames-Framework
+- Die vorhandenen Projektbibliotheken und freigegebenen Schnittstellen
 
-Das Spiel besteht aus verbundenen Bereichen:
+Verwende keine eigenständige Game-Engine.
 
-1. Das Zuhause als Start- und Rückkehrort.
-2. Die begehbare Stadt mit Casino, Krankenhaus, Supermarkt, weiteren Gebäuden, Fluss und Tierwelt.
-3. Das Casino-Innere mit interaktiven Minispielen, eigenständiger Spiellogik und KI-Gegnern.
-4. Ergänzende, eingerichtete Innenräume für Krankenhaus, Supermarkt und weitere Gebäude (z. B. Tankstelle, Bekleidungsgeschäft).
+Insbesondere darfst du nicht eigenständig auf Unity, Godot, MonoGame oder andere Game-Engines wechseln.
 
-Mindestens Zuhause und Casino benötigen betretbare Innenräume. Zusätzliche Gebäude dürfen als solide Fassaden oder mit klar abgegrenzten, eigenen Innenräumen umgesetzt werden.
+## 2.2 OOPGames-Framework
 
-Das Spiel soll einen hochwertigen, zusammenhängenden Eindruck vermitteln und deutlich umfangreicher als ein einfacher Brettspielklon sein.
+Das Spiel muss vollständig mit dem vorhandenen OOPGames-Framework funktionieren.
 
-Alle Bestandteile müssen vollständig innerhalb des vorgegebenen OOPGames-Frameworks funktionieren.
+Untersuche zunächst die tatsächlichen Interfaces und deren Implementierungen.
 
-## 1.1 Grafischer Stil
+Berücksichtige insbesondere die vorgesehenen Rollen:
 
-Der gesamte visuelle Stil orientiert sich an Pokémon Rubin/Saphir für den Game Boy Advance.
+- Painter über `IPaintGame`
+- Rules über `IGameRules` und `IGameField`
+- Player über `IHumanGamePlayer` und `IComputerGamePlayer`
 
-Verbindliche Gestaltungsmerkmale:
+Erweiterte Interfaces wie `IGameRules2` oder `IPaintGame2` dürfen nur verwendet werden, wenn sie im vorhandenen Framework tatsächlich existieren und für das Projekt freigegeben sind.
 
-- 2D-Pixel-Art.
-- Top-Down-Perspektive.
-- Klare Pixelkonturen.
-- Einheitlicher Pixel-Art-Stil.
-- Farblich abgestimmte Umgebungen.
-- Animierte Spielfigur.
-- Detailreiche Casino-Einrichtung.
-- Wiedererkennbare NPCs.
-- Einheitliche grafische Gestaltung aller Minispiele.
+Die Kompatibilität muss anhand der tatsächlich vorhandenen Schnittstellen geprüft werden, insbesondere über:
 
-Es dürfen keine realistischen 3D-Grafiken oder unpassenden modernen Grafikelemente verwendet werden.
+- `CanBePaintedBy`
+- `CanBeRuledBy`
 
----
+Erfinde keine Methodensignaturen, Eigenschaften oder Framework-Funktionen.
 
-# 2. ABSOLUTE FRAMEWORK-REGELN
+## 2.3 Was nicht verändert werden darf
 
-Diese Regeln haben höchste Priorität.
+Es gelten die offiziellen Einschränkungen des Projekts.
 
-Das bestehende OOPGames-Framework darf niemals umgangen oder eigenständig ersetzt werden.
+Grundsätzlich dürfen nur folgende Bereiche verändert werden:
 
-- Das Spiel muss vollständig innerhalb des vorgegebenen Frameworks laufen.
-- Keine eigenen Windows-Forms-, WPF- oder sonstigen Fenster erstellen.
-- Keine eigene Main-Methode erstellen.
-- Keine eigene Hauptschleife oder Game-Loop implementieren.
-- Keine eigene Framework-Initialisierung erstellen.
-- Keine eigenen Eingabe-Handler außerhalb der vorgesehenen Schnittstellen erstellen.
-- Eingaben ausschließlich über die vorgesehenen Framework-Klick- und Tastatur-Selections verarbeiten.
-- Ausschließlich auf dem vom Framework übergebenen Canvas zeichnen.
-- Keine zusätzlichen Render-Fenster erstellen.
-- Keine zusätzlichen Zeichenflächen erstellen.
-- Das Hauptfenster des Frameworks muss zur Auswahl und zum Start des Spiels verwendet werden.
-- Keine Framework-Dateien verändern.
-- Keine Framework-Erweiterungen ohne vorherige Zustimmung des Dozenten.
+- `Classes/<Gruppe>/`
+- `Interfaces/<Gruppe>/`
 
-Es müssen die tatsächlich vorhandenen Framework-Schnittstellen verwendet werden.
+Einzige ausdrücklich vorgesehene Ausnahme:
 
-Dazu gehören entsprechend ihrer tatsächlichen Verfügbarkeit:
+Eigene Klassen dürfen ausschließlich im vorgesehenen Bereich
 
-- IPaintGame
-- IGameRules
-- IGameField
-- IHumanGamePlayer
-- IComputerGamePlayer
-- IGameRules2
-- IPaintGame2
+`//REGISTER YOUR CLASSES HERE`
 
-Wichtig:
+in `MainWindow.xaml.cs` registriert werden.
 
-Vor jeder Implementierung müssen die vorhandenen Interface-Definitionen und Beispielimplementierungen untersucht werden.
+Folgende Dateien und Bereiche sind tabu:
 
-Es dürfen keine Methoden, Properties, Events oder Parameter erfunden werden.
+- Basis-Interfaces unter `Interfaces/`
+- `Classes/OOPGames.cs`
+- `MainWindow.xaml` und `MainWindow.xaml.cs`, außer der erlaubten Klassenregistrierung
+- `App.xaml` und `App.xaml.cs`
+- `.csproj`-Dateien
+- `.sln`-Dateien
+- `.vscode/`
+- `X_Griesbauer`
+- Ordner anderer Gruppen
+- Sonstige Framework-Dateien
 
-Die tatsächlichen Schnittstellen haben immer Vorrang vor den hier beschriebenen Architekturvorschlägen.
+Ändere keine Projektdateien, um Abhängigkeiten oder neue Funktionen eigenmächtig einzuführen.
 
----
+Wenn eine benötigte Funktion nur durch eine Änderung am Framework möglich wäre, dokumentiere das Problem und frage zuerst nach einer Freigabe.
 
-# 3. Erlaubte Verzeichnisse und Dateistruktur
+## 2.4 Spiel 1 und Spiel 2
 
-Es dürfen ausschließlich Dateien innerhalb folgender Verzeichnisse erstellt oder verändert werden:
+Das Projekt kann mehrere Aufgaben enthalten.
 
-- Classes/<Gruppe>/
-- Interfaces/<Gruppe>/
+Spiel 1, insbesondere Vier gewinnt, ist eine separate Aufgabe.
 
-Die einzige Ausnahme ist die Registrierung der eigenen Klassen im vorgesehenen Bereich:
+Vermische dessen Regeln, Logik oder Implementierung nicht mit unserem Casino-Spiel.
 
-//REGISTER YOUR CLASSES HERE
-
-in MainWindow.xaml.cs.
-
-Diese Ausnahme erlaubt ausschließlich die Registrierung und keine sonstigen Änderungen.
-
-Framework-Dateien und fremde Gruppenordner sind tabu.
-
-Insbesondere dürfen niemals verändert werden:
-
-- Basis-Interfaces in Interfaces/.
-- Classes/OOPGames.cs.
-- MainWindow.xaml und MainWindow.xaml.cs außerhalb des Registrierungsblocks.
-- App.xaml und App.xaml.cs.
-- .csproj und .sln.
-- .vscode/.
-- X_Griesbauer/.
-- Fremde Gruppenverzeichnisse.
-
-## 3.1 Vorgesehene Projektstruktur
-
-Die folgende Struktur dient als Architekturvorschlag und muss an das tatsächlich vorhandene Projekt angepasst werden.
-
-```text
-Classes/
-└── <Gruppe>/
-    ├── AGENTS.md
-    │
-    ├── Plans/
-    │   ├── Casino_Konzept.md
-    │   ├── Architektur.md
-    │   └── Grafiksystem.md
-    │
-    ├── Scrum/
-    │   ├── ProductBacklog.md
-    │   ├── SprintPlanning.md
-    │   ├── SprintReviews.md
-    │   └── Retrospectives.md
-    │
-    ├── <Vorname>_<Nachname>_Painter.cs
-    ├── <Vorname>_<Nachname>_Rules.cs
-    ├── <Vorname>_<Nachname>_Field.cs
-    ├── <Vorname>_<Nachname>_HumanPlayer.cs
-    ├── <Vorname>_<Nachname>_ComputerPlayer.cs
-    │
-    ├── <Vorname>_<Nachname>_CasinoWorld.cs
-    ├── <Vorname>_<Nachname>_CasinoMap.cs
-    ├── <Vorname>_<Nachname>_CollisionManager.cs
-    ├── <Vorname>_<Nachname>_InteractionManager.cs
-    │
-    ├── <Vorname>_<Nachname>_Player.cs
-    ├── <Vorname>_<Nachname>_PlayerMovement.cs
-    ├── <Vorname>_<Nachname>_PlayerAnimation.cs
-    │
-    ├── <Vorname>_<Nachname>_Roulette.cs
-    ├── <Vorname>_<Nachname>_Poker.cs
-    ├── <Vorname>_<Nachname>_Blackjack.cs
-    ├── <Vorname>_<Nachname>_Slots.cs
-    │
-    ├── <Vorname>_<Nachname>_RouletteAI.cs
-    ├── <Vorname>_<Nachname>_PokerAI.cs
-    ├── <Vorname>_<Nachname>_BlackjackAI.cs
-    │
-    ├── <Vorname>_<Nachname>_GameManager.cs
-    ├── <Vorname>_<Nachname>_MoneyManager.cs
-    ├── <Vorname>_<Nachname>_GameState.cs
-    ├── <Vorname>_<Nachname>_AssetManager.cs
-    │
-    ├── <Vorname>_<Nachname>_GameHUD.cs
-    ├── <Vorname>_<Nachname>_DialogueBox.cs
-    └── <Vorname>_<Nachname>_CasinoMenu.cs
-```
-
-Jeder Studierende besitzt zusätzlich eine eigene Prompt-Datei:
-
-`Classes/<Gruppe>/<Vorname>_<Nachname>_Prompts.md`
-
-Diese liegt direkt im Hauptverzeichnis der Gruppe.
-
-Die tatsächlichen Dateinamen müssen den offiziellen Namenskonventionen entsprechen.
-
-Nicht benötigte Klassen dürfen entfallen. Zusätzliche Klassen dürfen nur erstellt werden, wenn sie eine klar definierte Aufgabe besitzen.
+Die Anforderungen an unser eigenes Spiel 2 müssen unabhängig davon umgesetzt werden.
 
 ---
 
-# 4. Architektur und objektorientierter Entwurf
+# 3. Projektkonzept – Casino im Pokémon-Rubin-Stil
 
-Das Projekt muss sauber objektorientiert aufgebaut sein.
+## 3.1 Grundidee
 
-Jede Klasse erhält eine klar definierte Verantwortung.
+Entwickle ein 2D-Top-down-Pixel-Art-Spiel, dessen Stil an Pokémon Rubin und Saphir erinnert.
 
-Die Spiellogik muss von der Darstellung getrennt werden.
+Der Spieler befindet sich in einer Spielwelt mit einem Casino als zentralem Spielbereich.
 
-Die einzelnen Casino-Spiele müssen voneinander unabhängig sein.
+Das Casino soll nicht nur aus einer statischen Kulisse bestehen, sondern ein tatsächlich begehbarer und interaktiver Bereich sein.
 
-Jedes Casino-Spiel wird in einer eigenen C#-Datei implementiert.
+Der Spieler soll:
 
-Beispiele:
+- Sich frei bewegen können.
+- Mit NPCs sprechen können.
+- Spieltische benutzen können.
+- Spielautomaten bedienen können.
+- Gebäude und Gegenstände untersuchen können.
+- Verschiedene Minispiele starten können.
+- Gegenstände kaufen und verwenden können.
+- Sein Inventar öffnen können.
+- Mit Händlern und Mitarbeitern interagieren können.
+- Die Spielwelt erkunden können.
 
-- Roulette.cs
-- Poker.cs
-- Blackjack.cs
-- Slots.cs
+Die gesamte Spielwelt soll wie aus einem zusammenhängenden Pokémon-Spiel wirken.
 
-Jedes Spiel besitzt seine eigene Spiellogik, seine eigenen Regeln und seine eigenen KI-Entscheidungen.
+## 3.2 Ein zusammenhängender Grafikstil
 
-Der Painter darf nicht die vollständige Spiellogik aller Minispiele enthalten.
+Alle Grafiken müssen optisch zueinander passen.
 
-Die Klassen müssen so aufgebaut sein, dass Änderungen an einem Casino-Spiel möglichst keine Änderungen an anderen Spielen erfordern.
+Achte auf:
 
-## 4.1 Painter
+- Einheitliche Pixelauflösung.
+- Einheitliche Perspektive.
+- Passende Proportionen.
+- Konsistente Licht- und Schattenrichtung.
+- Einheitliche Farbpalette.
+- Passende Konturen.
+- Wiedererkennbare Charaktere.
+- Harmonische Gebäude und Innenräume.
 
-Der Painter ist die zentrale Darstellungskomponente.
+Vermeide es, beliebige Grafiken aus unterschiedlichen Stilen zu kombinieren.
 
-Er übernimmt:
+Wenn mehrere Grafiken vorhanden sind, prüfe, ob sie tatsächlich zusammenpassen.
 
-- Zeichnen der Casino-Spielwelt.
-- Zeichnen der Spielfigur.
-- Zeichnen der NPCs.
-- Zeichnen der Möbel und Spieltische.
-- Zeichnen der Minispiele.
-- Zeichnen der Benutzeroberfläche.
-- Darstellung des aktuellen Spielzustands.
-
-Der Painter verwendet ausschließlich das vom Framework übergebene Canvas.
-
-Er darf nicht eigenständig eine zweite Zeichenumgebung erstellen.
-
-## 4.2 Rules und Field
-
-Die Rules verwalten den Spielablauf und die Spielregeln entsprechend dem OOPGames-Framework.
-
-Das Field verwaltet die notwendigen Zustands- und Spielfeldinformationen.
-
-Die genaue Aufteilung richtet sich nach den vorhandenen Framework-Interfaces.
-
-Die Darstellung darf nicht die eigentliche Spielregelverwaltung ersetzen.
-
-## 4.3 Player
-
-Human-Player und Computer-Player werden entsprechend der vorgesehenen Framework-Interfaces implementiert.
-
-Die Spielfigur in der Casino-Welt ist von der technischen Rolle des Human-Players zu unterscheiden.
-
-Der Human-Player verarbeitet die vorgesehenen Benutzereingaben und stellt die erforderlichen Spielaktionen bereit.
-
-Der Computer-Player übernimmt die KI-Entscheidungen der jeweiligen Spielkomponente.
+Grafiken dürfen nicht einfach überall wiederverwendet werden, wenn dadurch Gebäude, Charaktere oder Gegenstände identisch und unpassend aussehen.
 
 ---
 
-# 5. Spielfigur und Bewegungssystem
+# 4. Spielfigur und Bewegungssteuerung
 
-Die Spielfigur ist ein zentraler Bestandteil des Spiels.
+## 4.1 Spielfigur
 
-Sie soll sich ähnlich wie die Spielfigur in Pokémon Rubin/Saphir durch Zuhause, Außenwelt und Casino bewegen.
+Die Spielfigur soll optisch an die Spielfiguren aus Pokémon Rubin und Saphir erinnern.
 
-## 5.1 Größe und Darstellung
+Sie benötigt unterschiedliche Grafiken für:
 
-Die Spielfigur verwendet als vorgesehene logische Darstellungsgröße:
+- Oben
+- Unten
+- Links
+- Rechts
 
-**90 × 90 Pixel.**
+Zusätzlich müssen eigene Zustände vorhanden sein:
 
-Diese Größe bezeichnet den vorgesehenen Darstellungsbereich der Figur und muss bei der tatsächlichen Canvas-Größe und Skalierung berücksichtigt werden.
+- Idle nach oben
+- Idle nach unten
+- Idle nach links
+- Idle nach rechts
+- Laufanimation nach oben
+- Laufanimation nach unten
+- Laufanimation nach links
+- Laufanimation nach rechts
 
-Die Spielfigur darf nicht verzerrt dargestellt werden.
+Die Figur muss beim Richtungswechsel korrekt dargestellt werden.
 
-Das Seitenverhältnis muss erhalten bleiben.
+Die Laufanimation darf nicht weiterlaufen, wenn der Spieler steht.
 
-Pixel-Art-Grafiken sollen möglichst ohne unscharfe Interpolation skaliert werden, sofern das Framework dies unterstützt.
+## 4.2 Größe und Skalierung
 
-## 5.2 Separate Grafiken für jede Laufrichtung
+Der vorgesehene logische Darstellungsbereich der Spielfigur beträgt ungefähr 90 × 90 Pixel.
 
-Für jede Laufrichtung muss eine eigene Sprite-Grafik existieren.
+Das ist eine Orientierung für die Darstellung und keine zwingende Größe jedes einzelnen Sprite-Frames.
 
-Mindestens folgende Richtungen sind erforderlich:
+Berücksichtige die tatsächliche Canvas-Größe und die vorhandene Rendertechnik.
 
-- Oben.
-- Unten.
-- Links.
-- Rechts.
+Die Grafiken müssen passend skaliert werden, ohne:
 
-Für jede Richtung muss es eine eigene visuelle Darstellung geben.
+- Verzerrungen.
+- Unscharfe Pixel.
+- Unterschiedliche Charaktergrößen.
+- Übermäßige Vergrößerung.
+- Ungewollte Überlappungen.
 
-Die Figur darf nicht einfach durch Spiegelung oder Rotation einer einzigen Grafik dargestellt werden, wenn dadurch die vorgesehene Charaktergestaltung verloren geht.
+Sprite-Größen und Darstellungsgrößen müssen voneinander getrennt bleiben.
 
-Die Ausrichtung muss eindeutig erkennbar sein.
+## 4.3 WASD-Steuerung
 
-## 5.3 Animationen
+Die WASD-Steuerung funktioniert aktuell nicht zuverlässig.
 
-Jede Laufrichtung soll eigene Laufanimationen besitzen.
+Untersuche und behebe dieses Problem vollständig.
 
-Vorgesehen sind:
+Prüfe:
 
-- Idle-Animation nach oben.
-- Idle-Animation nach unten.
-- Idle-Animation nach links.
-- Idle-Animation nach rechts.
-- Laufanimation nach oben.
-- Laufanimation nach unten.
-- Laufanimation nach links.
-- Laufanimation nach rechts.
+- Ob Tastatureingaben zuverlässig erkannt werden.
+- Ob der Tastaturfokus verloren geht.
+- Ob Eingaben während Dialogen blockiert werden.
+- Ob mehrere gleichzeitig gedrückte Tasten korrekt behandelt werden.
+- Ob die Figur bei gedrückter Taste kontinuierlich läuft.
+- Ob die Figur nach dem Loslassen sofort stoppt.
+- Ob sich die Figur diagonal korrekt verhält.
+- Ob die Bewegung durch Kollisionen begrenzt wird.
+- Ob Dialoge und Minispiele die normale Bewegung korrekt deaktivieren.
 
-Die Animationen bestehen aus mehreren Einzelbildern.
+Implementiere keine eigene Game-Loop, wenn das Framework bereits einen geeigneten Mechanismus bereitstellt.
 
-Der Wechsel der Einzelbilder muss an die vom Framework vorgesehenen Aktualisierungs- und Zeichenaufrufe angepasst werden.
+Verwende ausschließlich die tatsächlich vorhandenen Möglichkeiten des Frameworks zur Verarbeitung von Eingaben.
 
-Keine eigene Game-Loop zur Animation erstellen.
+## 4.4 Zusätzliche Verbesserungsideen
 
-Die Animation darf nicht unabhängig vom Framework laufen.
+Wenn es technisch möglich ist:
 
-## 5.4 Bewegungssteuerung
-
-Die Bewegung erfolgt über die vorgesehenen Tastatur-Selections.
-
-Vorgesehene Steuerung:
-
-- W oder Pfeil nach oben: nach oben laufen.
-- S oder Pfeil nach unten: nach unten laufen.
-- A oder Pfeil nach links: nach links laufen.
-- D oder Pfeil nach rechts: nach rechts laufen.
-- Interaktionstaste: mit Objekten und NPCs interagieren.
-
-Es dürfen nur tatsächlich vom Framework unterstützte Eingabemöglichkeiten verwendet werden.
-
-Die Bewegung muss flüssig und nachvollziehbar sein.
-
-Der Spieler darf nicht durch Wände, Möbel oder andere nicht begehbare Objekte laufen.
+- Flüssigere Laufanimationen.
+- Kurze Übergänge zwischen Idle und Bewegung.
+- Korrekte Blickrichtung nach dem Ansprechen eines NPCs.
+- Keine Animation beim Blockieren durch eine Wand.
+- Einheitliche Bewegungsgeschwindigkeit.
+- Keine ungewollten Geschwindigkeitssprünge bei gleichzeitig gedrückten Tasten.
 
 ---
 
-# 6. Kollisionssystem
+# 5. Spielwelt, Gebäude und Kollisionen
 
-Das Spiel benötigt ein zuverlässiges Kollisionssystem.
+## 5.1 Begehbare Spielwelt
 
-## 6.1 Nicht durchdringbare Objekte
+Die Spielwelt soll eine klare räumliche Struktur haben.
 
-Folgende Objekte müssen Kollisionen besitzen:
+Es muss erkennbar sein, welche Bereiche begehbar und welche blockiert sind.
 
-- Außenwände.
-- Innenwände.
-- Säulen.
-- Tresen.
+Nicht durchdringbar sind beispielsweise:
+
+- Wände.
+- Möbel.
 - Spieltische.
 - Spielautomaten.
 - Schränke.
-- Dekorationen mit physischer Begrenzung.
-- Andere nicht begehbare Objekte.
+- Dekorationen.
+- Gebäudeobjekte.
+- Andere feste Hindernisse.
 
-Die Spielfigur darf diese Objekte und die geschlossene Außengrenze der Stadtkarte nicht durchdringen.
+Der Spieler darf nicht durch diese Objekte laufen.
 
-## 6.2 Kollisionsabfrage
+## 5.2 Kollisionssystem
 
-Das Kollisionssystem muss:
+Die Kollisionslogik muss unabhängig von der grafischen Darstellung funktionieren.
 
-- Die aktuelle Position der Spielfigur berücksichtigen.
-- Die Größe der Spielfigur berücksichtigen.
-- Die Kollisionsbereiche der Umgebung berücksichtigen.
-- Bewegungen vor einer Kollision verhindern.
-- Bewegungen entlang einer Wand ermöglichen.
-- Ungewolltes Feststecken vermeiden.
-- Kollisionen unabhängig von der Bewegungsrichtung korrekt erkennen.
+Eine Änderung der Grafik darf nicht automatisch die Kollisionslogik beschädigen.
 
-Wenn das Framework keine vorgefertigte Kollisionsfunktion besitzt, darf innerhalb des erlaubten Gruppenordners eine eigene Kollisionslogik implementiert werden.
+Trenne:
 
-Es darf dafür keine Framework-Datei verändert werden.
+- Grafische Darstellung.
+- Kollisionsbereiche.
+- Begehbare Flächen.
+- Interaktionsbereiche.
 
-## 6.3 Begehbare Bereiche
+Prüfe, ob Kollisionen bei verschiedenen Bewegungsrichtungen korrekt funktionieren.
 
-Jede Szene muss klar definierte begehbare und nicht begehbare Bereiche besitzen. Die Außenwelt benötigt eine sichtbare, geschlossene und kollidierbare Kartengrenze.
+Verhindere, dass der Spieler:
 
-Die Spielfigur darf sich ausschließlich innerhalb der vorgesehenen begehbaren Fläche bewegen.
+- Durch Wände läuft.
+- In Möbeln stecken bleibt.
+- Durch Tische läuft.
+- Ungewollt hinter Gebäuden verschwindet.
+- Durch geschlossene Türen läuft.
+- An Ecken hängen bleibt.
 
-Die Karte muss so gestaltet sein, dass alle wichtigen Bereiche erreichbar sind.
+## 5.3 Zusätzliche Ideen
 
----
+Wenn es zur vorhandenen Architektur passt:
 
-# 7. Austauschbares Grafiksystem
-
-Eine der wichtigsten Anforderungen ist die vollständige Austauschbarkeit der Grafiken.
-
-**Keine Grafik darf fest und untrennbar in die Spiellogik eingebaut werden.**
-
-Alle grafischen Elemente müssen so organisiert sein, dass sie später ohne Änderung der Spielmechanik ausgetauscht werden können.
-
-## 7.1 Austauschbare Grafikelemente
-
-Dies gilt mindestens für:
-
-- Spielfigur.
-- Spielfigur-Sprites für jede Laufrichtung.
-- Laufanimationen.
-- Casino-Boden.
-- Wände.
-- Türen.
-- Tische.
-- Stühle.
-- Spielautomaten.
-- Roulette-Tische.
-- Poker-Tische.
-- Blackjack-Tische.
-- NPCs.
-- Dialogfenster.
-- Karten.
-- Spielchips.
-- Symbole.
-- Benutzeroberfläche.
-- Hintergrundgrafiken.
-- Stadtboden, Straßen, Wege, Stadtgrenze und Gebäudefassaden.
-
-## 7.2 Trennung von Grafik und Spiellogik
-
-Die Spielmechanik darf nicht von bestimmten Bilddateien abhängig sein.
-
-Beispielsweise darf ein Roulette-Spiel nicht davon abhängig sein, wie die Roulette-Grafik aussieht.
-
-Die Roulette-Klasse verwaltet die Regeln und Ergebnisse.
-
-Die Darstellungskomponente verwendet die zugehörigen Grafiken.
-
-Ein Austausch der Roulette-Grafik darf keine Änderung der Roulette-Spielregeln benötigen.
-
-## 7.3 Grafikverwaltung
-
-Es soll ein zentrales Grafikverwaltungssystem innerhalb des erlaubten Gruppenordners vorgesehen werden.
-
-Dieses System soll:
-
-- Grafiken zentral zuordnen.
-- Grafiken anhand eindeutiger Namen identifizieren.
-- Grafiken austauschbar machen.
-- Sprites und Animationen verwalten.
-- Grafische Ressourcen möglichst wiederverwenden.
-- Fehlende Grafiken nachvollziehbar behandeln.
-
-Beispielhafte Ressourcenbezeichnungen:
-
-- player_idle_up
-- player_idle_down
-- player_idle_left
-- player_idle_right
-- player_walk_up
-- player_walk_down
-- player_walk_left
-- player_walk_right
-- casino_floor
-- casino_wall
-- roulette_table
-- poker_table
-- blackjack_table
-- slot_machine
-
-Die tatsächliche Lade- und Speichertechnik muss an das bestehende Framework angepasst werden.
-
-Es dürfen keine zusätzlichen externen Fenster oder Rendering-Systeme erstellt werden.
-
-Grafikdateien dürfen nur dort abgelegt werden, wo dies mit den offiziellen Projektvorgaben und der vorhandenen Ressourcenverwaltung vereinbar ist. Falls die Vorgaben keine zusätzlichen Asset-Verzeichnisse erlauben, muss vor einer Erweiterung Rücksprache mit dem Dozenten gehalten werden.
+- Unsichtbare Kollisionsflächen für unregelmäßige Objekte.
+- Separate Interaktionsbereiche vor NPCs und Möbeln.
+- Korrekte Darstellung der Spielfigur vor und hinter Objekten.
+- Saubere Übergänge zwischen Innen- und Außenbereichen.
+- Einheitliche Koordinaten- und Größenverwaltung.
 
 ---
 
-# 8. Stadt- und Casino-Spielwelt
+# 6. Austauschbares Grafiksystem
 
-Die begehbare Spielwelt besteht mindestens aus dem Zuhause, einer Außenwelt und dem vorhandenen Casino-Innenraum. Weitere getrennte Karten dürfen ergänzt werden (siehe Abschnitt 0). Alle Szenen werden in Top-Down-Perspektive und im einheitlichen 2D-Pixel-Art-Stil dargestellt.
+## 6.1 Grafiken und Spiellogik trennen
 
-## 8.1 Außenwelt
+Alle Grafiken sollen möglichst unabhängig von der Spiellogik austauschbar sein.
 
-- Die Spielfigur startet im eigenen Zuhause und kann dieses betreten sowie verlassen.
-- Größe und Form der Stadtkarte sind nicht festgelegt; sie müssen zum Maßstab der Spielfigur passen (aktuell 96x64 Kacheln).
-- Eine mit der Spielfigur scrollende Kamera zeigt nur einen viewportgroßen Ausschnitt, folgt flüssig und begrenzt sich an allen Kartenrändern.
-- Dichte Baumreihen und Wasser bilden eine sichtbare, geschlossene, nicht begehbare Außengrenze.
-- Straßen, Gassen, Parkwege und Brücken bilden ein verbundenes Wegenetz zwischen Zuhause, Casino und Stadtbereichen.
-- Ein gewundener Fluss mit begehbaren Ufern verläuft durch die Stadt; Brücken überqueren ihn an den Straßen und Fußwegen.
-- Mindestens Zuhause, Casino, Krankenhaus und Supermarkt müssen von außen erkennbar sein.
-- Gebäude, Mauern, Bäume und andere Hindernisse besitzen unabhängig von ihrer Grafik Kollisionen.
-- Zuhause und Casino sind betretbar und über eindeutige Türfelder wieder verlassbar.
-- Krankenhaus und Supermarkt besitzen eingerichtete Innenräume mit eigenen Bodendaten, Möbelkollisionen und Türübergängen; weitere Gebäude dürfen solide Fassaden sein.
-- Enten und Fische befinden sich im oder am Wasser; Katzen und Vögel beleben Wege, Bäume und Plätze, ohne Kollisionen oder Interaktionen auszulösen.
-- Mindestens vier Stadt-NPCs sind über getrennte Bezirke der Außenwelt verteilt und bewegen sich eigenständig mit variierenden Pausen.
-- NPC-Laufwege bleiben auf begehbaren Kacheln innerhalb ihrer Bereiche, prüfen Gebäude, Dekoration, andere NPCs und den Spieler als Hindernisse und meiden Türfelder.
-- Die Stadt-NPCs sind über die Interaktionstaste ansprechbar und verwenden das vorhandene Gesprächssystem; Casino-NPC-Positionen und Casino-Interaktionen bleiben erhalten.
-- Weltkarte, Kamera, Darstellung, Kollisionen, Szenenwechsel und Tieranimation bleiben getrennt; die Karte wird effizient im niedrigen Pixelmaßstab zwischengespeichert.
+Ein Austausch einer Grafik darf nicht dazu führen, dass Spielmechaniken angepasst werden müssen.
 
-## 8.2 Casino-Innenraum
+Verwende sprechende Grafik-IDs, beispielsweise:
 
-Das bestehende Casino bleibt als eigener Innenraum mit Eingangsbereich, Empfang, Roulette-, Poker-, Blackjack- und Spielautomatenbereichen, NPCs und Dekoration erhalten. Der Übergang aus der Stadt führt in diesen vorhandenen Innenraum; der Ausgang führt zurück an die Casino-Tür in der Außenwelt.
+- `player_idle_up`
+- `player_idle_down`
+- `player_walk_left`
+- `player_walk_right`
+- `casino_floor`
+- `casino_wall`
+- `roulette_table`
+- `blackjack_table`
+- `slot_machine`
+- `claw_machine`
+- `casino_npc`
+- `shop_counter`
 
-Spieltische und Möbel müssen sinnvoll positioniert sein. Die Umgebung muss ausreichend Platz bieten und darf nicht wie ein einfacher leerer Raum wirken.
+## 6.2 Zentraler Grafikmanager
 
-## 8.3 Weitere Innenräume
+Prüfe, ob ein zentraler Grafikmanager mit dem vorhandenen Framework sinnvoll umgesetzt werden kann.
 
-Krankenhaus, Supermarkt und weitere Gebäude dürfen eigene kleine, ausgestattete Szenen erhalten. Jede Szene benötigt eine passende Bodentextur, eine geschlossene Außenwand, ein Ausgangsfeld, kollidierbare Einrichtung und einen eindeutigen Übergang zurück zur zugehörigen Außentür.
+Falls ja, soll er die Zuordnung von Grafik-IDs zu Grafikressourcen verwalten.
+
+Grafiken sollen nicht an zahlreichen Stellen direkt und fest in der Spiellogik referenziert werden.
+
+Eine mögliche Trennung:
+
+- Grafikressourcen.
+- Grafikzuordnung.
+- Animationen.
+- Spiellogik.
+- Darstellung.
+- Kollisionsdaten.
+
+Verwende nur die im Projekt zulässigen Speicherorte.
+
+Falls keine zusätzlichen Asset-Ordner erlaubt sind, müssen die Ressourcen innerhalb der freigegebenen Struktur organisiert werden. Ändere keine Projektdateien, um neue Ressourcen einzubinden.
+
+## 6.3 Grafikqualität
+
+Prüfe alle vorhandenen Grafiken auf:
+
+- Richtige Größe.
+- Richtige Ausrichtung.
+- Transparenz.
+- Passende Perspektive.
+- Fehlerhafte Pixel.
+- Falsche Animationen.
+- Unpassende Farbgebung.
+- Doppelte oder falsch zugeordnete Grafiken.
+
+Insbesondere die Vogelgrafiken sind aktuell fehlerhaft und müssen überprüft und korrigiert werden.
+
+Auch Bett, Teppiche, Möbel und andere Inneneinrichtungen sollen optisch verbessert werden.
 
 ---
 
-# 9. Interaktionssystem
+# 7. NPCs und Charaktere
 
-Der Spieler muss mit NPCs und Objekten interagieren können.
+## 7.1 NPC-Grundsystem
 
-Interaktionen erfolgen über die vorgesehenen Framework-Eingaben.
+NPCs sollen eigenständige Charaktere mit individuellen Eigenschaften sein.
 
-Vorgesehene Interaktionen:
+Jeder NPC soll möglichst eigene:
 
-- Mit NPCs sprechen.
-- Roulette starten.
-- Poker starten.
-- Blackjack starten.
-- Spielautomaten bedienen.
-- Mit der Kasse interagieren.
-- Dialoge bestätigen.
-- Minispiele verlassen.
+- Grafiken.
+- Namen.
+- Dialoge.
+- Dialogoptionen.
+- Antworten.
+- Interaktionsmöglichkeiten.
+- Aufgaben oder Funktionen.
 
-Vor einer Interaktion muss geprüft werden, ob sich der Spieler im entsprechenden Interaktionsbereich befindet.
+besitzen.
 
-Interaktionsbereiche müssen unabhängig von der Grafik verwaltet werden.
+Nicht jeder NPC darf dieselben Dialoge oder dieselben Antwortmöglichkeiten verwenden.
 
-Ein Austausch der Grafik eines Spieltisches darf nicht dazu führen, dass die Interaktion nicht mehr funktioniert.
+## 7.2 Mutter und Oma
+
+Die Mutter und die Oma des Spielers fehlen aktuell und müssen ergänzt werden.
+
+### Mutter
+
+Die Mutter soll:
+
+- Optisch zum Pokémon-Rubin-Stil passen.
+- Als eigenständige Figur erkennbar sein.
+- Individuelle Dialoge besitzen.
+- Eigene Antwortmöglichkeiten anbieten.
+- Eine erkennbare Persönlichkeit haben.
+- In die Spielwelt und die Hintergrundgeschichte integriert werden.
+
+### Oma
+
+Die Oma soll ein eigenständiger, wiedererkennbarer Charakter sein.
+
+Als visuelle und charakterliche Inspiration dient die ältere Frau aus Deadpool.
+
+Übernimm keine geschützte Figur eins zu eins und kopiere keine Originalgrafiken.
+
+Die Oma soll beispielsweise:
+
+- Graue oder weiße Haare haben.
+- Einen älteren, markanten Charakterstil besitzen.
+- Trocken und sarkastisch sein.
+- Einen eigenen Humor haben.
+- Ungewöhnliche und unterhaltsame Dialoge führen.
+- Individuelle Antworten und Dialogoptionen anbieten.
+
+Die Figur muss optisch weiterhin in die Pixel-Art-Welt passen.
+
+## 7.3 Dialogsystem
+
+Das Dialogsystem muss deutlich verbessert werden.
+
+Jeder Charakter soll individuelle Dialogoptionen haben.
+
+Beispielsweise:
+
+- Begrüßung.
+- Fragen zur Spielwelt.
+- Fragen zu Geschäften.
+- Fragen zum Casino.
+- Persönliche Gespräche.
+- Besondere Antworten.
+- Wiederholte Gespräche mit veränderten Antworten.
+
+Die Antworten müssen zur gewählten Option passen.
+
+Vermeide allgemeine Standarddialoge, die für jeden NPC identisch sind.
+
+## 7.4 Zusätzliche Dialogideen
+
+Wenn sinnvoll:
+
+- NPCs erinnern sich an vorherige Gespräche.
+- Dialoge verändern sich abhängig vom Spielfortschritt.
+- NPCs reagieren auf Tageszeiten.
+- Mitarbeiter geben Informationen über ihre Geschäfte.
+- Charaktere können kleine Hinweise und Geheimnisse verraten.
+- Die Oma kann besondere humorvolle Kommentare machen.
+
+Diese Funktionen müssen mit der vorhandenen Architektur umgesetzt werden und dürfen nicht unnötig kompliziert werden.
 
 ---
 
-# 10. Casino-Minispiele
+# 8. Casino und Minispiele
 
-Jedes Casino-Spiel muss in einer eigenen C#-Datei implementiert werden.
+Das Casino ist der zentrale Spielbereich.
 
-Jedes Spiel muss eine eigenständige Spiellogik besitzen.
+Es soll verschiedene interaktive Spielmöglichkeiten geben.
 
-Alle Minispiele müssen vollständig in das zentrale OOPGames-Spiel integriert werden.
+Jedes Minispiel muss modular und unabhängig implementiert werden.
 
-Die Minispiele dürfen keine eigenen Fenster oder Game-Loops verwenden.
+## 8.1 Roulette
 
-## 10.1 Roulette
-
-Funktionen:
+Erstelle ein eigenes Roulette-System mit:
 
 - Roulette-Tisch.
-- Zahlen von 0 bis 36.
-- Rote und schwarze Zahlen.
-- Grüne Null.
-- Einsatzmöglichkeiten auf einzelne Zahlen.
-- Einsatzmöglichkeiten auf Farben.
-- Einsatzmöglichkeiten auf Zahlenbereiche.
+- Einsatzmöglichkeiten.
+- Zahlen und Farben.
+- Gewinn- und Verlustberechnung.
+- Auszahlung.
 - Einsatzverwaltung.
-- Zufällige Ermittlung des Ergebnisses.
-- Korrekte Gewinnberechnung.
-- Korrekte Verlustberechnung.
-- KI-Gegner.
-- Darstellung des Ergebnisses.
-- Runde abschließen und zurückkehren.
+- Passender grafischer Darstellung.
 
-## 10.2 Poker
+Die Spielregeln müssen korrekt sein.
 
-Die verwendete Poker-Variante muss vor der Implementierung festgelegt werden.
+## 8.2 Poker
 
-Vorgesehene Funktionen:
+Erstelle ein eigenständiges Pokersystem.
 
-- Kartenverteilung.
+Je nach Umfang und vorhandener Zeit soll es Folgendes enthalten:
+
+- Kartenverwaltung.
+- Mischen.
+- Austeilen.
+- Spielerentscheidungen.
+- Handbewertung.
+- Gewinnermittlung.
+- Gegnerlogik.
+- Einsatzverwaltung.
+
+Die Regeln müssen eindeutig und nachvollziehbar sein.
+
+## 8.3 Blackjack
+
+Implementiere ein eigenständiges Blackjack-Spiel.
+
+Dazu gehören:
+
+- Karten.
+- Kartenwerte.
 - Spielerhand.
-- Gemeinschaftskarten, falls die gewählte Variante diese verwendet.
-- Einsatzsystem.
-- Fold.
-- Call.
-- Raise.
-- KI-Gegner.
-- Bewertung der Pokerhände.
-- Ermittlung des Gewinners.
-- Anzeige des Spielergebnisses.
+- Dealerhand.
+- Ziehen.
+- Stehenbleiben.
+- Bust.
+- Blackjack.
+- Gewinn- und Verlustberechnung.
+- Einsätze und Auszahlungen.
 
-Die KI muss abhängig von ihrer Hand und der Spielsituation Entscheidungen treffen.
+Die Dealer-KI muss die vorgesehenen Regeln befolgen.
 
-## 10.3 Blackjack
+## 8.4 Spielautomaten
 
-Funktionen:
+Implementiere einen oder mehrere Spielautomaten.
 
-- Kartenausgabe.
-- Spielerhand.
-- Dealer-Hand.
-- Hit.
-- Stand.
-- Blackjack-Erkennung.
-- Bust-Erkennung.
-- Berechnung der Kartenwerte.
-- KI-Entscheidungslogik.
-- Gewinnerermittlung.
-- Einsatzabrechnung.
+Mögliche Funktionen:
 
-## 10.4 Spielautomaten
-
-Funktionen:
-
-- Mindestens drei Walzen.
-- Unterschiedliche Symbole.
+- Walzen.
+- Symbole.
 - Zufällige Ergebnisse.
-- Unterschiedliche Gewinnkombinationen.
-- Einsatzsystem.
-- Auszahlungssystem.
-- Gewinnanimation, sofern mit dem Framework möglich.
+- Gewinnkombinationen.
+- Verschiedene Auszahlungen.
+- Einsätze.
+- Gewinnanimationen.
 
-Alle Casino-Spiele müssen einheitlich gestaltet sein, dürfen aber ihre eigenen Regeln besitzen.
+Die Zufallslogik darf nicht von der Grafik abhängig sein.
 
----
+## 8.5 KI-Gegner
 
-# 11. KI-Gegner
+Falls ein Minispiel Gegner benötigt, soll deren Verhalten eigenständig und nachvollziehbar implementiert werden.
 
-Die KI-Gegner müssen eine eigenständige und nachvollziehbare Entscheidungslogik besitzen.
+Die KI muss mit den tatsächlichen Regeln des jeweiligen Spiels arbeiten.
 
-Sie dürfen nicht einfach zufällig gewinnen oder verlieren.
+Keine bloße Zufallsauswahl, wenn eine sinnvolle Strategie möglich ist.
 
-Die KI soll spielabhängig Entscheidungen treffen.
+## 8.6 Zentrale Spielwährung
 
-## Roulette-KI
+Alle Casino-Spiele sollen auf ein gemeinsames Guthabensystem zugreifen.
 
-- Eigene Einsatzstrategie.
-- Verschiedene Einsatzmöglichkeiten.
-- Risikobewertung.
-- Berücksichtigung des verfügbaren Spielgeldes.
+Verhindere:
 
-Es darf keine Gewinnstrategie behauptet werden, die mathematisch nicht existiert.
+- Negative Guthaben.
+- Doppelte Abbuchungen.
+- Doppelte Auszahlungen.
+- Auszahlung ohne gültigen Gewinn.
+- Manipulation des Guthabens durch bloße Grafikaktionen.
 
-## Poker-KI
-
-- Bewertung der eigenen Karten.
-- Bewertung der aktuellen Spielsituation.
-- Berücksichtigung der Gemeinschaftskarten.
-- Entscheidungen über Fold, Call und Raise.
-- Berücksichtigung des verfügbaren Einsatzes.
-
-## Blackjack-KI
-
-- Bewertung der eigenen Karten.
-- Berücksichtigung der sichtbaren Dealer-Karte.
-- Strategische Entscheidungen über Hit und Stand.
-
-Die KI-Logik muss modular aufgebaut sein und darf nicht vollständig im Painter implementiert werden.
+Die Berechnung muss in der Spiellogik stattfinden.
 
 ---
 
-# 12. Spielphasen und Spielzustände
+# 9. Inventar und Gegenstände
 
-Das Spiel muss über eindeutig definierte Zustände verfügen.
+Erstelle beziehungsweise verbessere ein zentrales Inventarsystem, sofern es mit den bestehenden Framework-Vorgaben umsetzbar ist.
 
-Mindestens folgende Zustände sind vorgesehen:
+Der Spieler soll Gegenstände besitzen und verwenden können.
 
-- WorldExploration (Zuhause, Außenwelt oder Casino-Innenraum; der aktuelle Ort ist getrennt vom UI-/Minispielzustand)
-- Dialogue
-- Roulette
-- Poker
-- Blackjack
-- Slots
-- Result
+Beispielsweise:
 
-Weitere Zustände (z. B. Hauptmenü, Gespräch, Listenmenü, Handy) dürfen ergänzt werden, solange sie zentral verwaltet werden.
+- Fahrrad.
+- Gekaufte Gegenstände.
+- Besondere Items.
+- Casino-Gegenstände.
+- Eventuell Schlüssel oder andere Freischaltgegenstände.
 
-Beim Start eines Minispiels:
+Das Inventar soll übersichtlich dargestellt werden.
 
-- Wird die normale Bewegung deaktiviert.
-- Wird das ausgewählte Minispiel aktiviert.
-- Werden die erforderlichen Daten übergeben.
-- Wird die Darstellung auf das Minispiel umgestellt.
+Grafische Darstellung und Inventarlogik müssen getrennt sein.
 
-Nach Beendigung:
-
-- Wird das Spielergebnis angezeigt.
-- Wird das Spielgeld aktualisiert.
-- Wird der Zustand zurückgesetzt.
-- Kehrt der Spieler in die Szene zurück, aus der das Minispiel gestartet wurde.
-- Wird die Bewegung wieder aktiviert.
-
-Die Zustandsverwaltung muss zentral und nachvollziehbar erfolgen.
+Ein Gegenstand darf nicht nur als Grafik angezeigt werden, sondern muss tatsächlich im Inventar gespeichert und verwendbar sein.
 
 ---
 
-# 13. Benutzeroberfläche
+# 10. Gebäude, Geschäfte und Öffnungszeiten
 
-Die Benutzeroberfläche muss zum Pokémon-Rubin-Pixel-Art-Stil passen.
+## 10.1 Geschäfte
 
-Sie muss ausschließlich auf dem vom Framework übergebenen Canvas dargestellt werden.
+Die Öffnungszeiten werden aktuell teilweise für Verkäufe verwendet, aber die Geschäfte schließen nicht richtig.
 
-Vorgesehene Elemente:
+Dieses Verhalten muss korrigiert werden.
 
-- Kontostand.
-- Interaktionshinweise.
-- Dialogfenster.
-- NPC-Namen.
-- Einsatzanzeige.
-- Kartenanzeige.
-- Spielinformationen.
-- Gewinn- und Verlustanzeige.
-- Spielmenüs.
-- Ergebnisanzeige.
+Wenn ein Geschäft geschlossen ist:
 
-Die Benutzeroberfläche muss übersichtlich und einheitlich gestaltet sein.
+- Dürfen keine normalen Verkäufe stattfinden.
+- Muss die Interaktion entsprechend reagieren.
+- Muss ein geschlossenes Geschäft visuell erkennbar sein.
+- Muss ein CLOSED-Schild an der Tür angezeigt werden.
 
-Grafische UI-Elemente müssen ebenfalls austauschbar sein.
+Wenn das Geschäft wieder öffnet, muss das Schild verschwinden beziehungsweise der normale Zustand wiederhergestellt werden.
+
+Die Öffnungszeiten müssen tatsächlich mit der Spielzeit verbunden sein.
+
+## 10.2 Arcade
+
+Eine Arcade beziehungsweise Spielhalle fehlt und muss ergänzt werden.
+
+Sie soll als eigener, erkennbarer Bereich gestaltet werden.
+
+Die Claw Machine beziehungsweise der Greifautomat muss in die Arcade und nicht in ein falsches Gebäude.
+
+Der Greifautomat soll:
+
+- Eine eigene Grafik besitzen.
+- Interaktiv sein.
+- Einen verständlichen Ablauf haben.
+- Einen tatsächlichen Spielmechanismus besitzen.
+- Einen Gewinn oder Verlust ermöglichen.
+
+## 10.3 Tankstelle
+
+Die Tankstelle soll bewusst auch dann geöffnet bleiben können, wenn andere Geschäfte geschlossen sind.
+
+Sie soll:
+
+- Rot gestaltet sein.
+- Zwei Zapfsäulen besitzen.
+- Ein kleines Gebäude mit Verkäufer enthalten.
+- Optisch als Tankstelle erkennbar sein.
+- Eine eigene Innen- oder Interaktionsdarstellung besitzen.
+
+Der Spieler soll durch ein Fenster mit dem Verkäufer sprechen und einkaufen können.
+
+Die Interaktion muss tatsächlich funktionieren und darf nicht nur eine dekorative Grafik sein.
+
+## 10.4 Innenwände und Dekorationen
+
+Die linken und rechten Innenwände der Gebäude sehen aktuell schlecht aus.
+
+Überarbeite die Wanddarstellung.
+
+Vermeide, dass dieselbe Wandgrafik überall unpassend wiederholt wird.
+
+Die Innenwände sollen:
+
+- Zur jeweiligen Raumgestaltung passen.
+- Korrekte Perspektiven besitzen.
+- Einheitliche Übergänge haben.
+- Nicht verzerrt sein.
+
+Ergänze außerdem:
+
+- Poster.
+- Bilder.
+- Wanddekoration.
+- Kleine Details.
+- Passende Beleuchtung und Gestaltungselemente, soweit technisch möglich.
+
+Poster sollen eigene Grafiken und eine sinnvolle Positionierung besitzen.
+
+## 10.5 Bett und Teppiche
+
+Bett, Teppiche und weitere Einrichtungsgegenstände müssen optisch verbessert werden.
+
+Achte auf:
+
+- Richtige Größe.
+- Passende Perspektive.
+- Stimmige Farben.
+- Einheitliche Pixel-Art.
+- Korrekte Kollisionsbereiche.
+- Sinnvolle Platzierung im Raum.
+
+## 10.6 Pavillon
+
+Der Pavillon ist aktuell schwer von einem Schild zu unterscheiden und sieht nicht korrekt aus.
+
+Überarbeite seine Grafik und Darstellung.
+
+Der Pavillon soll:
+
+- Als eigenständiges Gebäude beziehungsweise Objekt erkennbar sein.
+- Eine passende Dach- und Stützkonstruktion besitzen.
+- Nicht mit einem Schild verwechselt werden können.
+- Nur von unten begehbar sein, wenn das der vorgesehenen Gestaltung entspricht.
+- Eine korrekte Kollisionsfläche besitzen.
+
+## 10.7 Schilder und Poster
+
+Schilder müssen anklickbar beziehungsweise interaktiv sein.
+
+Der Spieler soll durch Interaktion Informationen erhalten.
+
+Auch Poster sollen untersuchbar sein.
+
+Folgende Texte sollen als kleine Details integriert werden:
+
+- Größeres Poster: „Hier könnte Ihre Werbung stehen“
+- Kleiner Sticker: „Nett hier, aber waren Sie schon mal in Baden-Württemberg“
+
+Die Texte sollen zur Spielwelt passen und grafisch sinnvoll eingebunden werden.
 
 ---
 
-# 14. Modulare Klassenstruktur
+# 11. Fahrrad und Fahrradgeschäft
 
-Diese Regel gilt für den gesamten Quellcode des Projekts.
+Vor dem Haus des Spielers soll ein Fahrrad stehen.
 
-Alle Klassen müssen modular und unabhängig voneinander aufgebaut sein.
+Es soll optisch zum Spiel passen.
 
-- Jede Klasse besitzt eine klar definierte Aufgabe.
-- Klassen dürfen nicht unnötig voneinander abhängig sein.
-- Spiellogik, Grafik, Eingabeverarbeitung und Datenverwaltung müssen getrennt werden.
-- Wiederkehrende Funktionen sollen zentral und wiederverwendbar implementiert werden.
-- Änderungen an einer Klasse sollen möglichst keine Anpassungen an anderen Klassen erfordern.
-- Jede Casino-Spielklasse muss eigenständig funktionieren und darf nicht die interne Implementierung eines anderen Minispiels voraussetzen.
-- Der Painter darf keine vollständige Spiellogik enthalten.
-- Grafiken müssen unabhängig von der Spiellogik austauschbar bleiben.
-- Abhängigkeiten zwischen Klassen müssen nachvollziehbar sein.
-- Bestehende Klassen dürfen nicht ohne Grund zusammengeführt werden.
-- Große Klassen müssen bei Bedarf in kleinere, fachlich sinnvolle Klassen aufgeteilt werden.
+Zusätzlich soll es ein Geschäft geben, in dem verschiedene Fahrräder ausgestellt sind.
 
-Jede Klasse soll nur die Daten und Methoden enthalten, die zu ihrer Aufgabe gehören.
+Mögliche Fahrradfarben:
 
-Keine unnötigen Hilfsklassen oder überdimensionierten Manager erstellen.
+- Rot.
+- Blau.
+- Grün.
+- Gelb.
+- Weitere passende Varianten.
 
-Die Architektur muss für alle Teammitglieder verständlich bleiben.
+Der Spieler soll andere Fahrradfarben kaufen können.
+
+Das Fahrrad muss:
+
+- Im Inventar gespeichert werden.
+- Aus dem Inventar aufrufbar sein.
+- Tatsächlich verwendbar sein, sofern die Framework-Mechanik dies zulässt.
+- Eine passende Darstellung besitzen.
+- Eine eigene Logik für den Besitz und die Auswahl haben.
+
+Wenn ein Fahrrad verwendet wird, soll sich die Bewegung sinnvoll anfühlen.
+
+Untersuche, ob sich eine höhere Bewegungsgeschwindigkeit umsetzen lässt, ohne die vorhandene Spielmechanik zu beschädigen.
 
 ---
 
-# 15. Entwicklerkennzeichnung im Quellcode
+# 12. Schlafanimation und Tagesablauf
 
-Jeder neu erstellte oder wesentlich veränderte Codeabschnitt muss eindeutig dem verantwortlichen Teammitglied zugeordnet werden.
+Die Spielfigur soll eine Schlafanimation besitzen.
 
-Dafür werden Kommentare mit dem vollständigen Vor- und Nachnamen verwendet.
+Wenn der Spieler schlafen geht:
 
-## 15.1 Kennzeichnung neuer Klassen
+- Soll die Figur optisch schlafen.
+- Soll eine passende Animation angezeigt werden.
+- Soll der Schlafzustand korrekt verwaltet werden.
+- Soll der Tagesablauf weitergeschaltet werden, sofern das vorhandene Spielsystem dies unterstützt.
+
+Prüfe, ob andere Systeme vom Tageswechsel abhängig sind.
+
+Dazu gehören insbesondere:
+
+- Öffnungszeiten.
+- Bankzinsen.
+- NPC-Verhalten.
+- Tageszeit.
+- Eventuelle Tagesereignisse.
+
+Vermeide widersprüchliche Tages- und Zeitberechnungen.
+
+---
+
+# 13. Bank und Guthaben
+
+Die Bank soll optisch und funktional verbessert werden.
+
+Aktuell soll die Bank deutlich schöner gestaltet werden.
+
+Sie soll:
+
+- Ein eigenes Gebäude besitzen.
+- Mitarbeiter beziehungsweise Bankangestellte enthalten.
+- Eine passende Innenausstattung besitzen.
+- Individuelle Dialoge anbieten.
+- Tatsächlich mit dem Spielguthaben verbunden sein.
+
+## 13.1 Bankfunktion
+
+Die Bank soll das Guthaben des Spielers verwalten.
+
+Das Bankguthaben soll pro Spieltag um 2 % erhöht werden.
+
+Die Berechnung muss korrekt sein.
 
 Beispiel:
 
+Bei einem Bankguthaben von 1.000 Einheiten beträgt der Zuwachs nach einem Spieltag 20 Einheiten.
+
+Nach der Verzinsung beträgt das Guthaben 1.020 Einheiten.
+
+Verwende das tatsächliche Bankguthaben als Berechnungsgrundlage.
+
+## 13.2 Zusätzliche Bankideen
+
+Wenn es sinnvoll und technisch umsetzbar ist:
+
+- Geld einzahlen.
+- Geld abheben.
+- Kontostand anzeigen.
+- Zinsentwicklung anzeigen.
+- Transaktionsübersicht.
+- Verständliche Dialoge mit Bankmitarbeitern.
+
+Verhindere doppelte Zinszahlungen am selben Spieltag.
+
+Die Zinsberechnung muss unabhängig von der grafischen Darstellung funktionieren.
+
+---
+
+# 14. Spielzustände und Interaktionen
+
+Das Spiel benötigt eine klare Verwaltung der verschiedenen Spielzustände.
+
+Mögliche Zustände sind:
+
+- `CasinoExploration`
+- `Dialogue`
+- `Roulette`
+- `Poker`
+- `Blackjack`
+- `Slots`
+- `Result`
+- `Inventory`
+- `Shop`
+- `Bank`
+- `Sleeping`
+
+Verwende nur so viele Zustände, wie tatsächlich erforderlich sind.
+
+Der Wechsel zwischen Zuständen muss eindeutig geregelt sein.
+
+Beispiele:
+
+- Beim Gespräch mit einem NPC wird die normale Bewegung deaktiviert.
+- Beim Verlassen eines Dialogs wird die normale Bewegung wieder aktiviert.
+- Beim Start eines Minispiels wird die Spielfigur nicht mehr frei bewegt.
+- Nach dem Minispiel kehrt der Spieler in den Casino-Bereich zurück.
+- Beim Öffnen des Inventars wird die normale Steuerung passend behandelt.
+
+Verhindere, dass mehrere Spielzustände gleichzeitig ungewollt aktiv sind.
+
+## 14.1 Interaktionssystem
+
+Interaktionen sollen einheitlich aufgebaut sein.
+
+Der Spieler soll beispielsweise vor einem NPC, einem Schild oder einem Spieltisch stehen und per vorgesehener Eingabe interagieren können.
+
+Nutze die vorhandenen Möglichkeiten des Frameworks.
+
+Achte auf:
+
+- Erreichbarkeit.
+- Interaktionsrichtung.
+- Entfernung.
+- Eindeutige Auswahl.
+- Verhinderung mehrfacher unbeabsichtigter Interaktionen.
+
+---
+
+# 15. Zusätzliche Ideen zur Verbesserung des Spiels
+
+Die folgenden Ideen sollen geprüft und bei sinnvoller Umsetzbarkeit in die Planung aufgenommen werden.
+
+Sie dürfen nicht blind implementiert werden, wenn sie die offiziellen Projektregeln verletzen oder die vorhandene Architektur unnötig komplizieren.
+
+## 15.1 Atmosphäre
+
+- Unterschiedliche Beleuchtung für Casino, Arcade und Geschäfte.
+- Dezente Animationen bei Spielautomaten.
+- Kleine Animationen bei NPCs.
+- Dekorationen, die die Gebäude lebendiger wirken lassen.
+- Unterschiedliche Raumgestaltungen.
+- Passende Farbgebung für verschiedene Bereiche.
+- Kleine visuelle Effekte bei Gewinnen.
+
+## 15.2 Spielwelt
+
+- NPCs mit unterschiedlichen Tagesabläufen.
+- Kleine versteckte Details.
+- Untersuchbare Gegenstände.
+- Kleine Nebenaufgaben.
+- Besondere Dialoge.
+- Dekorative Details, die zur Welt passen.
+
+## 15.3 Casino
+
+- Unterschiedliche Einsätze.
+- Kleine Belohnungen.
+- Gewinnanzeigen.
+- Verlustanzeigen.
+- Übersicht über vergangene Spielergebnisse.
+- Einheitliche Darstellung des Guthabens.
+- Kurze Animationen für Spielausgänge.
+
+## 15.4 Benutzeroberfläche
+
+Die Benutzeroberfläche soll verständlich und optisch einheitlich sein.
+
+Mögliche Elemente:
+
+- Guthabenanzeige.
+- Inventarübersicht.
+- Dialogfenster.
+- Interaktionshinweise.
+- Spielmenüs.
+- Gewinn- und Verlustanzeigen.
+- Statusanzeigen.
+- Tageszeit und Spieltag.
+
+Die Oberfläche darf das eigentliche Spielfeld nicht unnötig verdecken.
+
+## 15.5 Fehlervermeidung
+
+- Keine doppelten Interaktionen.
+- Keine mehrfachen Auszahlungen.
+- Keine verlorenen Eingaben.
+- Keine festhängenden Animationen.
+- Keine blockierten Spielzustände.
+- Keine unerreichbaren NPCs.
+- Keine ungewollten Kollisionen.
+- Keine inkonsistenten Guthabenwerte.
+
+---
+
+# 16. Prüfung aller Issues im lokalen SprintPlanning-Ordner
+
+Dieser Abschnitt ist besonders wichtig.
+
+Die maßgebliche Aufgabenquelle sind die lokalen Dokumente im Projektordner:
+
+`Classes/<Gruppe>/Scrum/SprintPlanning/`
+
+**Es sollen keine GitHub-Issues als Grundlage verwendet werden.**
+
+## 16.1 Vollständige Durchsicht
+
+Untersuche alle vorhandenen Dokumente und Unterordner in `SprintPlanning`.
+
+Berücksichtige:
+
+- Offene Aufgaben.
+- Abgeschlossene Aufgaben.
+- Teilweise erledigte Aufgaben.
+- Fehlerberichte.
+- Verbesserungsvorschläge.
+- Kommentare.
+- Ergänzungen.
+- Zusätzliche Ideen.
+- Bereits geplante Funktionen.
+- Aufgaben aus vergangenen Sprints.
+
+Lies die vollständigen Inhalte und nicht nur Dateinamen oder Überschriften.
+
+## 16.2 Tatsächlichen Implementierungsstand überprüfen
+
+Vergleiche jede Aufgabe mit dem tatsächlichen Quellcode.
+
+Eine Aufgabe gilt nicht automatisch als erledigt, nur weil sie im Dokument als abgeschlossen markiert wurde.
+
+Prüfe:
+
+1. Ist die Funktion vorhanden?
+2. Ist sie vollständig implementiert?
+3. Funktioniert sie tatsächlich?
+4. Ist sie mit anderen Systemen verbunden?
+5. Gibt es Fehler?
+6. Fehlen Teilfunktionen?
+7. Ist sie nur grafisch vorhanden?
+8. Gibt es Tests?
+9. Funktioniert sie nach anderen Änderungen weiterhin?
+
+## 16.3 Statuskategorien
+
+Verwende für jede Aufgabe einen dieser Status:
+
+- `VOLLSTÄNDIG UMGESETZT`
+- `TEILWEISE UMGESETZT`
+- `FEHLERHAFT`
+- `NUR GRAFISCH VORHANDEN`
+- `NICHT IMPLEMENTIERT`
+- `NICHT ÜBERPRÜFBAR`
+- `ÜBERHOLT`
+
+Begründe jeden Status anhand des tatsächlichen Codes oder eines nachvollziehbaren Testergebnisses.
+
+## 16.4 Ideen aus den Issues
+
+Alle sinnvollen Ideen aus den SprintPlanning-Dokumenten müssen berücksichtigt werden.
+
+Verliere keine Vorschläge, nur weil sie nicht ausdrücklich in diesem Dokument aufgeführt sind.
+
+Sortiere die Ideen in:
+
+- Bereits umgesetzt.
+- Noch offen.
+- In Planung.
+- Abhängig von anderen Funktionen.
+- Nicht sinnvoll oder nicht mit den Projektvorgaben vereinbar.
+
+Begründe, warum eine Idee nicht übernommen wird.
+
+## 16.5 Zentrale Auswertung
+
+Erstelle folgende Datei:
+
+`Classes/<Gruppe>/Plans/SprintPlanning_Issue_Auswertung.md`
+
+Dokumentiere darin für jede Aufgabe:
+
+- Ursprüngliche Bezeichnung.
+- Beschreibung.
+- Quelldatei.
+- Enthaltene Ideen.
+- Ursprünglicher Status.
+- Tatsächlicher Status.
+- Betroffene Klassen.
+- Fehlende Funktionen.
+- Testergebnisse.
+- Priorität.
+- Verantwortliches Teammitglied.
+- Nächste Schritte.
+
+Verändere die ursprünglichen SprintPlanning-Dateien nicht unnötig.
+
+Lösche keine alten Aufgaben oder deren Historie.
+
+## 16.6 Product Backlog aktualisieren
+
+Alle offenen und sinnvollen Aufgaben müssen in den SCRUM-Product-Backlog übernommen werden.
+
+Formuliere sie als verständliche User Stories mit:
+
+- Beschreibung.
+- Akzeptanzkriterien.
+- Priorität.
+- Abhängigkeiten.
+- Verantwortlichem.
+- Umsetzungsstatus.
+
+Doppelte Aufgaben sollen erkannt und sinnvoll zusammengeführt werden, ohne Informationen zu verlieren.
+
+---
+
+# 17. Automatisiertes Testsystem
+
+Es soll ein automatisiertes Prüfprogramm beziehungsweise eine Testsammlung geben, mit der wichtige Funktionen des Spiels überprüft werden können.
+
+## 17.1 Start nur auf ausdrücklichen Aufruf
+
+Das Testsystem darf nicht automatisch bei jedem normalen Start des Spiels ausgeführt werden.
+
+Es soll nur starten, wenn es ausdrücklich durch den Nutzer oder den KI-Agenten angefordert wird.
+
+Ein normaler Spielstart darf dadurch nicht verlangsamt oder gestört werden.
+
+## 17.2 Zu prüfende Funktionen
+
+Das Testsystem soll, soweit technisch möglich, folgende Bereiche überprüfen:
+
+**Bewegung**
+- WASD-Eingaben.
+- Richtungswechsel.
+- Bewegungsgrenzen.
+- Kollisionen.
+- Stillstand nach Loslassen der Taste.
+
+**Grafiken**
+- Vorhandene Grafikzuordnungen.
+- Fehlende Grafik-IDs.
+- Fehlende Animationen.
+- Ungültige Zuordnungen.
+- Unterschiedliche Größen, sofern sie unzulässig sind.
+
+**NPCs und Dialoge**
+- Vorhandene NPC-Daten.
+- Dialogzuordnungen.
+- Dialogoptionen.
+- Antwortzuordnungen.
+
+**Gebäude und Interaktionen**
+- Interaktionsmöglichkeiten.
+- Kollisionsbereiche.
+- Begehbare Flächen.
+- Öffnungszeiten.
+- Geschlossene Geschäfte.
+
+**Casino**
+- Roulette-Berechnungen.
+- Blackjack-Regeln.
+- Poker-Handbewertungen.
+- Spielautomaten-Ergebnisse.
+- Einsätze und Auszahlungen.
+
+**Inventar und Bank**
+- Einlagern und Entfernen von Gegenständen.
+- Guthabenänderungen.
+- Einzahlungen und Abhebungen.
+- Zinsberechnung von 2 %.
+- Verhinderung doppelter Tageszinsen.
+
+**Spielzustände**
+- Wechsel zwischen Dialogen und Spielwelt.
+- Start und Ende von Minispielen.
+- Öffnen und Schließen des Inventars.
+- Vermeidung ungültiger Zustände.
+
+## 17.3 Testergebnisse
+
+Jeder Test soll eindeutig anzeigen:
+
+- BESTANDEN
+- FEHLGESCHLAGEN
+- NICHT AUSFÜHRBAR
+- NICHT VORHANDEN
+
+Dokumentiere Fehler mit möglichst genauer Angabe der betroffenen Klasse oder Methode.
+
+Unterscheide zwischen automatisierten Tests und manuellen Prüfungen.
+
+Erfinde keine Testergebnisse.
+
+## 17.4 Technische Grenzen
+
+Erstelle Tests nur innerhalb der offiziell erlaubten Projektstruktur.
+
+Falls ein separates Testprojekt oder Änderungen an Projektdateien notwendig wären, frage vorher nach einer Freigabe.
+
+Verwende nach Möglichkeit vorhandene Testmöglichkeiten und reine Logiktests, die ohne eigene Game-Loop auskommen.
+
+---
+
+# 18. Modulare Klassenstruktur
+
+Alle Klassen müssen modular und unabhängig aufgebaut sein.
+
+Jede Klasse soll eine klar definierte Aufgabe besitzen.
+
+Vermeide große Klassen, in denen sämtliche Spielmechaniken, Grafiken und Eingaben miteinander vermischt sind.
+
+Trenne insbesondere:
+
+- Spiellogik.
+- Darstellung.
+- Eingabeverarbeitung.
+- Datenverwaltung.
+- Animationen.
+- Kollisionen.
+- NPC-Verhalten.
+- Dialoge.
+- Minispiele.
+- Inventar.
+- Guthabenverwaltung.
+- Spielzustände.
+
+## 18.1 Minispiele
+
+Roulette, Poker, Blackjack und Spielautomaten sollen jeweils eigene Klassen beziehungsweise klar abgegrenzte Module besitzen.
+
+Ein Fehler in einem Minispiel soll nicht automatisch die anderen Minispiele beschädigen.
+
+## 18.2 Gemeinsame Systeme
+
+Gemeinsam verwendete Funktionen sollen zentral verwaltet werden.
+
+Beispielsweise:
+
+- Guthaben.
+- Inventar.
+- Grafikzuordnungen.
+- Spielzustände.
+- Dialogverwaltung.
+- Zeit und Tageswechsel.
+
+Vermeide doppelte Implementierungen derselben Funktion.
+
+## 18.3 Keine unnötige Komplexität
+
+Modularität bedeutet nicht, für jede einzelne Kleinigkeit eine eigene Klasse zu erstellen.
+
+Wähle eine verständliche und sinnvolle Aufteilung.
+
+Die Struktur muss zum vorhandenen OOPGames-Framework passen.
+
+---
+
+# 19. Entwicklerkennzeichnung in allen Änderungen
+
+Jede neu erstellte oder wesentlich veränderte Klasse, Methode und jeder relevante Codeabschnitt muss mit dem Namen des verantwortlichen Entwicklers gekennzeichnet werden.
+
+## 19.1 Name ermitteln
+
+Wenn der Name des verantwortlichen Teammitglieds nicht bekannt ist, frage zuerst danach.
+
+Erfinde keine Namen.
+
+KI-generierter Code wird dem menschlichen Teammitglied zugeordnet, das den Code geprüft, verstanden und übernommen hat.
+
+Die KI darf nicht als menschlicher Entwickler ausgegeben werden.
+
+## 19.2 Klassenheader
+
+Verwende beispielsweise:
+
 ```csharp
-// =====================================================
 // Klasse: CAS_Roulette
 // Entwickler: Max Mustermann
 // Erstellt: 12.11.2026
-// Beschreibung: Enthält die Spiellogik für Roulette.
-// =====================================================
+// Beschreibung: Verwaltet die Spiellogik des Roulette-Minispiels.
 ```
 
-## 15.2 Kennzeichnung neuer Methoden
+## 19.3 Methodenkennzeichnung
 
-Beispiel:
+Neue oder wesentlich geänderte Methoden sollen beispielsweise so gekennzeichnet werden:
 
 ```csharp
 // Entwickler: Max Mustermann
-// Aufgabe: Berechnet den Gewinn des Spielers.
-private void CalculateWinnings()
-{
-    // Implementierung
-}
+// Aufgabe: Berechnet das Spielergebnis des Roulette-Spiels.
 ```
 
-## 15.3 Kennzeichnung veränderter Codeabschnitte
+## 19.4 Änderungen
+
+Bei späteren Änderungen muss ein Kommentar mit folgenden Angaben ergänzt werden:
+
+- Entwickler.
+- Datum.
+- Beschreibung der Änderung.
 
 Beispiel:
 
 ```csharp
 // Änderung durch: Max Mustermann
-// Datum: 12.11.2026
-// Änderung: Kollisionsprüfung für Casino-Wände erweitert.
+// Datum: 15.11.2026
+// Änderung: Fehlerhafte Berechnung der Auszahlung korrigiert.
 ```
 
-## 15.4 Änderungen durch mehrere Entwickler
+## 19.5 Zusammenarbeit
 
-Wenn mehrere Teammitglieder an derselben Klasse arbeiten:
+Wenn mehrere Teammitglieder an einer Klasse arbeiten:
 
-- Jeder Entwickler kennzeichnet seine eigenen neu erstellten oder wesentlich veränderten Methoden.
-- Bei Änderungen innerhalb einer bestehenden Methode wird die Änderung an der entsprechenden Stelle dokumentiert.
-- Der ursprüngliche Entwickler darf nicht nachträglich als Autor fremder Änderungen eingetragen werden.
-- Gemeinsame Implementierungen müssen mit allen tatsächlich beteiligten Entwicklern gekennzeichnet werden.
-- Bestehende Entwicklerkennzeichnungen müssen erhalten bleiben.
+- Bestehende Kennzeichnungen erhalten.
+- Eigene Methoden kennzeichnen.
+- Eigene Änderungen kennzeichnen.
+- Keine fremden Beiträge als eigene ausgeben.
+- Keine fremden Kennzeichnungen entfernen.
 
-Nicht jede einzelne Codezeile benötigt einen Kommentar. Die Kennzeichnung soll auf Klassen-, Methoden- und relevanter Änderungsebene erfolgen.
-
-## 15.5 KI-generierter Code
-
-KI-generierter Code muss ebenfalls einem verantwortlichen Teammitglied zugeordnet werden.
-
-Der eingetragene Name bezeichnet das Teammitglied, das den Code geprüft, verstanden und in das Projekt übernommen hat.
-
-Eine KI darf niemals als menschlicher Entwickler ausgegeben werden.
-
-KI-Unterstützung muss zusätzlich in der persönlichen Prompt-Datei des verantwortlichen Teammitglieds dokumentiert werden.
-
-Ist der verantwortliche Entwickler nicht bekannt, muss der Agent vor der Implementierung nach dem vollständigen Namen fragen.
-
-## 15.6 Git und Nachvollziehbarkeit
-
-Die Entwicklerkennzeichnungen ersetzen nicht die Git-Historie.
-
-Jedes Teammitglied muss weiterhin mit dem eigenen GitHub-Account committen und pushen.
-
-Die Entwicklerkennzeichnungen, persönlichen Prompt-Dateien und Git-Commits müssen nachvollziehbar zusammenpassen.
-
-Ziel ist, dass jederzeit erkennbar ist:
-
-- Wer eine Klasse erstellt hat.
-- Wer eine Methode implementiert hat.
-- Wer eine bestehende Funktion verändert hat.
-- Wer eine KI-generierte Implementierung geprüft und übernommen hat.
+Die Kommentare ersetzen nicht die Git-Historie.
 
 ---
 
-# 16. Codequalität und Wartbarkeit
+# 20. Dateinamen und Namenskonventionen
 
-- Jede Klasse hat eine klar definierte Aufgabe.
-- Keine riesigen Klassen mit sämtlicher Spiellogik.
-- Keine unnötigen globalen Variablen.
-- Keine doppelten Implementierungen.
-- Möglichst geringe Kopplung zwischen den Minispielen.
-- Aussagekräftige Namen für Klassen und Methoden.
-- Kommentare für komplexe Algorithmen.
-- Fehlerbehandlung bei ungültigen Eingaben.
-- Trennung von Darstellung und Logik.
-- Wiederverwendbare Komponenten.
-- Austauschbare Grafiken.
-- Keine unnötigen Framework-Abhängigkeiten.
-- Keine unnötigen Änderungen an bestehenden Klassen.
+Verwende die offizielle Dateinamenskonvention:
 
-Jedes Teammitglied muss den gesamten eigenen Code erklären können, einschließlich agentisch erzeugtem Code.
+`Vorname_Nachname_<Inhalt>.cs`
 
----
+Beispiel:
 
-# 17. Regeln für KI-Agenten und VS Code
+`Max_Mustermann_Roulette.cs`
 
-Bevor neue Funktionen implementiert werden:
+Klassen und Interfaces müssen das Gruppenpräfix verwenden.
 
-1. Bestehenden Code untersuchen.
-2. Framework-Schnittstellen überprüfen.
-3. Beispielprojekt X_Griesbauer analysieren.
-4. Vorhandene Klassen untersuchen.
-5. Abhängigkeiten verstehen.
-6. Prüfen, welche Dateien verändert werden dürfen.
-7. Verantwortlichen Entwickler feststellen.
-8. Einen konkreten Implementierungsplan erstellen.
+Beispiel:
 
-Bei Änderungen:
+`CAS_Roulette`
 
-- Nur tatsächlich benötigte Dateien bearbeiten.
-- Nur erlaubte Verzeichnisse verwenden.
-- Keine Framework-Dateien verändern.
-- Keine fremden Gruppenordner bearbeiten.
-- Keine vorhandenen Funktionen unnötig ersetzen.
-- Keine zusätzlichen Framework-Abhängigkeiten einführen.
-- Keine Methoden oder Interfaces erfinden.
-- Keine Platzhalter als fertige Funktionen deklarieren.
-- Bestehende Entwicklerkennzeichnungen erhalten.
-- Neue oder wesentlich veränderte Methoden kennzeichnen.
-- Klassen modular halten.
-- Kompilierbarkeit nach größeren Änderungen überprüfen.
+Achte darauf, dass:
 
-Wenn eine Funktion eine Framework-Erweiterung benötigt, muss die Implementierung abgebrochen werden.
-
-Der Agent muss beschreiben:
-
-- Welche Erweiterung notwendig wäre.
-- Warum sie benötigt wird.
-- Welche Framework-Dateien betroffen wären.
-- Welche Alternative ohne Framework-Änderung möglich ist.
-
-Die Entscheidung liegt beim Team und beim Dozenten.
+- Klassennamen eindeutig sind.
+- Interfaces eindeutig sind.
+- `Name`-Properties nicht ungewollt mit anderen Klassen kollidieren.
+- Keine doppelten Klassen erstellt werden.
+- Die vorhandenen Namenskonventionen eingehalten werden.
 
 ---
 
-# 18. SCRUM und Dokumentation
+# 21. Dokumentation der KI-Prompts
 
-Die Entwicklung erfolgt nach SCRUM.
+Jedes Teammitglied muss seine verwendeten KI-Prompts dokumentieren.
 
-Die Dokumentation liegt unter:
+Die Datei soll innerhalb von `Classes/<Gruppe>/` liegen.
+
+Namensschema:
+
+`Vorname_Nachname_Prompts.md`
+
+Dokumentiere:
+
+- Verwendeten Prompt im Originalwortlaut.
+- Datum.
+- Verwendetes Werkzeug beziehungsweise KI-Modell.
+- Ergebnis der Anfrage.
+- Welche Teile übernommen wurden.
+- Welche Teile angepasst oder verworfen wurden.
+- Wer den Code geprüft und übernommen hat.
+
+Die Dokumentation muss nachvollziehbar bleiben.
+
+---
+
+# 22. Planung und SCRUM
+
+## 22.1 Planung
+
+Pläne gehören in:
+
+`Classes/<Gruppe>/Plans/`
+
+Dort sollen insbesondere stehen:
+
+- Projektkonzept.
+- Architekturüberlegungen.
+- Technische Entscheidungen.
+- SprintPlanning-Auswertungen.
+- Testberichte.
+- Weitere relevante Projektdokumentation.
+
+## 22.2 SCRUM
+
+Die SCRUM-Dokumentation gehört in:
 
 `Classes/<Gruppe>/Scrum/`
 
-Sie enthält:
+Berücksichtige:
 
 - Product Owner.
 - Scrum Master.
@@ -915,194 +1311,261 @@ Sie enthält:
 - User Stories.
 - Sprintplanung.
 - Sprintziele.
-- Verantwortliche je Aufgabe.
-- Kurzprotokolle der Abstimmungen.
+- Aufgabenverantwortliche.
+- Abstimmungsprotokolle.
 - Sprint Reviews.
-- Sprint Retrospektiven.
+- Retrospektiven.
 
-Die Sprints dauern ein bis zwei Wochen.
+Sprints sollen eine Dauer von ein bis zwei Wochen haben.
 
-Jedes Teammitglied muss einen sichtbaren und substanziellen Beitrag leisten.
+Jeder Sprint benötigt ein klares Ziel und konkrete Aufgaben.
 
-Alle Prompts müssen pro Studierendem dokumentiert werden.
+## 22.3 Aufgabenplanung
 
-Die Prompts werden im Wortlaut mit Datum, Werkzeug, Modell und Ergebnisvermerk gespeichert.
+Bevor größere Änderungen vorgenommen werden:
 
-Die Pläne werden unter `Classes/<Gruppe>/Plans/` abgelegt.
-
-Das Spielkonzept muss vor Beginn der Implementierung dem Dozenten vorgestellt werden.
-
-Backlog, Prompts, Pläne und Git-Commits müssen zusammenpassen.
-
----
-
-# 19. Git und Build-Regeln
-
-Vor jedem Commit:
-
-1. `git status` ausführen.
-2. `git diff` kontrollieren.
-3. Änderungen auf unerlaubte Dateien prüfen.
-4. Sicherstellen, dass keine Framework-Dateien verändert wurden.
-5. `dotnet build` ausführen.
-
-Vor jedem Push:
-
-1. `git pull` ausführen.
-2. `dotnet build` ausführen.
-3. Änderungen erneut prüfen.
-4. Eigenen Commit erstellen.
-5. Mit dem eigenen GitHub-Account pushen.
-
-Keine Force-Pushes.
-
-Keine bin/- oder obj/-Dateien committen.
-
-Jedes Teammitglied committet selbst.
-
-Commits müssen kleine, nachvollziehbare Änderungen enthalten.
-
-Der KI-Agent darf keine Commits unter fremdem Namen erstellen oder pushen.
+1. Bestehende Aufgaben untersuchen.
+2. Abhängigkeiten erkennen.
+3. Prioritäten festlegen.
+4. Änderungen in sinnvolle Arbeitsschritte aufteilen.
+5. Verantwortlichkeiten berücksichtigen.
+6. Erst danach implementieren.
 
 ---
 
-# 20. Verbindliche Entwicklungsreihenfolge
+# 23. Git-Regeln
 
-Die Implementierung soll in folgender Reihenfolge erfolgen.
+Alle Teammitglieder verwenden ihren eigenen Git-Account.
 
-## Phase 1: Framework-Analyse
+Jedes Teammitglied muss eigene Änderungen selbst committen und pushen.
 
-- Vorhandene Interfaces untersuchen.
-- Beispielprojekt untersuchen.
-- Painter, Rules und Player verstehen.
-- Registrierungsmöglichkeiten untersuchen.
-- Erlaubte Architektur festlegen.
+Beachte:
 
-## Phase 2: Grundstruktur
+- Kleine und aussagekräftige Commits.
+- Vor dem Push `git pull`.
+- Vor dem Push `dotnet build`.
+- Vor einem Commit `git status`.
+- Vor einem Commit `git diff`.
+- Keine fremden Änderungen überschreiben.
+- Keine Änderungen anderer Teammitglieder als eigene ausgeben.
+- Kein `git push --force`.
+- Keine `bin/`- oder `obj/`-Ordner committen.
+- Keine Änderungen an geschützten Dateien.
 
-- Painter implementieren.
-- Rules implementieren.
-- Field implementieren.
-- Human-Player implementieren.
-- Computer-Player implementieren.
-- Registrierung vorbereiten.
+Wenn Konflikte auftreten, untersuche sie sorgfältig.
 
-## Phase 3: Zuhause, Außenwelt und Casino-Spielwelt
-
-- Begehbare Startszene im Zuhause erstellen.
-- Außenkarte mit geschlossener Baum-/Wassergrenze, Fluss, Brücken und verbundenen Straßen erstellen.
-- Scrollende, begrenzte Kamera und sichtbaren Kartenausschnitt implementieren.
-- Casino, Krankenhaus, Supermarkt und weitere Stadtbereiche erkennbar darstellen.
-- Übergänge zwischen Zuhause, Stadt, Casino und optionalen Gebäudeinnenräumen implementieren.
-- Begehbare Bereiche und Kollisionen für alle Szenen definieren.
-- Nicht kollidierende Tierdarstellung und tickbasierte Animation ergänzen.
-
-## Phase 4: Spielfigur
-
-- Spielfigur implementieren.
-- Vier Laufrichtungen integrieren.
-- Idle-Sprites integrieren.
-- Laufanimationen integrieren.
-- Bewegung implementieren.
-- Kollisionen testen.
-- Kartengrenzen, Flussufer und Brücken testen.
-- Kamerafahrt und Randbegrenzung testen.
-- Tierdarstellung und zus\u00e4tzliche Innenraumübergänge testen.
-## Phase 5: Grafiksystem
-
-- Austauschbares Grafiksystem implementieren.
-- Ressourcen zentral verwalten.
-- Grafiken von der Spiellogik trennen.
-- Austauschbarkeit testen.
-
-
-## Phase 6: Interaktionen
-
-- NPCs implementieren.
-- Spieltische integrieren.
-- Interaktionsbereiche erstellen.
-- Dialogsystem implementieren.
-
-## Phase 7: Casino-Minispiele
-
-- Roulette implementieren.
-- Blackjack implementieren.
-- Poker implementieren.
-- Spielautomaten implementieren.
-
-## Phase 8: KI
-
-- KI-Gegner integrieren.
-- Entscheidungslogik implementieren.
-- Spielstrategien testen.
-
-
-## Phase 9: Gesamtsystem
-
-- Spielzustände verbinden.
-- Geldsystem integrieren.
-- Benutzeroberfläche fertigstellen.
-- Übergänge zwischen Zuhause, Außenwelt, Casino und Minispielen testen.
-
-## Phase 10: Qualitätssicherung
-
-- Build überprüfen.
-- Kollisionen testen.
-- Eingaben testen.
-- Minispiele testen.
-- KI testen.
-- Grafikaustausch testen.
-- Gesamte Framework-Integration überprüfen.
+Löse Konflikte nicht durch blindes Überschreiben.
 
 ---
 
-# 21. Abschließende Prioritäten
+# 24. Vorgehensweise bei jeder neuen Aufgabe
 
-Die höchste Priorität hat immer die vollständige Kompatibilität mit dem vorgegebenen OOPGames-Framework.
+Arbeite nach diesem verbindlichen Ablauf.
 
-Danach folgen:
+## Phase 1 – Bestand aufnehmen
 
-1. Saubere objektorientierte Architektur.
-2. Modulare Klassen mit klaren Verantwortlichkeiten.
-3. Funktionierende, verbundene Zuhause-, Stadt- und Casino-Spielwelt.
-4. Spielfigur mit vier Laufrichtungen und Animationen.
-5. Zuverlässiges Kollisionssystem.
-6. Vollständig austauschbare Grafiken.
-7. Funktionierende Casino-Minispiele.
-8. Anspruchsvolle KI-Gegner.
-9. Hochwertige Pixel-Art-Darstellung.
-10. Vollständige Entwickler- und SCRUM-Dokumentation.
+- Projektstruktur untersuchen.
+- Vorhandene Klassen untersuchen.
+- Framework-Schnittstellen untersuchen.
+- Bestehende Funktionen nachvollziehen.
+- Vorhandene Grafiken und Ressourcen untersuchen.
+- SprintPlanning-Dokumente berücksichtigen.
+- Bereits vorhandene Lösungen erkennen.
 
-Keine zusätzlichen Features dürfen die Framework-Kompatibilität gefährden.
+## Phase 2 – Problem verstehen
 
-## Verbindlicher Grundsatz
+- Ursache des Problems suchen.
+- Betroffene Klassen feststellen.
+- Abhängigkeiten untersuchen.
+- Prüfen, ob die Funktion bereits teilweise vorhanden ist.
+- Prüfen, welche Projektregeln gelten.
 
-Das Spiel soll wie ein eigenständiges Pokémon-Rubin-inspiriertes Casino-Abenteuer wirken, technisch aber vollständig und ausschließlich als reguläre OOPGames-Komponente funktionieren.
+## Phase 3 – Planung
 
-Alle Klassen müssen modular, nachvollziehbar und austauschbar sein.
+- Lösung festlegen.
+- Änderungen modular aufteilen.
+- Betroffene Dateien bestimmen.
+- Risiken erkennen.
+- Testmöglichkeiten festlegen.
 
-Jede wesentliche Codeänderung muss dem tatsächlich verantwortlichen Teammitglied zugeordnet werden können.
+Bei größeren Änderungen zuerst die geplante Lösung dokumentieren.
 
-Alle diese Regeln sind bei jeder Implementierung verbindlich.
+## Phase 4 – Implementierung
+
+- Nur notwendige Dateien ändern.
+- Bestehende Funktionen erhalten.
+- Klassen modular gestalten.
+- Entwicklerkennzeichnungen ergänzen.
+- Fehlerbehandlung berücksichtigen.
+- Grafik und Spiellogik trennen.
+- Keine unzulässigen Framework-Änderungen vornehmen.
+
+## Phase 5 – Überprüfung
+
+- `dotnet build` ausführen.
+- Vorhandene Tests ausführen, soweit erlaubt.
+- Betroffene Funktionen gezielt überprüfen.
+- Nebenwirkungen untersuchen.
+- Fehler korrigieren.
+- Nicht ausgeführte Prüfungen ausdrücklich kennzeichnen.
+
+## Phase 6 – Dokumentation
+
+- Änderungen dokumentieren.
+- Status der Aufgabe aktualisieren.
+- Testergebnisse dokumentieren.
+- Offene Probleme festhalten.
+- Product Backlog gegebenenfalls aktualisieren.
 
 ---
 
-# 22. Ergänzte Erweiterungen
+# 25. Abschlussprüfung des gesamten Spiels
 
-Hier werden Inhaltsregeln für Erweiterungen nach Abschnitt 0 nachgetragen. Die harten Regeln gelten unverändert.
+Nach größeren Entwicklungsphasen muss das gesamte Spiel erneut überprüft werden.
 
-## 22.1 Spielwelt, Uhr, Charakter, Läden, Handy, Speichern
+Kontrolliere insbesondere:
 
-Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Plan: `Plans/Patrick_Lupierz_Welt_Plan.md`
+### Steuerung
+- Funktioniert WASD?
+- Funktionieren alle Richtungen?
+- Sind Animationen korrekt?
+- Funktionieren Kollisionen?
 
-- **Währung:** Es gibt nur Casino-Chips. Alle Zahlungen laufen über die zentrale Geldverwaltung; NPC-Geldbeutel sind getrennt und werden nie negativ.
-- **Uhr:** Es gibt genau eine Ingame-Uhr im Framework-Tick (ein Tag = 30 Echtzeitminuten). Im Hauptmenü und im Pausenmenü steht sie.
-- **Licht:** Der Tag-Nacht-Wechsel wird darübergezeichnet; Grafikdateien werden nicht verändert.
-- **Charakter und Kleidung:** Name und Aussehen werden beim neuen Spiel gewählt. Kleidung ist an der Figur in allen Laufrichtungen sichtbar.
-- **Läden und Inventar:** Alle Läden nutzen dieselbe Kauflogik. Das Inventar hat keine eigene Geldverwaltung. Effekte sind zeitlich begrenzt und verändern keine Gewinnchancen der Minispiele.
-- **Handy:** Das Handy wird auf dem Framework-Canvas gezeichnet. Eingaben kommen nur über die Framework-Selections; neue Apps werden modular ergänzt.
-- **Speichern:** Spielstände liegen als versionierte Dateien im Ordner `G1Casino_Saves` neben der `OOPGames.exe`, nie im Quellcode-Ordner. Beschädigte Dateien dürfen das Spiel nicht abstürzen lassen.
-- **Lokale Wahrnehmung:** Nur NPCs auf derselben Karte und im Wahrnehmungsradius bemerken eine Handlung (z. B. Mülleimer); dieselbe Handlung wird nicht mehrfach bewertet.
-- **Tasten:** Enter und Leertaste werden nicht verwendet, weil sie den Start-Knopf des Frameworks auslösen.
+### Grafiken
+- Sind alle Grafiken vorhanden?
+- Sind die Größen passend?
+- Passen die Grafiken zusammen?
+- Funktionieren alle Animationen?
+- Sind Vogelgrafiken und Innenausstattung korrigiert?
 
-Bei Bedarf soll die Agents.md erweitern werden. Die Grundregeln dürfen nicht verändert werden. Pushen soll nur auf den jetzigen Branch sein, kein merge.
+### NPCs
+- Sind Mutter und Oma vorhanden?
+- Haben NPCs eigene Grafiken?
+- Haben sie eigene Dialoge?
+- Funktionieren die Dialogoptionen?
+
+### Gebäude
+- Sind alle Gebäude korrekt dargestellt?
+- Sind Innenwände und Dekorationen verbessert?
+- Ist der Pavillon erkennbar?
+- Funktionieren Schilder und Poster?
+
+### Geschäfte
+- Funktionieren Öffnungszeiten?
+- Werden geschlossene Geschäfte korrekt angezeigt?
+- Ist die Tankstelle wie vorgesehen gestaltet?
+- Ist die Arcade vorhanden?
+- Befindet sich die Claw Machine im richtigen Gebäude?
+
+### Fahrrad
+- Steht ein Fahrrad vor dem Spielerhaus?
+- Funktioniert der Fahrradshop?
+- Können andere Farben gekauft werden?
+- Ist das Fahrrad im Inventar vorhanden?
+
+### Bank
+- Sind Mitarbeiter vorhanden?
+- Funktionieren Einzahlungen und Abhebungen?
+- Werden 2 % pro Spieltag korrekt berechnet?
+- Werden Zinsen nicht doppelt ausgezahlt?
+
+### Casino
+- Funktionieren Roulette, Poker, Blackjack und Spielautomaten?
+- Werden Einsätze korrekt abgezogen?
+- Werden Gewinne korrekt ausgezahlt?
+- Funktioniert die Rückkehr in die Spielwelt?
+
+### Dokumentation und Technik
+- Sind Klassen modular?
+- Sind Entwicklerkennzeichnungen vorhanden?
+- Sind die Prompt-Dateien gepflegt?
+- Sind SprintPlanning-Issues berücksichtigt?
+- Sind Tests nachvollziehbar?
+- Ist der Build erfolgreich?
+
+---
+
+# 26. Abschlussbericht
+
+Nach jeder größeren Arbeitsphase soll ein verständlicher Bericht erstellt werden.
+
+Er muss enthalten:
+
+1. Was wurde untersucht?
+2. Welche Probleme wurden gefunden?
+3. Welche Funktionen wurden implementiert?
+4. Welche bestehenden Funktionen wurden verbessert?
+5. Welche Ideen aus dem SprintPlanning wurden übernommen?
+6. Welche Klassen und Dateien wurden verändert?
+7. Welche Tests wurden ausgeführt?
+8. Welche Tests waren erfolgreich?
+9. Welche Tests sind fehlgeschlagen?
+10. Welche Prüfungen konnten nicht ausgeführt werden?
+11. Welche Aufgaben sind noch offen?
+12. Was sollte als Nächstes umgesetzt werden?
+
+Behaupte niemals, dass eine Funktion fertig ist, wenn sie nur teilweise implementiert wurde.
+
+Behaupte niemals, dass Tests erfolgreich waren, wenn sie nicht tatsächlich ausgeführt wurden.
+
+---
+
+# 27. Wichtige Grenzen für den KI-Agenten
+
+Du darfst:
+
+- Bestehende Klassen analysieren.
+- Eigene Klassen im erlaubten Bereich erstellen.
+- Bestehende eigene Klassen verbessern.
+- Fehler beheben.
+- Grafiken und Grafikzuordnungen verbessern.
+- Spielmechaniken implementieren.
+- Dokumentation ergänzen.
+- Lokale SprintPlanning-Issues auswerten.
+- Tests innerhalb der freigegebenen Struktur erstellen und ausführen.
+- Vorschläge für weitere Verbesserungen machen.
+
+Du darfst nicht:
+
+- Framework-Dateien eigenmächtig verändern.
+- Projektdateien eigenmächtig verändern.
+- Eigene Fenster erstellen.
+- Eine eigene Game-Loop erstellen.
+- Eine eigene Main-Methode erstellen.
+- Das OOPGames-Framework umgehen.
+- Andere Gruppenordner verändern.
+- Bestehende Teamänderungen überschreiben.
+- Nicht vorhandene Schnittstellen erfinden.
+- Nicht getestete Funktionen als fertig melden.
+- Dokumentierte Aufgaben ohne Rücksprache löschen.
+- Ungefragt GitHub-Issues erstellen oder schließen.
+- Nicht freigegebene externe Bibliotheken einführen.
+
+Wenn du für eine Aufgabe eine nicht erlaubte Änderung benötigst, erkläre genau, warum sie erforderlich wäre, und frage nach Freigabe.
+
+---
+
+# 28. Übergeordnete Entwicklungsziele
+
+Bei jeder Entscheidung gelten folgende Prioritäten:
+
+1. **Korrekte Funktion:** Das Spiel muss tatsächlich funktionieren.
+2. **Framework-Kompatibilität:** Alle offiziellen Vorgaben müssen eingehalten werden.
+3. **Modularität:** Jede Komponente muss eine klare Aufgabe haben.
+4. **Grafische Qualität:** Alle Grafiken sollen zusammenpassen und sauber dargestellt werden.
+5. **Benutzerfreundlichkeit:** Steuerung und Interaktionen müssen verständlich sein.
+6. **Wartbarkeit:** Andere Teammitglieder müssen den Code verstehen können.
+7. **Testbarkeit:** Wichtige Funktionen müssen überprüfbar sein.
+8. **Dokumentation:** Änderungen und Entscheidungen müssen nachvollziehbar sein.
+
+## Abschließende Anweisung
+
+Arbeite nicht einfach nur die zuletzt genannte Aufgabe ab und ignoriere dabei ältere Anforderungen.
+
+Berücksichtige immer den gesamten Projektstand, alle bereits dokumentierten Aufgaben und alle genannten Spielideen.
+
+Prüfe zuerst, was bereits existiert, verbessere vorhandene Lösungen und ergänze fehlende Funktionen.
+
+Das Ziel ist ein zusammenhängendes, hochwertiges und vollständig spielbares Casino-Spiel im Pokémon-Rubin-/Saphir-Stil, das technisch sauber mit dem OOPGames-Framework umgesetzt wurde.
+
+**Jede Funktion muss nicht nur vorhanden sein, sondern tatsächlich funktionieren. Jede Änderung muss nachvollziehbar sein. Jede Aufgabe muss anhand des echten Implementierungsstands bewertet werden.**

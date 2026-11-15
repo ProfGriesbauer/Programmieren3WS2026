@@ -36,6 +36,10 @@ namespace OOPGames
         public string[] EnemyMonologues { get; set; } = new string[0];
         public Dictionary<G1C_NpcMood, string[]> MoodMonologues { get; } = new Dictionary<G1C_NpcMood, string[]>();
 
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Änderung: individuelle Fragen/Antworten je Charakter
+        // (siehe G1C_DialogueTopic); leer = bisheriges Gesprächsverhalten.
+        public List<G1C_DialogueTopic> Topics { get; } = new List<G1C_DialogueTopic>();
+
         /// <summary>Lena: Gesprächsaufgabe „zu einer Pause überreden“.</summary>
         public bool HasPauseTask { get; set; }
 

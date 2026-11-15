@@ -64,6 +64,36 @@ namespace OOPGames
             }
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Gehaltene Richtungstaste abfragen (das Framework meldet nur KeyDown, kein KeyUp).
+        //          Die bisherige Blickrichtung hat Vorrang, damit zwei gehaltene Tasten nicht zittern.
+        //          Wird im Framework-Tick (UI-Thread) aufgerufen; außerhalb davon gilt "keine Taste".
+        public static G1C_Direction? HeldDirection(G1C_Direction preferred)
+        {
+            try
+            {
+                if (IsHeld(preferred)) return preferred;
+                foreach (G1C_Direction d in new[] { G1C_Direction.Up, G1C_Direction.Down, G1C_Direction.Left, G1C_Direction.Right })
+                    if (IsHeld(d)) return d;
+            }
+            catch (System.InvalidOperationException)
+            {
+                // kein UI-Thread / kein Tastaturgerät (z. B. Selbsttest)
+            }
+            return null;
+        }
+
+        private static bool IsHeld(G1C_Direction d)
+        {
+            switch (d)
+            {
+                case G1C_Direction.Up: return Keyboard.IsKeyDown(Key.W) || Keyboard.IsKeyDown(Key.Up);
+                case G1C_Direction.Down: return Keyboard.IsKeyDown(Key.S) || Keyboard.IsKeyDown(Key.Down);
+                case G1C_Direction.Left: return Keyboard.IsKeyDown(Key.A) || Keyboard.IsKeyDown(Key.Left);
+                default: return Keyboard.IsKeyDown(Key.D) || Keyboard.IsKeyDown(Key.Right);
+            }
+        }
+
         public static bool IsConfirm(Key key) { return key == Key.E; }
 
         public static bool IsBack(Key key) { return key == Key.Q || key == Key.Escape; }

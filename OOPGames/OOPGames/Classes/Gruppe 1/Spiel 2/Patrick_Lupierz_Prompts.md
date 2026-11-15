@@ -1862,3 +1862,73 @@ Ergebnisvermerk: `Agents.md` um Abschnitt 0 (harte Regeln vs. erweiterbare Inhal
 Abschnitt 22 (Inhaltsregeln der Erweiterungen aus Prompt 4) ergänzt. Feste Vorgaben wie die 180x180-Karte und die
 Begrenzung auf Krankenhaus/Supermarkt gelten jetzt als Mindestumfang. Framework-, Verzeichnis-, Kennzeichnungs-, Doku- und
 Git-Regeln sind unverändert. Kein Commit.
+
+### Prompt 6
+
+Datum: 15.11.2026
+Werkzeug: Claude Code (VS-Code-Erweiterung)
+Modell: Claude Opus 5.5
+
+```text
+Explore this codebase and document it in CLAUDE.md
+[eingefügter Text: „AGENTS.md – Verbindliche Projektanweisungen für das Casino-Spiel“, Abschnitte 1–28]
+ this is your agents.md
+```
+
+Ergebnisvermerk: `CLAUDE.md` in diesem Ordner angelegt (Codekarte, Framework-Anbindung, Regeln, Build). Der lange
+eingefügte AGENTS-Text ist hier nicht wörtlich wiederholt; sein Inhalt deckt sich weitgehend mit `Agents.md` und dem
+Arbeitsauftrag aus Prompt 7. Abweichung festgehalten: dort ".NET 6", Projekt nutzt `net10.0-windows`. Geprüft und
+übernommen: Patrick Lupierz. Kein Commit.
+
+### Prompt 7
+
+Datum: 15.11.2026
+Werkzeug: Claude Code (VS-Code-Erweiterung)
+Modell: Claude Opus 5.5
+
+```text
+# Arbeitsauftrag – Vollständige Weiterentwicklung und Überprüfung des Casino-Spiels
+
+Lies zuerst die vollständige `AGENTS.md` und halte dich ausnahmslos an alle dort festgelegten Regeln.
+
+Du bist jetzt für die systematische Weiterentwicklung unseres Casino-Spiels verantwortlich.
+
+Dein Ziel ist es, das bestehende Projekt nicht nur zu analysieren, sondern die noch offenen Aufgaben tatsächlich umzusetzen, vorhandene Fehler zu beheben und die Qualität des gesamten Spiels zu verbessern.
+
+**Wichtig: Erstelle nicht einfach nur einen Plan oder eine Liste mit Vorschlägen. Arbeite die Aufgaben nach Möglichkeit direkt im vorhandenen Quellcode ab.**
+
+## 1. Vollständige Projektanalyse
+[… Abschnitte 1–10 wie eingegeben: Projektanalyse, SprintPlanning-Issues durcharbeiten und
+`Classes/<Gruppe>/Plans/SprintPlanning_Issue_Auswertung.md` erstellen, alle Anforderungen der AGENTS.md prüfen
+(Spielfigur/Steuerung, Grafik, NPCs/Dialoge inkl. Mutter und Oma, Gebäude/Geschäfte inkl. CLOSED-Schilder, Arcade,
+Tankstelle, Pavillon, Schilder/Poster/Sticker, Fahrrad, Schlafen/Tagesablauf, Bank mit 2 % Zinsen, Casino),
+fehlende Funktionen implementieren, Verbesserungsideen prüfen, modular arbeiten, Tests (Testsystem nur auf
+ausdrücklichen Aufruf), Dokumentation aktuell halten, Prioritäten, Abschlussbericht …]
+
+## 11. Endziel
+
+Entwickle das vorhandene Projekt zu einem möglichst vollständigen, zusammenhängenden und spielbaren Casino-Spiel im Pokémon-Rubin-/Saphir-Stil weiter.
+
+Es reicht nicht, wenn Funktionen nur auf dem Bildschirm sichtbar sind.
+
+NPCs müssen tatsächlich interagieren können. Geschäfte müssen ihre Öffnungszeiten beachten. Die Bank muss korrekt rechnen. Casino-Spiele müssen echte Spielregeln besitzen. Das Inventar muss Gegenstände tatsächlich verwalten. Kollisionen müssen funktionieren. Die Steuerung muss zuverlässig sein.
+
+**Beginne jetzt mit der vollständigen Bestandsaufnahme und arbeite anschließend die Aufgaben nach Priorität ab. Erstelle nicht nur einen Maßnahmenplan: Setze alle eindeutig umsetzbaren Aufgaben tatsächlich um und dokumentiere ehrlich, was noch offen ist.**
+
+ das ist deine aufgabe
+```
+
+Ergebnisvermerk (alle Änderungen mit „Entwickler/Änderung durch: Patrick Lupierz“ markiert, auf Nachfrage des Agenten
+als verantwortlicher Entwickler bestätigt):
+
+- **Übernommen:** WASD-Reparatur (`G1C_PlayerMovement`, `G1C_InputManager.HeldDirection`, Canvas-Fokus im Painter);
+  Kollisionsfehler Bäume/Vögel (`G1C_CollisionManager`); Bankzinsen 2 %/Tag ohne Doppelzahlung inkl. Speichern
+  (`G1C_FinanceManager`, `G1C_SaveData`); Tageswechsel (`ApplyNewDay`); Schlafanimation; Ladenschluss mit Türsperre,
+  Kaufsperre und CLOSED-Schild (`G1C_DecorSprites`); Mama und Oma Gerda (`G1C_FamilyNpcRoster`, Taschengeld);
+  individuelle Gesprächsthemen (`G1C_DialogueTopic`); Verkäuferprofile (`G1C_ShopNpcRoster`); untersuchbare
+  Schilder/Poster/Sticker (`G1C_InteractionType.Inspect`); Selbsttest (`G1C_SelfTest`, Menü [B] + [F12]).
+- **Angepasst:** Oma wohnt im Wohnhaus neben dem Spielerhaus, steht aber im Vorgarten (kein Innenraum).
+- **Nicht umgesetzt (im Backlog 38–46):** Arcade, Tankstellen-Neugestaltung, Fahrrad, Pavillon, Innenwände/Bett/Teppiche,
+  Vogelgrafik, liegende Schlaffigur.
+- Build 0 Fehler/0 Warnungen; Selbsttest 30/30 bestanden (ohne Fenster ausgeführt); Bedienung im echten Fenster nicht
+  getestet. Details: `Plans/Testbericht_2026-11-15.md`, `Plans/SprintPlanning_Issue_Auswertung.md`. Kein Commit.

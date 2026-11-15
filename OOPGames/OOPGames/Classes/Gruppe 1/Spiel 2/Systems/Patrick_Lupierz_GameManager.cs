@@ -62,6 +62,12 @@ namespace OOPGames
         public G1C_Phone Phone { get; }
         public G1C_MapView MapView { get; } = new G1C_MapView();
 
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Schlafzustand: nach dem Schlafen wird die Welt
+        // kurz abgedunkelt mit "Zzz" gezeigt; währenddessen ist die Steuerung gesperrt.
+        public const int SleepAnimationTicks = 75; // 3 Sekunden
+        public int SleepUntilTick { get; private set; }
+        public bool IsSleeping { get { return TickCount < SleepUntilTick; } }
+
         // Änderung durch: Denis Mock – Ein neues Spiel startet im Zuhause.
         public G1C_GameManager()
         {
@@ -71,6 +77,7 @@ namespace OOPGames
             _movement = CreateMovement();
             _interactions = new G1C_InteractionManager(World);
             Npcs = new G1C_NpcSystem(World, Money, Finance, _random); // Änderung durch: Eduard Schoenfeld
+            Npcs.Clock = Clock; // Änderung durch: Patrick Lupierz – 15.11.2026
             _exteriorNpcRoaming = new G1C_ExteriorNpcRoamingSystem(Exterior, Player, _random); // Erweiterung durch Denis Mock
             Phone = new G1C_Phone(Npcs);
         }
@@ -81,6 +88,8 @@ namespace OOPGames
             get
             {
                 if (State != G1C_GameState.MainGame) return "";
+                G1C_Shop lockedShop = ClosedShopAtFacingDoor();
+                if (lockedShop != null) return "Geschlossen – geöffnet " + lockedShop.OpenFrom + " bis " + lockedShop.OpenUntil + " Uhr";
                 string transitionHint = _sceneTransitions.GetHint(Player);
                 if (!string.IsNullOrEmpty(transitionHint)) return transitionHint;
 
@@ -89,6 +98,7 @@ namespace OOPGames
                 switch (target.Interaction)
                 {
                     case G1C_InteractionType.Trash: return "[E] Mülleimer durchsuchen";
+                    case G1C_InteractionType.Inspect: return "[E] " + target.Name + " ansehen";
                     case G1C_InteractionType.Shop: return "[E] Einkaufen";
                     case G1C_InteractionType.Vending: return "[E] Automat  [F3] Kaffee kaufen";
                     case G1C_InteractionType.Wardrobe: return "[E] Umziehen";
@@ -152,7 +162,7 @@ namespace OOPGames
                     break;
 
                 case G1C_GameState.MainGame:
-                    if (isKey) HandleWorldKey(input.Key);
+                    if (isKey && !IsSleeping) HandleWorldKey(input.Key); // Patrick Lupierz – 15.11.2026: beim Schlafen keine Steuerung
                     break;
 
                 case G1C_GameState.Dialogue:
@@ -162,7 +172,9 @@ namespace OOPGames
                     break;
 
                 case G1C_GameState.Menu:
-                    if (!isKey || Menu.ShouldClose(input.Key)) State = G1C_GameState.MainGame;
+                    // Änderung durch: Patrick Lupierz – 15.11.2026 – Selbsttest nur auf ausdrücklichen Aufruf (Menü + F12)
+                    if (isKey && input.Key == Key.F12) OpenSelfTest();
+                    else if (!isKey || Menu.ShouldClose(input.Key)) State = G1C_GameState.MainGame;
                     break;
 
                 case G1C_GameState.Conversation:
@@ -241,12 +253,32 @@ namespace OOPGames
             }
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Gehaltene Richtung nur während der Erkundung; in Dialogen, Menüs und Minispielen läuft
+        //          die Figur nicht weiter. Angetrunken geht jeder vierte Schritt in eine zufällige Richtung.
+        private G1C_Direction? HeldDirection()
+        {
+            if (State != G1C_GameState.MainGame || IsSleeping) return null;
+            G1C_Direction? held = G1C_InputManager.HeldDirection(Player.Facing);
+            if (held.HasValue && Buffs.Has("drunk") && _random.Next(4) == 0) held = (G1C_Direction)_random.Next(4);
+            return held;
+        }
+
         // Änderung durch: Denis Mock – Türen wechseln die aktive Szene; Casinointeraktionen bleiben erhalten.
         // Änderung durch Denis Mock: Stadtbewohner benutzen dasselbe Gesprächssystem wie Casino-NPCs.
         // Änderung durch: Patrick Lupierz – Mülleimer, Läden, Kleiderschrank und Bett in allen Szenen.
         private void Interact()
         {
             if (Player.IsMoving) return;
+
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – geschlossene Läden sind abgeschlossen
+            G1C_Shop lockedShop = ClosedShopAtFacingDoor();
+            if (lockedShop != null)
+            {
+                OpenDialogue(lockedShop.Name, new[] { "An der Tür hängt ein Schild: CLOSED.\nGeöffnet von " + lockedShop.OpenFrom +
+                                                      " bis " + lockedShop.OpenUntil + " Uhr. Jetzt ist es " + Clock.TimeText + "." }, null);
+                return;
+            }
 
             if (_sceneTransitions.TryTransition(Player))
             {
@@ -263,7 +295,12 @@ namespace OOPGames
             switch (target.Interaction)
             {
                 case G1C_InteractionType.Trash: SearchTrash(target); return;
-                case G1C_InteractionType.Shop: OpenShop(); return;
+                case G1C_InteractionType.Inspect: OpenDialogue(target.Name, target.Lines, null); return; // Patrick Lupierz – 15.11.2026
+                case G1C_InteractionType.Shop:
+                    // Änderung durch: Patrick Lupierz – 15.11.2026 – Verkäufer mit Profil führen erst ein Gespräch
+                    if (Npcs.TryStartConversation(target)) State = G1C_GameState.Conversation;
+                    else OpenShop();
+                    return;
                 case G1C_InteractionType.Vending: OpenVending(); return;
                 case G1C_InteractionType.Wardrobe: OpenWardrobe(); return;
                 case G1C_InteractionType.Bed:
@@ -323,7 +360,7 @@ namespace OOPGames
                 OpenBankMenu();
                 return;
             }
-            if (action == G1C_ConversationAction.FurnitureShop)
+            if (action == G1C_ConversationAction.FurnitureShop || action == G1C_ConversationAction.Shop)
             {
                 OpenShop();
                 return;
@@ -351,6 +388,23 @@ namespace OOPGames
             }
             _trash.NotifyWitnesses(CurrentWorld, Player, Npcs, Clock.Day);
             OpenDialogue("Mülleimer", new[] { found }, null);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Läden mit Öffnungszeiten, die gerade geschlossen sind (für CLOSED-Schild und Türsperre).
+        //          Die Tankstelle ist durchgehend geöffnet und erscheint daher nie.
+        public IEnumerable<G1C_WorldLocation> ClosedShops()
+        {
+            foreach (G1C_WorldLocation location in G1C_Shop.Locations)
+                if (!G1C_Shop.For(location).IsOpen(Clock.Hour)) yield return location;
+        }
+
+        private G1C_Shop ClosedShopAtFacingDoor()
+        {
+            if (CurrentLocation != G1C_WorldLocation.Exterior || Player.IsMoving) return null;
+            G1C_WorldLocation? destination = CurrentWorld.Grid.GetTransitionAt(Player.FacingTileX, Player.FacingTileY);
+            G1C_Shop shop = destination.HasValue ? G1C_Shop.For(destination.Value) : null;
+            return shop != null && !shop.IsOpen(Clock.Hour) ? shop : null;
         }
 
         // Entwickler: Patrick Lupierz
@@ -383,6 +437,17 @@ namespace OOPGames
         {
             int[] amounts = { 25, 100, 250 };
             List<G1C_MenuRow> rows = new List<G1C_MenuRow>();
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Kontostand, Zinsen und Kontoauszug
+            rows.Add(new G1C_MenuRow
+            {
+                Text = "Kontostand: " + Finance.Savings + " Chips",
+                Right = G1C_FinanceManager.InterestPercentPerDay + " % pro Tag",
+                Detail = "Nächster Tag: +" + G1C_FinanceManager.InterestFor(Finance.Savings) + " Chips. Bisher erhalten: " +
+                         Finance.TotalInterestPaid + " Chips.",
+                Run = () => ListMenu.Message = Finance.Statement.Count == 0
+                    ? "Noch keine Buchungen in diesem Spiel."
+                    : "Letzte Buchungen: " + string.Join(", ", Finance.Statement)
+            });
             foreach (int amount in amounts)
             {
                 int current = amount;
@@ -463,6 +528,17 @@ namespace OOPGames
             return message;
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Einziger Einstieg für den Tageswechsel. Bucht die Bankzinsen (pro Tag höchstens einmal,
+        //          siehe G1C_FinanceManager) und meldet sie. Weitere tagesabhängige Systeme (Mülleimer,
+        //          Taschengeld) prüfen den Spieltag selbst über Clock.Day.
+        private int ApplyNewDay()
+        {
+            int interest = Finance.ApplyDailyInterest(Clock.Day);
+            if (interest > 0) NotifySystemMessage("Tag " + Clock.Day + ": Die Bank schreibt dir " + interest + " Chips Zinsen gut.");
+            return interest;
+        }
+
         private void NotifySystemMessage(string message)
         {
             SystemMessage = message;
@@ -480,7 +556,10 @@ namespace OOPGames
                 {
                     Text = item.Name, Right = owned ? "gekauft" : G1C_Shop.PriceWithMarkup(item.Price) + " Chips",
                     Detail = item.Description, SpriteId = item.IconId,
-                    Run = () => ListMenu.Message = G1C_Shop.Buy(current, Money, Inventory)
+                    // Änderung durch: Patrick Lupierz – 15.11.2026 – Ladenschluss gilt auch bei offenem Menü
+                    Run = () => ListMenu.Message = shop.IsOpen(Clock.Hour)
+                        ? G1C_Shop.Buy(current, Money, Inventory)
+                        : "Ladenschluss! Heute wird nichts mehr verkauft (" + shop.OpenFrom + "–" + shop.OpenUntil + " Uhr)."
                 });
             }
             foreach (G1C_Item item in Inventory.Items.Where(i => i.SellValue > 0))
@@ -493,6 +572,23 @@ namespace OOPGames
                 });
             }
             return rows;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Automatisierte Tests ausführen und als Liste anzeigen. Die Tests arbeiten mit eigenen,
+        //          neu erzeugten Spielzuständen; der laufende Spielstand wird nicht verändert.
+        private void OpenSelfTest()
+        {
+            List<G1C_TestResult> results = G1C_SelfTest.RunAll();
+            int passed = results.Count(r => r.Status == G1C_TestStatus.Bestanden);
+            ListMenu.Open("Selbsttest: " + passed + "/" + results.Count + " bestanden", () => results.Select(r => new G1C_MenuRow
+            {
+                Text = r.Area + ": " + r.Name,
+                Right = r.StatusText,
+                Detail = string.IsNullOrEmpty(r.Detail) ? "Bericht: " + G1C_SelfTest.ReportFileName + " neben der OOPGames.exe" : r.Detail,
+                Run = () => ListMenu.Message = r.StatusText + (string.IsNullOrEmpty(r.Detail) ? "" : " – " + r.Detail)
+            }).ToList());
+            State = G1C_GameState.ListMenu;
         }
 
         // Entwickler: Patrick Lupierz
@@ -512,8 +608,13 @@ namespace OOPGames
                 Detail = "Bis " + hour.ToString("00") + ":00 Uhr schlafen.",
                 Run = () =>
                 {
+                    // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Schlafzustand mit Animation,
+                    // Tageswechsel (Zinsen) wird sofort ausgewertet.
                     Clock.SkipUntilHour(hour);
-                    ListMenu.Message = "Du bist aufgewacht. Es ist " + Clock.TimeText + " Uhr.";
+                    int interest = ApplyNewDay();
+                    SleepUntilTick = TickCount + SleepAnimationTicks;
+                    ListMenu.Message = "Du bist aufgewacht. Es ist Tag " + Clock.Day + ", " + Clock.TimeText + " Uhr." +
+                                       (interest > 0 ? " Zinsen: +" + interest + " Chips." : "");
                 }
             }).ToList());
             State = G1C_GameState.ListMenu;
@@ -644,6 +745,7 @@ namespace OOPGames
         {
             Profile = Start.Profile;
             Finance.Restore(0, 0);
+            Finance.RestoreInterest(0, 0, Clock.Day); // Patrick Lupierz – 15.11.2026
             Home.RestoreFurniture(null);
             foreach (string clothing in new[] { Profile.Top, Profile.Pants, Profile.Shoes }) Inventory.Add(clothing);
             Player.Skin = Profile.SkinId;
@@ -671,7 +773,8 @@ namespace OOPGames
                     Purse = c.Purse, Mood = (int)c.Mood, Memory = c.Memory
                 }).ToList(),
                 Tasks = Npcs.Tasks.Tasks.Select(t => t.Capture()).ToList(),
-                Messages = Phone.Messages, Trash = _trash.SearchedOnDay
+                Messages = Phone.Messages, Trash = _trash.SearchedOnDay,
+                BankInterestDay = Finance.LastInterestDay, BankInterestTotal = Finance.TotalInterestPaid
             };
         }
 
@@ -687,6 +790,7 @@ namespace OOPGames
             Home.RestoreFurniture(data.HomeFurniture);
             Buffs.Restore(data.Buffs);
             Clock.TotalTicks = data.ClockTicks;
+            Finance.RestoreInterest(data.BankInterestDay, data.BankInterestTotal, Clock.Day); // Patrick Lupierz – 15.11.2026
             TickCount = Math.Max(0, data.PlayTicks);
             GamesPlayed = Math.Max(0, data.GamesPlayed);
             Npcs.RestoreReputation(data.Reputation);
@@ -767,7 +871,7 @@ namespace OOPGames
             if (State == G1C_GameState.Title) return; // im Hauptmenü stehen Uhr und Spielzeit
 
             TickCount++;
-            _movement.Update();
+            _movement.Update(HeldDirection); // Änderung durch: Patrick Lupierz – 15.11.2026 – WASD-Reparatur
             if (State != G1C_GameState.MainGame) _movement.ClearQueue();
             if (ActiveGame != null) ActiveGame.Update();
 
@@ -775,6 +879,7 @@ namespace OOPGames
             if (State != G1C_GameState.Menu && State != G1C_GameState.Map)
             {
                 Clock.Advance();
+                ApplyNewDay();
                 Buffs.Update(Clock.TotalTicks);
                 if (!Player.IsMoving) Player.StepTicks = Buffs.StepTicks;
                 Phone.HourlyUpdate(Clock, Profile.Name, Money.Balance, _random);

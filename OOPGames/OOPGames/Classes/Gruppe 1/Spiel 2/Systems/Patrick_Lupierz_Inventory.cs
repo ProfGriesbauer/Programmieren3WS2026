@@ -288,6 +288,12 @@ namespace OOPGames
 
         public bool IsOpen(int hour) { return hour >= OpenFrom && hour < OpenUntil; }
 
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026 – alle Orte mit Laden (für CLOSED-Schilder und Selbsttest)
+        public static readonly G1C_WorldLocation[] Locations =
+        {
+            G1C_WorldLocation.GasStation, G1C_WorldLocation.ClothingStore, G1C_WorldLocation.Market, G1C_WorldLocation.FurnitureStore
+        };
+
         // Entwickler: Patrick Lupierz – Kauf: erst abbuchen, dann ins Inventar. Kleidung gibt es nur einmal.
         public static string Buy(G1C_Item item, G1C_MoneyManager money, G1C_Inventory inventory)
         {

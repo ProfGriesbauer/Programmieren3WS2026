@@ -47,6 +47,10 @@ namespace OOPGames
         public List<G1C_SaveTask> Tasks { get; set; }
         public List<G1C_Sms> Messages { get; set; }
         public Dictionary<string, int> Trash { get; set; }
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Zinstag (gegen Doppelzahlung) und Zinssumme;
+        // fehlen sie in älteren Spielständen, bleiben sie 0 und werden beim Laden sinnvoll ergänzt.
+        public int BankInterestDay { get; set; }
+        public int BankInterestTotal { get; set; }
     }
 
     // =====================================================

@@ -27,6 +27,8 @@ namespace OOPGames
             // Erweiterung durch Denis Mock: Profile der Stadtbewohner im gemeinsamen Gesprächssystem.
             _characters = G1C_NpcRoster.CreateCasinoNpcs();
             _characters.AddRange(G1C_CityNpcRoster.Create()); // Erweiterung durch Denis Mock: Gespräche mit Stadtbewohnern.
+            _characters.AddRange(G1C_FamilyNpcRoster.Create()); // Änderung durch: Patrick Lupierz – 15.11.2026 – Mama und Oma
+            _characters.AddRange(G1C_ShopNpcRoster.Create());   // Änderung durch: Patrick Lupierz – 15.11.2026 – Verkäufer
             foreach (G1C_WorldObject obj in casino.Objects)
             {
                 G1C_Npc npc = obj as G1C_Npc;
@@ -48,6 +50,8 @@ namespace OOPGames
         public int Reputation { get; private set; } = 50;
         // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – NPCs sprechen den Spieler mit seinem Namen an
         public string PlayerName { get; set; } = "";
+        // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Uhr für tageszeitabhängige Antworten (vom GameManager gesetzt)
+        public G1C_GameClock Clock { get; set; }
         public G1C_SpeechBubbleSystem Bubbles { get; }
         public G1C_TaskBoard Tasks { get; }
         public G1C_NpcMoneyService MoneyRequests { get; }

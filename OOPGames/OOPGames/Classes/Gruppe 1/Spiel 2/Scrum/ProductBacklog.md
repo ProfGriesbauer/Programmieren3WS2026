@@ -35,3 +35,37 @@ Scrum Master: _noch eintragen_
 | 28 | Als Spieler möchte ich Mülleimer durchsuchen; nur NPCs in der Nähe bemerken es. | erledigt (Patrick Lupierz) |
 | 29 | Als Spieler möchte ich zum Friseur gehen und Möbel für mein Haus kaufen. | offen |
 | 30 | Als Spieler möchte ich wechselndes Wetter erleben. | offen |
+
+## Ergänzung 15.11.2026 (Patrick Lupierz, KI-gestützt)
+
+Quelle: `Plans/SprintPlanning_Issue_Auswertung.md` und Arbeitsauftrag vom 15.11.2026. Bestehende Einträge oben bleiben
+unverändert; Statusänderungen stehen hier. Doppelte Wünsche wurden zusammengeführt (Verweis in Klammern).
+
+### Statusänderungen bestehender Stories
+
+| ID | Neuer Stand |
+|----|-------------|
+| 1 | Kollisionsfehler "durch Bäume laufen" behoben; WASD-Logik repariert (Halten/Loslassen). Manuelle Fensterprüfung offen. |
+| 19 | weiterhin offen (zusammengeführt mit SprintPlanning C5 "Tagesablauf"). |
+| 29 | Möbelteil vorhanden (SprintPlanning C17); Friseur offen. |
+
+### Neue User Stories
+
+| ID | User Story | Akzeptanzkriterien | Prio | Abhängig von | Verantw. | Status |
+|----|------------|--------------------|------|--------------|----------|--------|
+| 31 | Als Spieler möchte ich, dass die Figur bei gehaltener WASD-Taste flüssig läuft und beim Loslassen sofort stehen bleibt. | kein Anfangsruckeln; kein Nachlaufen; keine Bewegung in Dialogen/Menüs; Pfeiltasten funktionieren nach Spielstart | H | – | Patrick Lupierz | umgesetzt, manuelle Prüfung offen |
+| 32 | Als Spieler möchte ich, dass Läden nach Ladenschluss geschlossen sind und ein CLOSED-Schild zeigen. | Tür bleibt zu mit Hinweis; kein Verkauf bei offenem Menü nach Ladenschluss; Schild verschwindet bei Öffnung; Tankstelle 24 h | H | – | Patrick Lupierz | erledigt (Tests) |
+| 33 | Als Spieler möchte ich, dass mein Bankguthaben pro Spieltag um 2 % wächst. | 1000 → 1020 nach einem Tag; kein Doppelzins am selben Tag; auch nach Schlafen und Laden korrekt; Kontoauszug sichtbar | H | – | Patrick Lupierz | erledigt (Tests) |
+| 34 | Als Spieler möchte ich mit meiner Mutter und meiner sarkastischen Oma sprechen. | eigene Grafik, eigene Fragen/Antworten, wechselnde Antworten, Nummer im Handy, Taschengeld-Chance nach Gespräch mit beiden (SprintPlanning C9) | H | 35 | Patrick Lupierz | erledigt; Omas Innenraum offen (→ 44) |
+| 35 | Als Team möchten wir jedem NPC eigene Fragen und Antworten geben können. | `G1C_DialogueTopic` je Profil; Antworten nach Wiederholung/Tageszeit; max. 4 Optionen | H | – | Patrick Lupierz | erledigt; Casino-NPCs und Stadtbewohner noch ohne Themen |
+| 36 | Als Spieler möchte ich Schilder, Poster und Sticker untersuchen. | [E] zeigt Text; Poster "Hier könnte Ihre Werbung stehen"; Sticker "Nett hier, aber waren Sie schon mal in Baden-Württemberg" | M | – | Patrick Lupierz | erledigt (Test) |
+| 37 | Als Team möchten wir wichtige Funktionen per Selbsttest prüfen, der nur auf Aufruf startet. | Menü [B] + [F12]; Status BESTANDEN/FEHLGESCHLAGEN/NICHT AUSFÜHRBAR; Bericht-Datei | H | – | Patrick Lupierz | erledigt (30 Tests) |
+| 38 | Als Spieler möchte ich eine Arcade mit Spielautomaten und dem Greifautomaten. | eigenes Gebäude, dunkler Boden/Wände, 5 Automaten, Claw Machine aus dem Casino verschoben, Chips als Belohnung (SprintPlanning C4, C11) | H | – | _eintragen_ | offen |
+| 39 | Als Spieler möchte ich eine rote Tankstelle mit zwei Zapfsäulen und Verkauf durchs Fenster. | Außengrafik rot, 2 Zapfsäulen (Kollision), Verkäufer am Fenster ansprechbar, 24 h offen | M | – | _eintragen_ | offen |
+| 40 | Als Spieler möchte ich ein Fahrrad besitzen, Farben kaufen und damit schneller fahren. | Fahrrad vor dem Haus; Fahrradladen mit Rot/Blau/Grün/Gelb; Inventar-Item; schnellere Bewegung über `G1C_Player.StepTicks` | M | 38 (neues Gebäude-Muster) | _eintragen_ | offen |
+| 41 | Als Spieler möchte ich einen erkennbaren Pavillon, der nur von unten betreten werden kann. | eigene Dach-/Stützengrafik; Kollision nur an Seiten/Rückwand | N | – | _eintragen_ | offen |
+| 42 | Als Spieler möchte ich schönere Innenräume. | Innenwände links/rechts überarbeitet, Bett und Teppiche verbessert, Poster je Raum | N | – | _eintragen_ | offen |
+| 43 | Als Spieler möchte ich korrekte Vogelgrafiken. | Fehlerbild dokumentieren; Frames korrigiert | N | – | _eintragen_ | offen |
+| 44 | Als Spieler möchte ich Oma in ihrem Haus mit drei Katzen besuchen. | Innenraum Wohnhaus, Oma drinnen, 3 Katzen | M | 34 | _eintragen_ | offen |
+| 45 | Als Spieler möchte ich, dass sich die Figur zum Schlafen ins Bett legt. | liegende Figur im Bett während der Schlafanimation | N | – | _eintragen_ | offen (Abdunkel-Animation vorhanden) |
+| 46 | Als Spieler möchte ich, dass Familien-Taschengeld und Minispielstände gespeichert werden. | Speichern/Laden ohne doppeltes Taschengeld (SprintPlanning C12) | N | 34 | _eintragen_ | offen |

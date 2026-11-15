@@ -69,6 +69,9 @@ namespace OOPGames
             AddSeller("Tankwart Olli", "dealer_green", 10, 3);
             AddFurniture("Verkaufsautomat", "obj_vending_machine", 13, 8, 1, 1, G1C_InteractionType.Vending);
             AddFurniture("M\u00fclleimer", "obj_trash", 13, 9, 1, 1, G1C_InteractionType.Trash);
+            // \u00c4nderung durch: Patrick Lupierz \u2013 Datum: 15.11.2026 \u2013 kleiner Sticker an der Wand (untersuchbar)
+            _objects.Add(new G1C_WorldObject("Sticker", "obj_sticker_bw", 8, 0, 1, 1, true, G1C_InteractionType.Inspect,
+                "Ein kleiner gelber Sticker klebt an der Wand:\n\"Nett hier, aber waren Sie schon mal in Baden-W\u00fcrttemberg?\""));
         }
 
         // Entwickler: Patrick Lupierz

@@ -4,7 +4,8 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
-    public enum G1C_ConversationAction { None, BankMenu, FurnitureShop }
+    // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Shop: Warenliste nach Gespräch mit einem Verkäufer
+    public enum G1C_ConversationAction { None, BankMenu, FurnitureShop, Shop }
 
     // =====================================================
     // Klasse: G1C_ConversationOption
@@ -245,6 +246,7 @@ namespace OOPGames
             if (ViaPhone)
             {
                 AddOption("Lass uns plaudern.", SmallTalk);
+                if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0)); // Patrick Lupierz – 15.11.2026
                 AddOption("Wie läuft es bei dir?", AskHowAreYou);
                 AddOption("Ich muss auflegen.", Close);
                 return;
@@ -276,6 +278,16 @@ namespace OOPGames
                 return;
             }
 
+            // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Verkäufer: einkaufen, eigene Fragen, plaudern
+            if (_serviceOffered == G1C_InteractionType.Shop)
+            {
+                AddOption("Ich möchte einkaufen.", () => { RequestedAction = G1C_ConversationAction.Shop; Close(); });
+                if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0));
+                AddOption("Lass uns plaudern.", SmallTalk);
+                AddOption("Ich gehe wieder.", Close);
+                return;
+            }
+
             if (_serviceOffered == G1C_InteractionType.FurnitureShop)
             {
                 AddOption("Möbel ansehen.", RequestFurnitureShop);
@@ -291,9 +303,50 @@ namespace OOPGames
             if (task != null) AddTaskOption(task);
             else if (Npc.Personality.HasPauseTask && !Memory.HelpedByPlayer) AddOption("Du wirkst nervös. Alles okay?", AskAboutNerves);
 
+            if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0)); // Patrick Lupierz – 15.11.2026
             AddOption("Lass uns plaudern.", SmallTalk);
             bool goodFriendOffer = Status == G1C_RelationshipStatus.GoodFriend && PlayerBroke;
             AddOption(goodFriendOffer ? "Ja, ein paar Chips wären toll." : "Kannst du mir etwas Geld geben?", AskForMoney);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        // Aufgabe: Individuelle Fragen des NPCs seitenweise anbieten (zwei Fragen + "Weitere" + "Zurück",
+        //          damit die Obergrenze von vier Optionen gilt). Die Antwort kommt aus G1C_DialogueTopic.
+        private void ShowTopics(int page)
+        {
+            List<G1C_DialogueTopic> topics = Npc.Personality.Topics;
+            const int perPage = 2;
+            int pages = (topics.Count + perPage - 1) / perPage;
+            page = pages == 0 ? 0 : page % pages;
+
+            _options.Clear();
+            Selected = 0;
+            for (int i = page * perPage; i < Math.Min(topics.Count, (page + 1) * perPage); i++)
+            {
+                G1C_DialogueTopic topic = topics[i];
+                int currentPage = page;
+                AddOption(topic.Question, () => AskTopic(topic, currentPage));
+            }
+            if (pages > 1) AddOption("Weitere Fragen ...", () => ShowTopics(page + 1));
+            AddOption("Zurück.", () => { Say("Was gibt's noch?", Npc.MoodExpression); ShowRoot(); });
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 15.11.2026
+        private void AskTopic(G1C_DialogueTopic topic, int page)
+        {
+            bool firstTime = topic.TimesAsked == 0;
+            G1C_TopicContext context = new G1C_TopicContext
+            {
+                PlayerName = _system.PlayerName,
+                Day = _system.Clock != null ? _system.Clock.Day : 1,
+                Hour = _system.Clock != null ? _system.Clock.Hour : 12,
+                Money = _system.Money,
+                Random = _system.Random,
+                ViaPhone = ViaPhone
+            };
+            Say(topic.Ask(context), topic.Expression);
+            if (firstTime) GrantSocialTrust(1); // neue Themen festigen die Beziehung ein wenig
+            ShowTopics(page);
         }
 
         private string GameOptionText()
