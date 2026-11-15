@@ -59,15 +59,11 @@ namespace OOPGames
         private static readonly AnimationProfile BoxingKnightProfile = new AnimationProfile(
             "BoxingKnight",
             new[] { "Character", "BoxingKnight", "BoxingKnightSpritesheet.png" },
-            new[] { "Character", "BoxingKnight", "BoxingKnightAnimation.json" },
-            "IdleFront", "IdleBack", "IdleLeft", "IdleRight",
-            "WalkFront", "WalkBack", "WalkLeft", "WalkRight");
+            new[] { "Character", "BoxingKnight", "BoxingKnightAnimation.json" });
         private static readonly AnimationProfile KurtProfile = new AnimationProfile(
             "Kurt",
             new[] { "Character", "Kurt", "Kurt.png" },
-            new[] { "Character", "Kurt", "Kurt.json" },
-            "Idle Front", "Idle Back", "Idle Left", "Idle Right",
-            "Walk Forwards", "Walk Backwards", "Walk Left", "Walk Right");
+            new[] { "Character", "Kurt", "Kurt.json" });
         private static readonly string[] EnemySpriteSheetPath =
             { "Enemies", "Enemie1.png" };
         private static readonly string[] EnemyAnimationMetadataPath =
@@ -223,7 +219,7 @@ namespace OOPGames
             }
 
             string animationName = GetPlayerAnimationName(
-                _selectedAnimationProfile, field.Player.Facing, field.Player.IsMoving,
+                field.Player.Facing, field.Player.IsMoving,
                 field.Player.IsAttacking, field.Player.AttackFacing);
             if (_playerAnimator == null
                 || !ReferenceEquals(_playerAnimatorProfile, _selectedAnimationProfile))
@@ -948,17 +944,16 @@ namespace OOPGames
             }
         }
 
-        // Keep Boxing Knight's game-state naming convention outside the generic animator.
         private static string GetPlayerAnimationName(
-            AnimationProfile profile, PlayerFacing facing, bool isMoving,
+            PlayerFacing facing, bool isMoving,
             bool isAttacking, PlayerFacing attackFacing)
         {
-            if (ReferenceEquals(profile, KurtProfile) && isAttacking)
+            if (isAttacking)
             {
                 switch (attackFacing)
                 {
                     case PlayerFacing.Back:
-                        return "WalkAttackBackwards";
+                        return isMoving ? "WalkAttackBackwards" : "IdleAttackBackwards";
                     case PlayerFacing.Left:
                         return "IdleAttackLeft";
                     case PlayerFacing.Right:
@@ -973,20 +968,20 @@ namespace OOPGames
             switch (facing)
             {
                 case PlayerFacing.Back:
-                    idleAnimation = profile.IdleBack;
-                    walkAnimation = profile.WalkBack;
+                    idleAnimation = "Idle Back";
+                    walkAnimation = "Walk Backwards";
                     break;
                 case PlayerFacing.Left:
-                    idleAnimation = profile.IdleLeft;
-                    walkAnimation = profile.WalkLeft;
+                    idleAnimation = "Idle Left";
+                    walkAnimation = "Walk Left";
                     break;
                 case PlayerFacing.Right:
-                    idleAnimation = profile.IdleRight;
-                    walkAnimation = profile.WalkRight;
+                    idleAnimation = "Idle Right";
+                    walkAnimation = "Walk Right";
                     break;
                 default:
-                    idleAnimation = profile.IdleFront;
-                    walkAnimation = profile.WalkFront;
+                    idleAnimation = "Idle Front";
+                    walkAnimation = "Walk Forwards";
                     break;
             }
 
@@ -1207,39 +1202,15 @@ namespace OOPGames
             public string Name { get; }
             public string[] SpriteSheetPath { get; }
             public string[] AnimationMetadataPath { get; }
-            public string IdleFront { get; }
-            public string IdleBack { get; }
-            public string IdleLeft { get; }
-            public string IdleRight { get; }
-            public string WalkFront { get; }
-            public string WalkBack { get; }
-            public string WalkLeft { get; }
-            public string WalkRight { get; }
 
             public AnimationProfile(
                 string name,
                 string[] spriteSheetPath,
-                string[] animationMetadataPath,
-                string idleFront,
-                string idleBack,
-                string idleLeft,
-                string idleRight,
-                string walkFront,
-                string walkBack,
-                string walkLeft,
-                string walkRight)
+                string[] animationMetadataPath)
             {
                 Name = name;
                 SpriteSheetPath = spriteSheetPath;
                 AnimationMetadataPath = animationMetadataPath;
-                IdleFront = idleFront;
-                IdleBack = idleBack;
-                IdleLeft = idleLeft;
-                IdleRight = idleRight;
-                WalkFront = walkFront;
-                WalkBack = walkBack;
-                WalkLeft = walkLeft;
-                WalkRight = walkRight;
             }
         }
 

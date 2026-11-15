@@ -12,6 +12,7 @@ namespace OOPGames
     // Loads a tagged sprite-sheet atlas and plays any named clip from its JSON metadata.
     public sealed class SpriteSheetAnimator
     {
+        private const string NotFoundAnimationName = "NotFound";
         private readonly Dictionary<string, AnimationClip> _clips =
             new Dictionary<string, AnimationClip>(StringComparer.OrdinalIgnoreCase);
         private string _currentClipName;
@@ -50,9 +51,15 @@ namespace OOPGames
             }
             if (!_clips.TryGetValue(animationName, out AnimationClip clip))
             {
-                throw new KeyNotFoundException(
-                    "The sprite-sheet metadata does not contain an animation named '"
-                    + animationName + "'.");
+                if (!_clips.TryGetValue(NotFoundAnimationName, out clip))
+                {
+                    throw new KeyNotFoundException(
+                        "The sprite-sheet metadata does not contain an animation named '"
+                        + animationName + "' or the required fallback animation '"
+                        + NotFoundAnimationName + "'.");
+                }
+
+                animationName = NotFoundAnimationName;
             }
 
             // A new clip starts at frame zero; continued requests advance its loop.
