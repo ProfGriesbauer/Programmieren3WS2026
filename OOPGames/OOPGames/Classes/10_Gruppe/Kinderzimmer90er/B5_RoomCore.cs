@@ -51,7 +51,8 @@ namespace OOPGames
                 new List<B5RoomGameEntry>
                 {
                     new B5RoomGameEntry("Snake", Color.FromRgb(116, 158, 70), () => new B5RoomSnakeGame()),
-                    new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new B5RoomPongGame())
+                    new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new B5RoomPongGame()),
+                    new B5RoomGameEntry("Void Courier", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame())
                 }),
             new B5RoomDevice(B5RoomDeviceKind.Commodore, "HEIMCOMPUTER", Color.FromRgb(124, 112, 218), Color.FromRgb(53, 40, 121),
                 new List<B5RoomGameEntry> { new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132))) })
