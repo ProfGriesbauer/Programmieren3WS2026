@@ -312,14 +312,17 @@
   "size": { "w": 4864, "h": 128 },
   "scale": "1",
   "frameTags": [
-   { "name": "IdleFront", "from": 0, "to": 0, "direction": "forward" },
+   { "name": "Idle Front", "from": 0, "to": 0, "direction": "forward" },
    { "name": "IdleBack", "from": 1, "to": 1, "direction": "forward" },
+   { "name": "Idle Back", "from": 1, "to": 1, "direction": "forward" },
    { "name": "IdleRight", "from": 2, "to": 2, "direction": "forward" },
+   { "name": "Idle Right", "from": 2, "to": 2, "direction": "forward" },
    { "name": "IdleLeft", "from": 3, "to": 3, "direction": "forward" },
-   { "name": "WalkFront", "from": 4, "to": 11, "direction": "forward" },
-   { "name": "WalkBack", "from": 12, "to": 20, "direction": "forward" },
-   { "name": "WalkRight", "from": 21, "to": 28, "direction": "forward" },
-   { "name": "WalkLeft", "from": 29, "to": 36, "direction": "forward" },
+   { "name": "Idle Left", "from": 3, "to": 3, "direction": "forward" },
+   { "name": "Walk Forwards", "from": 4, "to": 11, "direction": "forward" },
+   { "name": "Walk Backwards", "from": 12, "to": 20, "direction": "forward" },
+   { "name": "Walk Right", "from": 21, "to": 28, "direction": "forward" },
+   { "name": "Walk Left", "from": 29, "to": 36, "direction": "forward" },
    { "name": "NotFound", "from": 37, "to": 37, "direction": "forward" }
   ],
   "layers": [
