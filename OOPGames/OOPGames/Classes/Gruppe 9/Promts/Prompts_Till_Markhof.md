@@ -56,4 +56,47 @@ Diese Datei dokumentiert meine Prompts in diesem Arbeitsverlauf. Die Formulierun
 | 13.11.2026 15:28:40 | „jetzt läuft der gegner nicht mehr weiter auf mich zu sobald ich in seiner range bin er soll aber imme rso nah wie möglich an mich ran“ | Gegner nähern sich nun bis zum Kontakt der Hitboxen; Angriffe in Reichweite bleiben bestehen. Wegvorschau angepasst. Build erfolgreich. |
 | 13.11.2026 15:30:56 | „sehr gut alle entity sollten eine hibox haben die sich nicht mit der von anderen überschneiden darf“ | Spieler und Gegner blockieren Bewegungen, die ihre Hitboxen überlappen würden; neue Gegner erhalten freie Spawnpositionen. Build erfolgreich. |
 | 15.11.2026 11:19:39 | „Speichere alle änderungen, katuallisire meinen promtsdatei, und pushe die änderungen mit eine sinvollen comittnachricht auf den gruppe 9 branch“ | Promptdatei ergänzt; Arena-Änderungen und Dokumentation auf `Gruppe-9` mit einer passenden Commit-Nachricht gespeichert und zum Remote-Branch gepusht. |
+| 17.11.2026 15:44:27 | „schreibe mir einen Promt mit dem ich in einem anderen modell weiterschreibenkann und aktualisire noch die promtdatei“ | Einen kopierbaren Übergabe-Prompt zum Projektkontext, aktuellen Arena-Verhalten und den verbindlichen Änderungsregeln erstellt und unten in dieser Datei ergänzt. |
+| 17.11.2026 15:52:19 | „Übernimm die Weiterentwicklung von Arena Survival, prüfe zuerst Branch, Git-Status und Code, beachte die Framework- und Änderungsregeln und aktualisiere nach jedem Prompt die Promptdatei. (Till Markhof)“ | Branch `Gruppe-9`, vorhandene lokale Änderung an dieser Promptdatei und die ausgewählte Entity-Logik geprüft. Keine Spielcode-Änderung vorgenommen, da noch keine konkrete Aufgabe genannt wurde. |
+| 17.11.2026 15:57:28 | „wo im code wird gerade bestimmt welche entety von welcher wie viel schaden bekommt?“ | Schadenspfade in `ArenaField.AttackWithPlayer`, `PursuerEnemy.TryAttackPlayerInRange` und `Entity.TakeDamage` geprüft und erläutert. |
+| 17.11.2026 16:04:37 | „Ist es sinnvoller, Schaden als allgemeine Entity-Eigenschaft zu behandeln und Angriffe/Waffen mit verschiedenen Wirkungsformen wie Schuss, Schwertkegel, Heilung, Slow oder Freeze zu sortieren? Auch NPCs sollen Waffen verwenden können.“ | Aktuelle Trennung geprüft: Trefferwahl und Spielerangriff liegen in `ArenaField`, Gegnerangriff in `PursuerEnemy`, gemeinsames Anwenden von Schaden in `Entity`. Architektur-Empfehlung mit Entity-Effektannahme, wiederverwendbaren Waffen/Angriffsmustern und gemeinsamer Trefferauflösung gegeben; keine Spielcodeänderung. |
+| 17.11.2026 16:10:16 | „Würdest du dafür neue Interfaces erstellen, wie sollte die Klassenstruktur aussehen und welche Bereiche – etwa HUD und Debugansicht in Painter – sollten eigene Klassen werden?“ | `PainterG9` auf Zuständigkeiten geprüft: Welt-/Entity-Rendering, HUD, Debugansicht, Menüs, Animationen und Eingabe liegen derzeit in einer Klasse. Empfehlung für sparsame Spiel-Interfaces bei variierenden Angriffsmustern/Effekten und Renderer-Komposition statt Painter-Unterklassen gegeben; keine Spielcodeänderung. |
+| 17.11.2026 16:19:57 | „Prüfe, ob der aktuelle Code die vorgegebenen Interfaces sinnvoll nutzt, wie neue Klassen damit zusammenspielen sollten und welche Teile zusammengefasst werden könnten.“ | Framework-Interfaces und Gruppe-9-Adapter geprüft. Echtzeit-Integration über `IGameRules2`/`IPaintGame2` ist passend; `IPlayMove` bleibt für Arena-Züge leer. Doppelte Spielinitialisierung und nicht verwendete `IEntities`-Abstraktion als mögliche Bereinigung notiert. Keine Code- oder Interfaceänderung. |
+| 17.11.2026 16:28:55 | „Zur Klarstellung: Die angehängten Interfaces darfst du auf keinen Fall ändern.“ | Klarstellung festgehalten: Sämtliche angehängten Framework-Interfaces, einschließlich `IPlayMoves.cs`, bleiben unverändert. |
+| 17.11.2026 (Uhrzeit nicht verfügbar) | „Implementiere alle besprochenen Änderungen und möglichst viele Features, berücksichtige spätere Animationen, erstelle Platzhalter, ergänze im Spielmenü eine Waffen-Testseite und passe HUD/Debugansicht fürs Testen an. Frage bei nötigen Informationen nach. (Till Markhof)“ | Kampfsystem mit Waffen, Angriffsmustern und Schaden/Heilung/Slow/Freeze ergänzt; sechs Testwaffen, Gegnerklaue, HUD-/Debugrenderer, Waffen-Testmenü und Animationsplatzhalter implementiert. Framework-Interfaces unangetastet. Build von `OOPGames.csproj` erfolgreich (0 Warnungen/Fehler); Gruppe-9-Konsolentests erfolgreich (23 Assertions). Keine Commits oder Pushes. |
+| 17.11.2026 17:07:08 | „pushe die anderungen mit einer sinvollen comittnachricht auf den grupe 9 branch“ / „ja“ | Branch `Gruppe-9` und Änderungen geprüft; die Arena-Implementierung, Tests und Prompt-Historie für den beauftragten Commit und Push vorbereitet. |
+
+## Übergabe-Prompt für ein anderes Modell
+
+```text
+Du übernimmst die Weiterentwicklung unseres C#-Spiels „Arena Survival“ für Gruppe 9. Arbeite direkt im vorhandenen Repository und untersuche den aktuellen Code, bevor du Änderungen vornimmst. Unser Spiel muss in das bestehende OOPGames-Framework passen.
+
+Wichtige Regeln:
+- Ändere niemals die vorgegebenen Framework-Interfaces.
+- Bewahre bestehendes Verhalten und fremde/lokale Änderungen. Prüfe zuerst Branch, Git-Status und aktuelle Änderungen; überschreibe oder verwerfe nichts ungefragt.
+- Arbeite gezielt und klein. Folge den vorhandenen C#- und WPF-Mustern und ändere nur, was für die konkrete Aufgabe nötig ist.
+- Baue mindestens das Projekt `OOPGames/OOPGames/OOPGames.csproj` (derzeit `net10.0-windows`) und führe passende Tests aus, falls vorhanden.
+- Wenn ich eine konkrete Funktion oder Änderung nenne, setze sie um, prüfe sie und fasse knapp zusammen, welche Dateien geändert wurden und ob der Build erfolgreich war. Committen oder pushen nur, wenn ich es ausdrücklich verlange.
+
+Projektstruktur:
+- `OOPGames/OOPGames/Classes/Gruppe 9/ArenaField.cs`: Arena-Zustand, Spieler/Gegner, Bewegung, Kollisionen, Angriffe, Spawn und Zoom.
+- `OOPGames/OOPGames/Classes/Gruppe 9/ArenaRules.cs`: Framework-Regeln und regelmäßiger Spiel-Tick.
+- `OOPGames/OOPGames/Classes/Gruppe 9/Entity.cs`: gemeinsame Lebenspunkte, Position, Geschwindigkeit, Größe/Hitbox und Bewegung.
+- `OOPGames/OOPGames/Classes/Gruppe 9/PlayerCharacter.cs`: Spielerzustand und Schlaganimation.
+- `OOPGames/OOPGames/Classes/Gruppe 9/PursuerEnemy.cs`: Gegnerverhalten, Streunen, Verfolgung und Angriffe.
+- `OOPGames/OOPGames/Classes/Gruppe 9/PainterG9.cs`: WPF-Zeichnung, HUD, Menüs, Animationen und Debuganzeigen.
+- `OOPGames/OOPGames/Classes/Gruppe 9/Promts/Prompts_Till_Markhof.md`: Dokumentation meiner Prompts und Ergebnisse; bei entsprechender Bitte fortführen.
+
+Aktuell umgesetztes Spielverhalten (vor Änderungen im aktuellen Checkout überprüfen):
+- Kleine Arena mit WASD/Pfeiltasten-Bewegung, Mausausrichtung und Linksklick-Nahkampfangriff; Kurt-Animationen und Gegner-Sprites werden verwendet.
+- Gegner streunen, solange sie den Spieler nicht sehen, und verfolgen ihn bei Sichtkontakt. Normale Sichtweite: 200 Einheiten; nach Entdeckung verfolgen sie bis 250 Einheiten und verlieren den Spieler außerhalb dieser Distanz wieder.
+- Gegner verursachen 10 Schaden pro Treffer, höchstens einmal pro Sekunde, sobald der Spieler innerhalb der Angriffsreichweite von 60 Einheiten ist. Der rote Angriffseffekt soll denselben Radius wie die Angriffsreichweite haben.
+- Spielerangriff: Reichweite 80, Gesamtkegel 60 Grad und 10 Schaden.
+- Neue Gegner erscheinen zufällig innerhalb der Arena mindestens 50 Einheiten außerhalb der normalen Sichtweite des Spielers. Entitäten sollen sich nicht überlappen; freie Spawnpositionen und Arena-Wände sind zu beachten.
+- Taste B schaltet Debugbereiche ein/aus: Hitboxen, geplante Gegnerwege, Angriffsbereiche und Sichtkreise. Die normale Sichtweite wird durchgezogen weiß, die erweiterte Sichtweite nach Entdeckung gestrichelt weiß dargestellt.
+- Taste H schaltet das Debug-HUD. Escape zeigt ein Pause-Overlay über dem eingefrorenen Spiel. Bei Tod erscheint ein entsprechendes Game-Over-Overlay mit „Erneut spielen“; der Neustart erhält die bisherigen Anzeige-/Zoom-Einstellungen.
+- Gegner-Kills erhöhen den Score und lassen einen neuen Gegner spawnen.
+
+Die Promptdatei enthält weitere historische Wünsche und Ergebnisse. Behandle sie als Projektverlauf, aber gleiche den tatsächlichen Ist-Zustand immer mit dem aktuellen Code ab. Beginne mit meiner nächsten konkreten Aufgabe und stelle nur dann eine Rückfrage, wenn eine wichtige Verhaltensentscheidung wirklich unklar ist.
+```
 

@@ -1,7 +1,6 @@
 //P06.11.2026
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,44 +14,16 @@ namespace OOPGames
     // Draws the arena every frame and keeps the player's world position at screen center.
     public sealed class PainterG9 : IPaintGame2
     {
-        private const double PlayerAttackFlashDurationMilliseconds = 80;
-        private const double PlayerAttackFlashGapMilliseconds = 40;
-        private readonly Queue<Point> _playerAttackFlashQueue = new Queue<Point>();
+        private readonly ArenaHudRenderer _hudRenderer = new ArenaHudRenderer();
+        private readonly ArenaDebugRenderer _debugRenderer = new ArenaDebugRenderer();
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
         private Canvas _zoomInputCanvas;
-        private PlayerCharacter _attackFlashPlayer;
-        private Point _activePlayerAttackDirection;
-        private long _activePlayerAttackTimestamp;
-        private long _nextPlayerAttackFlashTimestamp;
-        private bool _isPlayerAttackFlashActive;
 
         // Reusable brushes avoid creating new colors for every frame.
         private static readonly Brush FloorBrush = new SolidColorBrush(Color.FromRgb(55, 93, 65));
         private static readonly Brush GridBrush = new SolidColorBrush(Color.FromRgb(68, 108, 78));
         private static readonly Brush WallBrush = new SolidColorBrush(Color.FromRgb(55, 57, 62));
-        private static readonly Brush PlayerDamageRangeBrush =
-            new SolidColorBrush(Color.FromArgb(65, 110, 190, 255));
-        private static readonly Brush PlayerAttackFlashBrush =
-            new SolidColorBrush(Color.FromArgb(120, 110, 190, 255));
-        private static readonly Brush PlayerAttackFlashStrokeBrush =
-            new SolidColorBrush(Color.FromArgb(240, 220, 245, 255));
-        private static readonly Brush EnemyDamageRangeBrush =
-            new SolidColorBrush(Color.FromArgb(60, 245, 70, 70));
-        private static readonly Brush EntityHitboxFillBrush =
-            new SolidColorBrush(Color.FromArgb(35, 144, 238, 144));
-        private static readonly Brush EntityHitboxStrokeBrush =
-            new SolidColorBrush(Color.FromArgb(240, 144, 238, 144));
-        private static readonly Brush EnemySightRangeFillBrush =
-            new SolidColorBrush(Color.FromArgb(10, 255, 255, 255));
-        private static readonly Brush EnemySightRangeStrokeBrush =
-            new SolidColorBrush(Color.FromArgb(210, 255, 255, 255));
-        private static readonly Brush EnemyPathBrush =
-            new SolidColorBrush(Color.FromArgb(230, 255, 215, 0));
-        private static readonly Brush EnemyAttackFlashBrush =
-            new SolidColorBrush(Color.FromArgb(40, 255, 40, 40));
-        private static readonly Brush EnemyAttackFlashStroke =
-            new SolidColorBrush(Color.FromArgb(220, 255, 70, 50));
         private static readonly object StartMenuTag = new object();
         private static readonly object PauseMenuTag = new object();
         private static readonly object GameOverMenuTag = new object();
@@ -74,6 +45,7 @@ namespace OOPGames
         private SpriteSheetAnimator _enemyAnimator;
         private ArenaField _pauseMenuField;
         private bool _showAnimationMenu;
+        private bool _showWeaponMenu;
         private double _pauseMenuCanvasWidth;
         private double _pauseMenuCanvasHeight;
 
@@ -86,7 +58,7 @@ namespace OOPGames
             _playerAnimatorProfile = null;
             _enemyAnimator = null;
             _showAnimationMenu = false;
-            ClearPlayerAttackFlashes();
+            _showWeaponMenu = false;
         }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
@@ -183,40 +155,7 @@ namespace OOPGames
                 mapTop + ArenaField.WallThickness, ArenaField.WallThickness,
                 ArenaField.MapHeight - 2 * ArenaField.WallThickness);
 
-            if (field.ShowDamageRanges)
-            {
-                foreach (PursuerEnemy enemy in field.Enemies)
-                {
-                    if (enemy.IsAlive)
-                    {
-                        AddPlannedEnemyPath(worldCanvas, enemy, field, left, top);
-                        AddSightRange(worldCanvas,
-                            enemy.PositionX - left, enemy.PositionY - top,
-                            PursuerEnemy.SightRange, false);
-                        if (enemy.HasSeenPlayer)
-                        {
-                            AddSightRange(worldCanvas,
-                                enemy.PositionX - left, enemy.PositionY - top,
-                                enemy.CurrentSightRange, true);
-                        }
-                    }
-                }
-
-                AddDamageCone(worldCanvas, PlayerDamageRangeBrush,
-                    field.Player.PositionX - left, field.Player.PositionY - top,
-                    ArenaField.PlayerAttackRange,
-                    field.AimDirectionX, field.AimDirectionY,
-                    ArenaField.PlayerAttackHalfAngleRadians);
-                if (TryGetPlayerAttackFlash(field.Player, out Point attackDirection))
-                {
-                    AddDamageCone(worldCanvas, PlayerAttackFlashBrush,
-                        field.Player.PositionX - left, field.Player.PositionY - top,
-                        ArenaField.PlayerAttackRange,
-                        attackDirection.X, attackDirection.Y,
-                        ArenaField.PlayerAttackHalfAngleRadians,
-                        PlayerAttackFlashStrokeBrush);
-                }
-            }
+            _debugRenderer.PaintWorldOverlays(worldCanvas, field, left, top);
 
             string animationName = GetPlayerAnimationName(
                 field.Player.Facing, field.Player.IsMoving,
@@ -241,19 +180,14 @@ namespace OOPGames
             Canvas.SetLeft(player, width / 2 - spriteWidth / 2);
             Canvas.SetTop(player, height / 2 - spriteHeight / 2);
             worldCanvas.Children.Add(player);
+            _hudRenderer.PaintStatusPlaceholder(
+                worldCanvas, field.Player, width / 2, height / 2);
 
             foreach (PursuerEnemy enemy in field.Enemies)
             {
                 if (!enemy.IsAlive)
                 {
                     continue;
-                }
-
-                if (field.ShowDamageRanges)
-                {
-                    AddDamageRange(worldCanvas, EnemyDamageRangeBrush,
-                        enemy.PositionX - left, enemy.PositionY - top,
-                        PursuerEnemy.AttackRange);
                 }
 
                 if (_enemyAnimator == null)
@@ -276,9 +210,9 @@ namespace OOPGames
                     RenderTransformOrigin = new Point(0.5, 0.5),
                     RenderTransform = new ScaleTransform(
                         enemy.Facing == PlayerFacing.Right && !enemy.IsMoving
-                            ? (enemy.IsAttacking ? -1.2 : -1)
-                            : (enemy.IsAttacking ? 1.2 : 1),
-                        enemy.IsAttacking ? 1.2 : 1),
+                            ? (enemy.HasActiveAttack ? -1.2 : -1)
+                            : (enemy.HasActiveAttack ? 1.2 : 1),
+                        enemy.HasActiveAttack ? 1.2 : 1),
                     IsHitTestVisible = false
                 };
                 Canvas.SetLeft(enemyImage,
@@ -287,41 +221,16 @@ namespace OOPGames
                     enemy.PositionY - top - enemyHeight / 2);
                 worldCanvas.Children.Add(enemyImage);
 
-                if (enemy.IsAttacking)
-                {
-                    PaintEnemyAttackEffect(worldCanvas, enemy,
-                        enemy.PositionX - left, enemy.PositionY - top);
-                }
-
-                PaintEnemyHealth(worldCanvas, enemy,
+                _hudRenderer.PaintStatusPlaceholder(
+                    worldCanvas, enemy, enemy.PositionX - left, enemy.PositionY - top);
+                _hudRenderer.PaintEntityHealth(worldCanvas, enemy,
                     enemy.PositionX - left, enemy.PositionY - top - enemyHeight / 2 - 10);
             }
 
-            if (field.ShowDamageRanges)
-            {
-                AddEntityHitbox(worldCanvas,
-                    field.Player.PositionX - left, field.Player.PositionY - top,
-                    field.Player.Size);
-                foreach (PursuerEnemy enemy in field.Enemies)
-                {
-                    if (enemy.IsAlive)
-                    {
-                        AddEntityHitbox(worldCanvas,
-                            enemy.PositionX - left, enemy.PositionY - top, enemy.Size);
-                    }
-                }
-            }
-
             canvas.Children.Add(worldCanvas);
-            PaintPlayerHealth(canvas, field.Player, field.Score);
-            if (field.ShowDamageRanges)
-            {
-                PaintLegend(canvas, width, height);
-            }
-            if (field.ShowDebugHud)
-            {
-                PaintDebugHud(canvas, field, width, height);
-            }
+            _hudRenderer.PaintPlayerHud(canvas, field.Player, field.Score,
+                field.GetAttackCooldownRemaining(field.Player));
+            _debugRenderer.PaintPanels(canvas, field, width, height);
             if (!field.IsGameStarted)
             {
                 PaintStartMenu(canvas, field, width, height, true, field.IsGameOver);
@@ -330,365 +239,6 @@ namespace OOPGames
                 _pauseMenuCanvasWidth = width;
                 _pauseMenuCanvasHeight = height;
             }
-        }
-
-        private static void PaintPlayerHealth(Canvas canvas, PlayerCharacter player, int score)
-        {
-            const double width = 220;
-            const double height = 26;
-            Grid healthBar = new Grid
-            {
-                Width = width,
-                Height = height,
-                ClipToBounds = true
-            };
-            healthBar.Children.Add(new Rectangle
-            {
-                Fill = new SolidColorBrush(Color.FromRgb(40, 45, 50))
-            });
-            healthBar.Children.Add(new Rectangle
-            {
-                Width = width * player.CurrentHitPoints / player.MaxHitPoints,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Fill = player.CurrentHitPoints > player.MaxHitPoints / 3
-                    ? Brushes.LimeGreen
-                    : Brushes.IndianRed
-            });
-            healthBar.Children.Add(new TextBlock
-            {
-                Text = "HP: " + player.CurrentHitPoints + " / " + player.MaxHitPoints,
-                Foreground = Brushes.White,
-                FontWeight = FontWeights.Bold,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            });
-
-            Border border = new Border
-            {
-                Width = width,
-                Height = height,
-                BorderThickness = new Thickness(1),
-                BorderBrush = Brushes.White,
-                Child = healthBar,
-                IsHitTestVisible = false
-            };
-            Canvas.SetLeft(border, 16);
-            Canvas.SetTop(border, 16);
-            canvas.Children.Add(border);
-
-            Border scoreLabel = new Border
-            {
-                Padding = new Thickness(8, 3, 8, 3),
-                Background = new SolidColorBrush(Color.FromArgb(210, 40, 45, 50)),
-                BorderBrush = Brushes.White,
-                BorderThickness = new Thickness(1),
-                Child = new TextBlock
-                {
-                    Text = "Kills: " + score,
-                    Foreground = Brushes.White,
-                    FontWeight = FontWeights.Bold
-                },
-                IsHitTestVisible = false
-            };
-            Canvas.SetLeft(scoreLabel, width + 28);
-            Canvas.SetTop(scoreLabel, 16);
-            canvas.Children.Add(scoreLabel);
-        }
-
-        private static void AddDamageRange(
-            Canvas canvas, Brush fill, double centerX, double centerY, double radius)
-        {
-            double diameter = radius * 2;
-            Ellipse range = new Ellipse
-            {
-                Width = diameter,
-                Height = diameter,
-                Fill = fill,
-                IsHitTestVisible = false
-            };
-            Canvas.SetLeft(range, centerX - radius);
-            Canvas.SetTop(range, centerY - radius);
-            canvas.Children.Add(range);
-        }
-
-        private static void AddEntityHitbox(
-            Canvas canvas, double centerX, double centerY, double size)
-        {
-            double diameter = size;
-            Ellipse hitbox = new Ellipse
-            {
-                Width = diameter,
-                Height = diameter,
-                Fill = EntityHitboxFillBrush,
-                Stroke = EntityHitboxStrokeBrush,
-                StrokeThickness = 2,
-                IsHitTestVisible = false
-            };
-            Canvas.SetLeft(hitbox, centerX - diameter / 2);
-            Canvas.SetTop(hitbox, centerY - diameter / 2);
-            canvas.Children.Add(hitbox);
-        }
-
-        private static void AddSightRange(
-            Canvas canvas, double centerX, double centerY, double radius, bool dashed)
-        {
-            double diameter = radius * 2;
-            Ellipse range = new Ellipse
-            {
-                Width = diameter,
-                Height = diameter,
-                Fill = dashed ? Brushes.Transparent : EnemySightRangeFillBrush,
-                Stroke = EnemySightRangeStrokeBrush,
-                StrokeThickness = 2,
-                IsHitTestVisible = false
-            };
-            if (dashed)
-            {
-                range.StrokeDashArray = new DoubleCollection { 5, 3 };
-            }
-            Canvas.SetLeft(range, centerX - radius);
-            Canvas.SetTop(range, centerY - radius);
-            canvas.Children.Add(range);
-        }
-
-        private static void AddPlannedEnemyPath(
-            Canvas canvas, PursuerEnemy enemy, ArenaField field, double left, double top)
-        {
-            Point start = new Point(enemy.PositionX - left, enemy.PositionY - top);
-            Point destination = enemy.GetPlannedDestination(field);
-            Point end = new Point(destination.X - left, destination.Y - top);
-            if (start == end)
-            {
-                return;
-            }
-
-            canvas.Children.Add(new Polyline
-            {
-                Points = new PointCollection { start, end },
-                Stroke = EnemyPathBrush,
-                StrokeThickness = 2,
-                StrokeDashArray = new DoubleCollection { 5, 3 },
-                IsHitTestVisible = false
-            });
-
-            const double markerSize = 6;
-            Ellipse destinationMarker = new Ellipse
-            {
-                Width = markerSize,
-                Height = markerSize,
-                Fill = EnemyPathBrush,
-                IsHitTestVisible = false
-            };
-            Canvas.SetLeft(destinationMarker, end.X - markerSize / 2);
-            Canvas.SetTop(destinationMarker, end.Y - markerSize / 2);
-            canvas.Children.Add(destinationMarker);
-        }
-
-        private static void PaintDebugHud(Canvas canvas, ArenaField field,
-            double canvasWidth, double canvasHeight)
-        {
-            StackPanel content = new StackPanel();
-            AddDebugText(content, "DEBUG-STATISTIKEN", true);
-            AddDebugText(content, string.Format(
-                "Position: X {0:0}, Y {1:0}",
-                field.Player.PositionX, field.Player.PositionY));
-            AddDebugText(content, string.Format(
-                "Spielgeschwindigkeit: {0:0.0} / {1:0.0}",
-                field.Player.currentSpeed, field.Player.MaxSpeed));
-            AddDebugText(content, "Blickrichtung: " + GetFacingLabel(field.Player.Facing));
-            double aimAngle = Math.Atan2(field.AimDirectionY, field.AimDirectionX)
-                * 180 / Math.PI;
-            AddDebugText(content, string.Format("Zielwinkel: {0:0}°", aimAngle));
-            AddDebugText(content, string.Format(
-                "Spielerschaden: {0} je Schlag", ArenaField.PlayerAttackDamage));
-            AddDebugText(content, string.Format(
-                "Gegnerschaden: {0} je {1:0} s in Reichweite",
-                PursuerEnemy.AttackDamagePerHit,
-                PursuerEnemy.AttackIntervalMilliseconds / 1000.0));
-            AddDebugText(content, string.Format(
-                "Gegner: {0}   Kills: {1}", field.Enemies.Count, field.Score));
-            AddDebugText(content, string.Format(
-                "Angriffsreichweite: {0:0}", ArenaField.PlayerAttackRange));
-            AddDebugText(content, string.Format(
-                "Gegner-Angriffsreichweite: {0:0}", PursuerEnemy.AttackRange));
-            AddDebugText(content, string.Format(
-                "Sichtweite: {0:0} (+{1:0} nach Erkennen)",
-                PursuerEnemy.SightRange, PursuerEnemy.SightRangeAfterDetectionBonus));
-
-            Border panel = CreateDebugPanel(content, canvasWidth, canvasHeight);
-            Canvas.SetLeft(panel, 16);
-            Canvas.SetTop(panel, 52);
-            canvas.Children.Add(panel);
-        }
-
-        private static void PaintLegend(Canvas canvas, double canvasWidth, double canvasHeight)
-        {
-            StackPanel content = new StackPanel();
-            AddDebugText(content, "LEGENDE", true);
-            AddLegendItem(content, PlayerDamageRangeBrush, "Spieler-Angriffsbereich");
-            AddLegendItem(content, EnemyDamageRangeBrush, "Gegner-Angriffsbereich");
-            AddLegendItem(content, EntityHitboxStrokeBrush, "Hitboxen");
-            AddLegendItem(content, EnemySightRangeStrokeBrush, "Gegner-Sichtweite");
-            AddLegendItem(content, EnemyPathBrush, "Geplanter Gegnerweg");
-
-            Border panel = CreateDebugPanel(content, canvasWidth, canvasHeight);
-            Canvas.SetLeft(panel, Math.Max(16, canvasWidth - panel.DesiredSize.Width - 16));
-            Canvas.SetTop(panel, 52);
-            canvas.Children.Add(panel);
-        }
-
-        private static Border CreateDebugPanel(StackPanel content,
-            double canvasWidth, double canvasHeight)
-        {
-            Border panel = new Border
-            {
-                Background = new SolidColorBrush(Color.FromArgb(220, 30, 34, 38)),
-                BorderBrush = Brushes.White,
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(8),
-                Child = content,
-                IsHitTestVisible = false
-            };
-            panel.Measure(new Size(Math.Max(0, canvasWidth - 32),
-                Math.Max(0, canvasHeight - 60)));
-            return panel;
-        }
-
-        private static void AddDebugText(StackPanel panel, string text, bool isHeader = false)
-        {
-            panel.Children.Add(new TextBlock
-            {
-                Text = text,
-                Foreground = Brushes.White,
-                FontWeight = isHeader ? FontWeights.Bold : FontWeights.Normal,
-                Margin = new Thickness(0, 1, 0, 1)
-            });
-        }
-
-        private static void AddLegendItem(StackPanel panel, Brush color, string label)
-        {
-            DockPanel row = new DockPanel { LastChildFill = true };
-            Rectangle swatch = new Rectangle
-            {
-                Width = 12,
-                Height = 12,
-                Fill = color,
-                Stroke = Brushes.White,
-                StrokeThickness = 0.5,
-                Margin = new Thickness(0, 0, 6, 0),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            DockPanel.SetDock(swatch, Dock.Left);
-            row.Children.Add(swatch);
-            row.Children.Add(new TextBlock
-            {
-                Text = label,
-                Foreground = Brushes.White,
-                VerticalAlignment = VerticalAlignment.Center
-            });
-            panel.Children.Add(row);
-        }
-
-        private static string GetFacingLabel(PlayerFacing facing)
-        {
-            switch (facing)
-            {
-                case PlayerFacing.Back:
-                    return "Hinten";
-                case PlayerFacing.Left:
-                    return "Links";
-                case PlayerFacing.Right:
-                    return "Rechts";
-                default:
-                    return "Vorne";
-            }
-        }
-
-        private static void AddDamageCone(
-            Canvas canvas, Brush fill, double centerX, double centerY, double radius,
-            double directionX, double directionY, double halfAngle, Brush stroke = null)
-        {
-            double direction = Math.Atan2(directionY, directionX);
-            Point center = new Point(centerX, centerY);
-            Point start = new Point(
-                centerX + radius * Math.Cos(direction - halfAngle),
-                centerY + radius * Math.Sin(direction - halfAngle));
-            Point end = new Point(
-                centerX + radius * Math.Cos(direction + halfAngle),
-                centerY + radius * Math.Sin(direction + halfAngle));
-
-            StreamGeometry geometry = new StreamGeometry();
-            using (StreamGeometryContext context = geometry.Open())
-            {
-                context.BeginFigure(center, true, true);
-                context.LineTo(start, true, false);
-                context.ArcTo(end, new Size(radius, radius), 0, false,
-                    SweepDirection.Clockwise, true, false);
-            }
-            geometry.Freeze();
-
-            System.Windows.Shapes.Path cone = new System.Windows.Shapes.Path
-            {
-                Data = geometry,
-                Fill = fill,
-                Stroke = stroke,
-                StrokeThickness = stroke == null ? 0 : 2,
-                IsHitTestVisible = false
-            };
-            canvas.Children.Add(cone);
-        }
-
-        private static void PaintEnemyAttackEffect(
-            Canvas canvas, PursuerEnemy enemy, double centerX, double centerY)
-        {
-            double radius = PursuerEnemy.AttackRange;
-            Ellipse flash = new Ellipse
-            {
-                Width = radius * 2,
-                Height = radius * 2,
-                Fill = EnemyAttackFlashBrush,
-                Stroke = EnemyAttackFlashStroke,
-                StrokeThickness = 3,
-                IsHitTestVisible = false
-            };
-            Canvas.SetLeft(flash, centerX - radius);
-            Canvas.SetTop(flash, centerY - radius);
-            canvas.Children.Add(flash);
-        }
-
-        private static void PaintEnemyHealth(Canvas canvas, PursuerEnemy enemy, double centerX, double top)
-        {
-            const double width = 44;
-            const double height = 6;
-            Grid healthBar = new Grid
-            {
-                Width = width,
-                Height = height,
-                ClipToBounds = true
-            };
-            healthBar.Children.Add(new Rectangle
-            {
-                Fill = new SolidColorBrush(Color.FromRgb(40, 20, 20))
-            });
-            healthBar.Children.Add(new Rectangle
-            {
-                Width = width * enemy.CurrentHitPoints / enemy.MaxHitPoints,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Fill = Brushes.IndianRed
-            });
-
-            Border border = new Border
-            {
-                Width = width,
-                Height = height,
-                BorderThickness = new Thickness(1),
-                BorderBrush = Brushes.Black,
-                Child = healthBar,
-                IsHitTestVisible = false
-            };
-            Canvas.SetLeft(border, centerX - width / 2);
-            Canvas.SetTop(border, top);
-            canvas.Children.Add(border);
         }
 
         private static string GetEnemyAnimationName(PursuerEnemy enemy)
@@ -774,69 +324,6 @@ namespace OOPGames
             double aimX = clickPosition.X - _zoomInputCanvas.ActualWidth / 2;
             double aimY = clickPosition.Y - _zoomInputCanvas.ActualHeight / 2;
             _zoomInputField.AttackWithPlayer(aimX, aimY);
-            if (_zoomInputField.ShowDamageRanges)
-            {
-                QueuePlayerAttackFlash(_zoomInputField.Player,
-                    new Point(_zoomInputField.AimDirectionX, _zoomInputField.AimDirectionY));
-            }
-        }
-
-        private void QueuePlayerAttackFlash(PlayerCharacter player, Point direction)
-        {
-            EnsureAttackFlashPlayer(player);
-            _playerAttackFlashQueue.Enqueue(direction);
-        }
-
-        private bool TryGetPlayerAttackFlash(PlayerCharacter player, out Point direction)
-        {
-            EnsureAttackFlashPlayer(player);
-            long now = Stopwatch.GetTimestamp();
-
-            if (_isPlayerAttackFlashActive)
-            {
-                if (Stopwatch.GetElapsedTime(_activePlayerAttackTimestamp, now)
-                    .TotalMilliseconds < PlayerAttackFlashDurationMilliseconds)
-                {
-                    direction = _activePlayerAttackDirection;
-                    return true;
-                }
-
-                _isPlayerAttackFlashActive = false;
-                _nextPlayerAttackFlashTimestamp = now
-                    + (long)(PlayerAttackFlashGapMilliseconds * Stopwatch.Frequency / 1000);
-            }
-
-            if (_playerAttackFlashQueue.Count > 0
-                && now >= _nextPlayerAttackFlashTimestamp)
-            {
-                _activePlayerAttackDirection = _playerAttackFlashQueue.Dequeue();
-                _activePlayerAttackTimestamp = now;
-                _isPlayerAttackFlashActive = true;
-                direction = _activePlayerAttackDirection;
-                return true;
-            }
-
-            direction = default(Point);
-            return false;
-        }
-
-        private void EnsureAttackFlashPlayer(PlayerCharacter player)
-        {
-            if (ReferenceEquals(_attackFlashPlayer, player))
-            {
-                return;
-            }
-
-            ClearPlayerAttackFlashes();
-            _attackFlashPlayer = player;
-        }
-
-        private void ClearPlayerAttackFlashes()
-        {
-            _playerAttackFlashQueue.Clear();
-            _isPlayerAttackFlashActive = false;
-            _activePlayerAttackTimestamp = 0;
-            _nextPlayerAttackFlashTimestamp = 0;
         }
 
         private void OnAimMouseMove(object sender, MouseEventArgs e)
@@ -883,10 +370,6 @@ namespace OOPGames
                     && _zoomInputField.IsGameStarted)
                 {
                     _zoomInputField.ToggleDamageRanges();
-                    if (!_zoomInputField.ShowDamageRanges)
-                    {
-                        ClearPlayerAttackFlashes();
-                    }
                     e.Handled = true;
                     return;
                 }
@@ -1063,6 +546,50 @@ namespace OOPGames
                 Background = new SolidColorBrush(Color.FromRgb(27, 38, 52))
             };
             StackPanel contents = new StackPanel();
+            if (_showWeaponMenu)
+            {
+                contents.Children.Add(new TextBlock
+                {
+                    Text = "WAFFEN-TESTLABOR",
+                    FontSize = 24,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.White,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 0, 0, 8)
+                });
+                contents.Children.Add(new TextBlock
+                {
+                    Text = "Ausgewählt: " + field.SelectedPlayerWeapon.Name
+                        + " — " + field.SelectedPlayerWeapon.Effect.Description,
+                    FontSize = 13,
+                    Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
+                    TextWrapping = TextWrapping.Wrap,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 0, 0, 8)
+                });
+                foreach (Weapon weapon in field.TestWeapons)
+                {
+                    contents.Children.Add(CreateMenuButton(
+                        weapon.Name + " — " + weapon.AttackPattern.Name,
+                        GetWeaponButtonBrush(field, weapon),
+                        (sender, e) =>
+                        {
+                            field.SelectPlayerWeapon(weapon);
+                            canvas.Tag = null;
+                        }));
+                }
+                contents.Children.Add(CreateMenuButton("Back",
+                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                    (sender, e) =>
+                    {
+                        _showWeaponMenu = false;
+                        canvas.Tag = null;
+                    }));
+                panel.Child = contents;
+                DrawStartMenuPanel(canvas, panel, width, height);
+                return;
+            }
+
             if (_showAnimationMenu)
             {
                 contents.Children.Add(new TextBlock
@@ -1103,7 +630,9 @@ namespace OOPGames
 
             contents.Children.Add(new TextBlock
             {
-                Text = isGameOver ? "GAME OVER" : "ARENA PAUSED",
+                Text = isGameOver
+                    ? "GAME OVER"
+                    : field.HasActiveGame ? "ARENA PAUSED" : "ARENA SURVIVAL",
                 FontSize = 28,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White,
@@ -1112,14 +641,18 @@ namespace OOPGames
             });
             contents.Children.Add(new TextBlock
             {
-                Text = isGameOver ? "Your run has ended" : "Your game is paused",
+                Text = isGameOver
+                    ? "Your run has ended"
+                    : field.HasActiveGame ? "Your game is paused" : "Choose a weapon and start",
                 FontSize = 15,
                 Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 20)
             });
             contents.Children.Add(CreateMenuButton(
-                isGameOver ? "Erneut spielen" : "Spiel fortsetzen",
+                isGameOver
+                    ? "Erneut spielen"
+                    : field.HasActiveGame ? "Spiel fortsetzen" : "Spiel starten",
                 new SolidColorBrush(Color.FromRgb(43, 91, 125)),
                 (sender, e) =>
                 {
@@ -1127,19 +660,32 @@ namespace OOPGames
                     {
                         field.RestartGame();
                     }
-                    else if (!field.ContinueGame())
+                    else if (field.HasActiveGame && !field.ContinueGame())
                     {
                         MessageBox.Show("Kein aktives Spiel gefunden.",
                             "Spiel fortsetzen", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else if (!field.HasActiveGame)
+                    {
+                        field.StartNewGame();
                     }
                 }));
             contents.Children.Add(CreateMenuButton("How to Play",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                 (sender, e) => ShowNotImplemented("How to Play")));
+            contents.Children.Add(CreateMenuButton("Waffen testen",
+                new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                (sender, e) =>
+                {
+                    _showAnimationMenu = false;
+                    _showWeaponMenu = true;
+                    canvas.Tag = null;
+                }));
             contents.Children.Add(CreateMenuButton("Choose Animation",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                 (sender, e) =>
                 {
+                    _showWeaponMenu = false;
                     _showAnimationMenu = true;
                     canvas.Tag = null;
                 }));
@@ -1149,6 +695,13 @@ namespace OOPGames
             panel.Child = contents;
 
             DrawStartMenuPanel(canvas, panel, width, height);
+        }
+
+        private static Brush GetWeaponButtonBrush(ArenaField field, Weapon weapon)
+        {
+            return field.SelectedPlayerWeapon.Id == weapon.Id
+                ? new SolidColorBrush(Color.FromRgb(43, 125, 82))
+                : new SolidColorBrush(Color.FromRgb(55, 70, 88));
         }
 
         private static void DrawStartMenuPanel(Canvas canvas, Border panel, double width, double height)

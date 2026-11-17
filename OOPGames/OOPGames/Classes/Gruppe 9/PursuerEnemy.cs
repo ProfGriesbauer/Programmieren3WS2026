@@ -17,19 +17,16 @@ namespace OOPGames
         private const double WanderSpeedMultiplier = 0.5;
         private const double MinimumWanderDurationSeconds = 1.5;
         private const double WanderDurationVarianceSeconds = 2.5;
-        private static readonly TimeSpan AttackInterval =
-            TimeSpan.FromMilliseconds(AttackIntervalMilliseconds);
-        private static readonly TimeSpan AttackVisualDuration = TimeSpan.FromMilliseconds(250);
-        private long _lastAttackTimestamp;
-        private long _attackTimestamp;
         private long _nextWanderDirectionChange;
         private bool _hasSeenPlayer;
         private double _wanderDirectionX;
         private double _wanderDirectionY;
 
         public PursuerEnemy(double x, double y, double playerSpeed)
-            : base(x, y, 30, playerSpeed * 0.75, HitboxSize, Brushes.Crimson)
+            : base(x, y, 30, playerSpeed * 0.75, HitboxSize,
+                Brushes.Crimson, CombatTeam.Enemies)
         {
+            EquippedWeapon = WeaponCatalog.EnemyClaws;
             ChooseWanderDirection();
         }
 
@@ -54,7 +51,7 @@ namespace OOPGames
 
             Point currentPosition = new Point(PositionX, PositionY);
             PlayerCharacter player = field.Player;
-            if (!IsAlive || !player.IsAlive || currentSpeed == 0)
+            if (!IsAlive || !player.IsAlive || EffectiveSpeed == 0)
             {
                 return currentPosition;
             }
@@ -83,49 +80,35 @@ namespace OOPGames
             }
 
             double remainingSeconds = (double)remainingTicks / Stopwatch.Frequency;
-            double travel = currentSpeed * WanderSpeedMultiplier
+            double travel = EffectiveSpeed * WanderSpeedMultiplier
                 * remainingSeconds / GameTickDurationSeconds;
             return ClampToMovementBounds(currentPosition,
                 _wanderDirectionX, _wanderDirectionY, travel);
         }
 
-        public bool IsAttacking
-        {
-            get
-            {
-                return _attackTimestamp != 0
-                    && Stopwatch.GetElapsedTime(_attackTimestamp) < AttackVisualDuration;
-            }
-        }
-
-        public void TryAttackPlayerInRange(PlayerCharacter player)
+        public bool TryAttackPlayerInRange(
+            PlayerCharacter player, ArenaCombatSystem combatSystem)
         {
             if (player == null)
             {
                 throw new ArgumentNullException(nameof(player));
             }
+            if (combatSystem == null)
+            {
+                throw new ArgumentNullException(nameof(combatSystem));
+            }
 
             double offsetX = player.PositionX - PositionX;
             double offsetY = player.PositionY - PositionY;
-            double attackRangeSquared = AttackRange * AttackRange;
+            double range = EquippedWeapon.AttackPattern.Range;
+            double attackRangeSquared = range * range;
             if (!IsAlive || !player.IsAlive
                 || offsetX * offsetX + offsetY * offsetY > attackRangeSquared)
             {
-                _lastAttackTimestamp = 0;
-                return;
+                return false;
             }
 
-            long now = Stopwatch.GetTimestamp();
-            if (_lastAttackTimestamp != 0
-                && Stopwatch.GetElapsedTime(_lastAttackTimestamp, now)
-                    < AttackInterval)
-            {
-                return;
-            }
-
-            player.TakeDamage(AttackDamagePerHit);
-            _lastAttackTimestamp = now;
-            _attackTimestamp = now;
+            return combatSystem.TryStartAttack(this, offsetX, offsetY);
         }
 
         public override void UpdateBehavior(ArenaField field)
@@ -138,19 +121,13 @@ namespace OOPGames
             PlayerCharacter player = field.Player;
             if (!IsAlive || !player.IsAlive)
             {
-                Move(0, 0, new System.Windows.Rect(
-                    ArenaField.WallThickness, ArenaField.WallThickness,
-                    ArenaField.MapWidth - 2 * ArenaField.WallThickness,
-                    ArenaField.MapHeight - 2 * ArenaField.WallThickness));
+                Move(0, 0, ArenaField.MovementBounds);
                 return;
             }
 
             double offsetX = player.PositionX - PositionX;
             double offsetY = player.PositionY - PositionY;
-            System.Windows.Rect movementBounds = new System.Windows.Rect(
-                ArenaField.WallThickness, ArenaField.WallThickness,
-                ArenaField.MapWidth - 2 * ArenaField.WallThickness,
-                ArenaField.MapHeight - 2 * ArenaField.WallThickness);
+            System.Windows.Rect movementBounds = ArenaField.MovementBounds;
 
             double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
             if (distance > CurrentSightRange)
@@ -162,7 +139,7 @@ namespace OOPGames
 
             _hasSeenPlayer = true;
             FacePlayer(offsetX, offsetY);
-            if (currentSpeed == 0)
+            if (EffectiveSpeed == 0)
             {
                 Move(0, 0, movementBounds);
                 return;
@@ -183,7 +160,7 @@ namespace OOPGames
 
         private void UpdateWanderBehavior(System.Windows.Rect movementBounds)
         {
-            if (currentSpeed == 0)
+            if (EffectiveSpeed == 0)
             {
                 Move(0, 0, movementBounds);
                 return;

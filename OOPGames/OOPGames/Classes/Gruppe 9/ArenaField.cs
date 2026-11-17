@@ -22,10 +22,19 @@ namespace OOPGames
         private const double EnemySpawnVisibilityMargin = 50;
         private const int EnemySpawnPositionAttemptLimit = 10000;
         private readonly List<PursuerEnemy> _enemies = new List<PursuerEnemy>();
+        private readonly ArenaCombatSystem _combatSystem = new ArenaCombatSystem();
+        private Weapon _selectedPlayerWeapon = WeaponCatalog.PracticeSword;
 
         // The field owns the current player instance.
         public PlayerCharacter Player { get; private set; }
         public IReadOnlyList<PursuerEnemy> Enemies { get { return _enemies; } }
+        public IReadOnlyList<Weapon> TestWeapons { get { return WeaponCatalog.TestWeapons; } }
+        public Weapon SelectedPlayerWeapon { get { return _selectedPlayerWeapon; } }
+        public int ActiveAttackCount { get { return _combatSystem.ActiveAttackCount; } }
+        public IReadOnlyList<AttackVisualState> ActiveAttackVisuals
+        {
+            get { return _combatSystem.GetActiveVisuals(); }
+        }
         public bool IsGameStarted { get; private set; }
         public bool HasActiveGame { get; private set; }
         public bool IsGameOver { get { return HasActiveGame && !Player.IsAlive; } }
@@ -35,9 +44,18 @@ namespace OOPGames
         public double AimDirectionX { get; private set; }
         public double AimDirectionY { get; private set; } = 1;
         public double ZoomLevel { get; private set; } = 1.0;
+        public static Rect MovementBounds
+        {
+            get
+            {
+                return new Rect(WallThickness, WallThickness,
+                    MapWidth - 2 * WallThickness, MapHeight - 2 * WallThickness);
+            }
+        }
 
         public ArenaField()
         {
+            _combatSystem.EntityDefeated += OnEntityDefeated;
             // Create the player in the middle when a new field is constructed.
             ResetPlayer();
         }
@@ -45,11 +63,40 @@ namespace OOPGames
         public void ResetPlayer()
         {
             // Resetting starts the player at the center of the arena.
+            _combatSystem.Clear();
             Player = new PlayerCharacter(MapWidth / 2, MapHeight / 2);
+            Player.EquippedWeapon = _selectedPlayerWeapon;
             _enemies.Clear();
             Point spawnPosition = GetRandomEnemySpawnPosition(Player);
             _enemies.Add(new PursuerEnemy(
                 spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
+        }
+
+        public void SelectPlayerWeapon(Weapon weapon)
+        {
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+
+            Weapon availableWeapon = null;
+            foreach (Weapon candidate in WeaponCatalog.TestWeapons)
+            {
+                if (candidate.Id == weapon.Id)
+                {
+                    availableWeapon = candidate;
+                    break;
+                }
+            }
+            if (availableWeapon == null)
+            {
+                throw new ArgumentException(
+                    "The selected weapon is not available in the test menu.",
+                    nameof(weapon));
+            }
+
+            _selectedPlayerWeapon = availableWeapon;
+            Player.EquippedWeapon = availableWeapon;
         }
 
         public void ResetGame()
@@ -151,8 +198,7 @@ namespace OOPGames
             if (Keyboard.IsKeyDown(Key.A) || Keyboard.IsKeyDown(Key.Left)) directionX -= 1;
             if (Keyboard.IsKeyDown(Key.D) || Keyboard.IsKeyDown(Key.Right)) directionX += 1;
 
-            Rect movementBounds = new Rect(WallThickness, WallThickness,
-                MapWidth - 2 * WallThickness, MapHeight - 2 * WallThickness);
+            Rect movementBounds = MovementBounds;
             Player.Move(directionX, directionY, movementBounds);
             if (OverlapsAnotherEntity(Player))
             {
@@ -169,8 +215,7 @@ namespace OOPGames
                 return;
             }
 
-            Rect movementBounds = new Rect(WallThickness, WallThickness,
-                MapWidth - 2 * WallThickness, MapHeight - 2 * WallThickness);
+            Rect movementBounds = MovementBounds;
             foreach (PursuerEnemy enemy in _enemies)
             {
                 if (!enemy.IsAlive)
@@ -187,9 +232,23 @@ namespace OOPGames
                     enemy.PositionY = previousY;
                     enemy.Move(0, 0, movementBounds);
                 }
-                enemy.TryAttackPlayerInRange(Player);
+                enemy.TryAttackPlayerInRange(Player, _combatSystem);
             }
 
+            if (!Player.IsAlive)
+            {
+                IsGameStarted = false;
+            }
+        }
+
+        public void UpdateCombat(double deltaSeconds)
+        {
+            if (!IsGameStarted)
+            {
+                return;
+            }
+
+            _combatSystem.Update(deltaSeconds, GetCombatEntities());
             if (!Player.IsAlive)
             {
                 IsGameStarted = false;
@@ -206,6 +265,22 @@ namespace OOPGames
             Point spawnPosition = GetRandomEnemySpawnPosition(Player);
             _enemies.Add(new PursuerEnemy(
                 spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
+        }
+
+        private void OnEntityDefeated(Entity source, Entity target)
+        {
+            if (target is PursuerEnemy enemy)
+            {
+                _enemies.Remove(enemy);
+                if (source.Team == CombatTeam.Player)
+                {
+                    Score++;
+                }
+                if (IsGameStarted && Player.IsAlive)
+                {
+                    SpawnEnemy();
+                }
+            }
         }
 
         private Point GetRandomEnemySpawnPosition(PlayerCharacter player)
@@ -274,6 +349,24 @@ namespace OOPGames
             return false;
         }
 
+        private IReadOnlyList<Entity> GetCombatEntities()
+        {
+            List<Entity> entities = new List<Entity>(_enemies.Count + 1)
+            {
+                Player
+            };
+            foreach (PursuerEnemy enemy in _enemies)
+            {
+                entities.Add(enemy);
+            }
+            return entities;
+        }
+
+        public double GetAttackCooldownRemaining(Entity entity)
+        {
+            return _combatSystem.GetCooldownRemaining(entity);
+        }
+
         private static bool HitboxesOverlap(
             double firstX, double firstY, double firstSize,
             double secondX, double secondY, double secondSize)
@@ -299,42 +392,10 @@ namespace OOPGames
                 ? (aimX < 0 ? PlayerFacing.Left : PlayerFacing.Right)
                 : (aimY < 0 ? PlayerFacing.Back : PlayerFacing.Front);
 
-            PursuerEnemy target = null;
-            double nearestDistance = PlayerAttackRange;
-            foreach (PursuerEnemy enemy in _enemies)
+            if (_combatSystem.TryStartAttack(Player, aimX, aimY))
             {
-                if (!enemy.IsAlive)
-                {
-                    continue;
-                }
-
-                double offsetX = enemy.PositionX - Player.PositionX;
-                double offsetY = enemy.PositionY - Player.PositionY;
-                double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-                double forwardDistance = offsetX * aimX + offsetY * aimY;
-                double sideDistance = Math.Abs(offsetX * aimY - offsetY * aimX);
-                if (distance <= nearestDistance
-                    && forwardDistance >= 0
-                    && sideDistance <= forwardDistance
-                        * Math.Tan(PlayerAttackHalfAngleRadians))
-                {
-                    nearestDistance = distance;
-                    target = enemy;
-                }
+                Player.StartAttack();
             }
-
-            if (target != null)
-            {
-                target.TakeDamage(PlayerAttackDamage);
-                if (!target.IsAlive)
-                {
-                    _enemies.Remove(target);
-                    Score++;
-                    SpawnEnemy();
-                }
-            }
-
-            Player.StartAttack();
         }
 
         // Handle zoom from the routed key event so short key presses are not missed between ticks.
