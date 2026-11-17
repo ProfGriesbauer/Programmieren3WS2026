@@ -49,6 +49,7 @@ namespace OOPGames
             // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – NPC-Porträts und Aufgaben-Gegenstände
             bitmap = LoadFromFile(id) ?? G1C_BuiltInSprites.Create(id) ?? G1C_TownSprites.Create(id) ?? G1C_WorldSprites.Create(id)
                      ?? G1C_NpcSprites.Create(id, this) ?? G1C_DecorSprites.Create(id) // Patrick Lupierz – 15.11.2026
+                     ?? G1C_AnimalSprites.Create(id) // Patrick Lupierz – 16.11.2026: Haustiere, Angeln
                      ?? CreateMissingSprite();
             _cache[id] = bitmap;
             return bitmap;

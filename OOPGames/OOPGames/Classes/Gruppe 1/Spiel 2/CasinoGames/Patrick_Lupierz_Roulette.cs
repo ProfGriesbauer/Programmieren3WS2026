@@ -323,9 +323,25 @@ namespace OOPGames
                 r.Text("...", WheelCenterX - 30, 178, 18, Colors.White, 60);
             }
 
-            string history = _history.Count == 0 ? "-" : string.Join(" ", _history.Take(8));
+            // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – SprintPlanning: vorherige Zahlen in der Farbe des
+            // Ergebnisses (rot, schwarz, grün); heller Streifen dahinter, damit Schwarz auf dem Filz lesbar bleibt.
             r.Text("Letzte Zahlen:", 6, 214, 10, G1C_UiColors.Gold);
-            r.Text(history, 6, 228, 10, Colors.White);
+            if (_history.Count == 0)
+            {
+                r.Text("-", 6, 228, 10, Colors.White);
+            }
+            else
+            {
+                const double step = 22;
+                int shown = Math.Min(8, _history.Count);
+                r.DrawRect(4, 226, shown * step + 4, 16, Color.FromRgb(0xF4, 0xF0, 0xE4), G1C_UiColors.Gold, 1);
+                for (int i = 0; i < shown; i++)
+                {
+                    int n = _history[i];
+                    Color c = n == 0 ? G1C_UiColors.RouletteGreen : G1C_RouletteTable.IsRed(n) ? G1C_UiColors.RouletteRed : G1C_UiColors.RouletteBlack;
+                    r.Text(n.ToString(), 6 + i * step, 228, 11, c, step);
+                }
+            }
         }
 
         private void DrawTable(G1C_Renderer r)

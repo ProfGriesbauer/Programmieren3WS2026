@@ -10,8 +10,9 @@ namespace OOPGames
         private int _frame;
 
         // Entwickler: Denis Mock
-        public G1C_Animal(string name, string spritePrefix, int x, int y, int frameCount, int ticksPerFrame)
-            : base(name, null, x, y, 1, 1, false, G1C_InteractionType.None)
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – optional massiv (Enten sind nicht mehr begehbar)
+        public G1C_Animal(string name, string spritePrefix, int x, int y, int frameCount, int ticksPerFrame, bool solid = false)
+            : base(name, null, x, y, 1, 1, solid, G1C_InteractionType.None)
         {
             if (string.IsNullOrEmpty(spritePrefix)) throw new System.ArgumentException("Sprite-ID fehlt.", nameof(spritePrefix));
             if (frameCount < 1) throw new System.ArgumentOutOfRangeException(nameof(frameCount));

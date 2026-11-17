@@ -29,6 +29,7 @@ namespace OOPGames
             _characters.AddRange(G1C_CityNpcRoster.Create()); // Erweiterung durch Denis Mock: Gespräche mit Stadtbewohnern.
             _characters.AddRange(G1C_FamilyNpcRoster.Create()); // Änderung durch: Patrick Lupierz – 15.11.2026 – Mama und Oma
             _characters.AddRange(G1C_ShopNpcRoster.Create());   // Änderung durch: Patrick Lupierz – 15.11.2026 – Verkäufer
+            G1C_ExtraTopics.Apply(_characters);                  // Änderung durch: Patrick Lupierz – 16.11.2026 – mehr Themen
             foreach (G1C_WorldObject obj in casino.Objects)
             {
                 G1C_Npc npc = obj as G1C_Npc;

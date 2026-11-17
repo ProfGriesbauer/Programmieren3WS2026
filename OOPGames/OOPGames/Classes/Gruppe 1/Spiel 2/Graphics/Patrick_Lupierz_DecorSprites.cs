@@ -68,10 +68,19 @@ namespace OOPGames
             }
             if (id.StartsWith("obj_picture_", System.StringComparison.Ordinal)) return Picture(id.Substring("obj_picture_".Length)).ToBitmap();
             if (id.StartsWith("obj_bike_", System.StringComparison.Ordinal)) return BikeSide(id.Substring(4)).ToBitmap();
-            if (id.StartsWith("ride_", System.StringComparison.Ordinal) && id.EndsWith("_side", System.StringComparison.Ordinal))
-                return BikeSide(id.Substring(5, id.Length - 10)).ToBitmap();
-            if (id.StartsWith("ride_", System.StringComparison.Ordinal) && id.EndsWith("_front", System.StringComparison.Ordinal))
-                return BikeFront(id.Substring(5, id.Length - 11)).ToBitmap();
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – Fahrgrafik je Richtung (ride_<rad>_<left|right|back|front>)
+            if (id.StartsWith("ride_", System.StringComparison.Ordinal))
+            {
+                int cut = id.LastIndexOf('_');
+                string bike = id.Substring(5, cut - 5), view = id.Substring(cut + 1);
+                switch (view)
+                {
+                    case "right": case "side": return BikeSide(bike).ToBitmap();
+                    case "left": return BikeSide(bike).MirrorX().ToBitmap();
+                    case "back": return BikeBack(bike).ToBitmap();
+                    case "front": return BikeFront(bike).ToBitmap();
+                }
+            }
             if (id.StartsWith("obj_arcade_cabinet_", System.StringComparison.Ordinal))
                 return ArcadeCabinet(id.Substring("obj_arcade_cabinet_".Length)).ToBitmap();
             return null;
@@ -123,6 +132,20 @@ namespace OOPGames
             c.FillRect(1, 3, 10, 1, Color.FromRgb(0xB8, 0xC0, 0xC8));    // Lenker
             c.FillRect(0, 3, 2, 2, Color.FromRgb(0x30, 0x28, 0x28)); c.FillRect(10, 3, 2, 2, Color.FromRgb(0x30, 0x28, 0x28));
             c.FillRect(5, 1, 2, 2, Color.FromRgb(0xF8, 0xE8, 0x80));     // Lampe
+            c.AddOutline(Outline);
+            return c;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Rückansicht (beim Fahren nach oben): Rücklicht, Gepäckträger
+        public static G1C_PixelCanvas BikeBack(string bikeId)
+        {
+            Color frame = BikeColor(bikeId);
+            G1C_PixelCanvas c = new G1C_PixelCanvas(12, 14);
+            c.FillRect(5, 6, 2, 8, Color.FromRgb(0x28, 0x28, 0x30));     // Hinterreifen
+            c.FillRect(3, 4, 6, 2, Darker(frame, 0.8));                   // Gepäckträger
+            c.FillRect(5, 3, 2, 3, frame);                               // Sattelstütze
+            c.FillRect(4, 1, 4, 2, Color.FromRgb(0x30, 0x28, 0x28));     // Sattel
+            c.FillRect(5, 7, 2, 2, Color.FromRgb(0xE8, 0x30, 0x30));     // Rücklicht
             c.AddOutline(Outline);
             return c;
         }
@@ -341,15 +364,23 @@ namespace OOPGames
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026 – Verkaufsfenster (Nachtschalter) mit Ablage und Schild
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – breites Fenster (2 Kacheln) mit rot-weißer Markise,
+        // Tankwart im Fenster und Holztheke; unten transparent, damit der Gebäudesockel sichtbar bleibt.
         private static G1C_PixelCanvas SalesWindow()
         {
-            G1C_PixelCanvas c = new G1C_PixelCanvas(16, 16);
-            c.FillRect(1, 1, 14, 10, Color.FromRgb(0x30, 0x30, 0x38));
-            c.FillRect(2, 2, 12, 8, Color.FromRgb(0xA8, 0xD8, 0xF0));
-            c.FillRect(6, 4, 4, 6, Color.FromRgb(0x38, 0xA0, 0x50));              // Verkäufer im Fenster
-            c.FillRect(6, 3, 4, 2, Color.FromRgb(0xE8, 0xB8, 0x90));
-            c.FillRect(0, 11, 16, 3, Color.FromRgb(0xC0, 0xC0, 0xC8));            // Ablage
-            c.FillRect(4, 14, 8, 2, Color.FromRgb(0xD0, 0x28, 0x30));             // "24h"-Schild
+            G1C_PixelCanvas c = new G1C_PixelCanvas(32, 30);
+            Color red = Color.FromRgb(0xE8, 0x28, 0x28), white = Color.FromRgb(0xF8, 0xF8, 0xF8);
+            for (int x = 1; x < 29; x++) c.FillRect(x, 1, 1, 5, (x / 4) % 2 == 0 ? red : white);  // Markise
+            for (int x = 1; x < 29; x += 4) c.FillEllipse(x + 1.5, 6, 2, 1.2, (x / 4) % 2 == 0 ? red : white);
+            c.FillRect(3, 8, 24, 12, Color.FromRgb(0x30, 0x30, 0x38));            // Rahmen
+            c.FillRect(4, 9, 22, 10, Color.FromRgb(0xA8, 0xD8, 0xF0));            // Glas
+            c.FillRect(4, 9, 22, 1, Color.FromRgb(0xD8, 0xF0, 0xFF));
+            c.FillRect(12, 15, 6, 4, Color.FromRgb(0x38, 0xA0, 0x50));            // Tankwart im Fenster
+            c.FillRect(13, 11, 4, 4, Color.FromRgb(0xE8, 0xB8, 0x90));
+            c.FillRect(13, 10, 4, 1, Color.FromRgb(0x50, 0x38, 0x20));
+            c.FillRect(1, 19, 28, 2, Color.FromRgb(0xD8, 0xD0, 0xC0));            // Theke (Platte)
+            c.FillRect(2, 21, 26, 3, Color.FromRgb(0x9A, 0x68, 0x38));            // Theke (Front, Holz)
+            c.FillRect(21, 9, 4, 3, Color.FromRgb(0xF8, 0xD0, 0x40));             // "24h"-Schild
             c.AddOutline(Outline);
             return c;
         }

@@ -75,6 +75,7 @@ namespace OOPGames
             {
                 int doorX = Map.DoorX(building);
                 int doorY = Map.DoorY(building);
+                if (building == G1C_WorldLocation.GasStation) continue; // Patrick Lupierz – 16.11.2026: eigener Vorplatz
                 AddProp("Laterne", "obj_street_lamp", doorX - 2, doorY + 1, G1C_InteractionType.None);
                 if (building != G1C_WorldLocation.Home && building != G1C_WorldLocation.Hospital &&
                     building != G1C_WorldLocation.GrandmaHouse)
@@ -98,19 +99,26 @@ namespace OOPGames
             AddTownNpc("Studentin Lea", "dealer_blue", G1C_WorldLocation.Casino);
             AddTownNpc("Geldhai Viktor", "dealer_red", G1C_WorldLocation.Bank, G1C_InteractionType.LoanShark);
 
-            AddAnimal("Ente", "animal_duck", RiverBank(8, -3), 8, 2, 8);
-            AddAnimal("Ente", "animal_duck", RiverBank(24, 3), 24, 2, 10);
-            AddAnimal("Ente", "animal_duck", RiverBank(40, -3), 40, 2, 8);
-            AddAnimal("Ente", "animal_duck", RiverBank(58, 3), 58, 2, 10);
+            // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Enten sind nicht mehr begehbar
+            AddAnimal("Ente", "animal_duck", RiverBank(8, -3), 8, 2, 8, true);
+            AddAnimal("Ente", "animal_duck", RiverBank(24, 3), 24, 2, 10, true);
+            AddAnimal("Ente", "animal_duck", RiverBank(40, -3), 40, 2, 8, true);
+            AddAnimal("Ente", "animal_duck", RiverBank(58, 3), 58, 2, 10, true);
             foreach (int y in new[] { 6, 20, 26, 38, 44, 56 }) AddFish(y);
 
-            AddAnimal("Katze", "animal_cat", 12, 20, 2, 8);
-            AddAnimal("Katze", "animal_cat", 37, 26, 2, 9);
-            AddAnimal("Katze", "animal_cat", 62, 24, 2, 8);
-            AddAnimal("Katze", "animal_cat", 26, 40, 2, 9);
-            AddAnimal("Katze", "animal_cat", 88, 40, 2, 8);
+            // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Katzen in 5 Fellvarianten und Hunde laufen in
+            // ihrem Revier umher, sind nicht begehbar und lassen sich streicheln (G1C_PetAnimal).
+            AddPet("Katze Grisu", G1C_PetKind.Cat, "grey", 12, 20);
+            AddPet("Katze Lotti", G1C_PetKind.Cat, "calico", 37, 26);
+            AddPet("Katze Kürbis", G1C_PetKind.Cat, "orange", 62, 24);
+            AddPet("Katze Nacht", G1C_PetKind.Cat, "black", 26, 40);
+            AddPet("Katze Schneeflocke", G1C_PetKind.Cat, "white", 88, 40);
+            AddPet("Hund Bello", G1C_PetKind.Dog, "brown", 30, 22);
+            AddPet("Hund Tupfen", G1C_PetKind.Dog, "dalmatian", 64, 40);
+            AddPet("Hund Goldie", G1C_PetKind.Dog, "golden", 10, 44);
 
             AddGasStationForecourt(); // Änderung durch: Patrick Lupierz – 15.11.2026 – Oma wohnt jetzt in ihrem Haus
+            AddFishingSpots();        // Änderung durch: Patrick Lupierz – 16.11.2026 – Angeln auf den Brücken
             // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrrad vor dem Spielerhaus (links neben dem Eingang)
             ParkedBike = new G1C_ParkedBike(Map.DoorX(G1C_WorldLocation.Home) - 1, Map.DoorY(G1C_WorldLocation.Home) + 1);
             _objects.Add(ParkedBike);
@@ -145,14 +153,19 @@ namespace OOPGames
         {
             int doorX = Map.DoorX(G1C_WorldLocation.GasStation);
             int doorY = Map.DoorY(G1C_WorldLocation.GasStation);
-            _objects.Add(new G1C_ShopWindow("Tankwart Olli", "obj_sales_window", doorX + 1, doorY, G1C_WorldLocation.GasStation));
+            // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – grauer Steinplatten-Gehweg vor der Tankstelle;
+            // das breite Verkaufsfenster mit Markise ist Teil der Gebäudegrafik (zwei Kacheln rechts der Tür).
+            Map.AddPlaza(doorX - 4, doorY + 1, 9, 1);
+            _objects.Add(new G1C_ShopWindow("Tankwart Olli", "obj_sales_window", doorX + 1, doorY, G1C_WorldLocation.GasStation, 2));
             string[] pumpLines =
             {
                 "Zapfsäule: Super 1,89 Chips pro Liter, Diesel 1,79.",
                 "Leider hast du kein Auto. Nur ein Fahrrad. Das tankt man mit Snacks."
             };
-            AddForecourtObject("Zapfsäule 1", "obj_fuel_pump", doorX - 3, doorY + 2, pumpLines);
-            AddForecourtObject("Zapfsäule 2", "obj_fuel_pump", doorX + 3, doorY + 2, pumpLines);
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – beide Zapfsäulen auf dem Steinplatten-Gehweg links der Tür
+            AddForecourtObject("Zapfsäule 1", "obj_fuel_pump", doorX - 3, doorY + 1, pumpLines);
+            AddForecourtObject("Zapfsäule 2", "obj_fuel_pump", doorX - 2, doorY + 1, pumpLines);
+            AddProp("Mülleimer", "obj_trash", doorX + 4, doorY + 1, G1C_InteractionType.Trash);
         }
 
         private void AddForecourtObject(string name, string sprite, int x, int y, string[] lines)
@@ -180,14 +193,38 @@ namespace OOPGames
 
         // Entwickler: Patrick Lupierz
         // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Änderung: Pavillon ist unterbegehbar.
-        // Massiv sind nur Rückseite und die beiden Säulenseiten; der Eingang liegt unten (Mitte).
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Änderung: von jeder Seite betretbar. Massiv sind nur
+        // noch die vier Ecksäulen; die beiden mittleren Kacheln jeder Seite sind Eingänge.
         // Das Objekt selbst ist nicht massiv; das Dach wird über die Figur gezeichnet (Sortierung nach Unterkante).
         private void AddPavilion(int x, int y)
         {
-            Map.AddSolidFootprint(x, y, 4, 1);          // Rückseite
-            Map.AddSolidFootprint(x, y + 1, 1, 3);      // linke Säulen
-            Map.AddSolidFootprint(x + 3, y + 1, 1, 3);  // rechte Säulen
+            foreach (int[] corner in new[] { new[] { x, y }, new[] { x + 3, y }, new[] { x, y + 3 }, new[] { x + 3, y + 3 } })
+                Map.AddSolidFootprint(corner[0], corner[1], 1, 1);
             _objects.Add(new G1C_WorldObject("Parkpavillon", "building_pavilion", x, y, 4, 4, false, G1C_InteractionType.None));
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Es gibt genau einen Angelplatz: auf der untersten (südlichsten) Flussbrücke (Flussmitte, obere
+        //          Brückenreihe). Änderung 16.11.2026 (Rückmeldung Patrick): Die Angel ist nicht massiv und blockiert
+        //          die Brücke nicht; man steht daneben/davor und drückt [E].
+        private void AddFishingSpots()
+        {
+            for (int y = G1C_ExteriorMap.MapHeight - 4; y >= 2; y--)
+            {
+                int x = Map.RiverCenterXAt(y);
+                if (!Map.IsBridge(x, y) || !Map.IsBridge(x, y + 1) || Map.IsBridge(x, y - 1) || ObjectAt(x, y) != null) continue;
+                _objects.Add(new G1C_WorldObject("Angel", "obj_fishing_rod", x, y, 1, 1, false, G1C_InteractionType.Fishing,
+                    "Eine Angel lehnt am Brückengeländer. Daneben ein Eimer mit Ködern."));
+                return;
+            }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Haustier auf die nächste freie Kachel setzen
+        private void AddPet(string name, G1C_PetKind kind, string variant, int x, int y)
+        {
+            for (int i = 0; i < 6 && (!Map.IsWalkable(x, y) || Map.IsDoorApproach(x, y) || ObjectAt(x, y) != null); i++) x++;
+            if (!Map.IsWalkable(x, y) || ObjectAt(x, y) != null) return;
+            _objects.Add(new G1C_PetAnimal(name, kind, variant, x, y, 4));
         }
 
         // Entwickler: Patrick Lupierz – Laternen und Mülleimer nur auf freie, begehbare Kacheln stellen
@@ -245,9 +282,10 @@ namespace OOPGames
         }
 
         // Entwickler: Denis Mock
-        private void AddAnimal(string name, string sprite, int x, int y, int frames, int animationTicks)
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – optional massiv
+        private void AddAnimal(string name, string sprite, int x, int y, int frames, int animationTicks, bool solid = false)
         {
-            G1C_Animal animal = new G1C_Animal(name, sprite, x, y, frames, animationTicks);
+            G1C_Animal animal = new G1C_Animal(name, sprite, x, y, frames, animationTicks, solid);
             _animals.Add(animal);
             _objects.Add(animal);
         }

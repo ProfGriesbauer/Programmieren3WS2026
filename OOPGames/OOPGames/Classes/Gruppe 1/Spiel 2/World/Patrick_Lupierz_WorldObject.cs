@@ -7,7 +7,9 @@ namespace OOPGames
         Wardrobe, Bed, Bank, LoanShark, FurnitureShop, Furnish,
         Inspect, // Änderung durch: Patrick Lupierz – 15.11.2026 – Schilder, Poster, Sticker: Text aus Lines anzeigen
         Arcade,  // Änderung durch: Patrick Lupierz – 15.11.2026 – Spielautomat der Spielhalle (Name = Automat)
-        Bike     // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrradständer vor dem Haus (auf-/absteigen)
+        Bike,    // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrradständer vor dem Haus (auf-/absteigen)
+        Pet,     // Änderung durch: Patrick Lupierz – 16.11.2026 – Katze/Hund streicheln
+        Fishing  // Änderung durch: Patrick Lupierz – 16.11.2026 – Angel auf der Brücke
     }
 
     /// <summary>

@@ -74,7 +74,22 @@ namespace OOPGames
         public bool IsWalkable(int x, int y)
         {
             char tile = GetTile(x, y);
-            return tile == 'g' || tile == 'v' || IsPaved(tile);
+            return tile == 'g' || tile == 'v' || tile == 'q' || IsPaved(tile); // 'q': Patrick Lupierz – 16.11.2026
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Brückenkachel (für den Angelplatz)
+        public bool IsBridge(int x, int y)
+        {
+            return GetTile(x, y) == 'b';
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Grauer Steinplatten-Vorplatz (z. B. vor der Tankstelle); überschreibt nur Gras und Wiese.
+        public void AddPlaza(int x, int y, int width, int height)
+        {
+            for (int tileY = y; tileY < y + height; tileY++)
+                for (int tileX = x; tileX < x + width; tileX++)
+                    if (IsOpenGround(tileX, tileY)) _tiles[tileX, tileY] = 'q';
         }
 
         // Entwickler: Denis Mock
@@ -97,6 +112,7 @@ namespace OOPGames
                 case 'r': return "tile_city_road_" + Mask(x, y, false);
                 case 'p': return "tile_city_path_" + Mask(x, y, false);
                 case 'b': return "tile_city_bridge";
+                case 'q': return "tile_city_plaza"; // Patrick Lupierz – 16.11.2026: Steinplatten
                 case 'w': return "tile_city_water_" + Mask(x, y, true);
                 case 'v': return ((x * 7 + y * 3) % 5) == 0 ? "tile_city_flowers" : "tile_city_park";
                 case 'g':

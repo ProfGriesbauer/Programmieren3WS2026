@@ -18,6 +18,25 @@ namespace OOPGames
         public bool Riding { get; private set; }
         public string ActiveBikeId { get; private set; } = StarterBike;
 
+        /// <summary>Änderung durch: Patrick Lupierz – 16.11.2026 – Rad wartet vor der Tür des betretenen Gebäudes.</summary>
+        public bool ParkedAtDoor { get; private set; }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – beim Betreten eines Gebäudes abstellen (force: beim Laden)
+        public void ParkAtDoor(bool force = false)
+        {
+            if (!Riding && !force) return;
+            Riding = false;
+            ParkedAtDoor = true;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – beim Hinausgehen wieder aufsteigen
+        public void ResumeFromDoor()
+        {
+            if (!ParkedAtDoor) return;
+            ParkedAtDoor = false;
+            Riding = true;
+        }
+
         // Entwickler: Patrick Lupierz
         public string TryMount(G1C_Inventory inventory, string bikeId, G1C_WorldLocation location)
         {
@@ -26,6 +45,7 @@ namespace OOPGames
             if (inventory == null || !inventory.Has(bikeId)) return "Dieses Fahrrad besitzt du nicht.";
             if (location != G1C_WorldLocation.Exterior) return "Fahrrad fahren geht nur draußen in der Stadt.";
             Riding = true;
+            ParkedAtDoor = false;
             ActiveBikeId = bikeId;
             return "Du fährst jetzt mit dem " + bike.Name + ". Schneller unterwegs!";
         }
@@ -34,6 +54,7 @@ namespace OOPGames
         {
             if (!Riding) return "Du fährst gerade nicht Fahrrad.";
             Riding = false;
+            ParkedAtDoor = false;
             return "Du bist abgestiegen.";
         }
 
@@ -43,16 +64,24 @@ namespace OOPGames
             return Riding ? Math.Min(walkingTicks, RidingStepTicks) : walkingTicks;
         }
 
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Fehler "Fahrrad zeigt immer in eine Richtung"
+        // behoben: eigene Grafik für links (gespiegelt), rechts, oben (Rückansicht) und unten (Frontansicht).
         public string RideSpriteId(G1C_Direction facing)
         {
-            bool vertical = facing == G1C_Direction.Up || facing == G1C_Direction.Down;
-            return "ride_" + ActiveBikeId + (vertical ? "_front" : "_side");
+            switch (facing)
+            {
+                case G1C_Direction.Left: return "ride_" + ActiveBikeId + "_left";
+                case G1C_Direction.Right: return "ride_" + ActiveBikeId + "_right";
+                case G1C_Direction.Up: return "ride_" + ActiveBikeId + "_back";
+                default: return "ride_" + ActiveBikeId + "_front";
+            }
         }
 
         public void Restore(bool riding, string bikeId)
         {
             ActiveBikeId = G1C_ItemCatalog.Get(bikeId) != null ? bikeId : StarterBike;
             Riding = riding;
+            ParkedAtDoor = false;
         }
     }
 

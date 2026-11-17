@@ -55,7 +55,7 @@ namespace OOPGames
                 case "building_market": return Building(Rgb(0x3890E0), Rgb(0xF8F8F8), Rgb(0x3890E0), "bag");
                 case "building_casino": return Building(Rgb(0x8040B0), Rgb(0xF8E8B0), Rgb(0x402060), "chip");
                 // Änderung durch: Patrick Lupierz – 15.11.2026 – Tankstelle rot, Omas Haus mit lila Dach
-                case "building_gas_station": return Building(Rgb(0xD02830), Rgb(0xF4F0EC), Rgb(0xD02830), "drop");
+                case "building_gas_station": return GasStationBuilding(); // Patrick Lupierz – 16.11.2026: Retro-Tankstelle
                 case "building_grandma": return Building(Rgb(0x8858A0), Rgb(0xF8ECE0), Rgb(0x8858A0), "");
                 case "building_clothing": return Building(Rgb(0xE870A0), Rgb(0xFFF4E0), Rgb(0x804060), "shirt");
                 case "building_library": return Building(Rgb(0x5868A8), Rgb(0xE8DCC0), Rgb(0x5868A8), "");
@@ -281,6 +281,23 @@ namespace OOPGames
                 }
             c.FillRect(36, 42, 24, 11, Outline); c.FillRect(37, 43, 22, 9, Rgb(0x286838));
             c.FillRect(40, 46, 16, 3, Rgb(0xF8F8F8));
+            return c.ToBitmap();
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Kleine Retro-Tankstelle (SprintPlanning): leuchtend rotes Dach, weiße Wände, braune Holztür.
+        //          Rechts der Tür bleibt die Wand frei – dort sitzt das breite Verkaufsfenster mit Markise und
+        //          Theke (eigenes Objekt "obj_sales_window", zwei Kacheln breit, damit man dort einkaufen kann).
+        private static BitmapSource GasStationBuilding()
+        {
+            Color wall = Rgb(0xF8F8F4);
+            G1C_PixelCanvas c = BuildingCanvas(Rgb(0xE82828), wall, Rgb(0xE82828), "drop");
+            c.FillRect(69, 50, 23, 17, wall);                     // rechtes Fenster entfernen (Platz für den Schalter)
+            c.FillRect(50, 57, 12, 9, Rgb(0x8A5A30));             // Glasfeld der Tür wird Holz
+            foreach (int x in new[] { 52, 56, 60 }) c.FillRect(x, 56, 1, 24, Rgb(0x6A4020));   // Bretterfugen
+            c.FillRect(49, 62, 14, 1, Rgb(0x6A4020));
+            c.FillRect(60, 68, 2, 2, Gold);                        // Türknauf
+            c.FillRect(4, 40, 88, 2, Rgb(0xE82828));               // roter Zierstreifen unter der Traufe
             return c.ToBitmap();
         }
 

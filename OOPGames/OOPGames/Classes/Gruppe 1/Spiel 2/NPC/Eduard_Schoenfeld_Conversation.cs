@@ -409,8 +409,12 @@ namespace OOPGames
 
             _options.Clear();
             Selected = 0;
-            AddOption("Du machst das echt gut hier.", Compliment);
-            AddOption(p.Pride >= 0.6 ? "Du kannst wohl nichts außer angeben." : "Du kannst wohl nicht spielen.", Insult);
+            // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Lob und Spitze passen zur Rolle (nicht mehr bei allen
+            // "Du machst das echt gut hier" / "Du kannst nicht spielen"); Familie hat keine Beleidigungs-Option.
+            AddOption(G1C_SmallTalk.ComplimentFor(p), Compliment);
+            string insult = G1C_SmallTalk.InsultFor(p);
+            if (insult != null) AddOption(insult, Insult);
+            if (p.Topics.Count > 0) AddOption("Erzähl mir mehr ...", () => ShowTopics(0));
             AddOption("Zurück.", () => { Say("Was gibt's noch?", Npc.MoodExpression); ShowRoot(); });
         }
 

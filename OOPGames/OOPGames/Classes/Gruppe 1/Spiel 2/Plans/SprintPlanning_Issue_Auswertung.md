@@ -16,14 +16,14 @@ NICHT ÜBERPRÜFBAR · ÜBERHOLT. Priorität: H = hoch, M = mittel, N = niedrig.
 
 | Status | Anzahl |
 |--------|-------:|
-| VOLLSTÄNDIG UMGESETZT | 17 |
-| TEILWEISE UMGESETZT | 13 |
+| VOLLSTÄNDIG UMGESETZT | 31 (Stand 16.11.2026, inkl. 11 neuer Punkte aus Abschnitt H) |
+| TEILWEISE UMGESETZT | 12 |
 | FEHLERHAFT | 0 (Issue 6 war fehlerhaft und wurde am 15.11.2026 behoben) |
 | NUR GRAFISCH VORHANDEN | 0 |
 | NICHT IMPLEMENTIERT | 0 (Arcade C11 am 15.11.2026, 2. Arbeitsschritt, umgesetzt) |
-| NICHT ÜBERPRÜFBAR | 4 |
+| NICHT ÜBERPRÜFBAR | 2 (B4, B7: Entscheidung Team/Dozent) |
 | ÜBERHOLT | 0 |
-| **Summe** | **34** |
+| **Summe** | **45** |
 
 ## A. Sprint 1 – Aufgaben
 
@@ -37,13 +37,13 @@ NICHT ÜBERPRÜFBAR · ÜBERHOLT. Priorität: H = hoch, M = mittel, N = niedrig.
 | A6 | Poker + KI | erledigt | VOLLSTÄNDIG UMGESETZT | `G1C_PokerHandEvaluator`, `G1C_PokerAI` | KI nur Code-Durchsicht | Poker-Test BESTANDEN | – | _eintragen_ |
 | A7 | Spielautomat | erledigt | VOLLSTÄNDIG UMGESETZT | `G1C_Slots.GetMultiplier`, Zufall unabhängig von Grafik | – | Slots-Test BESTANDEN | – | _eintragen_ |
 | A8 | Austauschbare Grafiken | erledigt | VOLLSTÄNDIG UMGESETZT | `G1C_SpriteLibrary`: PNG `<ID>.png` überschreibt eingebaute Grafik; neue IDs (`sign_closed`, `obj_poster_ad`, `obj_sticker_bw`, `obj_sign_post`) ebenso | – | Grafiktests (alle Objekt-IDs auflösbar) BESTANDEN | – | _eintragen_ |
-| A9 | Manueller Test im Hauptfenster | offen | NICHT ÜBERPRÜFBAR | KI-Agent kann das WPF-Fenster nicht bedienen. Ersatzweise: Szenen offscreen mit dem echten Painter gerendert (Zuhause, CLOSED-Schild, Oma, Tankstelle) | Teammitglied spielt Checkliste aus `Plans/Testbericht_2026-11-15.md` durch | – | H | _eintragen_ |
+| A9 | Manueller Test im Hauptfenster | erledigt (Team, 16.11.) | VOLLSTÄNDIG UMGESETZT (laut SprintPlanning vom Team erledigt; vom Agenten selbst nicht bedienbar) | KI-Agent kann das WPF-Fenster nicht bedienen. Ersatzweise: Szenen offscreen mit dem echten Painter gerendert (Zuhause, CLOSED-Schild, Oma, Tankstelle) | Teammitglied spielt Checkliste aus `Plans/Testbericht_2026-11-15.md` durch | – | H | _eintragen_ |
 
 ## B. Sprint 1 – Nachtrag: Erweiterungen in Agents.md
 
 | # | Inhalt | urspr. | tatsächlicher Status | Begründung | Nächste Schritte | Prio | Verantw. |
 |---|--------|--------|----------------------|------------|------------------|------|----------|
-| B1 | Abschnitt 0: harte Regeln / erweiterbare Inhalte | offen | NICHT ÜBERPRÜFBAR | Abschnitt steht in `Agents.md`; offen ist nur die Freigabe durch Team/Dozent | Freigabe einholen | M | Team |
+| B1 | Abschnitt 0: harte Regeln / erweiterbare Inhalte | erledigt (Team, 16.11.) | VOLLSTÄNDIG UMGESETZT (Freigabe laut SprintPlanning erteilt) | Abschnitt steht in `Agents.md`; offen ist nur die Freigabe durch Team/Dozent | Freigabe einholen | M | Team |
 | B2 | Stadt, Innenräume, Gebäude erweiterbar (Tankstelle, Bekleidung) | offen | VOLLSTÄNDIG UMGESETZT | `G1C_BuildingInteriorWorld` (GasStation, ClothingStore, Bank, FurnitureStore) | – | – | Patrick Lupierz |
 | B3 | Weitere getrennte Karten erlaubt | offen | VOLLSTÄNDIG UMGESETZT | Regel steht in Agents.md; `IG1C_WorldScene` + `G1C_SceneTransitionManager` tragen weitere Karten | – | – | – |
 | B4 | Stadtgröße 96x64 statt 180x180 | offen | NICHT ÜBERPRÜFBAR | Code: 96x64 (`G1C_ExteriorMap`). Entscheidung liegt bei Team/Dozent | Entscheidung protokollieren | M | Team |
@@ -72,7 +72,7 @@ NICHT ÜBERPRÜFBAR · ÜBERHOLT. Priorität: H = hoch, M = mittel, N = niedrig.
 | C14 | Minimap, Stadtkarte, Ortsname beim Darüberfahren | teilweise | TEILWEISE UMGESETZT | Karte + Klickauswahl; Hover nicht möglich: Framework liefert keine Mausbewegung (nur Klick) | – (Framework-Grenze, dokumentiert) | – | N | _eintragen_ |
 | C15 | Aufwachzeit beim Schlafen wählen | teilweise | VOLLSTÄNDIG UMGESETZT (3. Schritt: Figur liegt im Bett) | Auswahl vorhanden; NEU: Schlafanimation (Abdunkeln + "Zzz", Steuerung gesperrt) und Tageswechsel mit Zinsen | Figur liegend im Bett zeigen; Animation manuell prüfen | Zinstest über Tageswechsel BESTANDEN | M | Patrick Lupierz |
 | C16 | Bank und Geldhai | teilweise | TEILWEISE UMGESETZT | NEU: 2 % Zinsen/Tag ohne Doppelzahlung, Kontostand- und Kontoauszugszeile (`G1C_FinanceManager`) | Bank optisch verbessern; Ansprechen durch den Geldhai beim Vorbeilaufen prüfen | 3 Banktests BESTANDEN | H | Patrick Lupierz |
-| C17 | Möbelgeschäft und Einrichten | teilweise | TEILWEISE UMGESETZT | `OpenFurnishMenu`, `PlaceFurniture`, Speicherung | Kauf/Platzierung manuell prüfen, Test ergänzen | – | N | _eintragen_ |
+| C17 | Möbelgeschäft und Einrichten | teilweise | VOLLSTÄNDIG UMGESETZT (16.11.: Einrichtungsmodus, Limit 3, Tests – siehe H1) | `OpenFurnishMenu`, `PlaceFurniture`, Speicherung | Kauf/Platzierung manuell prüfen, Test ergänzen | – | N | _eintragen_ |
 
 ## D. Zusätzliche Anforderungen aus AGENTS.md (Arbeitsauftrag 15.11.2026) – Stand
 
@@ -133,3 +133,25 @@ liegende Schlaffigur, manuelle Prüfung im Hauptfenster.
 
 Damit sind alle bekannten offenen Implementierungsaufgaben umgesetzt. Offen bleiben nur Punkte, die außerhalb des Codes
 liegen: Freigaben durch Team/Dozent (B1, B4, B7) und der manuelle Durchlauf im Hauptfenster (A9).
+
+## H. Neue SprintPlanning-Punkte vom 16.11.2026 (Ideen: Patrick)
+
+Quelle: Ende von `Scrum/SprintPlanning.md` (Stand 16.11.2026). Prüfung: Code-Durchsicht, Selbsttest **64/64 BESTANDEN**
+(15 neue Tests) und Offscreen-Renderings mit dem echten Painter. Bedienung im Hauptfenster: siehe Checkliste im Testbericht.
+
+| # | Punkt | Status | Umsetzung / Nachweis |
+|---|-------|--------|----------------------|
+| H1 | Möbel über klickbare, sich aktualisierende Hausansicht platzieren; max. 3 je Möbel; im Platzierungsmodus verschiebbar | VOLLSTÄNDIG UMGESETZT | `G1C_FurnitureEditor` + Zustand `FurnitureEditor`: echtes Zuhause mit Raster, Vorschau grün/rot, Klick oder [E] setzt, eigenes Möbel anklicken = aufheben/verschieben, [R] einlagern, [N] nächstes, [Q] fertig (aufgehobenes Möbel kehrt zurück). `G1C_Shop.MaxFurniturePerItem = 3` (Inventar + aufgestellt). Tests "Kauflimit", "Einrichtungsmodus" |
+| H2 | Tiere mit Sprechblasen (typische Laute), nicht begehbar, laufen draußen umher; Katzen streicheln; 5 Katzenvarianten (u. a. Calico, Orange, Schwarz); Hunde, streichelbar | VOLLSTÄNDIG UMGESETZT | `G1C_PetAnimal` (Katzen grey/calico/orange/black/white, Hunde brown/dalmatian/golden), laufen im Revier (Radius 4), massiv; `G1C_AnimalVoices` (Miau, Wuff, Quak, Tschilp, Blubb); [E] streicheln = Herz-Blase. Enten massiv. Omas Katzen sind ebenfalls Haustiere. Tests "Katzen und Hunde", "Streicheln" |
+| H3 | Sounds: Hintergrundmusik (Läden, Casino …), Gewinn-Sounds, allgemeine Geräusche | VOLLSTÄNDIG UMGESETZT (Hörprobe im Fenster offen) | `G1C_SoundSystem` + `G1C_ChipTune`: 7 Musikstücke (Stadt, Zuhause, Laden, Casino, Spielhalle, Angeln, Titel) und 10 Geräusche, im Code erzeugt (keine Dateien, keine Bibliothek), WPF-`MediaPlayer`. [T] im Menü = Ton an/aus. Im Selbsttest stumm. Test "Sound" prüft Zuordnung und WAV-Daten; ob es gut klingt, kann der Agent nicht hören |
+| H4 | Fahrrad zeigt immer in eine Richtung; nach Haus betreten/verlassen muss zweimal geklickt werden | VOLLSTÄNDIG UMGESETZT (Fehler behoben) | Grafik je Richtung (links gespiegelt, rechts, Rück-, Frontansicht), Figur ohne Laufbeine auf dem Rad. Ursache Doppelklick: beim Betreten wurde abgestiegen, das Rad aber weiter als ausgerüstet geführt. Jetzt `ParkedAtDoor`: Rad wartet vor der Tür, beim Hinausgehen automatisch wieder aufsteigen; Inventar zeigt "fährst du" / "steht vor der Tür". Tests "Fahrrad …" |
+| H5 | Standardsätze "Das machst du echt gut hier" / "Du kannst nicht spielen" nicht bei jedem NPC; mehr Themen | VOLLSTÄNDIG UMGESETZT | `G1C_SmallTalk`: Lob und Spitze passend zur Rolle (17 Rollen), Familie ohne Beleidigung. `G1C_ExtraTopics`: eigene Fragen für alle 11 Casino- und Stadt-NPCs, für alle (außer Familie) täglich wechselnder Stadtklatsch und Tageszeit-Frage; "Erzähl mir mehr …" im Plaudern. Test "Gespräche" |
+| H6 | Angel-Minispiel auf der Brücke, Fische verkaufen, Fluss, Fischanimation, Platschen, Glücksfunde, graue Leiste mit grünem Abschnitt, der entgegen dem Fisch läuft | VOLLSTÄNDIG UMGESETZT | Angel auf jeder Flussbrücke (`AddFishingSpots`). `G1C_FishingGame`: Auswerfen, Biss, Anhauen, Drill mit schwimmendem Fisch (Ziele, Pfeilschüsse, Sprünge, Platschen), graue Leiste, grüner Bereich treibt gegen die Fischbewegung, [A]/[D] gegensteuern. 6 Fischarten + Stiefel, Flasche, Chipsbeutel, Ring, Glücksmünze; alles im Laden verkaufbar. Nachtrag: 20 Fischarten mit den von Patrick bereitgestellten, frei nutzbaren Fischgrafiken (`G1C_FishSprites`, als Pixeldaten im Code) |
+| H7 | Tankstelle: Retro-Look rot/weiß, braune Holztür, breites Verkaufsfenster mit Markise und Theke, zwei rote Zapfsäulen auf grauen Steinplatten | VOLLSTÄNDIG UMGESETZT | `GasStationBuilding` (TownSprites), Verkaufsfenster 2 Kacheln mit Markise/Theke, Steinplatten `tile_city_plaza`, Zapfsäulen darauf. Test "Tankstelle: Retro-Look" + Render |
+| H8 | Poker: eigene Hand tiefer, im Halbkreis, 5 % größer | VOLLSTÄNDIG UMGESETZT | `G1C_CardView.DrawFan` (Drehung um gemeinsamen Punkt, `G1C_Renderer.BeginRotation`), Skalierung 1,05. Test + Render |
+| H9 | Admin-Cheat: 100 % Jackpot; Münzregen abhängig vom Einsatz | VOLLSTÄNDIG UMGESETZT | Tastenfolge geändert (Rückmeldung Patrick: A B A B scheitert an [B] = Menü): jetzt ADMIN. `G1C_CheatCode` (an/aus), `G1C_Slots.GuaranteedJackpot`, Münzregen `CoinsForBet` (20 + Einsatz/2, max. 240), Jackpot-Schriftzug und -Sound. Test "Admin-Cheat" + Render |
+| H10 | Umzugsschild des Greifautomaten entfernen | VOLLSTÄNDIG UMGESETZT | Schild aus `G1C_CasinoWorld` entfernt. Test |
+| H11 | Pavillon von jeder Seite betretbar | VOLLSTÄNDIG UMGESETZT | Nur noch die vier Ecksäulen massiv. Test angepasst ("von jeder Seite betretbar") |
+
+Hinweise: Die Statusänderungen von A9 und B1 stammen aus der SprintPlanning (vom Team auf "erledigt" gesetzt).
+Offen bleiben B4/B7 (Stadtgröße, Entscheidung Team/Dozent) sowie eine Hör- und Spielprobe der neuen Punkte im Hauptfenster.

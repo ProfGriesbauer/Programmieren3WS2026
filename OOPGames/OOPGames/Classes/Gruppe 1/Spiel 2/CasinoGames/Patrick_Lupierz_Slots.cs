@@ -38,6 +38,26 @@ namespace OOPGames
         private int _spinBet;
         private int _lastWin = -1;
 
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Admin-Cheat und Münzregen beim Jackpot
+        private readonly List<double[]> _coins = new List<double[]>();  // x, y, Fallgeschwindigkeit, Drehphase
+        private int _rainTicks;
+
+        /// <summary>Liefert true, solange der Admin-Cheat aktiv ist: dann ist jede Drehung ein Jackpot (7-7-7).</summary>
+        public Func<bool> GuaranteedJackpot { get; set; }
+        public bool LastWasJackpot { get; private set; }
+        public int CoinRainCount { get { return _coins.Count; } }
+
+        /// <summary>Anzahl fallender Münzen beim Jackpot – wächst mit dem Einsatz (10 Chips: 25 Münzen, max. 240).</summary>
+        public static int CoinsForBet(int bet)
+        {
+            return Math.Min(240, 20 + Math.Max(0, bet) / 2);
+        }
+
+        public void ShowNotice(string text)
+        {
+            if (!_spinning) Message = text;
+        }
+
         public G1C_Slots(G1C_MoneyManager money, Random random) : base(money, random)
         {
             for (int i = 0; i < ReelCount; i++)
@@ -124,6 +144,8 @@ namespace OOPGames
             for (int i = 0; i < ReelCount; i++)
             {
                 _targets[i] = Random.Next(_reels[i].Length); // Ergebnis steht beim Start fest
+                // Änderung durch: Patrick Lupierz – 16.11.2026 – Admin-Cheat: Walze stoppt auf der 7
+                if (GuaranteedJackpot != null && GuaranteedJackpot()) _targets[i] = Array.IndexOf(_reels[i], G1C_SlotSymbol.Seven);
             }
             _spinning = true;
             _tick = 0;
@@ -133,6 +155,7 @@ namespace OOPGames
 
         public override void Update()
         {
+            UpdateCoinRain(); // Patrick Lupierz – 16.11.2026
             if (!_spinning) return;
 
             _tick++;
@@ -159,15 +182,43 @@ namespace OOPGames
 
             int multiplier = GetMultiplier(line);
             _lastWin = _spinBet * multiplier;
+            LastWasJackpot = multiplier == 100; // Patrick Lupierz – 16.11.2026
+            if (LastWasJackpot) StartCoinRain(_spinBet);
             if (_lastWin > 0)
             {
                 Money.Deposit(_lastWin);
-                Message = "Gewinn! x" + multiplier + " = " + _lastWin + " Chips (Netto +" + (_lastWin - _spinBet) + "). [E] Nochmal";
+                Sfx(LastWasJackpot ? "jackpot" : "win");
+                Message = (LastWasJackpot ? "JACKPOT! " : "Gewinn! ") + "x" + multiplier + " = " + _lastWin + " Chips (Netto +" + (_lastWin - _spinBet) + "). [E] Nochmal";
             }
             else
             {
                 Message = "Leider nichts. -" + _spinBet + " Chips. [E] Nochmal, [Q] Verlassen";
             }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Münzregen beim Jackpot. Die Münzen fallen von der Decke, drehen sich und bleiben unten liegen;
+        //          wie viele es sind, hängt vom Einsatz ab (CoinsForBet).
+        private void StartCoinRain(int bet)
+        {
+            _coins.Clear();
+            int count = CoinsForBet(bet);
+            for (int i = 0; i < count; i++)
+                _coins.Add(new double[] { 8 + Random.NextDouble() * 464, -10 - Random.NextDouble() * 260, 2 + Random.NextDouble() * 3, Random.NextDouble() * 6 });
+            _rainTicks = 0;
+        }
+
+        private void UpdateCoinRain()
+        {
+            if (_coins.Count == 0) return;
+            _rainTicks++;
+            foreach (double[] coin in _coins)
+            {
+                double floor = 250 + (coin[0] * 7 % 10);
+                if (coin[1] < floor) { coin[1] = Math.Min(floor, coin[1] + coin[2]); coin[2] += 0.15; }
+                coin[3] += 0.3;
+            }
+            if (_rainTicks > 200) _coins.Clear();
         }
 
         // ------------------------------------------------------------------ Darstellung
@@ -200,6 +251,15 @@ namespace OOPGames
             r.Text("Gewinne:", 6, 216, 10, G1C_UiColors.Gold);
             r.Text("7 7 7 = x100   ◆◆◆ = x40   BAR x3 = x20   Glocke x3 = x12", 6, 230, 10, Colors.White);
             r.Text("Kirsche x3 = x10   Zitrone x3 = x8   zwei 7 = x5   zwei Kirschen = x2", 6, 244, 10, Colors.White);
+
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – Münzregen und Jackpot-Schriftzug
+            foreach (double[] coin in _coins)
+            {
+                double w = 5 * Math.Abs(Math.Cos(coin[3])) + 1;
+                r.FillEllipse(coin[0], coin[1], w + 1, 6, Color.FromRgb(0xB0, 0x80, 0x10));
+                r.FillEllipse(coin[0], coin[1], w, 5, G1C_UiColors.Gold);
+            }
+            if (_coins.Count > 0 && _rainTicks % 10 < 7) r.Text("JACKPOT!", 80, 66, 36, G1C_UiColors.Gold, 320);
 
             AddButtonRow(Btn("[W] Einsatz +", Key.W, !_spinning), Btn("[S] Einsatz -", Key.S, !_spinning),
                          Btn("[E] Drehen", Key.E, !_spinning), Btn("[Q] Verlassen", Key.Q, !_spinning));

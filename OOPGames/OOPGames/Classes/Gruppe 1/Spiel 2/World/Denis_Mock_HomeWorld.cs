@@ -103,7 +103,29 @@ namespace OOPGames
             }
         }
 
-        private bool CanPlaceFurniture(G1C_Item item, int x, int y, G1C_Player player)
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Eigenes (gekauftes) Möbel auf einer Kachel finden – für den Einrichtungsmodus (Verschieben).
+        public G1C_PlacedFurniture PlacedAt(int x, int y)
+        {
+            for (int i = _placedObjects.Count - 1; i >= 0; i--)
+                if (_placedObjects[i].Occupies(x, y)) return _placedFurniture[i];
+            return null;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Möbel aus dem Haus nehmen (Liste und Weltobjekt)
+        public bool RemovePlacedFurniture(G1C_PlacedFurniture furniture)
+        {
+            int index = _placedFurniture.IndexOf(furniture);
+            if (index < 0) return false;
+            _objects.Remove(_placedObjects[index]);
+            _placedObjects.RemoveAt(index);
+            _placedFurniture.RemoveAt(index);
+            return true;
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – öffentlich, damit der Einrichtungsmodus die
+        // Kachel unter dem Cursor grün/rot anzeigen kann.
+        public bool CanPlaceFurniture(G1C_Item item, int x, int y, G1C_Player player)
         {
             if (item == null || item.Category != G1C_ItemCategory.Moebel ||
                 string.IsNullOrEmpty(item.FurnitureSpriteId) || item.FurnitureWidth <= 0 ||

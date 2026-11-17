@@ -14,7 +14,7 @@ Sprintziel: Lauffähige erste Version – Casino erkunden und alle vier Minispie
 | Poker + KI | 6 | _eintragen_ | erledigt |
 | Spielautomat | 7 | _eintragen_ | erledigt |
 | Austauschbare Grafiken | 9 | _eintragen_ | erledigt |
-| Manueller Test im Hauptfenster | – | _eintragen_ | offen |
+| Manueller Test im Hauptfenster | – | _eintragen_ | erledigt |
 
 Kurzprotokolle der Abstimmungen: _noch eintragen_
 
@@ -24,8 +24,8 @@ Quelle: Änderungen von Patrick Lupierz in `Agents.md` (Abschnitte 0, 1, 8, 12, 
 
 | # | Kommentar / Inhalt | Agents.md-Stelle | Zugehörig | Bearbeiter | Status |
 |---|--------------------|------------------|-----------|------------|--------|
-| 1 | Neuer Abschnitt 0: Unterscheidung harte Regeln und erweiterbare Inhalte, Bedingungen für Erweiterungen | Abschnitt 0 | _eintragen_ | _eintragen_ | offen |
-| 2 | Spielwelt-Einleitung: Stadt, Innenräume und Gebäude dürfen erweitert werden (Tankstelle, Bekleidungsgeschäft) | Abschnitt 1 | _eintragen_ | _eintragen_ | offen |
+| 1 | Neuer Abschnitt 0: Unterscheidung harte Regeln und erweiterbare Inhalte, Bedingungen für Erweiterungen | Abschnitt 0 | _eintragen_ | _eintragen_ | erledigt |
+| 2 | Spielwelt-Einleitung: Stadt, Innenräume und Gebäude dürfen erweitert werden (Tankstelle, Bekleidungsgeschäft) | Abschnitt 1 | _eintragen_ | _eintragen_ | erledigt |
 | 3 | Weitere getrennte Karten dürfen ergänzt werden | Abschnitt 8 | _eintragen_ | _eintragen_ | offen |
 | 4 | Stadtgröße nicht festgelegt, muss zum Maßstab der Spielfigur passen (aktuell 96x64 statt 180x180) | Abschnitt 8.1 | _eintragen_ | _eintragen_ | offen – Entscheidung Team/Dozent |
 | 5 | Weitere Innenräume für Krankenhaus, Supermarkt und weitere Gebäude | Abschnitt 8.3 | _eintragen_ | _eintragen_ | offen |
@@ -63,3 +63,27 @@ Build: `dotnet build OOPGames\OOPGames.csproj --no-restore` erfolgreich (0 Warnu
 Manuell geprüft: Startansicht, Zuhause/Stadt-Übergang und Stadtkarte; zusätzlich kleine und maximierte Fenster.
 Noch offen: vollständige Prüfung der Seitenverhältnisse 16:10 und 4:3 sowie die Funktionspfade für Greifer,
 Bank/Kredit und Möbelkauf/-platzierung.
+
+Möbel sollen mit einer klickbaren view von dem haus was sich auch aktualisiert wählbar sein wo die möbel hin sollen am besten auch nicht mehr als 3 von jedem objekt kaufen können. und möbel im splatzierungs modus auch bewegbar machen idee: Patrick :D
+
+
+tiere sollen auch eine speech bubble haben mit deren typischen sounds und auch nicht belaufbar sein. sie sollen in der ausen welt auch umher laufen. eine funktion katzen zu streicheln und andere katzen skins calico cat orange cat, black cat, 5 katzen varianten. hunde auch hinzufügen auch streichelbar idee: Patrick :D
+
+wir wollen sounds einbauen für das game hintergrund musik in läden shops casino beim gewinnen auch und generell sounds. 
+idee: Patrick :D
+fahrad zeigt immer in eine richtung animation muss ebendalls angepasst werden fürs fahrad das equipte fahrad wird all equipd angezeigt wenn man ein haus betritt und wieder verlässt sodass es 2 mal angeklickt werden muss.idee: Patrick :D
+
+alle personen haben die standart fragen und gespräche mit das machst du echt gut hier und du kannst nicht spielen es soll diese zwei nicht bei jeden npc geben ausbauen von noch mehr gesprächs themen idee: Patrick :D
+
+fishing mini game es soll eine angel auf einer brücke geben und an der kann man fischen die fische kann man verkaufen im laden, es soll so aussehen das es ein fluss ist wenn ein fisch anbeist soll dieser eine animation haben indes der fisch herum schwimmt von links nach rechts oder in mehr komplexen richtungen platschen und co was in einem fishing minigame alles so enthalten sein soll auch mit glück coins und andere items zu finden die sinn machen wenn man einen fisch am hacken hat soll unten eine slide bar sein diese soll grau sein und ein abschnitt der grün sein soll da muss man mit den tasten folgen dieser abschnitt soll immer entgegengestzt vom fisch gehen.aussehen der items https://www.reddit.com/r/itchio/comments/1klo79a/free_fishing_asset_pack/  inspiration von slide bar https://almostapixel.itch.io/smallburg-fishing-pack.idee: Patrick :D
+
+tankstellen aussehen des gebäudes soll eher aussehen wie: 2D-Pixel-Art-Spielgrafik aus der Vogelperspektive (Top-Down) von einer kleinen Retro-Tankstelle in Rot und Weiß auf einem einfarbigen grünen Gras-Hintergrund, genau im schlichten 16-Bit-RPG-Stil des Referenzbildes. Das Gebäude hat ein leuchtend rotes Dach, weiße Wände, eine braune Holztür zum Reingehen und ein breites Verkaufsfenster mit kleiner Markise und Theke, an dem Spieler etwas kaufen können. Vor dem Gebäude stehen zwei kleine rote Zapfsäulen auf einem grauen Steinplatten-Gehweg. Klare dunkle Außenlinien, einfache Schattierung, flache 2D-Spiel-Perspektive.idee: Patrick :D
+
+
+
+poker karten eigene hand soll weiter unten sein wie als würde man diese in der hand halten im halb kreis angeordnet und um 5% skalieren idee: Patrick :D
+
+cheat funktion für admins abab hoch runter hoch runter (pfeiltasten) soll einem eine 100% gewinnchance geben jackpots zu gewinnen,jackpot solle zudem auch eine animation von coins die von der decke fallen geben abhängig wie groß der einsatz ist idee: Patrick :D
+
+clawmaschinen schild vom umzug wegmachen 
+pavelion von jeder seite betretbar machen 

@@ -279,6 +279,10 @@ namespace OOPGames
 
         protected override Color BackgroundColor { get { return Color.FromRgb(0x1E, 0x5A, 0x50); } }
 
+        public const double PlayerHandScale = 1.05;   // Patrick Lupierz – 16.11.2026
+        public const double PlayerHandTop = 196;
+        public const double PlayerHandCenterX = 240;
+
         protected override void DrawGame(G1C_Renderer r)
         {
             bool inHand = _phase != Phase.Setup;
@@ -301,21 +305,23 @@ namespace OOPGames
             // Spieler
             r.Text("Du", 20, 176, 13, G1C_UiColors.Gold);
             r.Text("Einheit: " + (inHand ? _unit : Bet.Amount), 20, 194, 10, Colors.White);
+            // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – eigene Hand tiefer, im Halbkreis gefächert und 5 %
+            // größer (wie in der Hand gehalten). Texte links/rechts daneben, damit nichts überdeckt wird.
             if (inHand)
             {
-                G1C_CardView.DrawHand(r, _playerHole, 200, 166, 44);
+                G1C_CardView.DrawFan(r, _playerHole, PlayerHandCenterX, PlayerHandTop, PlayerHandScale);
                 if (_board.Count >= 3)
                 {
                     string current = G1C_PokerHandEvaluator.EvaluateBest(_playerHole.Concat(_board).ToList()).Name;
-                    r.Text("Deine Hand: " + current, 300, 186, 11, Colors.White);
+                    r.Text("Deine Hand: " + current, 296, 176, 11, Colors.White);
                 }
             }
 
-            r.Text(_lastAction + (_phase == Phase.HandOver && _handInfo.Length > 0 ? "   " + _handInfo : ""), 20, 228, 10, G1C_UiColors.PanelFill);
+            r.WrappedText(_lastAction + (_phase == Phase.HandOver && _handInfo.Length > 0 ? "   " + _handInfo : ""), 20, 210, 9, G1C_UiColors.PanelFill, 172);
             if (_phase == Phase.HandOver)
             {
                 // Die Überlegung der KI wird erst nach der Hand gezeigt, sonst würde sie ihre Karten verraten
-                r.Text("KI: " + _ai.LastDecision, 20, 244, 9, G1C_UiColors.Gold);
+                r.WrappedText("KI: " + _ai.LastDecision, 296, 196, 9, G1C_UiColors.Gold, 176);
             }
 
             switch (_phase)

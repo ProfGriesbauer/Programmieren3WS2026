@@ -1981,3 +1981,60 @@ und drei Katzen; Seitenwände und zusammengesetzte Teppiche in allen Innenräume
 Vogelgrafik auf der Baumkrone; rote Tankstelle mit zwei Zapfsäulen und Verkaufsfenster (`G1C_ShopWindow`); schlafende Figur
 im Bett; Tiere in Innenräumen animiert. Build 0/0, Selbsttest 49/49 bestanden, Szenen gerendert und geprüft.
 Nicht möglich: Bedienung im echten Hauptfenster durch den Agenten. Kein Commit.
+
+### Prompt 11
+
+Datum: 16.11.2026
+Werkzeug: Claude Code (VS-Code-Erweiterung)
+Modell: Claude Opus 5.5
+
+```text
+halte dich an die claude.md und kümmere dich um die neuen issues in sprintplannig
+```
+
+Ergebnisvermerk (alle Änderungen mit „Entwickler/Änderung durch: Patrick Lupierz“ markiert): 11 neue SprintPlanning-Punkte
+umgesetzt – Einrichtungsmodus mit klickbarer Hausansicht und Möbel-Limit 3; Haustiere (5 Katzen-, 3 Hundevarianten),
+umherlaufend, massiv, streichelbar, mit Lautblasen; Sound-System mit erzeugter Chiptune-Musik und Geräuschen; Fahrrad je
+Richtung und Fehler "zweimal klicken" behoben; rollenabhängiger Smalltalk und mehr Themen; Angel-Minispiel auf den Brücken;
+Retro-Tankstelle; Poker-Kartenfächer; Admin-Cheat mit Münzregen; Umzugsschild entfernt; Pavillon von allen Seiten betretbar.
+Build 0/0, Selbsttest 64/64 bestanden, Szenen gerendert und geprüft. Nicht möglich: Hörprobe und Bedienung im echten
+Hauptfenster durch den Agenten. Kein Commit.
+
+### Prompt 12
+
+Datum: 16.11.2026
+Werkzeug: Claude Code (VS-Code-Erweiterung)
+Modell: Claude Opus 5.5
+
+```text
+[Bild: Fisch-Grafikpaket, 20 Fische] die fische sind free to use, der admin cheat funktioniert nicht wegen der bedienung b
+andere option tasten kombo
+```
+
+Ergebnisvermerk: 20 Fische aus dem bereitgestellten, frei nutzbaren Paket als Pixeldaten übernommen (`G1C_FishSprites`) und
+als 20 Fischarten ins Angelspiel und den Itemkatalog eingebaut (bestehende IDs bleiben, Spielstände kompatibel). Admin-Cheat
+auf ↑ ↑ ↓ ↓ ← → ← → umgestellt (nur Pfeiltasten, kein [B]). Build 0/0 (in separaten Ordner, da das Spiel lief), Selbsttest
+64/64 bestanden, Angelspiel gerendert. Kein Commit.
+
+### Prompt 13
+
+Datum: 16.11.2026 · Werkzeug: Claude Code · Modell: Claude Sonnet 5.5
+
+```text
+admin cheat auf eingabe von admin einfach aktivieren und deaktivieren im spielautomaten
+```
+
+Ergebnisvermerk: Cheat = Wort ADMIN (A D M I N), wirkt nur bei aktivem Spielautomaten, wiederholte Eingabe schaltet aus.
+Tests angepasst (inkl. "wirkt nicht außerhalb des Automaten"). Zusätzlich vorher: Roulette-Historie farbig (Prompt "roulet schrift ..."),
+Angelplatz nur auf der untersten Brücke und nicht massiv. Kein Commit.
+
+### Prompt 14
+
+Datum: 16.11.2026 · Werkzeug: Claude Code · Modell: Claude Sonnet 5.5
+
+```text
+zum cheat auch das durch speed unendlich lang geschwindigkeit erhöht its
+```
+
+Ergebnisvermerk (so verstanden: der Cheat gibt zusätzlich dauerhaft erhöhte Geschwindigkeit, wie ein endloser Speed-Effekt):
+ADMIN schaltet Jackpot-Garantie und Turbo-Tempo (2 Ticks pro Feld, schneller als Fahrrad mit 3) zusammen an/aus. Test ergänzt.

@@ -125,8 +125,28 @@ namespace OOPGames
             return brush;
         }
 
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – gemeinsame Drehung um einen Punkt (z. B. Kartenfächer):
+        // alle Elemente zwischen BeginRotation und EndRotation werden um (pivotX, pivotY) gedreht.
+        private double _groupAngle;
+        private double _pivotX;
+        private double _pivotY;
+
+        public void BeginRotation(double degrees, double pivotX, double pivotY)
+        {
+            _groupAngle = degrees;
+            _pivotX = pivotX;
+            _pivotY = pivotY;
+        }
+
+        public void EndRotation()
+        {
+            _groupAngle = 0;
+        }
+
         private void Place(UIElement element, double x, double y)
         {
+            if (_groupAngle != 0 && (element.RenderTransform == null || element.RenderTransform.Value.IsIdentity))
+                element.RenderTransform = new RotateTransform(_groupAngle, (_pivotX - x) * S, (_pivotY - y) * S);
             Canvas.SetLeft(element, Viewport.OffsetX + x * S);
             Canvas.SetTop(element, Viewport.OffsetY + y * S);
             _canvas.Children.Add(element);

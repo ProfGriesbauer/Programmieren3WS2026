@@ -5,7 +5,8 @@ using System.Linq;
 namespace OOPGames
 {
     // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrzeug (Fahrräder) am Ende ergänzt
-    public enum G1C_ItemCategory { Kleidung, Lebensmittel, Getraenk, Verbrauch, Quest, Moebel, Sonstiges, Fahrzeug }
+    // Änderung durch: Patrick Lupierz – 16.11.2026 – Fisch (Fang beim Angeln) am Ende ergänzt
+    public enum G1C_ItemCategory { Kleidung, Lebensmittel, Getraenk, Verbrauch, Quest, Moebel, Sonstiges, Fahrzeug, Fisch }
 
     public enum G1C_ClothingSlot { None, Top, Pants, Shoes, Hat }
 
@@ -100,6 +101,31 @@ namespace OOPGames
                 Bike("bike_green", "Grünes Fahrrad", 320, 0x38A050),
                 Bike("bike_yellow", "Gelbes Fahrrad", 350, 0xE8C030),
                 Bike("bike_black", "Schwarzes Rennrad", 480, 0x303038),
+
+                // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Fang beim Angeln (im Laden verkaufbar);
+                // 20 Fischarten passend zum frei nutzbaren Fisch-Grafikpaket (G1C_FishSprites)
+                Catch("fish_minnow", "Elritze", "Ein kleiner Schwarmfisch. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 6),
+                Catch("fish_smelt", "Stint", "Riecht angeblich nach Gurke. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 5),
+                Catch("fish_bluegill", "Sonnenbarsch", "Bunt wie ein Sommertag. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 12),
+                Catch("fish_perch", "Barsch", "Gestreift und stachelig. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 15),
+                Catch("fish_bream", "Brasse", "Flach und silbrig. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 14),
+                Catch("fish_chub", "Döbel", "Frisst einfach alles. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 18),
+                Catch("fish_trout", "Regenbogenforelle", "Schillert in allen Farben. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 25),
+                Catch("fish_browntrout", "Bachforelle", "Mag kaltes, klares Wasser. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 28),
+                Catch("fish_bass", "Schwarzbarsch", "Ein kräftiger Räuber. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 30),
+                Catch("fish_carp", "Karpfen", "Schwer und kräftig. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 40),
+                Catch("fish_flounder", "Flunder", "Platt wie ein Pfannkuchen. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 35),
+                Catch("fish_zander", "Zander", "Jagt in der Dämmerung. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 50),
+                Catch("fish_mackerel", "Makrele", "Wie kommt die in den Fluss? Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 45),
+                Catch("fish_redfish", "Rotbarsch", "Leuchtend rot. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 55),
+                Catch("fish_catfish", "Wels", "Mit langen Barteln. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 70),
+                Catch("fish_pike", "Hecht", "Der Räuber des Flusses. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 80),
+                Catch("fish_salmon", "Lachs", "Schwimmt gegen jeden Strom. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 90),
+                Catch("fish_sunfish", "Mondfisch", "Riesig, rund und sehr selten. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 120),
+                Catch("fish_marlin", "Blauer Marlin", "Eine Legende mit Schwert. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 200),
+                Catch("fish_golden", "Glücks-Koi", "Bringt Glück – und viele Chips. Im Laden verkaufbar.", G1C_ItemCategory.Fisch, 250),
+                Catch("boot", "Alter Stiefel", "Tropft noch. Irgendwer nimmt alles.", G1C_ItemCategory.Sonstiges, 1),
+                Catch("treasure_ring", "Verlorener Ring", "Ein goldener Ring aus dem Fluss.", G1C_ItemCategory.Sonstiges, 120),
             };
             return list.ToDictionary(i => i.Id);
         }
@@ -123,6 +149,12 @@ namespace OOPGames
                 Id = id, Name = name, Category = G1C_ItemCategory.Fahrzeug, Price = price, Color = color,
                 Description = "Fahrrad – im Inventar [E] zum Auf-/Absteigen (nur draußen). Fährt fast doppelt so schnell."
             };
+        }
+
+        // Entwickler: Patrick Lupierz – 16.11.2026 – Fang/Fundstück: nicht kaufbar, aber verkaufbar
+        private static G1C_Item Catch(string id, string name, string description, G1C_ItemCategory category, int sellValue)
+        {
+            return new G1C_Item { Id = id, Name = name, Description = description, Category = category, SellValue = sellValue };
         }
 
         private static G1C_Item Furniture(string id, string name, string sprite, int width, int height, int price)
@@ -331,6 +363,18 @@ namespace OOPGames
         }
 
         public static int PriceWithMarkup(int price) { return (price * 105 + 99) / 100; }
+
+        /// <summary>Höchstzahl je Möbelstück (Inventar + aufgestellt). Patrick Lupierz – 16.11.2026</summary>
+        public const int MaxFurniturePerItem = 3;
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Kauf mit Mengengrenze für Möbel. placedCount = bereits aufgestellte Stücke dieses Möbels.
+        public static string Buy(G1C_Item item, G1C_MoneyManager money, G1C_Inventory inventory, int placedCount)
+        {
+            if (item.Category == G1C_ItemCategory.Moebel && inventory.Count(item.Id) + placedCount >= MaxFurniturePerItem)
+                return "Von " + item.Name + " hast du schon " + MaxFurniturePerItem + " Stück – mehr passt nicht ins Haus.";
+            return Buy(item, money, inventory);
+        }
 
         public static string Sell(G1C_Item item, G1C_MoneyManager money, G1C_Inventory inventory)
         {

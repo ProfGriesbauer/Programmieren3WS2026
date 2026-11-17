@@ -18,6 +18,8 @@ namespace OOPGames
         ListMenu,   // Laden, Inventar, Kleiderschrank
         Phone,      // Klapphandy
         Map,        // Stadtkarte
-        Arcade      // Änderung durch: Patrick Lupierz – 15.11.2026 – Spiel an einem Automaten der Spielhalle
+        Arcade,     // Änderung durch: Patrick Lupierz – 15.11.2026 – Spiel an einem Automaten der Spielhalle
+        Fishing,    // Änderung durch: Patrick Lupierz – 16.11.2026 – Angeln auf der Brücke
+        FurnitureEditor // Änderung durch: Patrick Lupierz – 16.11.2026 – Einrichtungsmodus im Zuhause
     }
 }

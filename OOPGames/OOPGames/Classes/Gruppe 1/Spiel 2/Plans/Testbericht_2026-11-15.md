@@ -157,3 +157,30 @@ Gerendert und angesehen: Omas Haus außen und innen, Tankstelle mit Fenster und 
 Teppich, Wänden und Bildern, schlafende Figur im Bett, Bank mit neuen Wänden, Teppich und Zinsplakat.
 
 Weiterhin nicht ausführbar: Bedienung im echten Hauptfenster (siehe Checkliste in Abschnitt 4).
+
+## 7. Nachtrag 16.11.2026 – neue SprintPlanning-Punkte
+
+Build: 0 Fehler, 0 Warnungen. Selbsttest: **64/64 BESTANDEN** (15 neue Tests: Möbel-Limit, Einrichtungsmodus, Haustiere,
+Streicheln/Laute, Sound, Fahrrad-Richtungen, Fahrrad vor der Tür, Gespräche, Angelplätze, Drill/Fang/Verkauf, Entkommen,
+Admin-Cheat/Münzregen, Poker-Fächer, Casino-Schild, Tankstellen-Look).
+
+Erster Lauf: 60/64. Ursachen: (1) Tiertest lief im Zuhause – Haustiere bewegen sich bewusst nur in der aktiven Szene; Test in
+die Stadt verlegt. (2)/(3) Testposition 30,20 war nicht begehbar; außerdem rief `Select(...).Last()` wegen einer
+.NET-Optimierung nur das letzte Element auf (Cheat-Test). Tests korrigiert. (4) **Echter Fehler:** Die Zapfsäulen standen auf
+der Straße statt auf den Steinplatten – Vorplatz und Säulen korrigiert. Pavillon- und Katzen-Test an das neue, gewünschte
+Verhalten angepasst.
+
+Gerendert und angesehen: Tankstelle (Dach, Wände, Holztür, Fenster mit Markise, Säulen auf Steinplatten), Hund mit
+"Wuff! ♥", Katzen mit Lautblasen, Pavillon, Angel auf der Brücke, Angelspiel (Warten, Drill mit Leiste), Poker-Fächer,
+Jackpot mit Münzregen, Einrichtungsmodus, Fahrrad in allen vier Richtungen, Omas Haus mit laufenden Katzen.
+
+Nachtrag: Cheat-Tastenfolge auf ADMIN geändert ([B] öffnet das Menü); 20 Fischarten mit dem bereitgestellten
+Grafikpaket. Selbsttest danach erneut ausgeführt (siehe Prompt 12 im Prompt-Protokoll).
+
+Nicht ausführbar für den Agenten: Hörprobe der Musik/Geräusche und Bedienung im Hauptfenster. Ergänzung der Checkliste:
+- [ ] Musik wechselt beim Betreten von Laden/Casino/Spielhalle; [B] dann [T] schaltet stumm; nach Wechsel zu einem anderen
+      Framework-Spiel endet die Musik spätestens am Ende des Stücks
+- [ ] Einrichtungsplan: Möbel per Mausklick aufstellen, anklicken und verschieben, [R] einlagern
+- [ ] Angeln: [A]/[D] gedrückt halten steuert den grünen Bereich flüssig
+- [ ] Fahrrad: in ein Haus fahren, wieder hinausgehen – man fährt direkt weiter
+- [ ] Im Spielautomaten ADMIN tippen: Hinweis erscheint, nächste Drehung 7-7-7 mit Münzregen

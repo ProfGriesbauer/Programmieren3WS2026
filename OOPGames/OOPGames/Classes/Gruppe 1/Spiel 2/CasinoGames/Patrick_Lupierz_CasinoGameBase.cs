@@ -84,6 +84,15 @@ namespace OOPGames
             WantsExit = true;
         }
 
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Spiele melden Geräusche (Gewinn, Platschen, ...);
+        // abgespielt werden sie vom G1C_SoundSystem des GameManagers. Ohne Empfänger passiert nichts.
+        public Action<string> SoundRequested { get; set; }
+
+        protected void Sfx(string effect)
+        {
+            if (SoundRequested != null) SoundRequested(effect);
+        }
+
         public void HandleInput(G1C_InputEvent input)
         {
             if (input == null) return;

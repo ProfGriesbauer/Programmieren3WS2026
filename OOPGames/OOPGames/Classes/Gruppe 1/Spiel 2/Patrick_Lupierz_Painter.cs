@@ -162,8 +162,9 @@ namespace OOPGames
             {
                 G1C_WorldObject o = obj;
                 G1C_Npc npc = o as G1C_Npc;
-                double x = npc != null ? npc.VisualX : o.X;
-                double y = npc != null ? npc.VisualY : o.Y;
+                G1C_PetAnimal pet = o as G1C_PetAnimal; // Patrick Lupierz – 16.11.2026: Haustiere laufen flüssig
+                double x = npc != null ? npc.VisualX : pet != null ? pet.VisualX : o.X;
+                double y = npc != null ? npc.VisualY : pet != null ? pet.VisualY : o.Y;
                 if (!IsEntityVisible(o, x, y, tileSize, mapX, mapY)) continue;
                 drawables.Add(new KeyValuePair<double, System.Action>(y + o.Height,
                     () => DrawEntity(r, o.SpriteId, x, y, o.Width, o.Height, tileSize, mapX, mapY)));
@@ -180,9 +181,20 @@ namespace OOPGames
                     () => DrawSleeper(r, player.Skin, bed, tileSize, mapX, mapY)));
             else drawables.Add(new KeyValuePair<double, System.Action>(player.VisualY + 1.01, () =>
             {
-                if (riding) DrawBike(r, game.Bikes.RideSpriteId(player.Facing), player.VisualX, player.VisualY, tileSize, mapX, mapY);
-                DrawEntity(r, _animation.GetSpriteId(player), player.VisualX, player.VisualY - (riding ? 0.2 : 0), 1, 1,
-                           tileSize, mapX, mapY);
+                // Änderung durch: Patrick Lupierz – 16.11.2026 – Fahrrad in Blickrichtung; beim Fahren keine
+                // Laufbeine (Standbild, leichtes Wippen beim Treten); von vorn liegt der Lenker vor der Figur.
+                if (!riding)
+                {
+                    DrawEntity(r, _animation.GetSpriteId(player), player.VisualX, player.VisualY, 1, 1, tileSize, mapX, mapY);
+                    return;
+                }
+                string bike = game.Bikes.RideSpriteId(player.Facing);
+                double pedal = player.IsMoving ? System.Math.Abs(System.Math.Sin(player.StepProgress * 1.2)) * 0.05 : 0;
+                bool bikeInFront = player.Facing == G1C_Direction.Down;
+                if (!bikeInFront) DrawBike(r, bike, player.VisualX, player.VisualY, tileSize, mapX, mapY);
+                DrawEntity(r, G1C_PlayerAnimation.GetStandingSpriteId(player.Skin, player.Facing), player.VisualX,
+                           player.VisualY - 0.2 - pedal, 1, 1, tileSize, mapX, mapY);
+                if (bikeInFront) DrawBike(r, bike, player.VisualX, player.VisualY + 0.08, tileSize, mapX, mapY);
             }));
 
             foreach (KeyValuePair<double, System.Action> d in drawables.OrderBy(d => d.Key))
@@ -196,8 +208,11 @@ namespace OOPGames
             // Änderung durch: Eduard Schoenfeld – Datum: 12.11.2026 – Sprechblasen und Aufgabenanzeige
             // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Reaktions-Sprechblasen gibt es jetzt auf jeder Karte
             _npcOverlay.DrawBubbles(r, game.Npcs, mapX, mapY, tileSize);
+            DrawAnimalBubbles(r, game, tileSize, mapX, mapY);                         // Patrick Lupierz – 16.11.2026
             if (inCasino) _npcOverlay.DrawTaskStatus(r, game.Npcs);
+            if (game.State == G1C_GameState.FurnitureEditor) DrawFurnitureEditor(r, game, tileSize, mapX, mapY);
             r.RestoreClip();
+            if (game.State == G1C_GameState.FurnitureEditor) DrawFurnitureHelp(r, game);
             if (scrolling) game.MapView.DrawMinimap(r, game.Exterior, game.Player);
         }
 
@@ -241,11 +256,75 @@ namespace OOPGames
             r.Text("Z z", cx - tileSize * 0.2, bedTop - tileSize * 0.6, tileSize * 0.4, Color.FromRgb(0xF8, 0xF8, 0xF8));
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Kleine Sprechblasen der Tiere (Miau, Wuff, Quak ...); Herz beim Streicheln in Rot.
+        private void DrawAnimalBubbles(G1C_Renderer r, G1C_GameManager game, double tileSize, double mapX, double mapY)
+        {
+            foreach (KeyValuePair<G1C_WorldObject, string> bubble in game.AnimalVoices.Active)
+            {
+                G1C_PetAnimal pet = bubble.Key as G1C_PetAnimal;
+                double ax = pet != null ? pet.VisualX : bubble.Key.X;
+                double ay = pet != null ? pet.VisualY : bubble.Key.Y;
+                double width = bubble.Value.Length * 5.2 + 8;
+                double cx = mapX + (ax + 0.5) * tileSize;
+                double top = mapY + ay * tileSize - 16;
+                if (bubble.Key.SpriteId != null && bubble.Key.SpriteId.StartsWith("animal_bird")) top -= tileSize * 1.4;
+                if (cx < 0 || cx > G1C_Renderer.ScreenWidth || top < G1C_GameHUD.Height - 10 || top > G1C_Renderer.ScreenHeight) continue;
+                double x = cx - width / 2;
+                bool love = bubble.Value.Contains("♥");
+                r.DrawRect(x, top, width, 12, Color.FromRgb(0xFF, 0xFF, 0xF4), love ? Color.FromRgb(0xE0, 0x40, 0x60) : G1C_UiColors.PanelBorder, 1.2);
+                r.FillRect(cx - 1.5, top + 12, 3, 3, G1C_UiColors.PanelBorder);
+                r.Text(bubble.Value, x, top + 1, 8, love ? Color.FromRgb(0xD0, 0x30, 0x50) : G1C_UiColors.Text, width);
+            }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Einrichtungsmodus über dem echten Zuhause: feines Raster, eigene Möbel hellblau umrandet,
+        //          gehaltenes Möbel als Vorschau am Cursor (grün = frei, rot = blockiert).
+        private void DrawFurnitureEditor(G1C_Renderer r, G1C_GameManager game, double tileSize, double mapX, double mapY)
+        {
+            G1C_HomeMap map = game.Home.Map;
+            Color grid = Color.FromArgb(40, 255, 255, 255);
+            for (int x = 1; x < map.Width; x++) r.FillRect(mapX + x * tileSize, mapY, 1, map.Height * tileSize, grid);
+            for (int y = 1; y < map.Height; y++) r.FillRect(mapX, mapY + y * tileSize, map.Width * tileSize, 1, grid);
+            foreach (G1C_PlacedFurniture placed in game.Home.PlacedFurniture)
+            {
+                G1C_Item item = G1C_ItemCatalog.Get(placed.ItemId);
+                if (item == null) continue;
+                r.DrawRect(mapX + placed.X * tileSize, mapY + placed.Y * tileSize, item.FurnitureWidth * tileSize,
+                           item.FurnitureHeight * tileSize, Colors.Transparent, Color.FromRgb(0x60, 0xC8, 0xF8), 1.5);
+            }
+            G1C_FurnitureEditor editor = game.Furnishing;
+            double cx = mapX + editor.CursorX * tileSize, cy = mapY + editor.CursorY * tileSize;
+            if (editor.Held == null)
+            {
+                r.DrawRect(cx, cy, tileSize, tileSize, Colors.Transparent, G1C_UiColors.Gold, 2);
+                return;
+            }
+            G1C_Item held = editor.Held;
+            DrawEntity(r, held.FurnitureSpriteId, editor.CursorX, editor.CursorY, held.FurnitureWidth, held.FurnitureHeight, tileSize, mapX, mapY);
+            bool ok = editor.CursorValid(game.Home, game.Player);
+            r.DrawRect(cx, cy, held.FurnitureWidth * tileSize, held.FurnitureHeight * tileSize,
+                       ok ? Color.FromArgb(70, 0x40, 0xF0, 0x60) : Color.FromArgb(90, 0xF0, 0x30, 0x30),
+                       ok ? Color.FromRgb(0x40, 0xD0, 0x60) : Color.FromRgb(0xE0, 0x30, 0x30), 2);
+        }
+
+        private static void DrawFurnitureHelp(G1C_Renderer r, G1C_GameManager game)
+        {
+            double y = G1C_Renderer.ScreenHeight - 46;
+            r.DrawPanel(4, y, G1C_Renderer.ScreenWidth - 8, 42);
+            G1C_FurnitureEditor editor = game.Furnishing;
+            r.Text("EINRICHTEN" + (editor.Held != null ? ": " + editor.Held.Name : " – Möbel anklicken zum Verschieben"), 12, y + 5, 10, G1C_UiColors.PanelBorder);
+            r.Text("Klick/[E] setzen · WASD Cursor · [N] nächstes · [R] einlagern · [Q] fertig", 12, y + 17, 8.5, G1C_UiColors.Text);
+            r.Text(editor.Message, 12, y + 28, 8.5, G1C_UiColors.Text);
+        }
+
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026
         // Aufgabe: Fahrrad unter der Figur (Seitenansicht breiter als eine Kachel, Frontansicht schmal)
         private void DrawBike(G1C_Renderer r, string spriteId, double tileX, double tileY, double tileSize, double mapX, double mapY)
         {
-            double width = tileSize * (spriteId.EndsWith("_side") ? 1.3 : 0.6);
+            bool side = spriteId.EndsWith("_side") || spriteId.EndsWith("_left") || spriteId.EndsWith("_right"); // 16.11.2026
+            double width = tileSize * (side ? 1.3 : 0.6);
             double height = width * _sprites.GetAspect(spriteId);
             double bottom = mapY + (tileY + 1) * tileSize;
             r.Sprite(spriteId, mapX + (tileX + 0.5) * tileSize - width / 2, bottom - height, width, height);

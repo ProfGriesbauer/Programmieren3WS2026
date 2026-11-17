@@ -31,8 +31,9 @@ namespace OOPGames
     // =====================================================
     public sealed class G1C_ShopWindow : G1C_WorldObject
     {
-        public G1C_ShopWindow(string sellerName, string spriteId, int x, int y, G1C_WorldLocation shopLocation)
-            : base(sellerName, spriteId, x, y, 1, 1, true, G1C_InteractionType.Shop)
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – breite Fenster (mehrere Kacheln)
+        public G1C_ShopWindow(string sellerName, string spriteId, int x, int y, G1C_WorldLocation shopLocation, int width = 1)
+            : base(sellerName, spriteId, x, y, width, 1, true, G1C_InteractionType.Shop)
         {
             ShopLocation = shopLocation;
         }

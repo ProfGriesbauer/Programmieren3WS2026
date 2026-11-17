@@ -92,3 +92,18 @@ unverändert; Statusänderungen stehen hier. Doppelte Wünsche wurden zusammenge
 | 45 | Schlafen erledigt: Figur liegt während der Animation im Bett. |
 | 46 | teilweise: Taschengeld-Tag wird gespeichert (NPC-Erinnerung); laufende Minispiele werden bewusst nicht gespeichert (Runde endet beim Verlassen). |
 | – | Offen außerhalb des Codes: manueller Test im Hauptfenster; Freigaben (Agents.md Abschnitt 0, Stadtgröße). |
+
+## Ergänzung 4 – 16.11.2026 (Patrick Lupierz, KI-gestützt; Ideen aus SprintPlanning)
+
+| ID | Story | Stand |
+|----|-------|-------|
+| 48 | Als Spieler möchte ich Möbel in einer klickbaren Hausansicht platzieren und verschieben (max. 3 je Möbel). | erledigt |
+| 49 | Als Spieler möchte ich Katzen (5 Fellarten) und Hunde streicheln; Tiere laufen umher, blockieren den Weg und geben Laute von sich. | erledigt |
+| 50 | Als Spieler möchte ich Musik und Geräusche hören (je Ort, Gewinne, Aktionen) und den Ton abschalten können. | erledigt (Hörprobe offen) |
+| 51 | Als Spieler möchte ich, dass das Fahrrad in Fahrtrichtung zeigt und nach einem Hausbesuch ohne Doppelklick weiterfährt. | erledigt |
+| 52 | Als Spieler möchte ich mit jedem NPC über eigene Themen reden, statt überall dieselben zwei Sätze zu sehen. | erledigt |
+| 53 | Als Spieler möchte ich auf den Brücken angeln (Drill mit Leiste) und den Fang im Laden verkaufen. | erledigt |
+| 54 | Als Spieler möchte ich eine Retro-Tankstelle mit Verkaufsfenster und Zapfsäulen auf Steinplatten sehen. | erledigt |
+| 55 | Als Spieler möchte ich beim Poker meine Karten wie in der Hand gehalten sehen. | erledigt |
+| 56 | Als Admin möchte ich per Tastenfolge (ADMIN) einen garantierten Jackpot (mit Münzregen) auslösen können. | erledigt |
+| 57 | Pavillon von allen Seiten betretbar; Umzugsschild des Greifautomaten entfernt. | erledigt |

@@ -111,7 +111,7 @@ namespace OOPGames
             run("Zustände", "Inventar und Handy öffnen und schließen", StatesMenus);
 
             // ---- Erweiterung 15.11.2026: Pavillon, Bank, Fahrrad, Spielhalle
-            run("Gebäude", "Pavillon: von unten begehbar, Rückseite und Säulen massiv", BuildingsPavilion);
+            run("Gebäude", "Pavillon: von jeder Seite betretbar, nur Ecksäulen massiv", BuildingsPavilion);
             run("Bank", "Bank hat Bankierin, Berater und Wachmann mit eigenen Themen", BankStaff);
             run("Fahrrad", "Startfahrrad, Auf-/Absteigen nur draußen, schneller, Absteigen im Gebäude", BikeRiding);
             run("Fahrrad", "Fahrradladen: alle Farben ausgestellt, Kauf nur einmal, Ladenschluss", BikeShopBuy);
@@ -131,6 +131,24 @@ namespace OOPGames
             run("Grafik", "Jeder Innenraum hat ein eigenes, untersuchbares Wandbild", GraphicsWallPictures);
             run("Grafik", "Vögel sitzen oben auf dem Baum (hohe Grafik, unten transparent)", GraphicsBirds);
             run("Zustände", "Schlafen: Schlafzustand, Steuerung gesperrt, danach wieder frei", StatesSleeping);
+
+            // ---- Erweiterung 16.11.2026: neue SprintPlanning-Punkte (Möbel, Tiere, Sound, Fahrrad, Gespräche, Angeln,
+            //      Tankstelle, Poker, Cheat, Casino-Schild, Pavillon)
+            run("Möbel", "Kauflimit: höchstens 3 Stück je Möbel (Inventar + aufgestellt)", FurnitureLimit);
+            run("Möbel", "Einrichtungsmodus: per Klick aufstellen, verschieben, einlagern, abbrechen", FurnitureEditorFlow);
+            run("Tiere", "Katzen (5 Fellarten) und Hunde: Grafik, massiv, laufen im Revier umher", AnimalsPetsRoam);
+            run("Tiere", "Streicheln: Herz-Blase und Meldung; Laute je Tierart; Enten massiv", AnimalsPettingAndVoices);
+            run("Sound", "Musik je Ort, Geräusche bei Aktionen, WAV-Erzeugung, stumm im Test", SoundLogic);
+            run("Fahrrad", "Grafik in alle 4 Richtungen, links = gespiegelt rechts", BikeDirections);
+            run("Fahrrad", "Haus betreten/verlassen: Rad wartet vor der Tür, kein zweites Anklicken", BikeEnterLeaveBuilding);
+            run("Gespräche", "Lob/Spitze passend zur Rolle, Familie ohne Beleidigung, mehr Themen", ConversationSmallTalk);
+            run("Angeln", "Angeln auf den Brücken: erreichbar, startet das Angelspiel", FishingSpots);
+            run("Angeln", "Drill: grüner Bereich treibt gegen den Fisch, Fang landet im Inventar und ist verkaufbar", FishingCatch);
+            run("Angeln", "Drill: ohne Gegensteuern reißt sich der Fisch los", FishingEscape);
+            run("Casino", "Admin-Cheat: ADMIN im Spielautomaten tippen schaltet Jackpot-Garantie an/aus: Jackpot garantiert, Münzregen nach Einsatz", CasinoCheatJackpot);
+            run("Casino", "Poker: eigene Hand tiefer, gefächert, 5 % größer", CasinoPokerFan);
+            run("Casino", "Umzugsschild des Greifautomaten entfernt", CasinoClawSignRemoved);
+            run("Geschäfte", "Tankstelle: Retro-Look, breites Fenster, Steinplatten unter den Zapfsäulen", ShopGasStationLook);
 
             WriteReport(results);
             return results;
@@ -177,7 +195,8 @@ namespace OOPGames
         {
             return G1C_BuiltInSprites.Create(id) != null || G1C_TownSprites.Create(id) != null ||
                    G1C_WorldSprites.Create(id) != null || G1C_DecorSprites.Create(id) != null ||
-                   G1C_NpcSprites.Create(id, new G1C_SpriteLibrary()) != null;
+                   G1C_NpcSprites.Create(id, new G1C_SpriteLibrary()) != null ||
+                   G1C_AnimalSprites.Create(id) != null; // Patrick Lupierz – 16.11.2026
         }
 
         private static IEnumerable<IG1C_WorldScene> AllScenes(G1C_GameManager game)
@@ -326,7 +345,8 @@ namespace OOPGames
             Check(game.Home.Objects.OfType<G1C_Npc>().Any(n => n.Name == G1C_FamilyNpcRoster.MotherName), "Mama steht nicht im Zuhause");
             Check(game.GrandmaHouse.Objects.OfType<G1C_Npc>().Any(n => n.Name == G1C_FamilyNpcRoster.GrandmaName), "Oma ist nicht in ihrem Haus");
             Check(!game.Exterior.Objects.OfType<G1C_Npc>().Any(n => n.Name == G1C_FamilyNpcRoster.GrandmaName), "Oma läuft draußen herum");
-            Equal(3, game.GrandmaHouse.Objects.Count(o => o is G1C_Animal && o.SpriteId.StartsWith("animal_cat")), "Anzahl Katzen der Oma");
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – Omas Katzen sind jetzt streichelbare Haustiere
+            Equal(3, game.GrandmaHouse.Objects.OfType<G1C_PetAnimal>().Count(p => p.Kind == G1C_PetKind.Cat), "Anzahl Katzen der Oma");
             Check(game.Exterior.Objects.Any(o => o.SpriteId == "building_grandma"), "Omas Haus fehlt in der Stadt");
         }
 
@@ -685,12 +705,17 @@ namespace OOPGames
             foreach (G1C_WorldObject p in pavilions)
             {
                 Check(!p.Solid, "Pavillon-Objekt ist massiv");
-                for (int dy = 1; dy <= 3; dy++)
+                // Änderung durch: Patrick Lupierz – 16.11.2026 – von jeder Seite betretbar: nur die vier Ecksäulen massiv
+                foreach (int[] c in new[] { new[] { 0, 0 }, new[] { 3, 0 }, new[] { 0, 3 }, new[] { 3, 3 } })
+                    Check(collision.IsBlocked(p.X + c[0], p.Y + c[1]), "Ecksäule fehlt bei +" + c[0] + "/+" + c[1]);
+                for (int i = 1; i <= 2; i++)
                 {
-                    Check(!collision.IsBlocked(p.X + 1, p.Y + dy) && !collision.IsBlocked(p.X + 2, p.Y + dy), "Unter dem Pavillon blockiert (Zeile " + dy + ")");
-                    Check(collision.IsBlocked(p.X, p.Y + dy) && collision.IsBlocked(p.X + 3, p.Y + dy), "Säulenseite begehbar (Zeile " + dy + ")");
+                    Check(!collision.IsBlocked(p.X + i, p.Y), "Eingang oben blockiert");
+                    Check(!collision.IsBlocked(p.X + i, p.Y + 3), "Eingang unten blockiert");
+                    Check(!collision.IsBlocked(p.X, p.Y + i), "Eingang links blockiert");
+                    Check(!collision.IsBlocked(p.X + 3, p.Y + i), "Eingang rechts blockiert");
+                    Check(!collision.IsBlocked(p.X + i, p.Y + 1) && !collision.IsBlocked(p.X + i, p.Y + 2), "Innenraum blockiert");
                 }
-                for (int dx = 0; dx < 4; dx++) Check(collision.IsBlocked(p.X + dx, p.Y), "Rückseite begehbar");
             }
         }
 
@@ -1037,6 +1062,449 @@ namespace OOPGames
             game.HandleInput(G1C_InputEvent.FromKey(Key.D));
             for (int i = 0; i < 10; i++) game.Update();
             Equal(x + 1, game.Player.TileX, "Nach dem Aufwachen keine Bewegung");
+        }
+
+        // ------------------------------------------------------------------ Erweiterung 16.11.2026
+
+        private static void FurnitureLimit()
+        {
+            G1C_MoneyManager money = new G1C_MoneyManager(5000);
+            G1C_Inventory inventory = new G1C_Inventory();
+            G1C_Item plant = G1C_ItemCatalog.Get("furniture_plant");
+            inventory.Add("furniture_plant", 2);
+            string ok = G1C_Shop.Buy(plant, money, inventory, 0);
+            Equal(3, inventory.Count("furniture_plant"), "Kauf bis 3 – " + ok);
+            int before = money.Balance;
+            string refused = G1C_Shop.Buy(plant, money, inventory, 0);
+            Equal(before, money.Balance, "Viertes Stück wurde bezahlt");
+            Check(refused.Contains("3"), "Meldung beim Limit: " + refused);
+            inventory.Remove("furniture_plant", 2);
+            G1C_Shop.Buy(plant, money, inventory, 2);   // 1 im Inventar + 2 aufgestellt = 3
+            Equal(1, inventory.Count("furniture_plant"), "Aufgestellte Möbel zählen mit");
+        }
+
+        private static void FurnitureEditorFlow()
+        {
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Home, 8, 4, G1C_Direction.Up);
+            game.Inventory.Add("furniture_plant", 2);
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));                  // Einrichtungsplan
+            Equal(G1C_GameState.ListMenu, game.State, "Einrichtungsplan öffnet die Liste");
+            int row = game.ListMenu.Rows.FindIndex(r => r.Text.StartsWith("Topfpflanze"));
+            game.ListMenu.Choose(row);
+            Equal(G1C_GameState.FurnitureEditor, game.State, "Einrichtungsmodus");
+            G1C_Item plant = G1C_ItemCatalog.Get("furniture_plant");
+            List<G1C_FurnitureLocation> free = game.Home.AvailableFurnitureLocations(plant, game.Player);
+            Check(free.Count >= 2, "Zu wenig freie Plätze");
+            ClickTile(game, free[0].X, free[0].Y);
+            Equal(1, game.Home.PlacedFurniture.Count, "Per Klick aufgestellt");
+            Equal(1, game.Inventory.Count("furniture_plant"), "Inventar nach dem Aufstellen");
+            Check(game.Home.Objects.Any(o => o.SpriteId == "obj_plant" && o.X == free[0].X && o.Y == free[0].Y), "Ansicht nicht aktualisiert");
+
+            // Verschieben: Möbel anklicken, neuen Platz anklicken
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+            Equal(G1C_GameState.MainGame, game.State, "[Q] beendet den Modus");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            game.ListMenu.Choose(game.ListMenu.Rows.FindIndex(r => r.Text.StartsWith("Möbel verschieben")));
+            Equal(G1C_GameState.FurnitureEditor, game.State, "Verschiebe-Modus");
+            ClickTile(game, free[0].X, free[0].Y);
+            Check(game.Furnishing.IsMoving && game.Home.PlacedFurniture.Count == 0, "Möbel nicht aufgehoben");
+            G1C_FurnitureLocation target = game.Home.AvailableFurnitureLocations(plant, game.Player)
+                .First(l => l.X != free[0].X || l.Y != free[0].Y);
+            ClickTile(game, target.X, target.Y);
+            Check(game.Home.PlacedFurniture.Count == 1 && game.Home.PlacedFurniture[0].X == target.X && game.Home.PlacedFurniture[0].Y == target.Y,
+                  "Möbel nicht verschoben");
+            Equal(1, game.Inventory.Count("furniture_plant"), "Verschieben darf nichts kosten");
+
+            // Aufheben und abbrechen: Möbel kehrt zurück
+            ClickTile(game, target.X, target.Y);
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Escape));
+            Check(game.Home.PlacedFurniture.Count == 1 && game.Home.PlacedFurniture[0].X == target.X, "Abbrechen stellt nicht zurück");
+
+            // Einlagern
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            game.ListMenu.Choose(game.ListMenu.Rows.FindIndex(r => r.Text.StartsWith("Möbel verschieben")));
+            ClickTile(game, target.X, target.Y);
+            game.HandleInput(G1C_InputEvent.FromKey(Key.R));
+            Equal(0, game.Home.PlacedFurniture.Count, "Einlagern entfernt das Möbel");
+            Equal(2, game.Inventory.Count("furniture_plant"), "Einlagern legt ins Inventar");
+
+            // Blockierte Kachel (Wand) wird abgelehnt
+            game.Furnishing.Begin(plant, game.Home, game.Player);
+            game.Furnishing.SetCursor(0, 0, game.Home);
+            Check(!game.Home.CanPlaceFurniture(plant, 0, 0, game.Player), "Wand gilt als frei");
+        }
+
+        private static void ClickTile(G1C_GameManager game, int x, int y)
+        {
+            double size = game.Home.TileSize;
+            double mapX = (G1C_Renderer.ScreenWidth - game.Home.Map.Width * size) / 2;
+            double mapY = G1C_GameHUD.Height + (G1C_Renderer.ScreenHeight - G1C_GameHUD.Height - game.Home.Map.Height * size) / 2;
+            game.HandleInput(G1C_InputEvent.FromClick(mapX + (x + 0.5) * size, mapY + (y + 0.5) * size));
+        }
+
+        private static void AnimalsPetsRoam()
+        {
+            G1C_GameManager probe = RunningGame();
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, probe.Exterior.PlayerStartX, probe.Exterior.PlayerStartY, G1C_Direction.Down);
+            List<G1C_PetAnimal> pets = game.Exterior.Objects.OfType<G1C_PetAnimal>().ToList();
+            List<string> catVariants = pets.Where(p => p.Kind == G1C_PetKind.Cat).Select(p => p.Variant).Distinct().ToList();
+            Equal(5, catVariants.Count, "Katzen-Fellvarianten in der Stadt");
+            Check(pets.Count(p => p.Kind == G1C_PetKind.Dog) >= 3, "Zu wenige Hunde");
+            foreach (string v in G1C_PetAnimal.CatVariants.Select(v => "pet_cat_" + v).Concat(G1C_PetAnimal.DogVariants.Select(v => "pet_dog_" + v)))
+                foreach (string suffix in new[] { "_l_0", "_r_1", "_r_2" })
+                    Check(HasBuiltInSprite(v + suffix), "Grafik fehlt: " + v + suffix);
+            G1C_CollisionManager collision = new G1C_CollisionManager(game.Exterior);
+            foreach (G1C_PetAnimal pet in pets) Check(pet.Solid && collision.IsBlocked(pet.X, pet.Y), pet.Name + " ist begehbar");
+
+            Dictionary<G1C_PetAnimal, int[]> start = pets.ToDictionary(p => p, p => new[] { p.X, p.Y });
+            for (int i = 0; i < 900; i++) game.Update();
+            int moved = pets.Count(p => p.X != start[p][0] || p.Y != start[p][1]);
+            Check(moved >= pets.Count / 2, "Nur " + moved + " von " + pets.Count + " Tieren sind gelaufen");
+            foreach (G1C_PetAnimal pet in pets)
+            {
+                Check(Math.Abs(pet.X - pet.HomeX) <= pet.RoamRadius && Math.Abs(pet.Y - pet.HomeY) <= pet.RoamRadius, pet.Name + " hat sein Revier verlassen");
+                Check(game.Exterior.Map.IsWalkable(pet.X, pet.Y), pet.Name + " steht auf einer unbegehbaren Kachel");
+                Check(!game.Exterior.Objects.Any(o => o != pet && o.Solid && !(o is G1C_PetAnimal) && o.Occupies(pet.X, pet.Y)), pet.Name + " steht in einem Objekt");
+            }
+        }
+
+        private static void AnimalsPettingAndVoices()
+        {
+            G1C_GameManager probe = RunningGame();
+            G1C_PetAnimal cat = probe.Exterior.Objects.OfType<G1C_PetAnimal>().First(p => p.Kind == G1C_PetKind.Cat);
+            G1C_CollisionManager collision = new G1C_CollisionManager(probe.Exterior);
+            int[][] sides = { new[] { 0, 1, (int)G1C_Direction.Up }, new[] { 0, -1, (int)G1C_Direction.Down },
+                              new[] { 1, 0, (int)G1C_Direction.Left }, new[] { -1, 0, (int)G1C_Direction.Right } };
+            int[] side = sides.First(s => !collision.IsBlocked(cat.X + s[0], cat.Y + s[1]));
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, cat.X + side[0], cat.Y + side[1], (G1C_Direction)side[2]);
+            Check(game.CurrentHint.Contains("streicheln"), "Hinweis: '" + game.CurrentHint + "'");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            G1C_PetAnimal petted = game.Exterior.Objects.OfType<G1C_PetAnimal>().First(p => p.Name == cat.Name);
+            Equal(1, petted.PetCount, "Streichelzähler");
+            Check(game.SystemMessage.Contains(cat.Name), "Meldung: " + game.SystemMessage);
+            Check((game.AnimalVoices.TextOf(petted) ?? "").Contains("♥"), "Keine Herz-Blase");
+            Equal("meow", game.Sound.LastEffect, "Geräusch beim Streicheln");
+
+            Check(G1C_AnimalVoices.SoundOf(new G1C_PetAnimal("H", G1C_PetKind.Dog, "brown", 1, 1, 0), new Random(1)).StartsWith("W"), "Hund bellt nicht");
+            Check(G1C_AnimalVoices.SoundOf(game.Exterior.Animals.First(a => a.SpriteId.StartsWith("animal_duck")), new Random(1)).StartsWith("Quak"), "Ente quakt nicht");
+            Check(G1C_AnimalVoices.SoundOf(game.Exterior.Animals.First(a => a.SpriteId.StartsWith("animal_bird")), new Random(1)) != null, "Vogel stumm");
+            foreach (G1C_Animal duck in game.Exterior.Animals.Where(a => a.SpriteId.StartsWith("animal_duck")))
+                Check(duck.Solid, "Ente ist begehbar");
+
+            G1C_AnimalVoices voices = new G1C_AnimalVoices();
+            List<G1C_WorldObject> animals = game.Exterior.Animals.Cast<G1C_WorldObject>().ToList();
+            Random random = new Random(5);
+            for (int tick = 0; tick < 2000 && !voices.Active.Any(); tick++) voices.Update(tick, animals, random);
+            Check(voices.Active.Any(), "Tiere melden sich nie von selbst");
+            voices.Update(100000, animals, null);
+            Check(!voices.Active.Any(), "Sprechblasen laufen nicht ab");
+        }
+
+        private static void SoundLogic()
+        {
+            Equal("title", G1C_SoundSystem.MusicFor(G1C_GameState.Title, G1C_WorldLocation.Home, null), "Titelmusik");
+            Equal("town", G1C_SoundSystem.MusicFor(G1C_GameState.MainGame, G1C_WorldLocation.Exterior, null), "Stadtmusik");
+            Equal("home", G1C_SoundSystem.MusicFor(G1C_GameState.MainGame, G1C_WorldLocation.Home, null), "Zuhause");
+            Equal("shop", G1C_SoundSystem.MusicFor(G1C_GameState.ListMenu, G1C_WorldLocation.Market, null), "Laden");
+            Equal("casino", G1C_SoundSystem.MusicFor(G1C_GameState.MainGame, G1C_WorldLocation.Casino, null), "Casino");
+            Equal("arcade", G1C_SoundSystem.MusicFor(G1C_GameState.MainGame, G1C_WorldLocation.Arcade, null), "Spielhalle");
+            Equal("fishing", G1C_SoundSystem.MusicFor(G1C_GameState.Fishing, G1C_WorldLocation.Exterior,
+                new G1C_FishingGame(new G1C_MoneyManager(0), new Random(1), new G1C_Inventory())), "Angeln");
+
+            G1C_GameManager probe = RunningGame();
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, probe.Exterior.PlayerStartX, probe.Exterior.PlayerStartY, G1C_Direction.Down);
+            Check(!game.Sound.Enabled, "Ton im Test eingeschaltet");
+            game.Update();
+            Equal("town", game.Sound.CurrentMusic, "Musik in der Stadt");
+            G1C_GameManager shop = GameAt(G1C_WorldLocation.Exterior, game.Exterior.Map.DoorX(G1C_WorldLocation.Market),
+                                          game.Exterior.Map.DoorY(G1C_WorldLocation.Market) + 1, G1C_Direction.Up);
+            shop.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal("door", shop.Sound.LastEffect, "Türgeräusch");
+            shop.Update();
+            Equal("shop", shop.Sound.CurrentMusic, "Ladenmusik");
+            Equal("Ton aus.", shop.Sound.ToggleMute(), "Stummschalten");
+
+            foreach (string name in new[] { "music_town", "music_home", "music_shop", "music_casino", "music_arcade", "music_fishing", "music_title",
+                                            "sfx_win", "sfx_jackpot", "sfx_lose", "sfx_coin", "sfx_door", "sfx_meow", "sfx_woof", "sfx_splash", "sfx_catch" })
+            {
+                byte[] wav = G1C_ChipTune.Render(name);
+                Check(wav.Length > 2000 && wav[0] == 'R' && wav[1] == 'I' && wav[8] == 'W', "WAV ungültig: " + name);
+                Equal(wav.Length - 8, BitConverter.ToInt32(wav, 4), "RIFF-Länge " + name);
+            }
+            Check(Math.Abs(G1C_ChipTune.Frequency("A4") - 440) < 0.01 && Math.Abs(G1C_ChipTune.Frequency("A5") - 880) < 0.01, "Tonhöhe falsch");
+        }
+
+        private static void BikeDirections()
+        {
+            G1C_BikeSystem bikes = new G1C_BikeSystem();
+            List<string> ids = new[] { G1C_Direction.Left, G1C_Direction.Right, G1C_Direction.Up, G1C_Direction.Down }
+                .Select(d => bikes.RideSpriteId(d)).ToList();
+            Equal(4, ids.Distinct().Count(), "Eigene Grafik je Richtung");
+            foreach (string id in ids) Check(HasBuiltInSprite(id), "Grafik fehlt: " + id);
+            G1C_PixelCanvas right = G1C_DecorSprites.BikeSide("bike_red"), left = right.MirrorX();
+            bool mirrored = true, different = false;
+            for (int y = 0; y < right.Height; y++)
+                for (int x = 0; x < right.Width; x++)
+                {
+                    if (left.Get(x, y) != right.Get(right.Width - 1 - x, y)) mirrored = false;
+                    if (left.Get(x, y) != right.Get(x, y)) different = true;
+                }
+            Check(mirrored && different, "Links ist nicht die gespiegelte Rechts-Grafik");
+        }
+
+        private static void BikeEnterLeaveBuilding()
+        {
+            G1C_GameManager probe = RunningGame();
+            G1C_ExteriorMap map = probe.Exterior.Map;
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, map.DoorX(G1C_WorldLocation.Market), map.DoorY(G1C_WorldLocation.Market) + 1, G1C_Direction.Up);
+            game.Bikes.TryMount(game.Inventory, G1C_BikeSystem.StarterBike, game.CurrentLocation);
+            Check(game.Bikes.Riding, "Aufsteigen");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_WorldLocation.Market, game.CurrentLocation, "Laden betreten");
+            Check(!game.Bikes.Riding && game.Bikes.ParkedAtDoor, "Rad nicht vor der Tür abgestellt");
+            Equal("obj_bike_stand", game.Exterior.ParkedBike.SpriteId, "Fahrradständer zuhause müsste leer sein");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.I));
+            Check(game.ListMenu.Rows.Any(r => r.Right == "steht vor der Tür"), "Inventar zeigt Fahrradstatus nicht");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Escape));
+
+            IG1C_WorldMap inside = game.CurrentWorld.Grid;
+            int ex = -1, ey = -1;
+            for (int y = 0; y < inside.Height && ex < 0; y++)
+                for (int x = 0; x < inside.Width; x++)
+                    if (inside.GetTransitionAt(x, y) != null) { ex = x; ey = y; break; }
+            Check(ex >= 0, "Ausgang nicht gefunden");
+            game.Player.Teleport(ex, ey - 1, G1C_Direction.Down);
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_WorldLocation.Exterior, game.CurrentLocation, "Laden verlassen");
+            Check(game.Bikes.Riding && !game.Bikes.ParkedAtDoor, "Nach dem Verlassen nicht automatisch wieder aufgestiegen");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.I));
+            Check(game.ListMenu.Rows.Any(r => r.Right.StartsWith("fährst du")), "Inventar zeigt 'fährst du' nicht");
+            int row = game.ListMenu.Rows.FindIndex(r => r.Right.StartsWith("fährst du"));
+            game.ListMenu.Choose(row);
+            Check(!game.Bikes.Riding, "Ein Klick zum Absteigen reicht nicht");
+        }
+
+        private static void ConversationSmallTalk()
+        {
+            G1C_GameManager game = new G1C_GameManager();
+            List<G1C_NpcCharacter> all = game.Npcs.Characters.ToList();
+            int sameCompliment = all.Count(c => G1C_SmallTalk.ComplimentFor(c.Personality) == "Du machst das echt gut hier.");
+            Check(sameCompliment <= 2, sameCompliment + " NPCs haben noch 'Du machst das echt gut hier'");
+            Check(all.Count(c => (G1C_SmallTalk.InsultFor(c.Personality) ?? "").Contains("nicht spielen")) <= 1, "'Du kannst nicht spielen' bei zu vielen NPCs");
+            Check(all.Select(c => G1C_SmallTalk.ComplimentFor(c.Personality)).Distinct().Count() >= 8, "Zu wenig verschiedene Lob-Sätze");
+            foreach (G1C_NpcCharacter c in all.Where(c => c.Personality.IsFamily))
+                Check(G1C_SmallTalk.InsultFor(c.Personality) == null, c.Name + " hat eine Beleidigungs-Option");
+            foreach (G1C_NpcCharacter c in all.Where(c => !c.Personality.IsFamily))
+            {
+                Check(c.Personality.Topics.Count >= 2, c.Name + " hat zu wenige Themen");
+                Check(c.Personality.Topics.Any(t => t.Question == "Was gibt's Neues in der Stadt?"), c.Name + " ohne Stadtklatsch");
+                Check(c.Personality.Topics.Select(t => t.Question).Distinct().Count() == c.Personality.Topics.Count, c.Name + ": doppelte Fragen");
+            }
+
+            // Im Gespräch: Mama plaudern -> kein "echt gut hier", keine Beleidigung, "Erzähl mir mehr"
+            G1C_GameManager home = GameAt(G1C_WorldLocation.Home, 8, 5, G1C_Direction.Right);
+            home.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_GameState.Conversation, home.State, "Gespräch mit Mama");
+            ChooseOption(home, "Lass uns plaudern.");
+            List<string> options = home.Npcs.Conversation.Options.Select(o => o.Text).ToList();
+            Check(!options.Contains("Du machst das echt gut hier.") && !options.Any(o => o.Contains("nicht spielen")),
+                  "Standardsätze bei Mama: " + string.Join(" | ", options));
+            Check(options.Contains("Ich hab dich lieb, Mama."), "Rollen-Lob fehlt: " + string.Join(" | ", options));
+        }
+
+        private static void ChooseOption(G1C_GameManager game, string text)
+        {
+            int index = game.Npcs.Conversation.Options.Select(o => o.Text).ToList().IndexOf(text);
+            Check(index >= 0, "Option fehlt: " + text + " in " + string.Join(" | ", game.Npcs.Conversation.Options.Select(o => o.Text)));
+            game.HandleInput(G1C_InputEvent.FromKey(Key.D1 + index));
+        }
+
+        private static void FishingSpots()
+        {
+            G1C_GameManager probe = RunningGame();
+            List<G1C_WorldObject> rods = probe.Exterior.Objects.Where(o => o.Interaction == G1C_InteractionType.Fishing).ToList();
+            Equal(1, rods.Count, "Es soll genau einen Angelplatz geben");
+            int lowestBridgeY = Enumerable.Range(0, G1C_ExteriorMap.MapHeight).Where(y => probe.Exterior.Map.IsBridge(probe.Exterior.Map.RiverCenterXAt(y), y)).Max();
+            Check(rods[0].Y >= lowestBridgeY - 1, "Angel nicht auf der untersten Brücke (Angel y=" + rods[0].Y + ", Brücke bis y=" + lowestBridgeY + ")");
+            foreach (G1C_WorldObject rod in rods)
+            {
+                Check(!rod.Solid && !new G1C_CollisionManager(probe.Exterior).IsBlocked(rod.X, rod.Y), "Angel blockiert den Weg");
+                Check(probe.Exterior.Map.IsBridge(rod.X, rod.Y), "Angel nicht auf einer Brücke");
+                Check(!new G1C_CollisionManager(probe.Exterior).IsBlocked(rod.X, rod.Y + 1), "Brücke unter der Angel blockiert");
+            }
+            Check(HasBuiltInSprite("obj_fishing_rod"), "Grafik der Angel fehlt");
+            // Angel ist begehbar: Interaktion muss auf der Angel-Kachel selbst und (mit Blick darauf) daneben gehen
+            G1C_GameManager onTile = GameAt(G1C_WorldLocation.Exterior, rods[0].X, rods[0].Y, G1C_Direction.Up);
+            Equal("[E] Angeln", onTile.CurrentHint, "Hinweis auf der Angel-Kachel");
+            G1C_GameManager walking = GameAt(G1C_WorldLocation.Exterior, rods[0].X, rods[0].Y + 1, G1C_Direction.Up);
+            walking.HandleInput(G1C_InputEvent.FromKey(Key.W));
+            for (int i = 0; i < 12; i++) walking.Update();
+            Equal(rods[0].Y, walking.Player.TileY, "Angel muss begehbar sein");
+            walking.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_GameState.Fishing, walking.State, "Nach dem Daraufgehen: [E] startet das Angeln");
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, rods[0].X, rods[0].Y + 1, G1C_Direction.Up);
+            Equal("[E] Angeln", game.CurrentHint, "Hinweis vor der Angel");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_GameState.Fishing, game.State, "Angelspiel startet");
+            Check(game.ActiveGame is G1C_FishingGame, "Kein Angelspiel aktiv");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+            Equal(G1C_GameState.Dialogue, game.State, "Fangübersicht nach dem Angeln");
+        }
+
+        private static void FishingCatch()
+        {
+            G1C_MoneyManager money = new G1C_MoneyManager(0);
+            G1C_Inventory inventory = new G1C_Inventory();
+            G1C_FishingGame fishing = new G1C_FishingGame(money, new Random(3), inventory) { Steering = () => 0 };
+            fishing.Cast();
+            Equal(G1C_FishingGame.Phase.Waiting, fishing.State, "Auswerfen");
+            for (int i = 0; i < 200 && fishing.State == G1C_FishingGame.Phase.Waiting; i++) fishing.Update();
+            Equal(G1C_FishingGame.Phase.Bite, fishing.State, "Biss");
+            fishing.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_FishingGame.Phase.Fight, fishing.State, "Anhauen");
+
+            int opposite = 0, samples = 0;
+            for (int i = 0; i < 2000 && fishing.State == G1C_FishingGame.Phase.Fight; i++)
+            {
+                double zone = fishing.ZoneCenter;
+                fishing.UpdateFight(0);
+                if (Math.Abs(fishing.FishVelocity) > 0.002 && fishing.ZoneCenter > 0.14 && fishing.ZoneCenter < 0.86)
+                {
+                    samples++;
+                    if (Math.Sign(fishing.ZoneCenter - zone) == -Math.Sign(fishing.FishVelocity)) opposite++;
+                }
+                if (samples > 30) break;
+            }
+            Check(samples == 0 || opposite >= samples * 0.9, "Grüner Bereich treibt nicht gegen den Fisch (" + opposite + "/" + samples + ")");
+
+            // Mit Gegensteuern (immer zum Fisch) wird gefangen
+            G1C_FishingGame follow = new G1C_FishingGame(money, new Random(11), inventory);
+            follow.Steering = () => Math.Sign(follow.FishPosition - follow.ZoneCenter);
+            int caught = 0;
+            for (int round = 0; round < 6; round++)
+            {
+                follow.StrikeHook();
+                for (int i = 0; i < 3000 && follow.State == G1C_FishingGame.Phase.Fight; i++) follow.Update();
+                if (follow.State == G1C_FishingGame.Phase.Caught) caught++;
+            }
+            Check(caught >= 4, "Mit Gegensteuern nur " + caught + "/6 gefangen");
+            Check(follow.Caught.Count == caught, "Fangliste");
+            Check(inventory.Items.Any() || money.Balance > 0, "Fang nicht im Inventar");
+            G1C_Item item = inventory.Items.FirstOrDefault(i => i.SellValue > 0);
+            if (item != null)
+            {
+                int before = money.Balance;
+                G1C_Shop.Sell(item, money, inventory);
+                Check(money.Balance > before, item.Name + " ist nicht verkaufbar");
+            }
+            foreach (G1C_CatchInfo c in G1C_FishingGame.Catches.Where(c => c.ItemId != null))
+            {
+                Check(G1C_ItemCatalog.Get(c.ItemId) != null && G1C_ItemCatalog.Get(c.ItemId).SellValue > 0, "Fang fehlt im Katalog: " + c.ItemId);
+                Check(HasBuiltInSprite("item_" + c.ItemId), "Icon fehlt: " + c.ItemId);
+                if (c.IsFish) Check(HasBuiltInSprite(c.ItemId + "_l") && HasBuiltInSprite(c.ItemId + "_r"), "Fischgrafik fehlt: " + c.ItemId);
+            }
+            Equal(20, G1C_FishingGame.Catches.Count(c => c.IsFish), "Fischarten im Angelspiel");
+            Check(!G1C_CheatCode.Sequence.Contains(Key.E) && !G1C_CheatCode.Sequence.Contains(Key.Q) && !G1C_CheatCode.Sequence.Contains(Key.W) && !G1C_CheatCode.Sequence.Contains(Key.S), "Cheat nutzt Tasten des Spielautomaten");
+            Check(G1C_FishingGame.Catches.Any(c => c.ItemId == null) && G1C_FishingGame.Catches.Any(c => c.ItemId == "lucky_coin"), "Glücksfunde fehlen");
+        }
+
+        private static void FishingEscape()
+        {
+            G1C_FishingGame fishing = new G1C_FishingGame(new G1C_MoneyManager(0), new Random(4), new G1C_Inventory());
+            fishing.Steering = () => -Math.Sign(fishing.FishPosition - fishing.ZoneCenter);
+            fishing.StrikeHook();
+            for (int i = 0; i < 3000 && fishing.State == G1C_FishingGame.Phase.Fight; i++) fishing.Update();
+            Equal(G1C_FishingGame.Phase.Escaped, fishing.State, "Fisch entkommt beim Wegsteuern");
+            fishing.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_FishingGame.Phase.Waiting, fishing.State, "Neu auswerfen");
+        }
+
+        private static void CasinoCheatJackpot()
+        {
+            G1C_CheatCode code = new G1C_CheatCode();
+            foreach (Key k in new[] { Key.A, Key.D, Key.M, Key.I, Key.X }) code.Feed(k);
+            Check(!code.JackpotActive, "Falsche Folge aktiviert den Cheat");
+            bool completed = false;
+            foreach (Key k in G1C_CheatCode.Sequence) completed = code.Feed(k);
+            Check(completed && code.JackpotActive, "Richtige Folge aktiviert nicht");
+            foreach (Key k in G1C_CheatCode.Sequence) code.Feed(k);
+            Check(!code.JackpotActive, "Zweite Eingabe schaltet nicht aus");
+
+            G1C_GameManager start = RunningGame();
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, start.Exterior.PlayerStartX, start.Exterior.PlayerStartY, G1C_Direction.Down);
+            foreach (Key k in G1C_CheatCode.Sequence) game.HandleInput(G1C_InputEvent.FromKey(k));
+            Check(!game.Cheats.JackpotActive, "Cheat darf außerhalb des Spielautomaten nicht wirken");
+            // echter Weg: im Casino vor den Spielautomaten, Dialog bestätigen, bis der Automat läuft
+            game = GameAt(G1C_WorldLocation.Casino, 3, 9, G1C_Direction.Up);
+            for (int i = 0; i < 4 && !(game.ActiveGame is G1C_Slots); i++) game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Check(game.ActiveGame is G1C_Slots, "Spielautomat konnte nicht gestartet werden (Zustand " + game.State + ")");
+            foreach (Key k in G1C_CheatCode.Sequence) game.HandleInput(G1C_InputEvent.FromKey(k));
+            Check(game.Cheats.JackpotActive && game.SystemMessage.Contains("ADMIN"), "Cheat im Spielautomaten nicht aktiv: " + game.SystemMessage);
+            for (int i = 0; i < 3; i++) game.Update();
+            Equal(G1C_CheatCode.SpeedStepTicks, game.Player.StepTicks, "Cheat: Tempo nicht erhöht");
+            Check(G1C_CheatCode.SpeedStepTicks < G1C_BikeSystem.RidingStepTicks, "Cheat-Tempo nicht schneller als Fahrrad");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Q)); // Automaten verlassen: Tempo bleibt "unendlich" bestehen
+            for (int i = 0; i < 400; i++) game.Update();
+            Equal(G1C_CheatCode.SpeedStepTicks, game.Player.StepTicks, "Cheat-Tempo endet von selbst");
+            game = GameAt(G1C_WorldLocation.Casino, 3, 9, G1C_Direction.Up);
+            for (int i = 0; i < 4 && !(game.ActiveGame is G1C_Slots); i++) game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            foreach (Key k in G1C_CheatCode.Sequence) game.HandleInput(G1C_InputEvent.FromKey(k));
+            foreach (Key k in G1C_CheatCode.Sequence) game.HandleInput(G1C_InputEvent.FromKey(k));
+            Check(!game.Cheats.JackpotActive, "ADMIN erneut schaltet nicht aus");
+            for (int i = 0; i < 3; i++) game.Update();
+            Equal(5, game.Player.StepTicks, "Nach dem Ausschalten Tempo nicht zurückgesetzt");
+            for (int i = 0; i < 4 && !(game.ActiveGame is G1C_Slots); i++) game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            foreach (Key k in G1C_CheatCode.Sequence) game.HandleInput(G1C_InputEvent.FromKey(k));
+            Check(game.Cheats.JackpotActive, "ADMIN schaltet nicht wieder ein");
+
+            G1C_MoneyManager money = new G1C_MoneyManager(1000);
+            G1C_Slots slots = new G1C_Slots(money, new Random(2)) { GuaranteedJackpot = () => game.Cheats.JackpotActive };
+            for (int spin = 0; spin < 3; spin++)
+            {
+                int before = money.Balance;
+                slots.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                for (int i = 0; i < 80; i++) slots.Update();
+                Check(slots.LastWasJackpot, "Kein Jackpot trotz Cheat (Drehung " + (spin + 1) + ")");
+                Equal(before + 25 * 99, money.Balance, "Jackpot-Auszahlung (Einsatz 25)");
+            }
+            slots.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            for (int i = 0; i < 40; i++) slots.Update();
+            Equal(G1C_Slots.CoinsForBet(25), slots.CoinRainCount, "Münzregen-Menge");
+            Check(G1C_Slots.CoinsForBet(500) > G1C_Slots.CoinsForBet(100) && G1C_Slots.CoinsForBet(100) > G1C_Slots.CoinsForBet(10), "Münzregen wächst nicht mit dem Einsatz");
+        }
+
+        private static void CasinoPokerFan()
+        {
+            Equal(1.05, G1C_Poker.PlayerHandScale, "Skalierung der eigenen Hand");
+            Check(G1C_Poker.PlayerHandTop > 166, "Hand nicht tiefer als vorher (166)");
+            Check(G1C_CardView.FanAngle(0, 2) < 0 && G1C_CardView.FanAngle(1, 2) > 0 &&
+                  Math.Abs(G1C_CardView.FanAngle(0, 2) + G1C_CardView.FanAngle(1, 2)) < 0.001, "Fächer nicht symmetrisch");
+            Equal(0.0, G1C_CardView.FanAngle(2, 5), "Mittlere Karte gerade");
+        }
+
+        private static void CasinoClawSignRemoved()
+        {
+            G1C_GameManager game = new G1C_GameManager();
+            Check(!game.World.Objects.Any(o => o.Lines.Any(l => l.Contains("umgezogen"))), "Umzugsschild steht noch im Casino");
+            Check(!game.World.Objects.Any(o => o.Interaction == G1C_InteractionType.Claw), "Greifautomat steht noch im Casino");
+        }
+
+        private static void ShopGasStationLook()
+        {
+            G1C_GameManager game = new G1C_GameManager();
+            G1C_ExteriorMap map = game.Exterior.Map;
+            G1C_ShopWindow window = game.Exterior.Objects.OfType<G1C_ShopWindow>().First();
+            Equal(2, window.Width, "Breites Verkaufsfenster");
+            foreach (G1C_WorldObject pump in game.Exterior.Objects.Where(o => o.SpriteId == "obj_fuel_pump"))
+                Equal("tile_city_plaza", map.GetTileSpriteId(pump.X, pump.Y), "Zapfsäule nicht auf Steinplatten");
+            G1C_SpriteLibrary sprites = new G1C_SpriteLibrary(Path.Combine(Path.GetTempPath(), "g1c_no_assets"));
+            System.Windows.Media.Imaging.BitmapSource b = sprites.Get("building_gas_station");
+            System.Windows.Media.Imaging.FormatConvertedBitmap bgra = new System.Windows.Media.Imaging.FormatConvertedBitmap(b, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+            Func<int, int, byte[]> px = (x, y) => { byte[] p = new byte[4]; bgra.CopyPixels(new System.Windows.Int32Rect(x, y, 1, 1), p, 4, 0); return p; };
+            byte[] roof = px(48, 20), wall = px(20, 46), door = px(55, 70);
+            Check(roof[2] > 200 && roof[1] < 80, "Dach nicht rot");
+            Check(wall[0] > 230 && wall[1] > 230 && wall[2] > 230, "Wand nicht weiß");
+            Check(door[2] > door[0] + 40 && door[2] < 180, "Tür nicht braun (Holz)");
         }
 
         // ------------------------------------------------------------------ Bericht

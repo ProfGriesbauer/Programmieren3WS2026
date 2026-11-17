@@ -69,6 +69,12 @@ namespace OOPGames
         public G1C_Phone Phone { get; }
         public G1C_MapView MapView { get; } = new G1C_MapView();
 
+        // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Ton, Admin-Cheat, Einrichtungsmodus, Tierlaute
+        public G1C_SoundSystem Sound { get; } = new G1C_SoundSystem();
+        public G1C_CheatCode Cheats { get; } = new G1C_CheatCode();
+        public G1C_FurnitureEditor Furnishing { get; } = new G1C_FurnitureEditor();
+        public G1C_AnimalVoices AnimalVoices { get; } = new G1C_AnimalVoices();
+
         // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Schlafzustand: nach dem Schlafen wird die Welt
         // kurz abgedunkelt mit "Zzz" gezeigt; währenddessen ist die Steuerung gesperrt.
         public const int SleepAnimationTicks = 75; // 3 Sekunden
@@ -90,7 +96,7 @@ namespace OOPGames
             Phone = new G1C_Phone(Npcs);
             // Änderung durch: Patrick Lupierz – 15.11.2026 – Ständer zeigt das aktive Rad oder ist leer, wenn man fährt
             if (Exterior.ParkedBike != null)
-                Exterior.ParkedBike.SpriteSelector = () => Bikes.Riding ? "obj_bike_stand" : "obj_" + Bikes.ActiveBikeId;
+                Exterior.ParkedBike.SpriteSelector = () => Bikes.Riding || Bikes.ParkedAtDoor ? "obj_bike_stand" : "obj_" + Bikes.ActiveBikeId;
         }
 
         // Änderung durch: Denis Mock – Türhinweise richten sich nach der aktuell aktiven Welt.
@@ -113,6 +119,8 @@ namespace OOPGames
                     case G1C_InteractionType.Arcade:
                         return target.Name == G1C_ArcadeCatalog.HighscoreBoardName ? "[E] Highscores ansehen" : "[E] " + target.Name + " spielen";
                     case G1C_InteractionType.Bike: return Bikes.Riding ? "[E] Fahrrad abstellen" : "[E] Aufs Fahrrad steigen";
+                    case G1C_InteractionType.Pet: return "[E] " + target.Name + " streicheln";   // Patrick Lupierz – 16.11.2026
+                    case G1C_InteractionType.Fishing: return "[E] Angeln";                         // Patrick Lupierz – 16.11.2026
                     case G1C_InteractionType.Claw:
                         if (CurrentLocation == G1C_WorldLocation.Arcade) return "[E] Greifautomat";
                         break;
@@ -140,7 +148,8 @@ namespace OOPGames
                 return State == G1C_GameState.MainGame || State == G1C_GameState.Dialogue ||
                        State == G1C_GameState.Menu || State == G1C_GameState.Result ||
                        State == G1C_GameState.Conversation || State == G1C_GameState.ListMenu ||
-                       State == G1C_GameState.Phone || State == G1C_GameState.Map;
+                       State == G1C_GameState.Phone || State == G1C_GameState.Map ||
+                       State == G1C_GameState.FurnitureEditor; // Patrick Lupierz – 16.11.2026
             }
         }
 
@@ -154,9 +163,16 @@ namespace OOPGames
         private G1C_WorldObject FindTarget()
         {
             if (Player.IsMoving) return null;
-            return CurrentLocation == G1C_WorldLocation.Casino
-                ? _interactions.FindTarget(Player)
-                : CurrentWorld.ObjectAt(Player.FacingTileX, Player.FacingTileY);
+            if (CurrentLocation == G1C_WorldLocation.Casino) return _interactions.FindTarget(Player);
+            G1C_WorldObject facing = CurrentWorld.ObjectAt(Player.FacingTileX, Player.FacingTileY);
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – begehbare Objekte (Angel): man kann nicht davor stehen
+            // bleiben, weil man sofort daraufläuft. Deshalb zählt auch das Objekt auf der eigenen Kachel.
+            if (facing == null || facing.Interaction == G1C_InteractionType.None)
+            {
+                G1C_WorldObject here = CurrentWorld.ObjectAt(Player.TileX, Player.TileY);
+                if (here != null && !here.Solid && here.Interaction == G1C_InteractionType.Fishing) return here;
+            }
+            return facing;
         }
 
         // ------------------------------------------------------------------ Eingaben
@@ -165,6 +181,8 @@ namespace OOPGames
         {
             if (input == null) return;
             bool isKey = input.Kind == G1C_InputKind.Key;
+            // Patrick Lupierz – 16.11.2026: Admin-Cheat nur im Spielautomaten (dort belegen A D M I N keine Funktion)
+            if (isKey && ActiveGame is G1C_Slots && Cheats.Feed(input.Key)) OnCheatToggled();
 
             switch (State)
             {
@@ -191,6 +209,7 @@ namespace OOPGames
                 case G1C_GameState.Menu:
                     // Änderung durch: Patrick Lupierz – 15.11.2026 – Selbsttest nur auf ausdrücklichen Aufruf (Menü + F12)
                     if (isKey && input.Key == Key.F12) OpenSelfTest();
+                    else if (isKey && input.Key == Key.T) NotifySystemMessage(Sound.ToggleMute()); // Patrick Lupierz – 16.11.2026
                     else if (!isKey || Menu.ShouldClose(input.Key)) State = G1C_GameState.MainGame;
                     break;
 
@@ -213,6 +232,10 @@ namespace OOPGames
                     else if (isKey && (input.Key == Key.M || G1C_InputManager.IsBack(input.Key)))
                         State = G1C_GameState.MainGame;
                     else if (!isKey) MapView.SelectAt(input.X, input.Y, Exterior);
+                    break;
+
+                case G1C_GameState.FurnitureEditor:
+                    HandleFurnitureEditorInput(input); // Patrick Lupierz – 16.11.2026
                     break;
 
                 case G1C_GameState.Result:
@@ -302,11 +325,21 @@ namespace OOPGames
                 _movement.ClearQueue();
                 _movement = CreateMovement();
                 Npcs.Bubbles.Clear();
+                AnimalVoices.Clear();
+                Sound.Play("door"); // Patrick Lupierz – 16.11.2026
                 // Änderung durch: Patrick Lupierz – 15.11.2026 – in Gebäuden wird nicht Fahrrad gefahren
+                // Änderung durch: Patrick Lupierz – 16.11.2026 – Fehler "Fahrrad muss nach dem Haus zweimal angeklickt
+                // werden" behoben: Das Rad wartet vor der Tür (ParkedAtDoor) und beim Hinausgehen steigt man automatisch
+                // wieder auf. Vorher war man abgestiegen, das Rad wurde aber weiter als ausgerüstet angezeigt.
                 if (Bikes.Riding && CurrentLocation != G1C_WorldLocation.Exterior)
                 {
-                    Bikes.Dismount();
+                    Bikes.ParkAtDoor();
                     NotifySystemMessage("Du stellst dein Fahrrad vor der Tür ab.");
+                }
+                else if (Bikes.ParkedAtDoor && CurrentLocation == G1C_WorldLocation.Exterior)
+                {
+                    Bikes.ResumeFromDoor();
+                    NotifySystemMessage("Du steigst wieder auf dein Fahrrad.");
                 }
                 return;
             }
@@ -324,6 +357,8 @@ namespace OOPGames
                 case G1C_InteractionType.Inspect: OpenDialogue(target.Name, target.Lines, null); return; // Patrick Lupierz – 15.11.2026
                 case G1C_InteractionType.Arcade: OpenCabinet(target); return;                            // Patrick Lupierz – 15.11.2026
                 case G1C_InteractionType.Bike: UseParkedBike(); return;                                  // Patrick Lupierz – 15.11.2026
+                case G1C_InteractionType.Pet: PetAnimal(target as G1C_PetAnimal); return;                // Patrick Lupierz – 16.11.2026
+                case G1C_InteractionType.Fishing: StartFishing(); return;                                // Patrick Lupierz – 16.11.2026
                 case G1C_InteractionType.Shop:
                     // Änderung durch: Patrick Lupierz – 15.11.2026 – Verkäufer mit Profil führen erst ein Gespräch
                     if (Npcs.TryStartConversation(target)) State = G1C_GameState.Conversation;
@@ -581,13 +616,18 @@ namespace OOPGames
             {
                 G1C_Item current = item;
                 bool owned = item.IsUnique && Inventory.Has(item.Id); // Patrick Lupierz – 15.11.2026: auch Fahrräder
+                // Änderung durch: Patrick Lupierz – 16.11.2026 – höchstens 3 Stück je Möbel (Inventar + aufgestellt)
+                int placed = Home.PlacedFurniture.Count(f => f.ItemId == item.Id);
+                bool full = item.Category == G1C_ItemCategory.Moebel && Inventory.Count(item.Id) + placed >= G1C_Shop.MaxFurniturePerItem;
                 rows.Add(new G1C_MenuRow
                 {
-                    Text = item.Name, Right = owned ? "gekauft" : G1C_Shop.PriceWithMarkup(item.Price) + " Chips",
-                    Detail = item.Description, SpriteId = item.IconId,
+                    Text = item.Name, Right = owned ? "gekauft" : full ? "max. " + G1C_Shop.MaxFurniturePerItem : G1C_Shop.PriceWithMarkup(item.Price) + " Chips",
+                    Detail = item.Description + (item.Category == G1C_ItemCategory.Moebel
+                        ? " Du hast " + (Inventory.Count(item.Id) + placed) + "/" + G1C_Shop.MaxFurniturePerItem + "." : ""),
+                    SpriteId = item.IconId,
                     // Änderung durch: Patrick Lupierz – 15.11.2026 – Ladenschluss gilt auch bei offenem Menü
                     Run = () => ListMenu.Message = shop.IsOpen(Clock.Hour)
-                        ? G1C_Shop.Buy(current, Money, Inventory)
+                        ? BuyWithSound(current, placed)
                         : "Ladenschluss! Heute wird nichts mehr verkauft (" + shop.OpenFrom + "–" + shop.OpenUntil + " Uhr)."
                 });
             }
@@ -601,6 +641,88 @@ namespace OOPGames
                 });
             }
             return rows;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Kauf mit Möbelgrenze; erfolgreicher Kauf klimpert
+        private string BuyWithSound(G1C_Item item, int placedCount)
+        {
+            int before = Money.Balance;
+            string message = G1C_Shop.Buy(item, Money, Inventory, placedCount);
+            if (Money.Balance < before) Sound.Play("coin");
+            return message;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Admin-Cheat umgeschaltet: Meldung im HUD und – falls gerade gespielt wird – im Spielautomaten.
+        private void OnCheatToggled()
+        {
+            string text = Cheats.JackpotActive
+                ? "ADMIN AN: Jackpot bei jeder Drehung (7-7-7) und dauerhaft Turbo-Tempo."
+                : "ADMIN AUS: Jackpot-Garantie und Turbo-Tempo beendet.";
+            NotifySystemMessage(text);
+            G1C_Slots slots = ActiveGame as G1C_Slots;
+            if (slots != null) slots.ShowNotice(text);
+            Sound.Play("click");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Katze/Hund streicheln: Herz-Blase, Laut, Meldung
+        private void PetAnimal(G1C_PetAnimal pet)
+        {
+            if (pet == null) return;
+            string message = pet.Pet(Player);
+            AnimalVoices.Say(pet, pet.Kind == G1C_PetKind.Cat ? "Schnurr ♥" : "Wuff! ♥", TickCount);
+            Sound.Play(pet.Kind == G1C_PetKind.Cat ? "meow" : "woof");
+            NotifySystemMessage(message);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Darf ein Haustier diese Kachel betreten? Nicht auf massive Objekte, nicht auf den Spieler
+        //          (auch nicht auf die Kachel, von der er gerade kommt) und nicht vor Türen.
+        private bool PetCanEnter(int x, int y)
+        {
+            if (new G1C_CollisionManager(CurrentWorld).IsBlocked(x, y)) return false;
+            if (Math.Abs(Player.VisualX - x) < 1.0 && Math.Abs(Player.VisualY - y) < 1.0) return false;
+            if (Player.TileX == x && Player.TileY == y) return false;
+            IG1C_WorldMap map = CurrentWorld.Grid;
+            if (map.GetTransitionAt(x, y) != null || map.GetTransitionAt(x, y + 1) != null || map.GetTransitionAt(x, y - 1) != null) return false;
+            return CurrentLocation != G1C_WorldLocation.Exterior || !Exterior.Map.IsDoorApproach(x, y);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Einrichtungsmodus öffnen (null = Verschieben)
+        private void OpenFurnitureEditor(G1C_Item item)
+        {
+            if (CurrentLocation != G1C_WorldLocation.Home) return;
+            Furnishing.Begin(item, Home, Player);
+            State = G1C_GameState.FurnitureEditor;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Eingaben im Einrichtungsmodus: Klick auf eine Kachel = Cursor dorthin + Aufstellen/Aufheben,
+        //          WASD/Pfeile bewegen den Cursor, [E] aufstellen/aufheben, [R] einlagern, [N] nächstes Möbel,
+        //          [Q]/[Esc] beenden (ein aufgehobenes Möbel kehrt an seinen Platz zurück).
+        private void HandleFurnitureEditorInput(G1C_InputEvent input)
+        {
+            if (input.Kind != G1C_InputKind.Key)
+            {
+                int tx, ty;
+                if (G1C_FurnitureEditor.TileAt(input.X, input.Y, Home, out tx, out ty))
+                {
+                    Furnishing.SetCursor(tx, ty, Home);
+                    Furnishing.Confirm(Home, Inventory, Player);
+                }
+                return;
+            }
+            Key key = input.Key;
+            G1C_Direction? direction = G1C_InputManager.ToDirection(key);
+            if (direction.HasValue) Furnishing.MoveCursor(G1C_DirectionHelper.DeltaX(direction.Value), G1C_DirectionHelper.DeltaY(direction.Value), Home);
+            else if (G1C_InputManager.IsConfirm(key)) Furnishing.Confirm(Home, Inventory, Player);
+            else if (key == Key.R) Furnishing.Store(Inventory);
+            else if (key == Key.N) Furnishing.NextFromInventory(Inventory, Home, Player);
+            else if (G1C_InputManager.IsBack(key))
+            {
+                Furnishing.Cancel(Home);
+                State = G1C_GameState.MainGame;
+            }
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026
@@ -659,11 +781,20 @@ namespace OOPGames
                 rows.Add(new G1C_MenuRow
                 {
                     Text = item.Name + " x" + Inventory.Count(item.Id),
-                    Right = worn ? "angezogen" : (item.IsUsable ? "[E] benutzen" : item.Category.ToString()),
+                    Right = worn ? "angezogen" : item.Category == G1C_ItemCategory.Fahrzeug ? BikeStatus(item) // Patrick Lupierz – 16.11.2026
+                          : (item.IsUsable ? "[E] benutzen" : item.Category.ToString()),
                     Detail = item.Description, SpriteId = item.IconId, Run = () => UseItem(current)
                 });
             }
             return rows;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – eindeutiger Fahrradstatus im Inventar
+        private string BikeStatus(G1C_Item bike)
+        {
+            if (Bikes.ActiveBikeId != bike.Id) return "[E] aufsteigen";
+            if (Bikes.Riding) return "fährst du – [E] absteigen";
+            return Bikes.ParkedAtDoor ? "steht vor der Tür" : "[E] aufsteigen";
         }
 
         private void UseItem(G1C_Item item)
@@ -672,6 +803,11 @@ namespace OOPGames
             // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrrad wird nicht verbraucht, sondern auf-/abgestiegen
             if (item.Category == G1C_ItemCategory.Fahrzeug)
             {
+                if (Bikes.ParkedAtDoor && CurrentLocation != G1C_WorldLocation.Exterior)
+                {
+                    ListMenu.Message = "Dein Fahrrad steht draußen vor der Tür. Beim Hinausgehen steigst du automatisch auf.";
+                    return;
+                }
                 ListMenu.Message = Bikes.Riding && Bikes.ActiveBikeId == item.Id
                     ? Bikes.Dismount()
                     : Bikes.TryMount(Inventory, item.Id, CurrentLocation);
@@ -700,32 +836,19 @@ namespace OOPGames
                         Right = "[E] Platzieren",
                         Detail = current.Description,
                         SpriteId = current.IconId,
-                        Run = () => OpenFurniturePlacement(current)
+                        Run = () => OpenFurnitureEditor(current) // Patrick Lupierz – 16.11.2026: klickbare Ansicht
                     };
+                }).Concat(new[]
+                {
+                    // Änderung durch: Patrick Lupierz – 16.11.2026 – aufgestellte Möbel verschieben/einlagern
+                    new G1C_MenuRow
+                    {
+                        Text = "Möbel verschieben / einlagern", Right = Home.PlacedFurniture.Count + " aufgestellt",
+                        Detail = "Eigenes Möbel anklicken, neuen Platz wählen oder mit [R] zurück ins Inventar legen.",
+                        Run = () => OpenFurnitureEditor(null)
+                    }
                 }).ToList());
             State = G1C_GameState.ListMenu;
-        }
-
-        private void OpenFurniturePlacement(G1C_Item item)
-        {
-            ListMenu.Open("Platz für " + item.Name, () =>
-                Home.AvailableFurnitureLocations(item, Player).Select(location =>
-                {
-                    G1C_FurnitureLocation current = location;
-                    return new G1C_MenuRow
-                    {
-                        Text = "Bereich " + (current.X + 1) + ", " + (current.Y + 1),
-                        Detail = item.FurnitureWidth + "x" + item.FurnitureHeight + " Kacheln",
-                        Run = () =>
-                        {
-                            if (Home.PlaceFurniture(item, current.X, current.Y, Player) && Inventory.Remove(item.Id))
-                                ListMenu.Message = item.Name + " wurde aufgestellt.";
-                            else
-                                ListMenu.Message = "Der Platz ist nicht mehr frei oder das Möbel fehlt.";
-                        }
-                    };
-                }).ToList());
-            if (ListMenu.Rows.Count == 0) ListMenu.Message = "Kein passender freier Platz.";
         }
 
         private List<G1C_MenuRow> WardrobeRows()
@@ -814,7 +937,7 @@ namespace OOPGames
                 Tasks = Npcs.Tasks.Tasks.Select(t => t.Capture()).ToList(),
                 Messages = Phone.Messages, Trash = _trash.SearchedOnDay,
                 BankInterestDay = Finance.LastInterestDay, BankInterestTotal = Finance.TotalInterestPaid,
-                RidingBike = Bikes.Riding, ActiveBike = Bikes.ActiveBikeId,
+                RidingBike = Bikes.Riding, ActiveBike = Bikes.ActiveBikeId, BikeParkedAtDoor = Bikes.ParkedAtDoor,
                 ArcadeHighscores = new Dictionary<string, int>(ArcadeHighscores)
             };
         }
@@ -866,6 +989,7 @@ namespace OOPGames
             // das Fahrrad vor dem Haus nachträglich
             if (!Inventory.Has(G1C_BikeSystem.StarterBike)) Inventory.Add(G1C_BikeSystem.StarterBike);
             Bikes.Restore(data.RidingBike && CurrentLocation == G1C_WorldLocation.Exterior, data.ActiveBike);
+            if (data.BikeParkedAtDoor && CurrentLocation != G1C_WorldLocation.Exterior) Bikes.ParkAtDoor(true); // 16.11.2026
             ArcadeHighscores = data.ArcadeHighscores != null ? new Dictionary<string, int>(data.ArcadeHighscores) : new Dictionary<string, int>();
             State = G1C_GameState.MainGame;
         }
@@ -899,6 +1023,19 @@ namespace OOPGames
                     State = G1C_GameState.Claw;
                     break;
             }
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – Geräusche und Admin-Cheat (Jackpot-Garantie)
+            if (ActiveGame != null) ActiveGame.SoundRequested = Sound.Play;
+            G1C_Slots slots = ActiveGame as G1C_Slots;
+            if (slots != null) slots.GuaranteedJackpot = () => Cheats.JackpotActive;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Angel auf der Brücke benutzen
+        private void StartFishing()
+        {
+            _gameStartBalance = Money.Balance;
+            _activeGameType = G1C_InteractionType.Fishing;
+            ActiveGame = new G1C_FishingGame(Money, _random, Inventory) { SoundRequested = Sound.Play };
+            State = G1C_GameState.Fishing;
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026
@@ -948,6 +1085,7 @@ namespace OOPGames
             _gameStartBalance = Money.Balance;
             _activeGameType = G1C_InteractionType.Arcade;
             ActiveGame = game;
+            game.SoundRequested = Sound.Play; // Patrick Lupierz – 16.11.2026
             State = G1C_GameState.Arcade;
         }
 
@@ -960,6 +1098,18 @@ namespace OOPGames
 
         private void EndMinigame()
         {
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – Angeln endet mit einer Fangübersicht statt Chips-Bilanz
+            G1C_FishingGame fishing = ActiveGame as G1C_FishingGame;
+            if (fishing != null)
+            {
+                ActiveGame = null;
+                OpenDialogue("Angeln", new[] { fishing.Caught.Count == 0
+                    ? "Heute hat nichts angebissen. Morgen vielleicht!"
+                    : "Dein Fang: " + string.Join(", ", fishing.Caught) + ".\nFische und Fundstücke kannst du in jedem Laden verkaufen." }, null);
+                return;
+            }
+            if (!(ActiveGame is G1C_Slots)) // Spielautomat spielt Gewinn/Jackpot schon pro Drehung
+                Sound.Play(Money.Balance > _gameStartBalance ? "win" : Money.Balance < _gameStartBalance ? "lose" : "click");
             // Änderung durch: Patrick Lupierz – 15.11.2026 – Rekorde der Spielhalle merken
             G1C_ArcadeGame arcade = ActiveGame as G1C_ArcadeGame;
             if (arcade != null && arcade.BestScore > 0)
@@ -981,6 +1131,7 @@ namespace OOPGames
         // Erweiterung durch Denis Mock: Außenwelt-NPCs laufen ausschließlich im Framework-Tick.
         public void Update()
         {
+            Sound.SetMusic(G1C_SoundSystem.MusicFor(State, CurrentLocation, ActiveGame)); // Patrick Lupierz – 16.11.2026
             if (State == G1C_GameState.Title) return; // im Hauptmenü stehen Uhr und Spielzeit
 
             TickCount++;
@@ -994,7 +1145,13 @@ namespace OOPGames
                 Clock.Advance();
                 ApplyNewDay();
                 Buffs.Update(Clock.TotalTicks);
-                if (!Player.IsMoving) Player.StepTicks = Bikes.StepTicks(Buffs.StepTicks); // Patrick Lupierz – Fahrrad
+                if (!Player.IsMoving)
+                {
+                    Player.StepTicks = Bikes.StepTicks(Buffs.StepTicks); // Patrick Lupierz – Fahrrad
+                    // Änderung durch: Patrick Lupierz – 16.11.2026 – Admin-Cheat: dauerhaft erhöhte Geschwindigkeit (endet
+                    // erst, wenn ADMIN erneut getippt wird); schneller als Fahrrad und Energydrink.
+                    if (Cheats.JackpotActive) Player.StepTicks = Math.Min(Player.StepTicks, G1C_CheatCode.SpeedStepTicks);
+                }
                 Phone.HourlyUpdate(Clock, Profile.Name, Money.Balance, _random);
             }
 
@@ -1013,6 +1170,12 @@ namespace OOPGames
             {
                 foreach (G1C_Animal animal in CurrentWorld.Objects.OfType<G1C_Animal>()) animal.UpdateAnimation(TickCount);
             }
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – Katzen und Hunde laufen umher (nicht während Dialogen),
+            // Tiere in der Nähe melden sich ab und zu mit ihrem typischen Laut.
+            foreach (G1C_PetAnimal pet in CurrentWorld.Objects.OfType<G1C_PetAnimal>().ToList())
+                pet.Update(TickCount, PetCanEnter, exploring ? _random : null);
+            AnimalVoices.Update(TickCount, CurrentWorld.Objects.Where(o => (o is G1C_Animal || o is G1C_PetAnimal) &&
+                Math.Abs(o.X - Player.TileX) <= 8 && Math.Abs(o.Y - Player.TileY) <= 5), exploring ? _random : null);
         }
     }
 }

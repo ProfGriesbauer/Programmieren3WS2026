@@ -54,6 +54,7 @@ namespace OOPGames
         // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Fahrrad und Spielhallen-Rekorde
         public bool RidingBike { get; set; }
         public string ActiveBike { get; set; }
+        public bool BikeParkedAtDoor { get; set; } // Patrick Lupierz – 16.11.2026
         public Dictionary<string, int> ArcadeHighscores { get; set; }
     }
 

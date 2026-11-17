@@ -196,8 +196,10 @@ namespace OOPGames
                 "Ein Ölbild von Schnurrbert, Mausi und Herrn Doktor Krallmann.\nDarunter: \"Meine wahren Erben.\""));
             string[] cats = { "Schnurrbert", "Mausi", "Herr Doktor Krallmann" };
             int[][] spots = { new[] { 6, 4 }, new[] { 12, 6 }, new[] { 9, 9 } };
+            // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Katzen laufen umher, sind streichelbar und massiv
+            string[] variants = { "orange", "calico", "black" };
             for (int i = 0; i < cats.Length; i++)
-                _objects.Add(new G1C_Animal(cats[i], "animal_cat", spots[i][0], spots[i][1], 2, 7 + i));
+                _objects.Add(new G1C_PetAnimal(cats[i], G1C_PetKind.Cat, variants[i], spots[i][0], spots[i][1], 2));
         }
 
         private void BuildBikeShop()
