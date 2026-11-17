@@ -74,6 +74,24 @@ namespace OOPGames
         public int PoisonDamagePerSecond { get; private set; }
         public double StatusEffectTimeRemaining { get; private set; }
 
+        // Armor reduces damage by percent: 150 armor halves it, 450 armor leaves a quarter.
+        public const double ArmorConstant = 150;
+
+        // Multiplies all incoming damage, e.g. 1 / difficulty multiplier (acts like more health).
+        public double IncomingDamageFactor { get; set; } = 1.0;
+
+        double _EffectDamageCarry;
+
+        public double DamageFactor(DamageType damageType, bool useArmor)
+        {
+            double factor = IncomingDamageFactor;
+            if (ResistantDamageTypes.Contains(damageType)) factor *= 0.5;
+            if (WeakAgainst.Contains(damageType)) factor *= 1.5;
+            if (useArmor) factor *= ArmorConstant / (ArmorConstant + CurrentArmor);
+            return factor;
+        }
+
+        // Direct hit: weakness +50 %, resistance -50 %, then armor. Every hit deals at least 1.
         public int TakeDamage(int damage, DamageType damageType)
         {
             if (damage < 0)
@@ -81,18 +99,12 @@ namespace OOPGames
                 throw new ArgumentOutOfRangeException(nameof(damage), "Damage cannot be negative.");
             }
 
-            if (IsDefeated || ResistantDamageTypes.Contains(damageType))
+            if (IsDefeated || damage == 0)
             {
                 return 0;
             }
 
-            int adjustedDamage = damage;
-            if (WeakAgainst.Contains(damageType))
-            {
-                adjustedDamage = (int)Math.Ceiling(damage * 1.5);
-            }
-
-            int actualDamage = Math.Max(0, adjustedDamage - CurrentArmor);
+            int actualDamage = Math.Max(1, (int)Math.Round(damage * DamageFactor(damageType, true)));
             int appliedDamage = Math.Min(actualDamage, CurrentHealth);
             CurrentHealth -= appliedDamage;
             return appliedDamage;
@@ -133,8 +145,18 @@ namespace OOPGames
                 throw new ArgumentOutOfRangeException(nameof(seconds), "Time cannot be negative.");
             }
 
-            int damage = (int)Math.Floor((BurnDamagePerSecond + PoisonDamagePerSecond) * seconds);
-            int appliedDamage = TakeDamage(damage, DamageType.Physical);
+            // Burn counts as fire, poison as poison damage. Both ignore armor; fractions of a point
+            // are carried over, so short ticks still add up.
+            int appliedDamage = 0;
+            if (!IsDefeated && StatusEffectTimeRemaining > 0)
+            {
+                _EffectDamageCarry += BurnDamagePerSecond * seconds * DamageFactor(DamageType.Fire, false)
+                    + PoisonDamagePerSecond * seconds * DamageFactor(DamageType.Poison, false);
+                int whole = (int)Math.Floor(_EffectDamageCarry);
+                _EffectDamageCarry -= whole;
+                appliedDamage = Math.Min(whole, CurrentHealth);
+                CurrentHealth -= appliedDamage;
+            }
             StatusEffectTimeRemaining = Math.Max(0, StatusEffectTimeRemaining - seconds);
 
             if (StatusEffectTimeRemaining == 0)

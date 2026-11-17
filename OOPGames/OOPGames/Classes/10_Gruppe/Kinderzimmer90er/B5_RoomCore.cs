@@ -139,7 +139,7 @@ namespace OOPGames
             List<Key> keys = DrainInput();
             if (Phase == B5RoomPhase.Playing)
             {
-                if (keys.Any(IsBackKey))
+                if (keys.Any(IsBackKey) && !(ActiveGame is IB5RoomOwnBackKey))
                 {
                     Phase = B5RoomPhase.Device;
                     _ShowTitle = false;

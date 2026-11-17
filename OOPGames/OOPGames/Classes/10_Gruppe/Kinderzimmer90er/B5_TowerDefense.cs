@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace OOPGames
 {
@@ -37,44 +39,74 @@ namespace OOPGames
 
     public sealed class TowerDefenseMapDefinition
     {
-        public TowerDefenseMapDefinition(string name, IList<Point> towerSpots, IList<Point> path)
+        public TowerDefenseMapDefinition(string name, string description, string backgroundFile, Point mainBuilding,
+            IList<Point> towerSpots, IList<Point> path)
         {
             Name = name;
+            Description = description;
+            BackgroundFile = backgroundFile;
+            MainBuilding = mainBuilding;
             TowerSpots = towerSpots;
             Path = path;
         }
 
         public string Name { get; private set; }
+        public string Description { get; private set; }
+        // Pre-rendered map image in Assets/TowerDefense. Path, spots and decorations are baked into it,
+        // so the coordinates below must match Tower Defense/SpriteGenerator/Generate-TowerDefenseSprites.ps1.
+        public string BackgroundFile { get; private set; }
+        // Gate threshold of the main building, where the path ends.
+        public Point MainBuilding { get; private set; }
         public IList<Point> TowerSpots { get; private set; }
         public IList<Point> Path { get; private set; }
     }
 
     public static class TowerDefenseMaps
     {
+        // Unlock order. The path gets shorter from map to map, so enemies reach the castle sooner.
         static readonly IList<TowerDefenseMapDefinition> _Maps = new List<TowerDefenseMapDefinition>
         {
             new TowerDefenseMapDefinition(
-                "Gruene Wiese",
-                new List<Point>
-                {
-                    new Point(24, 97), new Point(73, 60), new Point(101, 133),
-                    new Point(156, 94), new Point(248, 87)
-                },
-                new List<Point>
-                {
-                    new Point(-10, 119), new Point(43, 119), new Point(43, 77),
-                    new Point(126, 77), new Point(126, 116), new Point(216, 116),
-                    new Point(216, 63), new Point(181, 63), new Point(181, 38),
-                    new Point(160, 38), new Point(160, 26)
-                })
+                "Gruene Wiese", "LANGER SCHLANGENWEG",
+                "map_gruene_wiese.png",
+                new Point(286, 70),
+                Points(14, 50, 14, 104, 68, 60, 68, 112, 132, 45, 132, 100, 196, 60, 196, 112, 260, 124, 305, 124),
+                Points(-10, 128, 40, 128, 40, 14, 100, 14, 100, 128, 164, 128, 164, 14, 228, 14, 228, 90, 286, 90, 286, 70)),
+            new TowerDefenseMapDefinition(
+                "Herbstwald", "MITTELLANGER WALDWEG",
+                "map_herbstwald.png",
+                new Point(280, 60),
+                Points(30, 76, 70, 76, 30, 128, 70, 128, 130, 48, 175, 48, 150, 100, 220, 46, 240, 122, 290, 122),
+                Points(-10, 40, 100, 40, 100, 120, 200, 120, 200, 76, 280, 76, 280, 60)),
+            new TowerDefenseMapDefinition(
+                "Wuestenpass", "KURZER PASS",
+                "map_wuestenpass.png",
+                new Point(272, 60),
+                Points(20, 60, 55, 60, 90, 60, 20, 130, 60, 130, 100, 130, 160, 124, 210, 124, 260, 124, 170, 40),
+                Points(-10, 100, 120, 100, 120, 76, 272, 76, 272, 60)),
+            new TowerDefenseMapDefinition(
+                "Frostgipfel", "KURZE SCHLEIFE ZUR BURG",
+                "map_frostgipfel.png",
+                new Point(160, 90),
+                Points(40, 38, 100, 38, 220, 38, 280, 38, 70, 86, 250, 86, 40, 134, 100, 134, 220, 134, 280, 134),
+                Points(-10, 112, 20, 112, 20, 64, 112, 64, 112, 112, 160, 112, 160, 90))
         };
 
         public static IList<TowerDefenseMapDefinition> Maps { get { return _Maps; } }
+
+        static IList<Point> Points(params int[] coordinates)
+        {
+            List<Point> points = new List<Point>();
+            for (int i = 0; i + 1 < coordinates.Length; i += 2)
+                points.Add(new Point(coordinates[i], coordinates[i + 1]));
+            return points;
+        }
     }
 
     enum TowerDefenseScreen
     {
         MainMenu,
+        SlotSelection,
         DifficultySelection,
         MapSelection,
         Map,
@@ -82,11 +114,31 @@ namespace OOPGames
         TowerUpgrade
     }
 
-    public sealed class B5RoomTowerDefenseGame : IB5RoomMiniGame
+    // Modal question shown on top of the current screen.
+    enum TowerDefenseDialog
     {
+        None,
+        ResumeRun,
+        DeleteSlot,
+        Defeat
+    }
+
+    // Implements IB5RoomOwnBackKey: Esc / X open the in-game menu instead of closing the game.
+    public sealed partial class B5RoomTowerDefenseGame : IB5RoomOwnBackKey
+    {
+        // Clickable region registered while drawing; the next Update hit-tests mouse input against it.
+        sealed class ClickArea
+        {
+            public Rect Area;
+            public Action Hover;
+            public Action Click;
+        }
+
         const int DesignWidth = 320;
         const int DesignHeight = 180;
+        const int MapTop = 27;
         static readonly string[] DifficultyNames = { "Easy", "Normal", "Hard", "God" };
+        static readonly string[] DamageTypeNames = { "PHYSISCH", "FEUER", "EIS", "ERDE", "STURM", "GIFT" };
         static readonly string[] TowerNames =
         {
             "Physical Archer", "Fire Mage", "Ice Mage", "Poison Archer",
@@ -97,6 +149,28 @@ namespace OOPGames
             () => new PhysicalArcher(), () => new FireMage(), () => new IceMage(), () => new PoisonArcher(),
             () => new StromMage(), () => new EarthMage(), () => new Flamethrower(), () => new IceAreaTower()
         };
+        // Enemies that march across the menu screens.
+        static readonly string[] MenuParade =
+        {
+            "Goblin", "Orc", "Skeleton Knight", "Goblin Shaman", "Troll", "Orc Lord",
+            "Dark Elf", "Fire Elemental", "Vampire", "Stone Golem", "Skeleton King", "Wyvern"
+        };
+
+        // Stone UI palette (matches the tower sprites).
+        static readonly Color Outline = Color.FromRgb(43, 37, 32);
+        static readonly Color StoneDark = Color.FromRgb(94, 87, 76);
+        static readonly Color Stone = Color.FromRgb(138, 130, 116);
+        static readonly Color StoneLight = Color.FromRgb(170, 162, 147);
+        static readonly Color StoneHighlight = Color.FromRgb(207, 199, 180);
+        static readonly Color PanelInside = Color.FromRgb(52, 45, 40);
+        static readonly Color PanelInsideDark = Color.FromRgb(40, 34, 30);
+        static readonly Color Selection = Color.FromRgb(112, 82, 48);
+        static readonly Color SelectionEdge = Color.FromRgb(234, 178, 52);
+        static readonly Color TitleGold = Color.FromRgb(255, 224, 108);
+        static readonly Color TextLight = Color.FromRgb(232, 226, 208);
+        static readonly Color TextDim = Color.FromRgb(170, 162, 147);
+        static readonly Color TextGold = Color.FromRgb(255, 214, 96);
+
         bool _Exit;
         TowerDefenseScreen _Screen;
         int _MenuSelection;
@@ -106,23 +180,56 @@ namespace OOPGames
         int _TowerSelection;
         int _UpgradeSelection;
         int _Gold;
-        readonly Tower[] _Towers = new Tower[5];
-        readonly int[] _TowerLevels = new int[5];
+        int _Tick;
+        Tower[] _Towers = new Tower[0];
+        TowerUpgrades[] _Upgrades = new TowerUpgrades[0];
         TowerDefensePixelSurface _PixelSurface;
         TowerDefenseDifficulty _Difficulty;
         TowerDefenseMapDefinition _Map;
+        int _MapIndex = -1;
         string _StatusMessage;
+        string _MapSelectionMessage;
+        bool _Paused;
+        int _PauseSelection;
+        int _SlotSelection;
+        int _SlotIndex = -1;
+        int _Wave = 1;
+        int _MainBuildingHealth = 100;
+        TowerDefenseDialog _Dialog;
+        int _DialogSelection;
+        Point? _LastMouse;
+        readonly List<ClickArea> _ClickAreas = new List<ClickArea>();
+        TowerDefenseBattle _Battle;
+        int _GameSpeed = 1;
+        bool _ShowWavePreview;
+        string _Banner;
+        int _BannerTicks;
+
+        // Seconds simulated per Update call (the room timer ticks every 40 ms).
+        const double TickSeconds = 0.04;
+        // Castle repair after every beaten wave, in percent of its maximum health.
+        const int RepairPerWave = 3;
 
         public string Title { get { return "Tower Defense"; } }
         public int Width { get { return DesignWidth * 2; } }
         public int Height { get { return DesignHeight * 2; } }
         public bool ExitRequested { get { return _Exit; } }
-        public int CurrentWave { get { return 1; } }
-        public int ExpectedEnemies { get { return 10; } }
+        public int CurrentWave { get { return _Wave; } }
+        // Enemies still to defeat in the running wave, or the size of the next wave while building.
+        public int ExpectedEnemies
+        {
+            get
+            {
+                if (_Battle == null) return 0;
+                if (_Battle.Phase == TowerDefenseBattlePhase.Running) return _Battle.RemainingEnemies;
+                return TowerDefenseWaves.Get(_MapIndex, _Wave).Spawns.Count;
+            }
+        }
         public int Gold { get { return _Gold; } }
         public string Difficulty { get { return DifficultyNames[(int)_Difficulty]; } }
         public string MapName { get { return _Map == null ? "Keine" : _Map.Name; } }
-        public int MainBuildingHealth { get { return 100; } }
+        public int MainBuildingHealth { get { return _Battle != null ? _Battle.HealthPercent : _MainBuildingHealth; } }
+        public bool WaveRunning { get { return _Battle != null && _Battle.Phase == TowerDefenseBattlePhase.Running; } }
         public string Status { get { return _Screen == TowerDefenseScreen.Map ? _StatusMessage : "Auswahl"; } }
         public TowerDefenseDifficulty SelectedDifficulty { get { return _Difficulty; } }
         public TowerDefenseMapDefinition SelectedMap { get { return _Map; } }
@@ -139,28 +246,134 @@ namespace OOPGames
             _TowerSelection = 0;
             _UpgradeSelection = 0;
             _Gold = 500;
-            Array.Clear(_Towers, 0, _Towers.Length);
-            Array.Clear(_TowerLevels, 0, _TowerLevels.Length);
+            _Tick = 0;
+            _Towers = new Tower[0];
+            _Upgrades = new TowerUpgrades[0];
             _Difficulty = TowerDefenseDifficulty.Normal;
             _Map = null;
+            _MapIndex = -1;
             _StatusMessage = "Bereit";
+            _MapSelectionMessage = null;
+            _Paused = false;
+            _PauseSelection = 0;
+            _SlotSelection = 0;
+            _SlotIndex = -1;
+            _Wave = 1;
+            _MainBuildingHealth = 100;
+            _Dialog = TowerDefenseDialog.None;
+            _DialogSelection = 0;
+            _LastMouse = null;
+            _ClickAreas.Clear();
+            _Battle = null;
+            _GameSpeed = 1;
+            _ShowWavePreview = false;
+            _Banner = null;
+            _BannerTicks = 0;
+            _ShowHelp = false;
+            _HelpPage = 0;
+        }
+
+        public bool IsPaused { get { return _Paused; } }
+
+        public int CurrentMapIndex { get { return _MapIndex; } }
+
+        public int CurrentSlotIndex { get { return _SlotIndex; } }
+
+        TowerDefenseSaveSlot CurrentSlot { get { return TowerDefenseSaves.Slots[_SlotIndex]; } }
+
+        // Called when a wave has been beaten. This is the only checkpoint during a map: the save
+        // then holds gold, towers and upgrades as they are at the start of the next wave. Anything
+        // changed afterwards is lost when the map is left before that wave is beaten.
+        void CompleteWave()
+        {
+            if (_Map == null) return;
+            if (_Wave >= TowerDefenseWaves.WaveCount)
+            {
+                CompleteCurrentMap();
+                return;
+            }
+            _Battle.Heal(RepairPerWave);
+            int bonus = _Battle.CurrentWave.CompletionBonus;
+            _Wave++;
+            SaveRun();
+            _StatusMessage = "Welle " + (_Wave - 1) + " geschafft";
+            ShowBanner("WELLE " + (_Wave - 1) + " GESCHAFFT  +" + bonus + " GOLD");
+        }
+
+        // Called when the last wave of the current map has been beaten.
+        void CompleteCurrentMap()
+        {
+            if (_Map == null) return;
+            bool unlocked = TowerDefenseSaves.CompleteMap(_SlotIndex, _MapIndex);
+            _Map = null;
+            _Battle = null;
+            bool hasNext = _MapIndex + 1 < TowerDefenseMaps.Maps.Count;
+            _MapSelection = hasNext ? _MapIndex + 1 : _MapIndex;
+            _MapSelectionMessage = !hasNext ? "ALLE KARTEN GESCHAFFT!"
+                : unlocked ? "NEUE KARTE FREIGESCHALTET!" : "KARTE GESCHAFFT!";
+            _Screen = TowerDefenseScreen.MapSelection;
         }
 
         public void Update(IReadOnlyCollection<Key> keys)
         {
+            _Tick++;
+            if (_BannerTicks > 0) _BannerTicks--;
+            HandleMouse();
             foreach (Key key in keys)
             {
+                if (_ShowHelp)
+                {
+                    HandleHelpKey(key);
+                    continue;
+                }
+
+                if (_Dialog != TowerDefenseDialog.None && !_Paused)
+                {
+                    HandleDialogKey(key);
+                    continue;
+                }
+
+                if (key == Key.Escape || key == Key.X)
+                {
+                    _Paused = !_Paused;
+                    _PauseSelection = 0;
+                    continue;
+                }
+
+                if (_Paused)
+                {
+                    HandlePauseKey(key);
+                    continue;
+                }
+
                 if (key == Key.Back)
                 {
                     GoBack();
                     continue;
                 }
 
-                if (_Screen == TowerDefenseScreen.Map &&
+                if (key == Key.E && _Screen == TowerDefenseScreen.Map)
+                {
+                    _ShowWavePreview = !_ShowWavePreview;
+                }
+                else if (key == Key.Space && _Screen == TowerDefenseScreen.Map)
+                {
+                    StartNextWave();
+                }
+                else if (key == Key.T && _Screen == TowerDefenseScreen.Map)
+                {
+                    ToggleSpeed();
+                }
+                else if (key == Key.Delete && _Screen == TowerDefenseScreen.SlotSelection)
+                {
+                    AskDeleteSlot();
+                }
+                else if (_Screen == TowerDefenseScreen.Map &&
                     (B5RoomKeys.IsLeft(key) || B5RoomKeys.IsRight(key) ||
                      B5RoomKeys.IsUp(key) || B5RoomKeys.IsDown(key)))
                 {
-                    MoveSpot(B5RoomKeys.IsRight(key) || B5RoomKeys.IsDown(key) ? 1 : -1);
+                    MoveSpot(B5RoomKeys.IsLeft(key) ? -1 : B5RoomKeys.IsRight(key) ? 1 : 0,
+                        B5RoomKeys.IsUp(key) ? -1 : B5RoomKeys.IsDown(key) ? 1 : 0);
                 }
                 else if ((_Screen == TowerDefenseScreen.TowerPlacement ||
                     _Screen == TowerDefenseScreen.TowerUpgrade) &&
@@ -168,9 +381,76 @@ namespace OOPGames
                 {
                     MoveMenuSelection(B5RoomKeys.IsDown(key) ? 1 : -1);
                 }
+                else if ((_Screen == TowerDefenseScreen.MainMenu ||
+                    _Screen == TowerDefenseScreen.SlotSelection ||
+                    _Screen == TowerDefenseScreen.DifficultySelection ||
+                    _Screen == TowerDefenseScreen.MapSelection) &&
+                    (B5RoomKeys.IsUp(key) || B5RoomKeys.IsDown(key) ||
+                     B5RoomKeys.IsLeft(key) || B5RoomKeys.IsRight(key)))
+                {
+                    MoveSelection(B5RoomKeys.IsDown(key) || B5RoomKeys.IsRight(key) ? 1 : -1);
+                }
                 else if (key == Key.Enter || key == Key.Z)
                     ConfirmSelection();
             }
+            StepBattle();
+        }
+
+        // ---------------- waves ----------------
+
+        void CreateBattle()
+        {
+            _Battle = new TowerDefenseBattle(_MapIndex, _Map.Path, _Map.MainBuilding, _Map.TowerSpots,
+                _Towers, _Upgrades, TowerDefenseDifficultyRules.GetMultiplier(_Difficulty), _MainBuildingHealth,
+                gold => _Gold += gold);
+            _ShowWavePreview = false;
+            _GameSpeed = 1;
+        }
+
+        // The battle only runs on the plain map view; menus, dialogs and the pause menu freeze it.
+        void StepBattle()
+        {
+            if (_Battle == null || _Screen != TowerDefenseScreen.Map || _Paused || _ShowHelp || _Dialog != TowerDefenseDialog.None)
+                return;
+
+            for (int step = 0; step < _GameSpeed; step++)
+            {
+                _Battle.Step(TickSeconds);
+                if (_Battle.ConsumeWaveCompleted())
+                {
+                    CompleteWave();
+                    return;
+                }
+                if (_Battle.Phase == TowerDefenseBattlePhase.Lost)
+                {
+                    _Dialog = TowerDefenseDialog.Defeat;
+                    _DialogSelection = 0;
+                    return;
+                }
+            }
+        }
+
+        void StartNextWave()
+        {
+            if (_Battle == null || _Battle.Phase != TowerDefenseBattlePhase.Building) return;
+            _Battle.StartWave(_Wave);
+            TowerDefenseWave wave = _Battle.CurrentWave;
+            _StatusMessage = "Welle " + _Wave + " laeuft";
+            if (wave.Boss != null)
+                ShowBanner((wave.IsMiniBoss ? "MINIBOSS: " : "BOSS: ") + wave.Boss.ToUpperInvariant());
+            else
+                ShowBanner("WELLE " + _Wave + " / " + TowerDefenseWaves.WaveCount);
+        }
+
+        void ToggleSpeed()
+        {
+            _GameSpeed = _GameSpeed % 3 + 1;
+        }
+
+        void ShowBanner(string text)
+        {
+            _Banner = text;
+            _BannerTicks = 60;
         }
 
         public void Draw(Canvas canvas)
@@ -184,45 +464,354 @@ namespace OOPGames
             }
 
             _PixelSurface.Begin();
+            _ClickAreas.Clear();
             switch (_Screen)
             {
                 case TowerDefenseScreen.MainMenu:
-                    DrawMainMenu(canvas);
+                    DrawMainMenu();
+                    break;
+                case TowerDefenseScreen.SlotSelection:
+                    DrawSlotSelection();
                     break;
                 case TowerDefenseScreen.DifficultySelection:
-                    DrawDifficultySelection(canvas);
+                    DrawDifficultySelection();
                     break;
                 case TowerDefenseScreen.MapSelection:
-                    DrawMapSelection(canvas);
+                    DrawMapSelection();
                     break;
                 case TowerDefenseScreen.TowerPlacement:
-                    DrawMap(canvas);
-                    DrawTowerPlacementMenu(canvas);
+                    DrawMap();
+                    DrawTowerPlacementMenu();
                     break;
                 case TowerDefenseScreen.TowerUpgrade:
-                    DrawMap(canvas);
-                    DrawTowerUpgradeMenu(canvas);
+                    DrawMap();
+                    DrawTowerUpgradeMenu();
                     break;
                 default:
-                    DrawMap(canvas);
+                    DrawMap();
                     break;
             }
+            DrawFooterBar();
+            if (_Dialog != TowerDefenseDialog.None) DrawDialog();
+            if (_Paused) DrawPauseMenu();
+            if (_ShowHelp) DrawHelp();
             _PixelSurface.End();
         }
+
+        // ---------------- save slots ----------------
+
+        void SelectSlot(int slotIndex)
+        {
+            _SlotIndex = slotIndex;
+            TowerDefenseSaveSlot slot = CurrentSlot;
+            _MapSelection = slot.LastMap >= 0 ? slot.LastMap : slot.UnlockedMaps - 1;
+            _MapSelectionMessage = null;
+            _Screen = TowerDefenseScreen.MapSelection;
+        }
+
+        void AskDeleteSlot()
+        {
+            if (TowerDefenseSaves.Slots[_SlotSelection].IsEmpty) return;
+            _Dialog = TowerDefenseDialog.DeleteSlot;
+            _DialogSelection = 0;
+        }
+
+        // Stores the running map in the current slot. Enemies are not stored; the wave restarts on resume.
+        void SaveRun()
+        {
+            if (_Map == null || _SlotIndex < 0) return;
+            TowerDefenseRunState run = new TowerDefenseRunState
+            {
+                Difficulty = (int)_Difficulty,
+                Wave = _Wave,
+                Gold = _Gold,
+                MainBuildingHealth = MainBuildingHealth,
+                Towers = new string[_Towers.Length],
+                TowerLevels = null
+            };
+            for (int i = 0; i < _Towers.Length; i++)
+                run.Towers[i] = _Towers[i] == null ? null : _Towers[i].Name;
+            run.SetUpgrades(_Upgrades);
+            TowerDefenseSaves.StoreRun(_SlotIndex, _MapIndex, run);
+        }
+
+        static Tower CreateTower(string name)
+        {
+            int index = Array.IndexOf(TowerNames, name);
+            if (index < 0) throw new InvalidDataException("Unbekannter Turm im Spielstand: " + name);
+            return TowerCreators[index]();
+        }
+
+        // ---------------- dialogs ----------------
+
+        string[] DialogItems()
+        {
+            if (_Dialog == TowerDefenseDialog.ResumeRun) return new[] { "WEITERSPIELEN", "NEU BEGINNEN", "ABBRECHEN" };
+            if (_Dialog == TowerDefenseDialog.Defeat) return new[] { "WELLE NEU", "KARTENWAHL" };
+            return new[] { "NEIN", "JA, LOESCHEN" };
+        }
+
+        // The defeat question cannot be dismissed: the lost battle must not continue.
+        void CloseDialog()
+        {
+            if (_Dialog != TowerDefenseDialog.Defeat) _Dialog = TowerDefenseDialog.None;
+        }
+
+        void HandleDialogKey(Key key)
+        {
+            int count = DialogItems().Length;
+            if (key == Key.Escape || key == Key.X || key == Key.Back)
+                CloseDialog();
+            else if (B5RoomKeys.IsUp(key) || B5RoomKeys.IsDown(key))
+                _DialogSelection = (_DialogSelection + (B5RoomKeys.IsDown(key) ? 1 : -1) + count) % count;
+            else if (key == Key.Enter || key == Key.Z)
+                ActivateDialogItem(_DialogSelection);
+        }
+
+        void ActivateDialogItem(int index)
+        {
+            TowerDefenseDialog dialog = _Dialog;
+            _Dialog = TowerDefenseDialog.None;
+            if (dialog == TowerDefenseDialog.ResumeRun)
+            {
+                if (index == 0) ResumeMap(_MapSelection);
+                else if (index == 1) _Screen = TowerDefenseScreen.DifficultySelection;
+            }
+            else if (dialog == TowerDefenseDialog.Defeat)
+            {
+                // Back to the last checkpoint (start of the lost wave) or to the map selection.
+                if (index == 0) ResumeMap(_MapIndex);
+                else
+                {
+                    _MapSelection = _MapIndex;
+                    _Map = null;
+                    _Battle = null;
+                    _Screen = TowerDefenseScreen.MapSelection;
+                }
+            }
+            else if (index == 1)
+            {
+                TowerDefenseSaves.Delete(_SlotSelection);
+            }
+        }
+
+        void DrawDialog()
+        {
+            _ClickAreas.Clear();
+            string[] items = DialogItems();
+            string title, info;
+            TowerDefenseIcon[] icons;
+            if (_Dialog == TowerDefenseDialog.ResumeRun)
+            {
+                TowerDefenseRunState run = CurrentSlot.GetRun(_MapSelection);
+                int towers = 0;
+                foreach (string tower in run.Towers) if (tower != null) towers++;
+                title = "WEITERSPIELEN?";
+                info = TowerDefenseMaps.Maps[_MapSelection].Name.ToUpperInvariant() + "  WELLE " + run.Wave +
+                    "  GOLD " + run.Gold + "  TUERME " + towers + "  " + DifficultyNames[run.Difficulty].ToUpperInvariant();
+                icons = new[] { TowerDefenseIcon.Upgrade, TowerDefenseIcon.Sword, TowerDefenseIcon.Wave };
+            }
+            else if (_Dialog == TowerDefenseDialog.Defeat)
+            {
+                title = "BURG ZERSTOERT";
+                info = "WELLE " + _Wave + " VERLOREN - NEUSTART AB WELLENBEGINN";
+                icons = new[] { TowerDefenseIcon.Upgrade, TowerDefenseIcon.Wave };
+            }
+            else
+            {
+                title = "LOESCHEN?";
+                info = "SPIELSTAND " + (_SlotSelection + 1) + " WIRKLICH LOESCHEN?";
+                icons = new[] { TowerDefenseIcon.Heart, TowerDefenseIcon.Skull };
+            }
+
+            Surface.Rect(0, 0, DesignWidth, DesignHeight, Color.FromArgb(150, 0, 0, 0));
+            double height = 52 + items.Length * 21;
+            double top = 88 - height / 2;
+            DrawPanel(54, top, 212, height);
+            AddClickArea(54, top, 212, height, null, null);
+            DrawTitle(title, top + 7);
+            ShadowText(info, 160 - info.Length * 1.65, top + 30, 5, TextLight);
+            for (int i = 0; i < items.Length; i++)
+            {
+                int index = i;
+                DrawMenuEntry(items[i], icons[i], _DialogSelection == i, top + 42 + i * 21,
+                    () => _DialogSelection = index, () => ActivateDialogItem(index));
+            }
+        }
+
+        // ---------------- pause menu ----------------
+
+        string[] PauseItems()
+        {
+            return _Screen == TowerDefenseScreen.MainMenu
+                ? new[] { "FORTSETZEN", "ANLEITUNG", "SPIEL VERLASSEN" }
+                : new[] { "FORTSETZEN", "ANLEITUNG", "HAUPTMENUE", "SPIEL VERLASSEN" };
+        }
+
+        void HandlePauseKey(Key key)
+        {
+            int count = PauseItems().Length;
+            if (B5RoomKeys.IsUp(key) || B5RoomKeys.IsDown(key))
+                _PauseSelection = (_PauseSelection + (B5RoomKeys.IsDown(key) ? 1 : -1) + count) % count;
+            else if (key == Key.Enter || key == Key.Z)
+                ActivatePauseItem(_PauseSelection);
+            else if (key == Key.Back)
+                _Paused = false;
+        }
+
+        void ActivatePauseItem(int index)
+        {
+            string item = PauseItems()[index];
+            if (item == "ANLEITUNG")
+            {
+                OpenHelp();
+                return;
+            }
+            _Paused = false;
+            if (item == "HAUPTMENUE") ReturnToMainMenu();
+            else if (item == "SPIEL VERLASSEN")
+            {
+                _Exit = true;
+            }
+        }
+
+        void ReturnToMainMenu()
+        {
+            _Dialog = TowerDefenseDialog.None;
+            _Screen = TowerDefenseScreen.MainMenu;
+            _MenuSelection = 0;
+            _Map = null;
+            _Battle = null;
+            _MapIndex = -1;
+            _Towers = new Tower[0];
+            _Upgrades = new TowerUpgrades[0];
+            _MapSelectionMessage = null;
+        }
+
+        void DrawPauseMenu()
+        {
+            _ClickAreas.Clear();
+            string[] items = PauseItems();
+            Surface.Rect(0, 0, DesignWidth, DesignHeight, Color.FromArgb(150, 0, 0, 0));
+            double height = 44 + items.Length * 21;
+            double top = 90 - height / 2;
+            DrawPanel(80, top, 160, height);
+            AddClickArea(80, top, 160, height, null, null);
+            DrawTitle("MENUE", top + 8);
+            Dictionary<string, TowerDefenseIcon> icons = new Dictionary<string, TowerDefenseIcon>
+            {
+                { "FORTSETZEN", TowerDefenseIcon.Upgrade }, { "ANLEITUNG", TowerDefenseIcon.Range },
+                { "HAUPTMENUE", TowerDefenseIcon.Star }, { "SPIEL VERLASSEN", TowerDefenseIcon.Wave }
+            };
+            for (int i = 0; i < items.Length; i++)
+            {
+                int index = i;
+                TowerDefenseIcon icon = icons[items[i]];
+                DrawMenuEntry(items[i], icon, _PauseSelection == i, top + 36 + i * 21,
+                    () => _PauseSelection = index, () => ActivatePauseItem(index));
+            }
+        }
+
+        // ---------------- mouse ----------------
+
+        void HandleMouse()
+        {
+            if (_PixelSurface == null) return;
+            Point? mouse = _PixelSurface.MousePosition;
+            if (mouse.HasValue && mouse != _LastMouse)
+            {
+                ClickArea hovered = HitTest(mouse.Value);
+                if (hovered != null && hovered.Hover != null) hovered.Hover();
+            }
+            _LastMouse = mouse;
+
+            foreach (TowerDefenseClick click in _PixelSurface.DrainClicks())
+            {
+                if (click.Right)
+                {
+                    MouseBack();
+                    continue;
+                }
+
+                ClickArea area = HitTest(click.Position);
+                if (area != null)
+                {
+                    if (area.Hover != null) area.Hover();
+                    if (area.Click != null) area.Click();
+                }
+                else if (_ShowHelp) { }
+                else if (_Paused) _Paused = false;
+                else if (_Dialog != TowerDefenseDialog.None) CloseDialog();
+                else if (_Screen == TowerDefenseScreen.TowerPlacement || _Screen == TowerDefenseScreen.TowerUpgrade)
+                    _Screen = TowerDefenseScreen.Map;
+            }
+        }
+
+        // Right click: closes the topmost menu, but never leaves a running map by accident.
+        void MouseBack()
+        {
+            if (_ShowHelp) CloseHelp();
+            else if (_Paused) _Paused = false;
+            else if (_Dialog != TowerDefenseDialog.None) CloseDialog();
+            else if (_Screen != TowerDefenseScreen.Map && _Screen != TowerDefenseScreen.MainMenu) GoBack();
+        }
+
+        // Areas registered later lie on top.
+        ClickArea HitTest(Point position)
+        {
+            for (int i = _ClickAreas.Count - 1; i >= 0; i--)
+                if (_ClickAreas[i].Area.Contains(position)) return _ClickAreas[i];
+            return null;
+        }
+
+        void AddClickArea(double x, double y, double width, double height, Action hover, Action click)
+        {
+            _ClickAreas.Add(new ClickArea { Area = new Rect(x, y, width, height), Hover = hover, Click = click });
+        }
+
+        bool IsMouseOver(double x, double y, double width, double height)
+        {
+            Point? mouse = Surface.MousePosition;
+            return mouse.HasValue && new Rect(x, y, width, height).Contains(mouse.Value);
+        }
+
+        // ---------------- game logic ----------------
 
         void MoveSelection(int direction)
         {
             if (_Screen == TowerDefenseScreen.MainMenu)
-                _MenuSelection = (_MenuSelection + direction + 2) % 2;
+                _MenuSelection = (_MenuSelection + direction + 3) % 3;
+            else if (_Screen == TowerDefenseScreen.SlotSelection)
+                _SlotSelection = (_SlotSelection + direction + TowerDefenseSaves.SlotCount) % TowerDefenseSaves.SlotCount;
             else if (_Screen == TowerDefenseScreen.DifficultySelection)
                 _DifficultySelection = (_DifficultySelection + direction + DifficultyNames.Length) % DifficultyNames.Length;
             else if (_Screen == TowerDefenseScreen.MapSelection)
+            {
                 _MapSelection = (_MapSelection + direction + TowerDefenseMaps.Maps.Count) % TowerDefenseMaps.Maps.Count;
+                _MapSelectionMessage = null;
+            }
         }
 
-        void MoveSpot(int direction)
+        // Jumps to the nearest pedestal in the pressed direction.
+        void MoveSpot(int dx, int dy)
         {
-            _SelectedSpot = (_SelectedSpot + direction + _Map.TowerSpots.Count) % _Map.TowerSpots.Count;
+            Point current = _Map.TowerSpots[_SelectedSpot];
+            int best = -1;
+            double bestScore = double.MaxValue;
+            for (int i = 0; i < _Map.TowerSpots.Count; i++)
+            {
+                if (i == _SelectedSpot) continue;
+                double vx = _Map.TowerSpots[i].X - current.X, vy = _Map.TowerSpots[i].Y - current.Y;
+                double along = vx * dx + vy * dy;
+                if (along <= 0) continue;
+                double score = along + Math.Abs(vx * dy - vy * dx) * 2;
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    best = i;
+                }
+            }
+            if (best >= 0) _SelectedSpot = best;
         }
 
         void MoveMenuSelection(int direction)
@@ -230,27 +819,44 @@ namespace OOPGames
             if (_Screen == TowerDefenseScreen.TowerPlacement)
                 _TowerSelection = (_TowerSelection + direction + TowerNames.Length) % TowerNames.Length;
             else
-                _UpgradeSelection = (_UpgradeSelection + direction + 2) % 2;
+                _UpgradeSelection = (_UpgradeSelection + direction + 5) % 5;
         }
 
         void ConfirmSelection()
         {
             if (_Screen == TowerDefenseScreen.MainMenu)
             {
-                if (_MenuSelection == 0) _Screen = TowerDefenseScreen.DifficultySelection;
+                if (_MenuSelection == 0)
+                {
+                    _SlotSelection = Math.Max(0, _SlotIndex);
+                    _Screen = TowerDefenseScreen.SlotSelection;
+                }
+                else if (_MenuSelection == 1) OpenHelp();
                 else _Exit = true;
+            }
+            else if (_Screen == TowerDefenseScreen.SlotSelection)
+            {
+                SelectSlot(_SlotSelection);
+            }
+            else if (_Screen == TowerDefenseScreen.MapSelection)
+            {
+                if (!CurrentSlot.IsUnlocked(_MapSelection))
+                {
+                    _MapSelectionMessage = "ERST " + TowerDefenseMaps.Maps[_MapSelection - 1].Name.ToUpperInvariant() + " SCHAFFEN";
+                    return;
+                }
+                if (CurrentSlot.GetRun(_MapSelection) != null)
+                {
+                    _Dialog = TowerDefenseDialog.ResumeRun;
+                    _DialogSelection = 0;
+                    return;
+                }
+                _Screen = TowerDefenseScreen.DifficultySelection;
             }
             else if (_Screen == TowerDefenseScreen.DifficultySelection)
             {
                 _Difficulty = (TowerDefenseDifficulty)_DifficultySelection;
-                _Screen = TowerDefenseScreen.MapSelection;
-            }
-            else if (_Screen == TowerDefenseScreen.MapSelection)
-            {
-                _Map = TowerDefenseMaps.Maps[_MapSelection];
-                _SelectedSpot = 0;
-                _StatusMessage = "Bereit";
-                _Screen = TowerDefenseScreen.Map;
+                StartMap(_MapSelection);
             }
             else if (_Screen == TowerDefenseScreen.Map)
             {
@@ -266,16 +872,64 @@ namespace OOPGames
             }
             else if (_Screen == TowerDefenseScreen.TowerUpgrade)
             {
-                if (_UpgradeSelection == 0) UpgradeTower();
+                if (_UpgradeSelection < 4) UpgradeTower((TowerUpgradePath)_UpgradeSelection);
                 else SellTower();
             }
         }
 
+        void StartMap(int mapIndex)
+        {
+            _MapIndex = mapIndex;
+            _Map = TowerDefenseMaps.Maps[mapIndex];
+            _Towers = new Tower[_Map.TowerSpots.Count];
+            _Upgrades = new TowerUpgrades[_Map.TowerSpots.Count];
+            _Gold = 500;
+            _Wave = 1;
+            _MainBuildingHealth = 100;
+            _SelectedSpot = 0;
+            _StatusMessage = "Bereit";
+            _MapSelectionMessage = null;
+            _Screen = TowerDefenseScreen.Map;
+            CreateBattle();
+            SaveRun();
+        }
+
+        // Continues a saved map. The saved wave starts again from its beginning.
+        void ResumeMap(int mapIndex)
+        {
+            TowerDefenseRunState run = CurrentSlot.GetRun(mapIndex);
+            _MapIndex = mapIndex;
+            _Map = TowerDefenseMaps.Maps[mapIndex];
+            _Difficulty = (TowerDefenseDifficulty)run.Difficulty;
+            _Gold = run.Gold;
+            _Wave = run.Wave;
+            _MainBuildingHealth = run.MainBuildingHealth;
+            _Towers = new Tower[_Map.TowerSpots.Count];
+            _Upgrades = new TowerUpgrades[_Map.TowerSpots.Count];
+            for (int i = 0; i < _Towers.Length && i < run.Towers.Length; i++)
+            {
+                if (run.Towers[i] == null) continue;
+                _Towers[i] = CreateTower(run.Towers[i]);
+                _Upgrades[i] = run.GetUpgrades(i);
+            }
+            _SelectedSpot = 0;
+            CreateBattle();
+            _StatusMessage = "Welle " + _Wave + " neu gestartet";
+            _MapSelectionMessage = null;
+            _Screen = TowerDefenseScreen.Map;
+        }
+
         void GoBack()
         {
-            if (_Screen == TowerDefenseScreen.DifficultySelection) _Screen = TowerDefenseScreen.MainMenu;
-            else if (_Screen == TowerDefenseScreen.MapSelection) _Screen = TowerDefenseScreen.DifficultySelection;
-            else if (_Screen == TowerDefenseScreen.Map) _Screen = TowerDefenseScreen.MapSelection;
+            if (_Screen == TowerDefenseScreen.SlotSelection) _Screen = TowerDefenseScreen.MainMenu;
+            else if (_Screen == TowerDefenseScreen.DifficultySelection) _Screen = TowerDefenseScreen.MapSelection;
+            else if (_Screen == TowerDefenseScreen.MapSelection) _Screen = TowerDefenseScreen.SlotSelection;
+            else if (_Screen == TowerDefenseScreen.Map)
+            {
+                _Map = null;
+                _Battle = null;
+                _Screen = TowerDefenseScreen.MapSelection;
+            }
             else if (_Screen == TowerDefenseScreen.TowerPlacement || _Screen == TowerDefenseScreen.TowerUpgrade)
                 _Screen = TowerDefenseScreen.Map;
         }
@@ -291,514 +945,826 @@ namespace OOPGames
 
             _Gold -= tower.Cost;
             _Towers[_SelectedSpot] = tower;
-            _TowerLevels[_SelectedSpot] = 1;
+            _Upgrades[_SelectedSpot] = new TowerUpgrades();
             _StatusMessage = tower.Name + " gebaut";
             _Screen = TowerDefenseScreen.Map;
         }
 
-        void UpgradeTower()
+        // The upgrade menu stays open, so several upgrades can be bought in a row.
+        void UpgradeTower(TowerUpgradePath path)
         {
             Tower tower = _Towers[_SelectedSpot];
-            int upgradeCost = tower.Cost / 2 * _TowerLevels[_SelectedSpot];
-            if (_Gold < upgradeCost)
+            TowerUpgrades upgrades = _Upgrades[_SelectedSpot];
+            if (upgrades.IsMaxed(path))
+            {
+                _StatusMessage = "Schon maximal";
+                return;
+            }
+            int cost = upgrades.Cost(tower, path);
+            if (_Gold < cost)
             {
                 _StatusMessage = "Zu wenig Gold";
                 return;
             }
 
-            _Gold -= upgradeCost;
-            _TowerLevels[_SelectedSpot]++;
-            _StatusMessage = tower.Name + " verbessert";
-            _Screen = TowerDefenseScreen.Map;
+            _Gold -= cost;
+            upgrades.Apply(path);
+            _StatusMessage = path == TowerUpgradePath.Tier
+                ? tower.Name + " Stufe " + TierName(upgrades.Tier)
+                : UpgradeNames[(int)path] + " verbessert";
+        }
+
+        static readonly string[] UpgradeNames = { "Schaden", "Reichweite", "Tempo", "Turmstufe" };
+
+        static string TierName(int tier)
+        {
+            return tier == 3 ? "III" : tier == 2 ? "II" : "I";
         }
 
         void SellTower()
         {
             Tower tower = _Towers[_SelectedSpot];
-            _Gold += tower.Cost / 2;
+            _Gold += TowerDefenseBattle.SellValue(tower, _Upgrades[_SelectedSpot]);
             _Towers[_SelectedSpot] = null;
-            _TowerLevels[_SelectedSpot] = 0;
+            _Upgrades[_SelectedSpot] = null;
             _StatusMessage = "Turm verkauft";
             _Screen = TowerDefenseScreen.Map;
         }
 
-        void DrawMainMenu(Canvas canvas)
+        // ---------------- menu screens ----------------
+
+        void DrawMainMenu()
         {
-            DrawBackground(canvas, Color.FromRgb(13, 22, 42));
-            DrawTitle(canvas, "TOWER DEFENSE", 56);
-            B5RoomDraw.Text(canvas, "BAUE TÜRME. HALTE DIE WELLEN AUF.", 48, 78, 8, Color.FromRgb(169, 191, 232));
-            DrawMenuEntry(canvas, "NEUES SPIEL", 0, 105);
-            DrawMenuEntry(canvas, "ZURUECK", 1, 128);
-            B5RoomDraw.Text(canvas, "PFEILE / WASD  AUSWAEHLEN     ENTER / Z  BESTAETIGEN", 28, 163, 7, Color.FromRgb(133, 154, 193));
+            DrawMenuBackground();
+            DrawPanel(70, 30, 180, 108);
+            DrawTitle("TOWER DEFENSE", 40);
+            ShadowText("BAUE TUERME. HALTE DIE WELLEN AUF.", 86, 64, 6, TextDim);
+            DrawMenuEntry("SPIELEN", TowerDefenseIcon.Sword, _MenuSelection == 0, 76,
+                () => _MenuSelection = 0, ConfirmSelection);
+            DrawMenuEntry("ANLEITUNG", TowerDefenseIcon.Range, _MenuSelection == 1, 95,
+                () => _MenuSelection = 1, ConfirmSelection);
+            DrawMenuEntry("SPIEL VERLASSEN", TowerDefenseIcon.Wave, _MenuSelection == 2, 114,
+                () => _MenuSelection = 2, ConfirmSelection);
+            DrawParade();
         }
 
-        void DrawDifficultySelection(Canvas canvas)
+        void DrawSlotSelection()
         {
-            DrawBackground(canvas, Color.FromRgb(16, 29, 47));
-            DrawTitle(canvas, "SCHWIERIGKEIT", 30);
-            B5RoomDraw.Text(canvas, "GEGNERWERTE WERDEN MIT DEM BASISWERT SKALIERT", 42, 63, 7, Color.FromRgb(164, 184, 216));
+            DrawMenuBackground();
+            DrawPanel(36, 16, 248, 146);
+            DrawTitle("SPIELSTAND WAEHLEN", 24);
+            for (int i = 0; i < TowerDefenseSaves.SlotCount; i++)
+                DrawSlotCard(i, 48, 50 + i * 35);
+        }
+
+        void DrawSlotCard(int slotIndex, double x, double y)
+        {
+            const double width = 224, height = 31;
+            TowerDefenseSaveSlot slot = TowerDefenseSaves.Slots[slotIndex];
+            bool selected = _SlotSelection == slotIndex;
+            int index = slotIndex;
+            AddClickArea(x, y, width, height, () => _SlotSelection = index, () => SelectSlot(index));
+
+            Surface.Rect(x, y, width, height, selected ? SelectionEdge : Outline);
+            Surface.Rect(x + 1, y + 1, width - 2, height - 2, selected ? Selection : PanelInsideDark);
+            Surface.Rect(x + 1, y + 1, width - 2, 1, selected ? Color.FromRgb(150, 110, 62) : StoneDark);
+            ShadowText((slotIndex + 1).ToString(), x + 6, y + 6, 14, selected ? TitleGold : TextDim);
+            ShadowText("SPIELSTAND " + (slotIndex + 1), x + 26, y + 4, 8, selected ? TitleGold : TextLight);
+
+            if (slot.IsEmpty)
+            {
+                ShadowText("LEER - NEUES SPIEL BEGINNEN", x + 26, y + 18, 5, TextDim);
+                return;
+            }
+
+            string detail = "KARTEN " + slot.UnlockedMaps + "/" + TowerDefenseMaps.Maps.Count + " FREI";
+            if (slot.LastMap >= 0)
+            {
+                detail += "   ZULETZT " + TowerDefenseMaps.Maps[slot.LastMap].Name.ToUpperInvariant();
+                TowerDefenseRunState run = slot.GetRun(slot.LastMap);
+                if (run != null) detail += " - WELLE " + run.Wave;
+            }
+            ShadowText(detail, x + 26, y + 18, 5, TextLight);
+
+            for (int map = 0; map < TowerDefenseMaps.Maps.Count; map++)
+            {
+                double dx = x + width - 44 + map * 9;
+                Surface.Rect(dx, y + 5, 6, 6, Outline);
+                Surface.Rect(dx + 1, y + 6, 4, 4, slot.IsUnlocked(map) ? SelectionEdge : StoneDark);
+            }
+            string date = slot.LastPlayed.Value.ToString("dd.MM. HH:mm");
+            Surface.Text(date, x + width - 6 - date.Length * 2.75, y + 19, 5, TextDim);
+        }
+
+        void DrawDifficultySelection()
+        {
+            DrawMenuBackground();
+            DrawPanel(60, 22, 200, 124);
+            DrawTitle("SCHWIERIGKEIT", 32);
+            ShadowText("GEGNERWERTE WERDEN MIT DEM BASISWERT SKALIERT", 72, 55, 5, TextDim);
             for (int i = 0; i < DifficultyNames.Length; i++)
             {
-                DrawMenuEntry(canvas, DifficultyNames[i], i, 83 + i * 19);
-                B5RoomDraw.Text(canvas, GetMultiplierText((TowerDefenseDifficulty)i), 190, 86 + i * 19, 7, Color.FromRgb(190, 203, 224));
+                double y = 68 + i * 18;
+                bool selected = _DifficultySelection == i;
+                int index = i;
+                AddClickArea(70, y, 180, 15, () => _DifficultySelection = index, ConfirmSelection);
+                DrawSelectionBar(70, y, 180, 15, selected);
+                ShadowText(DifficultyNames[i].ToUpperInvariant(), 78, y + 2, 9, selected ? TitleGold : TextLight);
+                for (int skull = 0; skull <= i; skull++)
+                    Icon(TowerDefenseIcon.Skull, 160 + skull * 10, y + 3, 8);
+                ShadowText(GetMultiplierText((TowerDefenseDifficulty)i), 210, y + 3, 7, TextGold);
             }
+            DrawParade();
         }
 
-        void DrawMapSelection(Canvas canvas)
+        void DrawMapSelection()
         {
-            DrawBackground(canvas, Color.FromRgb(18, 40, 35));
-            DrawTitle(canvas, "KARTE AUSWAEHLEN", 30);
+            DrawMenuBackground();
+            DrawPanel(56, 14, 208, 146);
+            DrawTitle("KARTE AUSWAEHLEN", 21);
             TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[_MapSelection];
-            DrawMapPreview(canvas, map, 43);
-            B5RoomDraw.Text(canvas, map.Name.ToUpperInvariant(), 116, 145, 10, Color.FromRgb(242, 222, 144));
-            B5RoomDraw.Text(canvas, "ENTER / Z  KARTE STARTEN", 102, 164, 7, Color.FromRgb(190, 215, 187));
-        }
+            bool unlocked = CurrentSlot.IsUnlocked(_MapSelection);
+            TowerDefenseRunState savedRun = CurrentSlot.GetRun(_MapSelection);
 
-        void DrawMap(Canvas canvas)
-        {
-            DrawBackground(canvas, Color.FromRgb(104, 157, 59));
-            DrawHud(canvas);
-            DrawMapPreview(canvas, _Map, 27);
-            DrawTowerMarker(canvas);
-            B5RoomDraw.Text(canvas, "ENTER: TURM / UPGRADE     BACKSPACE: ZURUECK", 72, 171, 7, Color.FromRgb(238, 242, 188));
-        }
-
-        void DrawTowerPlacementMenu(Canvas canvas)
-        {
-            DrawMenuPanel(canvas, "TURM BAUEN");
-            for (int i = 0; i < TowerNames.Length; i++)
+            const double previewX = 80, previewY = 45, scale = 0.5;
+            AddClickArea(previewX - 2, previewY - 2, 164, 82, null, ConfirmSelection);
+            Surface.Rect(previewX - 2, previewY - 2, 164, 82, Outline);
+            Surface.Rect(previewX - 1, previewY - 1, 162, 80, unlocked ? StoneHighlight : StoneDark);
+            Surface.Sprite(TowerDefenseSprites.Map(map.BackgroundFile), previewX, previewY,
+                TowerDefenseSprites.MapImageWidth * scale, 78);
+            Surface.Sprite(TowerDefenseSprites.MainBuilding(0),
+                previewX + (map.MainBuilding.X - 32) * scale, previewY + (map.MainBuilding.Y + 2 - 44) * scale, 32, 24);
+            if (!unlocked)
             {
-                Tower tower = TowerCreators[i]();
-                double x = i < 4 ? 42 : 178;
-                double y = 55 + (i % 4) * 21;
-                bool selected = i == _TowerSelection;
-                DrawPanelEntry(canvas, TowerNames[i], "G" + tower.Cost, x, y, selected);
+                Surface.Rect(previewX, previewY, 160, 78, Color.FromArgb(175, 16, 14, 20));
+                Icon(TowerDefenseIcon.Lock, 144, previewY + 16, 32);
+                ShadowText("GESPERRT", 138, previewY + 54, 8, TextLight);
             }
-            B5RoomDraw.Text(canvas, "BACKSPACE  ZURUECK", 105, 163, 7, Color.FromRgb(190, 215, 187));
-        }
-
-        void DrawTowerUpgradeMenu(Canvas canvas)
-        {
-            DrawMenuPanel(canvas, "TURM VERWALTEN");
-            Tower tower = _Towers[_SelectedSpot];
-            int upgradeCost = tower.Cost / 2 * _TowerLevels[_SelectedSpot];
-            B5RoomDraw.Text(canvas, tower.Name.ToUpperInvariant() + "  LV " + _TowerLevels[_SelectedSpot],
-                72, 58, 9, Color.FromRgb(242, 222, 144));
-            DrawPanelEntry(canvas, "UPGRADE", "G" + upgradeCost, 78, 82, _UpgradeSelection == 0);
-            DrawPanelEntry(canvas, "VERKAUFEN", "G" + tower.Cost / 2, 78, 106, _UpgradeSelection == 1);
-            B5RoomDraw.Text(canvas, "BACKSPACE  ZURUECK", 105, 163, 7, Color.FromRgb(190, 215, 187));
-        }
-
-        static void DrawMenuPanel(Canvas canvas, string title)
-        {
-            B5RoomDraw.Rect(canvas, 28, 31, 264, 133, Color.FromRgb(16, 29, 47));
-            B5RoomDraw.Rect(canvas, 30, 33, 260, 129, Color.FromRgb(26, 48, 86));
-            B5RoomDraw.Rect(canvas, 30, 33, 260, 2, Color.FromRgb(111, 177, 201));
-            B5RoomDraw.Rect(canvas, 30, 160, 260, 2, Color.FromRgb(50, 81, 127));
-            B5RoomDraw.Rect(canvas, 30, 33, 2, 129, Color.FromRgb(73, 113, 157));
-            B5RoomDraw.Rect(canvas, 288, 33, 2, 129, Color.FromRgb(14, 25, 50));
-            B5RoomDraw.Text(canvas, title, 111, 40, 12, Color.FromRgb(244, 221, 143));
-        }
-
-        static void DrawPanelEntry(Canvas canvas, string name, string cost, double x, double y, bool selected)
-        {
-            if (selected) B5RoomDraw.Rect(canvas, x - 5, y - 3, 112, 16, Color.FromRgb(50, 93, 177));
-            B5RoomDraw.Text(canvas, (selected ? "> " : "  ") + name, x, y, 8,
-                selected ? Colors.White : Color.FromRgb(184, 199, 224));
-            B5RoomDraw.Text(canvas, cost, x + 84, y, 7, Color.FromRgb(255, 220, 110));
-        }
-
-        void DrawTowerMarker(Canvas canvas)
-        {
-            if (_Map == null) return;
-            Point spot = _Map.TowerSpots[_SelectedSpot];
-            Color marker = _Towers[_SelectedSpot] == null
-                ? Color.FromRgb(105, 190, 255)
-                : Color.FromRgb(255, 218, 91);
-            B5RoomDraw.Rect(canvas, spot.X - 17, spot.Y + 25 - 19, 3, 9, marker);
-            B5RoomDraw.Rect(canvas, spot.X + 14, spot.Y + 25 - 19, 3, 9, marker);
-            B5RoomDraw.Rect(canvas, spot.X - 17, spot.Y + 25 + 10, 3, 9, marker);
-            B5RoomDraw.Rect(canvas, spot.X + 14, spot.Y + 25 + 10, 3, 9, marker);
-            B5RoomDraw.Text(canvas, (_SelectedSpot + 1).ToString(), spot.X - 3, spot.Y + 25 - 29, 7, marker);
-        }
-
-        void DrawMapPreview(Canvas canvas, TowerDefenseMapDefinition map, double top)
-        {
-            if (_Screen == TowerDefenseScreen.Map)
-                DrawMapScenery(canvas, top);
-
-            Color pathColor = Color.FromRgb(151, 105, 78);
-            Color pathEdge = Color.FromRgb(68, 61, 58);
-            for (int i = 0; i < map.Path.Count - 1; i++)
+            else if (savedRun != null)
             {
-                Point from = map.Path[i];
-                Point to = map.Path[i + 1];
-                if (Math.Abs(from.X - to.X) > Math.Abs(from.Y - to.Y))
-                {
-                    double x = Math.Min(from.X, to.X);
-                    B5RoomDraw.Rect(canvas, x, from.Y + top - 8, Math.Abs(to.X - from.X), 16, pathEdge);
-                    B5RoomDraw.Rect(canvas, x, from.Y + top - 5, Math.Abs(to.X - from.X), 10, pathColor);
-                    for (double stoneX = x + 5; stoneX < x + Math.Abs(to.X - from.X); stoneX += 12)
-                        B5RoomDraw.Rect(canvas, stoneX, from.Y + top - 1, 7, 1, Color.FromRgb(190, 137, 94));
-                }
+                string saved = "GESPEICHERT: WELLE " + savedRun.Wave;
+                double badgeWidth = saved.Length * 2.75 + 18;
+                Surface.Rect(previewX + 2, previewY + 2, badgeWidth, 11, Outline);
+                Surface.Rect(previewX + 3, previewY + 3, badgeWidth - 2, 9, Selection);
+                Icon(TowerDefenseIcon.Wave, previewX + 4, previewY + 3, 8);
+                Surface.Text(saved, previewX + 14, previewY + 3, 5, TitleGold);
+            }
+
+            DrawArrowButton("<", 60, 74, () => MoveSelection(-1));
+            DrawArrowButton(">", 244, 74, () => MoveSelection(1));
+
+            string title = (_MapSelection + 1) + "/" + TowerDefenseMaps.Maps.Count + "  " + map.Name.ToUpperInvariant();
+            ShadowText(title, 160 - title.Length * 2.75, 126, 10, unlocked ? TitleGold : TextDim);
+            double lineWidth = (_MapSelection + 1) * 9 + 4 + map.Description.Length * 3.3;
+            double lineX = 160 - lineWidth / 2;
+            for (int skull = 0; skull <= _MapSelection; skull++)
+                Icon(TowerDefenseIcon.Skull, lineX + skull * 9, 140, 8);
+            ShadowText(map.Description, lineX + (_MapSelection + 1) * 9 + 4, 141, 6, TextLight);
+            DrawMapProgressDots(150);
+
+            if (_MapSelectionMessage != null)
+            {
+                double width = _MapSelectionMessage.Length * 4.4 + 12;
+                Surface.Rect(160 - width / 2, 100, width, 14, Outline);
+                Surface.Rect(160 - width / 2 + 1, 101, width - 2, 12, Selection);
+                ShadowText(_MapSelectionMessage, 160 - width / 2 + 6, 102, 8, TitleGold);
+            }
+        }
+
+        void DrawArrowButton(string arrow, double x, double y, Action click)
+        {
+            bool hovered = IsMouseOver(x, y, 14, 18);
+            AddClickArea(x, y, 14, 18, null, click);
+            if (hovered)
+            {
+                Surface.Rect(x, y, 14, 18, SelectionEdge);
+                Surface.Rect(x + 1, y + 1, 12, 16, Selection);
+            }
+            ShadowText(arrow, x + 4, y + 4, 12, TitleGold);
+        }
+
+        // One dot per map below the selection panel: gold = unlocked, grey = locked, framed = selected.
+        void DrawMapProgressDots(double y)
+        {
+            int count = TowerDefenseMaps.Maps.Count;
+            double left = 160 - count * 5;
+            for (int i = 0; i < count; i++)
+            {
+                double x = left + i * 10;
+                int index = i;
+                AddClickArea(x - 2, y, 10, 11, null, () => { _MapSelection = index; _MapSelectionMessage = null; });
+                Surface.Rect(x, y + 2, 6, 6, Outline);
+                Surface.Rect(x + 1, y + 3, 4, 4, CurrentSlot.IsUnlocked(i) ? SelectionEdge : StoneDark);
+                if (i == _MapSelection) Surface.Rect(x + 1, y + 9, 4, 1, TitleGold);
+            }
+        }
+
+        void DrawMenuBackground()
+        {
+            TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[0];
+            Surface.Rect(0, 0, DesignWidth, DesignHeight, Color.FromRgb(98, 148, 66));
+            Surface.Sprite(TowerDefenseSprites.Map(map.BackgroundFile), 0, 25,
+                TowerDefenseSprites.MapImageWidth, TowerDefenseSprites.MapImageHeight);
+            DrawMainBuilding(map, MapTop);
+            Surface.Rect(0, 0, DesignWidth, DesignHeight, Color.FromArgb(150, 14, 18, 24));
+        }
+
+        // A small procession of enemy sprites walking along the bottom edge.
+        void DrawParade()
+        {
+            const double groundY = 166;
+            Surface.Rect(0, groundY - 2, DesignWidth, 4, Color.FromArgb(120, 0, 0, 0));
+            double offset = (_Tick * 0.6) % 36;
+            for (int i = 0; i < 11; i++)
+            {
+                string name = MenuParade[(i + _Tick / 60) % MenuParade.Length];
+                double x = -36 + i * 36 + offset;
+                int frame = (_Tick / 6 + i) % 2;
+                if (TowerDefenseSprites.IsBoss(name))
+                    Surface.Sprite(TowerDefenseSprites.Boss(name, frame), x - 16, groundY - 28, 32, 32);
                 else
+                    Surface.Sprite(TowerDefenseSprites.Enemy(name, frame), x - 8, groundY - 13, 16, 16);
+            }
+        }
+
+        // ---------------- map ----------------
+
+        void DrawMap()
+        {
+            Surface.Sprite(TowerDefenseSprites.Map(_Map.BackgroundFile), 0, MapTop - 2,
+                TowerDefenseSprites.MapImageWidth, TowerDefenseSprites.MapImageHeight);
+            DrawMainBuilding(_Map, MapTop);
+            if (_Screen == TowerDefenseScreen.Map && _Towers[_SelectedSpot] != null)
+                DrawRangeCircle(_Map.TowerSpots[_SelectedSpot],
+                    TowerDefenseBattle.TowerRange(_Towers[_SelectedSpot], _Upgrades[_SelectedSpot]));
+
+            // Towers and enemies back to front, so lower sprites overlap the ones behind them.
+            // Click areas follow the same order, so the frontmost tower wins the hit test.
+            List<KeyValuePair<double, int>> order = new List<KeyValuePair<double, int>>();
+            for (int i = 0; i < _Map.TowerSpots.Count; i++) order.Add(new KeyValuePair<double, int>(_Map.TowerSpots[i].Y, i));
+            if (_Battle != null)
+                for (int e = 0; e < _Battle.Enemies.Count; e++)
+                    order.Add(new KeyValuePair<double, int>(_Battle.Enemies[e].Y - 1, -1 - e));
+            order.Sort((a, b) => a.Key.CompareTo(b.Key));
+            foreach (KeyValuePair<double, int> entry in order)
+            {
+                if (entry.Value < 0)
                 {
-                    double y = Math.Min(from.Y, to.Y);
-                    B5RoomDraw.Rect(canvas, from.X - 8, y + top, 16, Math.Abs(to.Y - from.Y), pathEdge);
-                    B5RoomDraw.Rect(canvas, from.X - 5, y + top, 10, Math.Abs(to.Y - from.Y), pathColor);
-                    for (double stoneY = y + 5; stoneY < y + Math.Abs(to.Y - from.Y); stoneY += 12)
-                        B5RoomDraw.Rect(canvas, from.X - 1, stoneY + top, 1, 7, Color.FromRgb(190, 137, 94));
+                    int enemyIndex = -1 - entry.Value;
+                    DrawEnemy(_Battle.Enemies[enemyIndex], enemyIndex);
+                    continue;
                 }
+                int i = entry.Value;
+                Point spot = _Map.TowerSpots[i];
+                double x = spot.X, y = spot.Y + MapTop;
+                int index = i;
+                Action select = () => _SelectedSpot = index;
+                Action open = () => { _SelectedSpot = index; ConfirmSelection(); };
+                if (_Towers[i] == null)
+                {
+                    AddClickArea(x - 15, y - 10, 30, 19, select, open);
+                    continue;
+                }
+                AddClickArea(x - 16, y - 40, 32, 48, select, open);
+                DrawTowerSprite(_Towers[i], _Upgrades[i], x, y);
             }
-
-            for (int i = 0; i < map.TowerSpots.Count; i++)
-            {
-                Point spot = map.TowerSpots[i];
-                DrawStonePedestal(canvas, spot.X, spot.Y + top);
-                if (_Towers[i] != null && _Screen == TowerDefenseScreen.Map)
-                    DrawTowerSymbol(canvas, spot.X, spot.Y + top, _Towers[i], _TowerLevels[i]);
-            }
-
-            DrawMainBuilding(canvas, 160, 39 + top);
+            DrawProjectilesAndEffects();
+            DrawTowerMarker();
+            DrawHud();
+            DrawBanner();
+            if (_ShowWavePreview) DrawWavePreview();
         }
 
-        static void DrawStonePedestal(Canvas canvas, double x, double y)
+        void DrawEnemy(TowerDefenseBattleEnemy enemy, int index)
         {
-            Color darkStone = Color.FromRgb(61, 60, 57);
-            Color stone = Color.FromRgb(126, 124, 108);
-            Color lightStone = Color.FromRgb(184, 176, 143);
-            Color crack = Color.FromRgb(83, 79, 69);
-            B5RoomDraw.Rect(canvas, x - 13, y + 6, 26, 6, darkStone);
-            B5RoomDraw.Rect(canvas, x - 11, y, 22, 8, stone);
-            B5RoomDraw.Rect(canvas, x - 7, y - 3, 14, 4, lightStone);
-            B5RoomDraw.Rect(canvas, x - 9, y + 1, 5, 4, lightStone);
-            B5RoomDraw.Rect(canvas, x - 3, y + 1, 2, 4, crack);
-            B5RoomDraw.Rect(canvas, x + 3, y - 2, 2, 3, crack);
-            B5RoomDraw.Rect(canvas, x + 7, y + 3, 3, 1, crack);
-        }
-
-        static void DrawTowerSymbol(Canvas canvas, double x, double y, Tower tower, int level)
-        {
-            TowerDefensePixelSurface surface = canvas.Tag as TowerDefensePixelSurface;
-            if (surface == null) throw new InvalidOperationException("Tower sprites require the pixel surface.");
-            surface.Sprite(GetTowerSpriteIndex(tower), x - 16, y - 43, 32, 48);
-            B5RoomDraw.Rect(canvas, x - 10, y + 2, 20, 2, Color.FromRgb(38, 42, 44));
-            for (int pip = 0; pip < Math.Min(level, 5); pip++)
-                B5RoomDraw.Rect(canvas, x - 8 + pip * 4, y + 2, 2, 2, Color.FromRgb(246, 202, 76));
-        }
-
-        static int GetTowerSpriteIndex(Tower tower)
-        {
-            switch (tower.Name)
+            double x = enemy.X, y = enemy.Y + MapTop;
+            int frame = (_Tick / 6 + index) % 2;
+            Enemy stats = enemy.Enemy;
+            double barWidth;
+            double top;
+            if (TowerDefenseSprites.IsBoss(enemy.Name))
             {
-                case "Physical Archer": return 0;
-                case "Poison Archer": return 1;
-                case "Fire Mage": return 2;
-                case "Ice Mage": return 3;
-                case "Earth Mage": return 4;
-                case "Strom Mage": return 5;
-                case "Flamethrower": return 6;
-                case "Ice Area Tower": return 7;
-                default: throw new ArgumentException("No sprite is configured for this tower.", nameof(tower));
-            }
-        }
-
-        static void DrawTowerUnit(Canvas canvas, double x, double y, Tower tower)
-        {
-            if (tower.Name == "Physical Archer" || tower.Name == "Poison Archer")
-            {
-                Color tunic = tower.Name == "Poison Archer" ? Color.FromRgb(67, 137, 71) : Color.FromRgb(172, 91, 45);
-                Color hood = tower.Name == "Poison Archer" ? Color.FromRgb(42, 91, 51) : Color.FromRgb(116, 62, 40);
-                B5RoomDraw.Rect(canvas, x - 3, y - 5, 6, 7, tunic);
-                B5RoomDraw.Rect(canvas, x - 2, y - 8, 4, 4, Color.FromRgb(216, 164, 109));
-                B5RoomDraw.Rect(canvas, x - 3, y - 9, 6, 2, hood);
-                    B5RoomDraw.Rect(canvas, x - 4, y - 7, 1, 5, Color.FromRgb(240, 197, 128));
-                B5RoomDraw.Rect(canvas, x + 3, y - 5, 2, 10, Color.FromRgb(115, 72, 39));
-                B5RoomDraw.Rect(canvas, x + 5, y - 4, 1, 8, Color.FromRgb(216, 168, 93));
-                B5RoomDraw.Rect(canvas, x + 6, y - 3, 5, 1, Color.FromRgb(231, 211, 151));
-                if (tower.Name == "Poison Archer")
-                    B5RoomDraw.Rect(canvas, x - 7, y - 2, 3, 4, Color.FromRgb(151, 78, 185));
-            }
-            else if (tower.Name == "Fire Mage")
-            {
-                DrawMage(canvas, x, y, Color.FromRgb(175, 46, 42), Color.FromRgb(255, 143, 45));
-                B5RoomDraw.Rect(canvas, x + 5, y - 10, 2, 10, Color.FromRgb(92, 54, 42));
-                B5RoomDraw.Rect(canvas, x + 7, y - 13, 4, 5, Color.FromRgb(255, 196, 54));
-                B5RoomDraw.Rect(canvas, x + 8, y - 16, 2, 4, Color.FromRgb(255, 92, 36));
-            }
-            else if (tower.Name == "Ice Mage")
-            {
-                DrawMage(canvas, x, y, Color.FromRgb(64, 119, 184), Color.FromRgb(123, 221, 239));
-                B5RoomDraw.Rect(canvas, x + 5, y - 11, 2, 12, Color.FromRgb(112, 80, 56));
-                B5RoomDraw.Rect(canvas, x + 7, y - 15, 5, 5, Color.FromRgb(135, 238, 255));
-            }
-            else if (tower.Name == "Strom Mage")
-            {
-                DrawMage(canvas, x, y, Color.FromRgb(112, 65, 171), Color.FromRgb(217, 183, 255));
-                B5RoomDraw.Rect(canvas, x + 5, y - 11, 2, 11, Color.FromRgb(95, 78, 58));
-                B5RoomDraw.Rect(canvas, x + 7, y - 14, 3, 4, Color.FromRgb(255, 238, 105));
-                B5RoomDraw.Rect(canvas, x + 10, y - 10, 3, 2, Color.FromRgb(255, 238, 105));
-                B5RoomDraw.Rect(canvas, x + 8, y - 8, 2, 4, Color.FromRgb(255, 238, 105));
-            }
-            else if (tower.Name == "Earth Mage")
-            {
-                DrawMage(canvas, x, y, Color.FromRgb(122, 79, 46), Color.FromRgb(203, 164, 91));
-                B5RoomDraw.Rect(canvas, x + 5, y - 7, 7, 6, Color.FromRgb(105, 77, 52));
-                B5RoomDraw.Rect(canvas, x + 7, y - 10, 5, 4, Color.FromRgb(157, 126, 78));
-            }
-            else if (tower.Name == "Flamethrower")
-            {
-                B5RoomDraw.Rect(canvas, x - 4, y - 7, 8, 8, Color.FromRgb(52, 65, 73));
-                B5RoomDraw.Rect(canvas, x - 3, y - 10, 5, 4, Color.FromRgb(91, 110, 117));
-                B5RoomDraw.Rect(canvas, x + 3, y - 5, 8, 3, Color.FromRgb(68, 72, 75));
-                B5RoomDraw.Rect(canvas, x + 10, y - 7, 4, 3, Color.FromRgb(255, 141, 45));
-                B5RoomDraw.Rect(canvas, x + 12, y - 10, 3, 3, Color.FromRgb(255, 217, 68));
+                Surface.Sprite(TowerDefenseSprites.Boss(enemy.Name, frame), x - 16, y - 28, 32, 32, enemy.FacingLeft);
+                barWidth = 24;
+                top = y - 31;
             }
             else
             {
-                B5RoomDraw.Rect(canvas, x - 5, y - 7, 10, 8, Color.FromRgb(73, 123, 177));
-                B5RoomDraw.Rect(canvas, x - 3, y - 12, 6, 5, Color.FromRgb(129, 210, 235));
-                B5RoomDraw.Rect(canvas, x + 4, y - 5, 8, 3, Color.FromRgb(70, 94, 116));
-                B5RoomDraw.Rect(canvas, x + 10, y - 8, 5, 5, Color.FromRgb(152, 238, 255));
+                Surface.Sprite(TowerDefenseSprites.Enemy(enemy.Name, frame), x - 8, y - 13, 16, 16, enemy.FacingLeft);
+                barWidth = 12;
+                top = y - 15;
             }
-        }
+            if (enemy.HitFlash > 0) Surface.Rect(x - barWidth / 2, top + 3, barWidth, 1, Color.FromArgb(160, 255, 255, 255));
 
-        static void DrawMage(Canvas canvas, double x, double y, Color robe, Color accent)
-        {
-            B5RoomDraw.Rect(canvas, x - 4, y - 5, 8, 7, robe);
-            B5RoomDraw.Rect(canvas, x - 2, y - 9, 4, 4, Color.FromRgb(222, 171, 116));
-            B5RoomDraw.Rect(canvas, x - 5, y - 11, 10, 3, accent);
-            B5RoomDraw.Rect(canvas, x - 1, y - 13, 2, 3, accent);
-        }
-
-        static void DrawMainBuilding(Canvas canvas, double x, double y)
-        {
-            Color stone = Color.FromRgb(137, 133, 119);
-            Color stoneLight = Color.FromRgb(190, 181, 148);
-            Color stoneDark = Color.FromRgb(65, 63, 59);
-            Color roof = Color.FromRgb(91, 61, 58);
-            Color wood = Color.FromRgb(70, 43, 38);
-            B5RoomDraw.Rect(canvas, x - 34, y + 17, 68, 5, Color.FromRgb(57, 67, 55));
-            B5RoomDraw.Rect(canvas, x - 28, y - 9, 56, 27, stoneDark);
-            B5RoomDraw.Rect(canvas, x - 23, y - 15, 46, 25, stone);
-            B5RoomDraw.Rect(canvas, x - 36, y - 4, 15, 22, stone);
-            B5RoomDraw.Rect(canvas, x + 21, y - 4, 15, 22, stone);
-            B5RoomDraw.Rect(canvas, x - 39, y - 11, 21, 7, roof);
-            B5RoomDraw.Rect(canvas, x + 18, y - 11, 21, 7, roof);
-            B5RoomDraw.Rect(canvas, x - 31, y - 16, 62, 7, roof);
-            B5RoomDraw.Rect(canvas, x - 25, y - 22, 50, 7, Color.FromRgb(116, 95, 82));
-            B5RoomDraw.Rect(canvas, x - 5, y - 5, 10, 23, wood);
-            B5RoomDraw.Rect(canvas, x - 2, y + 7, 2, 2, Color.FromRgb(241, 199, 77));
-            B5RoomDraw.Rect(canvas, x - 30, y + 1, 8, 7, Color.FromRgb(70, 127, 139));
-            B5RoomDraw.Rect(canvas, x + 22, y + 1, 8, 7, Color.FromRgb(70, 127, 139));
-            B5RoomDraw.Rect(canvas, x - 31, y - 1, 10, 2, stoneLight);
-            B5RoomDraw.Rect(canvas, x + 21, y - 1, 10, 2, stoneLight);
-            B5RoomDraw.Rect(canvas, x - 17, y - 7, 3, 3, stoneLight);
-            B5RoomDraw.Rect(canvas, x + 12, y - 1, 3, 3, stoneLight);
-            B5RoomDraw.Rect(canvas, x - 18, y + 10, 2, 2, stoneDark);
-            B5RoomDraw.Rect(canvas, x + 14, y + 10, 2, 2, stoneDark);
-            B5RoomDraw.Rect(canvas, x - 2, y - 27, 4, 7, Color.FromRgb(213, 178, 72));
-            B5RoomDraw.Rect(canvas, x + 2, y - 27, 7, 2, Color.FromRgb(188, 64, 57));
-            B5RoomDraw.Text(canvas, "BASE", x - 13, y + 24, 6, Color.FromRgb(232, 210, 157));
-        }
-
-        static void DrawMapScenery(Canvas canvas, double top)
-        {
-            Color grassDark = Color.FromRgb(68, 103, 48);
-            Color grassLight = Color.FromRgb(111, 151, 59);
-            Color grassBright = Color.FromRgb(151, 176, 70);
-            DrawWater(canvas, 0, top + 5, 62, 24);
-            DrawWater(canvas, 242, top + 7, 78, 20);
-            for (int i = 0; i < 34; i++)
+            // Health bar once damaged (always for bosses), plus a dot per active status effect.
+            if (stats.CurrentHealth < stats.MaxHealth || enemy.IsBoss)
             {
-                double x = 8 + (i * 47) % 304;
-                double y = top + 8 + (i * 29) % 125;
-                B5RoomDraw.Rect(canvas, x, y, 3, 2, i % 2 == 0 ? grassDark : grassLight);
-                if (i % 3 == 0)
-                    B5RoomDraw.Rect(canvas, x + 4, y - 2, 2, 4, grassBright);
+                double fill = Math.Max(1, Math.Round(barWidth * stats.CurrentHealth / (double)stats.MaxHealth));
+                Surface.Rect(x - barWidth / 2 - 1, top - 1, barWidth + 2, 3, Outline);
+                Surface.Rect(x - barWidth / 2, top, fill, 1, enemy.IsBoss ? Color.FromRgb(230, 90, 220) : Color.FromRgb(120, 220, 90));
             }
-
-            B5RoomDraw.Rect(canvas, 0, top + 148, 320, 3, Color.FromRgb(54, 80, 44));
-            DrawTree(canvas, 22, top + 39);
-            DrawTree(canvas, 273, top + 32);
-            DrawTree(canvas, 260, top + 147);
-            DrawTree(canvas, 116, top + 132);
-            DrawTree(canvas, 178, top + 34);
-            DrawHouse(canvas, 18, top + 145, Color.FromRgb(142, 77, 45));
-            DrawHouse(canvas, 286, top + 38, Color.FromRgb(113, 69, 48));
-            DrawBridge(canvas, 194, top + 89);
-            DrawFence(canvas, 65, top + 43, 36);
-            DrawFence(canvas, 226, top + 132, 28);
-            DrawRock(canvas, 13, top + 70);
-            DrawRock(canvas, 279, top + 111);
-            DrawRock(canvas, 111, top + 30);
-            DrawFlowerPatch(canvas, 86, top + 145);
-            DrawFlowerPatch(canvas, 239, top + 37);
+            double dotX = x + barWidth / 2 + 2;
+            if (stats.BurnDamagePerSecond > 0) { Surface.Rect(dotX, top - 1, 2, 2, Color.FromRgb(255, 140, 40)); dotX += 3; }
+            if (stats.PoisonDamagePerSecond > 0) { Surface.Rect(dotX, top - 1, 2, 2, Color.FromRgb(120, 220, 80)); dotX += 3; }
+            if (stats.CurrentMoveSpeed < stats.MoveSpeed) { Surface.Rect(dotX, top - 1, 2, 2, Color.FromRgb(150, 220, 255)); dotX += 3; }
+            if (stats.CurrentArmor < stats.Armor) Surface.Rect(dotX, top - 1, 2, 2, Color.FromRgb(200, 150, 90));
         }
 
-        static void DrawWater(Canvas canvas, double x, double y, double width, double height)
+        void DrawProjectilesAndEffects()
         {
-            B5RoomDraw.Rect(canvas, x, y, width, height, Color.FromRgb(76, 142, 157));
-            B5RoomDraw.Rect(canvas, x, y, width, 3, Color.FromRgb(156, 190, 171));
-            B5RoomDraw.Rect(canvas, x + 5, y + 9, 15, 2, Color.FromRgb(103, 177, 174));
-            B5RoomDraw.Rect(canvas, x + width - 24, y + height - 7, 18, 2, Color.FromRgb(51, 105, 127));
-            B5RoomDraw.Rect(canvas, x + 28, y + 4, 2, 3, Color.FromRgb(190, 212, 178));
-        }
+            if (_Battle == null) return;
+            foreach (TowerDefenseProjectile projectile in _Battle.Projectiles)
+                Surface.Sprite(TowerDefenseSprites.DamageIcon(projectile.DamageType),
+                    projectile.X - 3, projectile.Y + MapTop - 3, 6, 6);
 
-        static void DrawBridge(Canvas canvas, double x, double y)
-        {
-            B5RoomDraw.Rect(canvas, x, y, 35, 9, Color.FromRgb(70, 46, 38));
-            B5RoomDraw.Rect(canvas, x + 2, y - 2, 31, 3, Color.FromRgb(143, 88, 57));
-            for (int plank = 0; plank < 5; plank++)
-                B5RoomDraw.Rect(canvas, x + 4 + plank * 6, y + 2, 3, 6, Color.FromRgb(178, 113, 66));
-            B5RoomDraw.Rect(canvas, x - 2, y - 5, 3, 14, Color.FromRgb(58, 45, 39));
-            B5RoomDraw.Rect(canvas, x + 34, y - 5, 3, 14, Color.FromRgb(58, 45, 39));
-        }
-
-        static void DrawFence(Canvas canvas, double x, double y, double width)
-        {
-            Color post = Color.FromRgb(75, 50, 39);
-            Color rail = Color.FromRgb(146, 88, 54);
-            B5RoomDraw.Rect(canvas, x, y, width, 3, rail);
-            B5RoomDraw.Rect(canvas, x, y + 8, width, 3, rail);
-            for (double postX = x; postX <= x + width; postX += 12)
-                B5RoomDraw.Rect(canvas, postX, y - 3, 3, 15, post);
-        }
-
-        static void DrawRock(Canvas canvas, double x, double y)
-        {
-            B5RoomDraw.Rect(canvas, x - 5, y + 2, 10, 4, Color.FromRgb(60, 67, 62));
-            B5RoomDraw.Rect(canvas, x - 3, y - 1, 7, 4, Color.FromRgb(119, 121, 105));
-            B5RoomDraw.Rect(canvas, x - 1, y - 1, 3, 2, Color.FromRgb(181, 172, 137));
-        }
-
-        static void DrawFlowerPatch(Canvas canvas, double x, double y)
-        {
-            Color stem = Color.FromRgb(58, 105, 45);
-            Color flower = Color.FromRgb(225, 203, 111);
-            B5RoomDraw.Rect(canvas, x, y, 1, 5, stem);
-            B5RoomDraw.Rect(canvas, x + 4, y - 2, 1, 6, stem);
-            B5RoomDraw.Rect(canvas, x + 8, y + 1, 1, 4, stem);
-            B5RoomDraw.Rect(canvas, x - 1, y - 1, 3, 2, flower);
-            B5RoomDraw.Rect(canvas, x + 3, y - 4, 3, 2, Color.FromRgb(238, 127, 91));
-            B5RoomDraw.Rect(canvas, x + 7, y, 3, 2, Color.FromRgb(220, 111, 171));
-        }
-
-        static void DrawTree(Canvas canvas, double x, double y)
-        {
-            B5RoomDraw.Rect(canvas, x - 3, y + 10, 6, 12, Color.FromRgb(77, 53, 38));
-            B5RoomDraw.Rect(canvas, x - 5, y + 12, 2, 8, Color.FromRgb(124, 76, 43));
-            B5RoomDraw.Rect(canvas, x - 10, y - 1, 20, 14, Color.FromRgb(55, 82, 40));
-            B5RoomDraw.Rect(canvas, x - 7, y - 7, 14, 10, Color.FromRgb(89, 123, 45));
-            B5RoomDraw.Rect(canvas, x - 3, y - 10, 7, 6, Color.FromRgb(139, 163, 59));
-            B5RoomDraw.Rect(canvas, x - 8, y + 1, 4, 3, Color.FromRgb(156, 177, 64));
-            B5RoomDraw.Rect(canvas, x + 4, y - 4, 3, 3, Color.FromRgb(173, 186, 72));
-        }
-
-        static void DrawHouse(Canvas canvas, double x, double y, Color roof)
-        {
-            B5RoomDraw.Rect(canvas, x - 15, y - 5, 30, 17, Color.FromRgb(161, 151, 122));
-            B5RoomDraw.Rect(canvas, x - 18, y - 10, 36, 5, roof);
-            B5RoomDraw.Rect(canvas, x - 11, y - 16, 22, 7, roof);
-            B5RoomDraw.Rect(canvas, x - 3, y + 3, 6, 9, Color.FromRgb(99, 57, 38));
-            B5RoomDraw.Rect(canvas, x - 12, y - 1, 5, 5, Color.FromRgb(91, 147, 153));
-            B5RoomDraw.Rect(canvas, x + 7, y - 1, 5, 5, Color.FromRgb(91, 147, 153));
-        }
-
-        void DrawHud(Canvas canvas)
-        {
-            B5RoomDraw.Rect(canvas, 0, 0, DesignWidth, 24, Color.FromRgb(29, 47, 57));
-            B5RoomDraw.Rect(canvas, 0, 23, DesignWidth, 2, Color.FromRgb(71, 103, 91));
-            DrawHudCell(canvas, 4, "GOLD", Gold.ToString(), 0);
-            DrawHudCell(canvas, 82, "LEBEN", MainBuildingHealth + "%", 1);
-            DrawHudCell(canvas, 164, "WELLE", CurrentWave.ToString(), 2);
-            DrawHudCell(canvas, 242, "FEINDE", ExpectedEnemies.ToString(), 3);
-        }
-
-        static void DrawHudCell(Canvas canvas, double x, string label, string value, int icon)
-        {
-            Color divider = Color.FromRgb(67, 93, 82);
-            if (x > 4)
-                B5RoomDraw.Rect(canvas, x - 6, 4, 1, 16, divider);
-
-            if (icon == 0) DrawGoldIcon(canvas, x, 6);
-            else if (icon == 1) DrawHeartIcon(canvas, x, 6);
-            else if (icon == 2) DrawWaveIcon(canvas, x, 6);
-            else DrawEnemyIcon(canvas, x, 6);
-
-            B5RoomDraw.Text(canvas, label, x + 17, 3, 6, Color.FromRgb(174, 197, 180));
-            B5RoomDraw.Text(canvas, value, x + 17, 10, 9, Color.FromRgb(255, 235, 159));
-        }
-
-        static void DrawGoldIcon(Canvas canvas, double x, double y)
-        {
-            Color gold = Color.FromRgb(247, 191, 55);
-            B5RoomDraw.Rect(canvas, x + 5, y, 5, 12, gold);
-            B5RoomDraw.Rect(canvas, x + 3, y + 2, 9, 8, gold);
-            B5RoomDraw.Rect(canvas, x + 5, y + 3, 5, 6, Color.FromRgb(255, 226, 104));
-            B5RoomDraw.Rect(canvas, x + 7, y + 4, 1, 4, Color.FromRgb(194, 126, 35));
-        }
-
-        static void DrawHeartIcon(Canvas canvas, double x, double y)
-        {
-            Color red = Color.FromRgb(220, 67, 68);
-            B5RoomDraw.Rect(canvas, x + 3, y + 2, 4, 4, red);
-            B5RoomDraw.Rect(canvas, x + 8, y + 2, 4, 4, red);
-            B5RoomDraw.Rect(canvas, x + 2, y + 5, 11, 5, red);
-            B5RoomDraw.Rect(canvas, x + 5, y + 10, 5, 3, red);
-            B5RoomDraw.Rect(canvas, x + 5, y + 3, 2, 2, Color.FromRgb(255, 144, 125));
-        }
-
-        static void DrawWaveIcon(Canvas canvas, double x, double y)
-        {
-            Color flag = Color.FromRgb(92, 178, 197);
-            B5RoomDraw.Rect(canvas, x + 4, y, 2, 13, Color.FromRgb(190, 166, 101));
-            B5RoomDraw.Rect(canvas, x + 6, y + 1, 7, 5, flag);
-            B5RoomDraw.Rect(canvas, x + 8, y + 3, 3, 2, Color.FromRgb(188, 236, 205));
-            B5RoomDraw.Rect(canvas, x + 2, y + 12, 8, 2, Color.FromRgb(190, 166, 101));
-        }
-
-        static void DrawEnemyIcon(Canvas canvas, double x, double y)
-        {
-            Color helmet = Color.FromRgb(139, 145, 137);
-            B5RoomDraw.Rect(canvas, x + 3, y + 3, 10, 7, helmet);
-            B5RoomDraw.Rect(canvas, x + 5, y + 1, 6, 3, helmet);
-            B5RoomDraw.Rect(canvas, x + 2, y + 8, 12, 3, Color.FromRgb(75, 82, 77));
-            B5RoomDraw.Rect(canvas, x + 5, y + 6, 2, 2, Color.FromRgb(37, 45, 42));
-            B5RoomDraw.Rect(canvas, x + 9, y + 6, 2, 2, Color.FromRgb(37, 45, 42));
-        }
-
-        static void DrawBackground(Canvas canvas, Color color)
-        {
-            B5RoomDraw.Rect(canvas, 0, 0, 320, 180, color);
-            Color shadow = Color.FromArgb(22, 0, 0, 0);
-            for (int y = 8; y < 180; y += 16)
-                B5RoomDraw.Rect(canvas, 0, y, 320, 1, shadow);
-            for (int x = 8; x < 320; x += 24)
-                B5RoomDraw.Rect(canvas, x, 0, 1, 180, shadow);
-        }
-
-        static void DrawTitle(Canvas canvas, string title, double y)
-        {
-            B5RoomDraw.Text(canvas, title, 90, y + 2, 17, Color.FromRgb(91, 61, 58));
-            B5RoomDraw.Text(canvas, title, 88, y, 17, Color.FromRgb(244, 221, 143));
-            B5RoomDraw.Rect(canvas, 72, y + 23, 176, 2, Color.FromRgb(92, 130, 185));
-            B5RoomDraw.Rect(canvas, 92, y + 26, 136, 1, Color.FromRgb(42, 67, 109));
-        }
-
-        void DrawMenuEntry(Canvas canvas, string text, int index, double y)
-        {
-            bool selected = (_Screen == TowerDefenseScreen.MainMenu && _MenuSelection == index) ||
-                (_Screen == TowerDefenseScreen.DifficultySelection && _DifficultySelection == index);
-            Color background = selected ? Color.FromRgb(50, 93, 177) : Color.FromArgb(0, 0, 0, 0);
-            B5RoomDraw.Rect(canvas, 82, y - 2, 156, 16, background);
-            if (selected)
+            foreach (TowerDefenseEffect effect in _Battle.Effects)
             {
-                B5RoomDraw.Rect(canvas, 82, y - 2, 2, 16, Color.FromRgb(115, 218, 228));
-                B5RoomDraw.Rect(canvas, 236, y - 2, 2, 16, Color.FromRgb(115, 218, 228));
+                if (effect.Text != null)
+                {
+                    double rise = (1 - effect.TimeLeft / effect.Duration) * 8;
+                    Point p = effect.Points[0];
+                    ShadowText(effect.Text, p.X - effect.Text.Length * 1.4, p.Y + MapTop - rise, 5, TitleGold);
+                    continue;
+                }
+                for (int i = 0; i + 1 < effect.Points.Count; i++)
+                    DrawBolt(effect.Points[i], effect.Points[i + 1]);
             }
-            B5RoomDraw.Text(canvas, (selected ? "> " : "  ") + text, 94, y, 11,
-                selected ? Colors.White : Color.FromRgb(184, 199, 224));
+        }
+
+        // Jagged lightning line between two map points.
+        void DrawBolt(Point from, Point to)
+        {
+            double dx = to.X - from.X, dy = to.Y - from.Y;
+            int steps = Math.Max(1, (int)(Math.Sqrt(dx * dx + dy * dy) / 3));
+            for (int s = 0; s <= steps; s++)
+            {
+                double t = s / (double)steps;
+                double jitter = s == 0 || s == steps ? 0 : ((s * 7 + _Tick) % 3) - 1;
+                double x = from.X + dx * t + jitter, y = from.Y + dy * t + MapTop + jitter;
+                Surface.Rect(x - 1, y - 1, 3, 3, Color.FromArgb(120, 200, 170, 255));
+                Surface.Rect(x, y, 1, 1, Color.FromRgb(255, 250, 200));
+            }
+        }
+
+        void DrawRangeCircle(Point spot, double range)
+        {
+            double cx = spot.X, cy = spot.Y - 6 + MapTop;
+            int points = Math.Max(24, (int)(range * 0.8));
+            for (int i = 0; i < points; i++)
+            {
+                double angle = i * Math.PI * 2 / points;
+                double x = cx + Math.Cos(angle) * range, y = cy + Math.Sin(angle) * range;
+                if (y < 25 || y > 169) continue;
+                Surface.Rect(Math.Round(x), Math.Round(y), 1, 1, Color.FromArgb(200, 255, 236, 150));
+            }
+        }
+
+        void DrawBanner()
+        {
+            if (_BannerTicks <= 0 || _Banner == null) return;
+            double width = _Banner.Length * 4.4 + 16;
+            double x = 160 - width / 2;
+            Surface.Rect(x, 30, width, 15, Outline);
+            Surface.Rect(x + 1, 31, width - 2, 13, Selection);
+            Surface.Rect(x + 1, 31, width - 2, 1, SelectionEdge);
+            ShadowText(_Banner, x + 8, 33, 8, TitleGold);
+        }
+
+        // Window below the FEINDE cell: which enemy types the current or next wave brings (no counts).
+        void DrawWavePreview()
+        {
+            TowerDefenseWave wave = WaveRunning ? _Battle.CurrentWave : TowerDefenseWaves.Get(_MapIndex, _Wave);
+            IList<string> types = wave.EnemyTypes;
+            const double width = 124, x = 192;
+            double height = 20 + types.Count * 17;
+            const double y = 24;
+            AddClickArea(x, y, width, height, null, () => _ShowWavePreview = false);
+            Surface.Rect(x, y, width, height, Outline);
+            Surface.Rect(x + 1, y + 1, width - 2, height - 2, StoneDark);
+            Surface.Rect(x + 2, y + 2, width - 4, height - 4, PanelInside);
+            string title = (WaveRunning ? "WELLE " : "NAECHSTE WELLE ") + wave.Number;
+            ShadowText(title, x + 6, y + 4, 6, TitleGold);
+            ShadowText("x", x + width - 10, y + 3, 6, TextDim);
+            for (int i = 0; i < types.Count; i++)
+            {
+                string name = types[i];
+                double rowY = y + 16 + i * 17;
+                bool boss = TowerDefenseSprites.IsBoss(name);
+                Surface.Rect(x + 5, rowY, 18, 16, PanelInsideDark);
+                if (boss)
+                    Surface.Sprite(TowerDefenseSprites.Boss(name, 0), x + 6, rowY, 16, 16);
+                else
+                    Surface.Sprite(TowerDefenseSprites.Enemy(name, 0), x + 6, rowY, 16, 16);
+                ShadowText(name.ToUpperInvariant(), x + 27, rowY + 2, 5, boss ? TitleGold : TextLight);
+                if (boss)
+                    Surface.Text(wave.IsMiniBoss ? "MINIBOSS" : "BOSS", x + 27, rowY + 9, 5, Color.FromRgb(230, 110, 200));
+            }
+        }
+
+        void DrawMainBuilding(TowerDefenseMapDefinition map, double top)
+        {
+            int health = MainBuildingHealth;
+            int stage = health > 66 ? 0 : health > 33 ? 1 : 2;
+            Surface.Sprite(TowerDefenseSprites.MainBuilding(stage),
+                map.MainBuilding.X - 32, map.MainBuilding.Y + top - 44, 64, 48);
+        }
+
+        static readonly Color DamageColor = Color.FromRgb(232, 92, 70);
+        static readonly Color RangeColor = Color.FromRgb(110, 210, 110);
+        static readonly Color SpeedColor = Color.FromRgb(250, 210, 80);
+
+        void DrawTowerSprite(Tower tower, TowerUpgrades upgrades, double x, double y)
+        {
+            Surface.Sprite(TowerDefenseSprites.Tower(tower.Name), x - 16, y - 43, 32, 48);
+            if (upgrades.Tier > 1) DrawTierBadge(x + 9, y - 25, upgrades.Tier);
+            if (upgrades.TotalLevels == 0) return;
+
+            // One bar per upgrade path below the pedestal, 2 px per level.
+            int widest = Math.Max(upgrades.Damage, Math.Max(upgrades.Range, upgrades.Speed));
+            double left = x - widest;
+            Surface.Rect(left - 1, y + 2, widest * 2 + 2, 7, Outline);
+            Surface.Rect(left, y + 3, upgrades.Damage * 2, 1, DamageColor);
+            Surface.Rect(left, y + 5, upgrades.Range * 2, 1, RangeColor);
+            Surface.Rect(left, y + 7, upgrades.Speed * 2, 1, SpeedColor);
+        }
+
+        // Small shield with one dot per tier: silver for tier II, gold for tier III.
+        void DrawTierBadge(double x, double y, int tier)
+        {
+            Color fill = tier >= 3 ? SelectionEdge : Color.FromRgb(196, 204, 214);
+            Surface.Rect(x - 1, y - 1, 9, 9, Outline);
+            Surface.Rect(x + 1, y + 8, 5, 1, Outline);
+            Surface.Rect(x, y, 7, 7, fill);
+            Surface.Rect(x + 1, y + 7, 5, 1, fill);
+            Surface.Rect(x, y, 7, 1, Color.FromRgb(255, 248, 220));
+            for (int dot = 0; dot < tier; dot++)
+                Surface.Rect(x + 1 + dot * 2, y + 3, 1, 2, Color.FromRgb(120, 36, 32));
+        }
+
+        void DrawTowerMarker()
+        {
+            Point spot = _Map.TowerSpots[_SelectedSpot];
+            double x = spot.X, y = spot.Y + MapTop;
+            bool occupied = _Towers[_SelectedSpot] != null;
+            Color marker = occupied ? SelectionEdge : Color.FromRgb(120, 220, 240);
+            double pulse = (_Tick / 8) % 2;
+            double left = x - 16 - pulse, right = x + 13 + pulse, top = y - 8 - pulse, bottom = y + 6 + pulse;
+            DrawCorner(left, top, 1, 1, marker);
+            DrawCorner(right, top, -1, 1, marker);
+            DrawCorner(left, bottom, 1, -1, marker);
+            DrawCorner(right, bottom, -1, -1, marker);
+
+            double bounce = (_Tick / 6) % 4 < 2 ? 0 : 2;
+            double cursorY = (occupied ? y - 58 : y - 22) - bounce;
+            Icon(TowerDefenseIcon.Cursor, x - 8, cursorY, 16);
+        }
+
+        void DrawCorner(double x, double y, int dx, int dy, Color color)
+        {
+            double hx = dx > 0 ? x : x - 2;
+            double vy = dy > 0 ? y : y - 2;
+            Surface.Rect(hx - 1, y - 1, 6, 3, Outline);
+            Surface.Rect(x - 1, vy - 1, 3, 6, Outline);
+            Surface.Rect(dx > 0 ? x : x - 3, y, 5, 1, color);
+            Surface.Rect(x, dy > 0 ? y : y - 3, 1, 5, color);
+        }
+
+        // ---------------- HUD ----------------
+
+        void DrawHud()
+        {
+            Surface.Rect(0, 0, DesignWidth, 25, Outline);
+            Surface.Rect(0, 0, DesignWidth, 23, StoneDark);
+            Surface.Rect(0, 0, DesignWidth, 1, Stone);
+            Surface.Rect(0, 22, DesignWidth, 1, Color.FromRgb(74, 68, 60));
+            DrawHudCell(3, TowerDefenseIcon.Coin, "GOLD", Gold.ToString());
+            DrawHudCell(67, TowerDefenseIcon.Heart, "LEBEN", MainBuildingHealth + "%");
+            DrawHudCell(131, TowerDefenseIcon.Wave, "WELLE", CurrentWave + "/" + TowerDefenseWaves.WaveCount);
+            DrawHudCell(195, TowerDefenseIcon.Skull, WaveRunning ? "FEINDE" : "NAECHSTE", ExpectedEnemies.ToString());
+            // The enemy cell opens the wave preview (mouse or E).
+            bool hovered = IsMouseOver(195, 3, 60, 17);
+            AddClickArea(195, 3, 60, 17, null, () => _ShowWavePreview = !_ShowWavePreview);
+            if (hovered || _ShowWavePreview)
+            {
+                Surface.Rect(195, 3, 60, 1, SelectionEdge);
+                Surface.Rect(195, 19, 60, 1, SelectionEdge);
+            }
+            Surface.Text(_ShowWavePreview ? "^" : "v", 247, 10, 6, hovered ? TitleGold : TextDim);
+            DrawHudInfo(259);
+        }
+
+        void DrawHudCell(double x, TowerDefenseIcon icon, string label, string value, double y = 3)
+        {
+            Surface.Rect(x, y, 60, 17, Outline);
+            Surface.Rect(x + 1, y + 1, 58, 15, PanelInside);
+            Surface.Rect(x + 1, y + 1, 58, 1, PanelInsideDark);
+            Icon(icon, x + 2, y + 1, 16);
+            Surface.Text(label, x + 20, y, 5, TextDim);
+            ShadowText(value, x + 20, y + 6, 8, TitleGold);
+        }
+
+        void DrawHudInfo(double x)
+        {
+            Surface.Rect(x, 3, 58, 17, Outline);
+            Surface.Rect(x + 1, 4, 56, 15, PanelInside);
+            for (int skull = 0; skull <= (int)_Difficulty; skull++)
+                Icon(TowerDefenseIcon.Skull, x + 3 + skull * 7, 5, 6);
+            Surface.Text(Difficulty.ToUpperInvariant(), x + 32, 4, 5, TextDim);
+            string status = Status.ToUpperInvariant();
+            if (status.Length > 17) status = status.Substring(0, 17);
+            Surface.Text(status, x + 3, 12, 5, TextLight);
+        }
+
+        // ---------------- tower menus ----------------
+
+        void DrawTowerPlacementMenu()
+        {
+            _ClickAreas.Clear();
+            Surface.Rect(0, 0, DesignWidth, DesignHeight, Color.FromArgb(110, 0, 0, 0));
+            DrawPanel(14, 28, 292, 136);
+            AddClickArea(14, 28, 292, 136, null, null);
+            DrawTitle("TURM BAUEN", 36);
+            for (int i = 0; i < TowerNames.Length; i++)
+            {
+                Tower option = TowerCreators[i]();
+                double y = 55 + i * 12;
+                bool selected = i == _TowerSelection;
+                bool affordable = _Gold >= option.Cost;
+                int index = i;
+                AddClickArea(24, y, 148, 12, () => _TowerSelection = index, BuildTower);
+                DrawSelectionBar(24, y, 148, 12, selected);
+                Icon(TowerDefenseSprites.DamageIcon(option.DamageType), 28, y + 2, 8);
+                ShadowText(option.Name.ToUpperInvariant(), 40, y + 2, 6, selected ? TitleGold : TextLight);
+                Icon(TowerDefenseIcon.Coin, 140, y + 2, 8);
+                ShadowText(option.Cost.ToString(), 150, y + 2, 6, affordable ? TextGold : Color.FromRgb(222, 96, 64));
+            }
+
+            Tower tower = TowerCreators[_TowerSelection]();
+            DrawTowerShowcase(tower, 178, 56);
+            AddClickArea(178, 56, 48, 72, null, BuildTower);
+            DrawTowerStats(tower, 230, 58);
+            ShadowText("KLICK / ENTER  BAUEN    RECHTSKLICK / BACKSPACE  ZURUECK", 64, 153, 5, TextDim);
+        }
+
+        void DrawTowerUpgradeMenu()
+        {
+            _ClickAreas.Clear();
+            Surface.Rect(0, 0, DesignWidth, DesignHeight, Color.FromArgb(110, 0, 0, 0));
+            DrawPanel(16, 28, 288, 140);
+            AddClickArea(16, 28, 288, 140, null, null);
+            DrawTitle("TURM VERWALTEN", 34);
+            Tower tower = _Towers[_SelectedSpot];
+            TowerUpgrades upgrades = _Upgrades[_SelectedSpot];
+            DrawTowerShowcase(tower, 26, 60);
+            if (upgrades.Tier > 1) DrawTierBadge(26 + 33, 60 + 33, upgrades.Tier);
+
+            ShadowText(tower.Name.ToUpperInvariant(), 84, 56, 7, TitleGold);
+            ShadowText("TURMSTUFE " + TierName(upgrades.Tier), 230, 57, 6, upgrades.Tier > 1 ? TitleGold : TextLight);
+
+            // Current values; the selected upgrade shows its result in green.
+            TowerUpgrades preview = _UpgradeSelection < 4 ? upgrades.Preview((TowerUpgradePath)_UpgradeSelection) : upgrades;
+            DrawUpgradeStat(TowerDefenseIcon.Sword, TowerDefenseBattle.TowerDamage(tower, upgrades).ToString(),
+                TowerDefenseBattle.TowerDamage(tower, preview).ToString(), 84);
+            DrawUpgradeStat(TowerDefenseIcon.Range, (TowerDefenseBattle.TowerRange(tower, upgrades) / TowerDefenseBattle.RangeUnit).ToString("0.0"),
+                (TowerDefenseBattle.TowerRange(tower, preview) / TowerDefenseBattle.RangeUnit).ToString("0.0"), 156);
+            DrawUpgradeStat(TowerDefenseIcon.Speed, TowerDefenseBattle.TowerAttackSpeed(tower, upgrades).ToString("0.00"),
+                TowerDefenseBattle.TowerAttackSpeed(tower, preview).ToString("0.00"), 226);
+
+            string[] labels =
+            {
+                "SCHADEN  +" + (int)(TowerUpgrades.DamagePerLevel * 100) + "%",
+                "REICHWEITE  +" + (int)(TowerUpgrades.RangePerLevel * 100) + "%",
+                "TEMPO  +" + (int)(TowerUpgrades.SpeedPerLevel * 100) + "%",
+                upgrades.IsMaxed(TowerUpgradePath.Tier) ? "TURMSTUFE" : "TURMSTUFE " + TierName(upgrades.Tier + 1),
+                "VERKAUFEN"
+            };
+            TowerDefenseIcon[] icons = { TowerDefenseIcon.Sword, TowerDefenseIcon.Range, TowerDefenseIcon.Speed, TowerDefenseIcon.Star, TowerDefenseIcon.Sell };
+            Color[] colors = { DamageColor, RangeColor, SpeedColor, TitleGold, TextGold };
+            for (int i = 0; i < labels.Length; i++)
+            {
+                double y = 78 + i * 15;
+                int index = i;
+                bool selected = _UpgradeSelection == i;
+                Action click = i < 4 ? (Action)(() => UpgradeTower((TowerUpgradePath)index)) : SellTower;
+                AddClickArea(82, y, 214, 14, () => _UpgradeSelection = index, click);
+                DrawSelectionBar(82, y, 214, 14, selected);
+                Icon(icons[i], 85, y + 3, 8);
+                ShadowText(labels[i], 97, y + 3, 6, selected ? TitleGold : TextLight);
+
+                if (i == 4)
+                {
+                    Icon(TowerDefenseIcon.Coin, 246, y + 3, 8);
+                    ShadowText("+" + TowerDefenseBattle.SellValue(tower, upgrades), 256, y + 3, 6, TextGold);
+                    continue;
+                }
+
+                TowerUpgradePath path = (TowerUpgradePath)i;
+                int max = TowerUpgrades.MaxLevel(path);
+                int current = upgrades.Level(path);
+                if (path == TowerUpgradePath.Tier)
+                    ShadowText(TierName(current) + "/III", 198, y + 3, 5, TextDim);
+                else
+                {
+                    // Pips: filled levels in the path colour.
+                    for (int pip = 0; pip < max; pip++)
+                        Surface.Rect(190 + pip * 5, y + 5, 4, 4, pip < current ? colors[i] : PanelInsideDark);
+                }
+
+                if (upgrades.IsMaxed(path))
+                {
+                    ShadowText("MAX", 256, y + 3, 6, TextDim);
+                    continue;
+                }
+                int cost = upgrades.Cost(tower, path);
+                Icon(TowerDefenseIcon.Coin, 246, y + 3, 8);
+                ShadowText(cost.ToString(), 256, y + 3, 6, _Gold >= cost ? TextGold : Color.FromRgb(222, 96, 64));
+            }
+
+            ShadowText("KLICK / ENTER  KAUFEN    RECHTSKLICK / BACKSPACE  ZURUECK", 84, 155, 5, TextDim);
+        }
+
+        void DrawUpgradeStat(TowerDefenseIcon icon, string value, string next, double x)
+        {
+            Icon(icon, x, 66, 8);
+            ShadowText(value, x + 11, 67, 5, TextLight);
+            if (next != value) ShadowText(">" + next, x + 13 + value.Length * 2.75, 67, 5, RangeColor);
+        }
+
+        // Tower standing on a pedestal inside a small framed window (48x72).
+        void DrawTowerShowcase(Tower tower, double x, double y)
+        {
+            Surface.Rect(x, y, 48, 72, Outline);
+            Surface.Rect(x + 1, y + 1, 46, 70, StoneLight);
+            Surface.Rect(x + 2, y + 2, 44, 68, Color.FromRgb(98, 148, 66));
+            Surface.Rect(x + 2, y + 2, 44, 40, Color.FromRgb(118, 176, 196));
+            Surface.Rect(x + 2, y + 38, 44, 4, Color.FromRgb(150, 196, 206));
+            double spotX = x + 24, spotY = y + 58;
+            Surface.Sprite(TowerDefenseSprites.Pedestal(), spotX - 16, spotY - 24, 32, 32);
+            Surface.Sprite(TowerDefenseSprites.Tower(tower.Name), spotX - 16, spotY - 43, 32, 48);
+        }
+
+        void DrawTowerStats(Tower tower, double x, double y)
+        {
+            DrawStat(TowerDefenseSprites.DamageIcon(tower.DamageType), DamageTypeNames[(int)tower.DamageType], x, y);
+            DrawStat(TowerDefenseSprites.Icon(TowerDefenseIcon.Sword), "SCHADEN " + tower.Damage, x, y + 14);
+            DrawStat(TowerDefenseSprites.Icon(TowerDefenseIcon.Speed), "TEMPO " + tower.AttackSpeed.ToString("0.0"), x, y + 28);
+            DrawStat(TowerDefenseSprites.Icon(TowerDefenseIcon.Range), "REICHW. " + tower.AttackRange.ToString("0.#"), x, y + 42);
+            string mode = tower.Effect == TowerEffect.ChainLightning ? "KETTE x" + tower.MaxChainTargets
+                : tower.Effect == TowerEffect.Burn ? "BRAND " + tower.EffectDamagePerSecond + "/S"
+                : tower.Effect == TowerEffect.PoisonDamageOverTime ? "GIFT " + tower.EffectDamagePerSecond + "/S"
+                : tower.Effect == TowerEffect.Slow ? "VERLANGSAMT"
+                : tower.Effect == TowerEffect.ArmorBreak ? "RUESTUNG -" + tower.EffectStrength
+                : tower.AttackMode == AttackMode.AreaDamage ? "FLAECHE" : "EINZELZIEL";
+            DrawStat(TowerDefenseSprites.Icon(TowerDefenseIcon.Physical), mode, x, y + 56);
+        }
+
+        void DrawStat(BitmapSource icon, string text, double x, double y)
+        {
+            Icon(icon, x, y, 8);
+            ShadowText(text, x + 11, y + 1, 5, TextLight);
+        }
+
+        // ---------------- shared UI pieces ----------------
+
+        TowerDefensePixelSurface Surface { get { return _PixelSurface; } }
+
+        void Icon(TowerDefenseIcon icon, double x, double y, double size)
+        {
+            Surface.Sprite(TowerDefenseSprites.Icon(icon), x, y, size, size);
+        }
+
+        void Icon(BitmapSource icon, double x, double y, double size)
+        {
+            Surface.Sprite(icon, x, y, size, size);
+        }
+
+        void ShadowText(string text, double x, double y, int size, Color color)
+        {
+            Surface.Text(text, x + 1, y + 1, size, Outline);
+            Surface.Text(text, x, y, size, color);
+        }
+
+        // Stone frame with a dark inner field, matching the tower walls.
+        void DrawPanel(double x, double y, double width, double height)
+        {
+            Surface.Rect(x + 2, y + height, width - 2, 2, Color.FromArgb(90, 0, 0, 0));
+            Surface.Rect(x, y, width, height, Outline);
+            Surface.Rect(x + 1, y + 1, width - 2, height - 2, Stone);
+            Surface.Rect(x + 1, y + 1, width - 2, 1, StoneHighlight);
+            Surface.Rect(x + 1, y + 1, 1, height - 2, StoneLight);
+            Surface.Rect(x + 1, y + height - 2, width - 2, 1, StoneDark);
+            Surface.Rect(x + width - 2, y + 1, 1, height - 2, StoneDark);
+            for (double bx = x + 6; bx < x + width - 6; bx += 12)
+            {
+                Surface.Rect(bx, y + 2, 1, 2, StoneDark);
+                Surface.Rect(bx + 6, y + height - 4, 1, 2, StoneDark);
+            }
+            Surface.Rect(x + 4, y + 4, width - 8, height - 8, Outline);
+            Surface.Rect(x + 5, y + 5, width - 10, height - 10, PanelInside);
+            Surface.Rect(x + 5, y + 5, width - 10, 2, PanelInsideDark);
+        }
+
+        void DrawTitle(string title, double y)
+        {
+            double width = title.Length * 7.2;
+            double x = 160 - width / 2;
+            ShadowText(title, x, y, 13, TitleGold);
+            Surface.Rect(x - 6, y + 17, width + 12, 1, Color.FromRgb(170, 112, 30));
+            Surface.Rect(x + 6, y + 19, width - 12, 1, Color.FromRgb(112, 82, 48));
+        }
+
+        void DrawMenuEntry(string text, TowerDefenseIcon icon, bool selected, double y, Action hover, Action click)
+        {
+            AddClickArea(92, y, 136, 17, hover, click);
+            DrawSelectionBar(92, y, 136, 17, selected);
+            Icon(icon, 98, y, 16);
+            ShadowText(text, 120, y + 3, 10, selected ? TitleGold : TextLight);
+        }
+
+        void DrawSelectionBar(double x, double y, double width, double height, bool selected)
+        {
+            if (!selected) return;
+            Surface.Rect(x, y, width, height, SelectionEdge);
+            Surface.Rect(x + 1, y + 1, width - 2, height - 2, Selection);
+            Surface.Rect(x + 1, y + 1, width - 2, 1, Color.FromRgb(150, 110, 62));
+        }
+
+        // Bottom bar: control hints on the left, MENUE / ZURUECK buttons for the mouse on the right.
+        void DrawFooterBar()
+        {
+            string hint;
+            bool back = true, menu = true;
+            switch (_Screen)
+            {
+                case TowerDefenseScreen.MainMenu:
+                    hint = "MAUS / PFEILE  WAEHLEN   KLICK / ENTER  BESTAETIGEN   ESC  MENUE";
+                    back = false;
+                    menu = false;
+                    break;
+                case TowerDefenseScreen.SlotSelection:
+                    hint = "KLICK / ENTER  LADEN   ENTF  LOESCHEN";
+                    break;
+                case TowerDefenseScreen.DifficultySelection:
+                    hint = "KLICK / ENTER  KARTE STARTEN   RECHTSKLICK  ZURUECK";
+                    break;
+                case TowerDefenseScreen.MapSelection:
+                    hint = CurrentSlot.IsUnlocked(_MapSelection)
+                        ? "KLICK AUF KARTE / ENTER  STARTEN   < >  WECHSELN"
+                        : "GESPERRT - SCHAFFE ZUERST DIE VORHERIGE KARTE";
+                    break;
+                case TowerDefenseScreen.Map:
+                    hint = WaveRunning
+                        ? "KLICK / PFEILE  PODEST   T  TEMPO   E  GEGNER   ESC  MENUE"
+                        : "LEERTASTE  WELLE STARTEN   ENTER  BAUEN   E  GEGNER";
+                    back = false;
+                    break;
+                default:
+                    hint = "KLICK  WAEHLEN   RECHTSKLICK  SCHLIESSEN   ESC  MENUE";
+                    break;
+            }
+            bool delete = _Screen == TowerDefenseScreen.SlotSelection && !TowerDefenseSaves.Slots[_SlotSelection].IsEmpty;
+            if (_Dialog != TowerDefenseDialog.None)
+            {
+                hint = _Dialog == TowerDefenseDialog.Defeat ? "KLICK / ENTER  AUSWAEHLEN" : "KLICK / ENTER  AUSWAEHLEN   ESC  ABBRECHEN";
+                back = menu = delete = false;
+            }
+            if (_Paused)
+            {
+                hint = "KLICK / ENTER  AUSWAEHLEN   ESC  WEITERSPIELEN";
+                back = menu = delete = false;
+            }
+            if (_ShowHelp)
+            {
+                hint = "PFEILE / KLICK  BLAETTERN   ESC  SCHLIESSEN";
+                back = menu = delete = false;
+            }
+
+            Surface.Rect(0, 170, DesignWidth, 10, Color.FromArgb(200, 20, 18, 16));
+            Surface.Rect(0, 170, DesignWidth, 1, Color.FromArgb(200, 0, 0, 0));
+            Surface.Text(hint, 4, 171, 5, TextDim);
+            double right = DesignWidth - 2;
+            if (menu) right = DrawFooterButton("MENUE", right, () => { _Paused = true; _PauseSelection = 0; });
+            if (back) right = DrawFooterButton("ZURUECK", right, GoBack);
+            if (menu && _Screen == TowerDefenseScreen.Map && _Battle != null)
+            {
+                right = DrawFooterButton("TEMPO x" + _GameSpeed, right, ToggleSpeed);
+                if (_Battle.Phase == TowerDefenseBattlePhase.Building)
+                    right = DrawFooterButton("WELLE STARTEN", right, StartNextWave);
+            }
+            if (delete) DrawFooterButton("LOESCHEN", right, AskDeleteSlot);
+        }
+
+        // Draws a small button that ends at x = right and returns the x where the next button may end.
+        double DrawFooterButton(string label, double right, Action click)
+        {
+            double width = label.Length * 3 + 8, x = right - width, y = 171;
+            bool hovered = IsMouseOver(x, y, width, 9);
+            AddClickArea(x, y, width, 9, null, click);
+            Surface.Rect(x, y, width, 9, Outline);
+            Surface.Rect(x + 1, y + 1, width - 2, 7, hovered ? Selection : StoneDark);
+            Surface.Rect(x + 1, y + 1, width - 2, 1, hovered ? SelectionEdge : Stone);
+            Surface.Text(label, x + 4, y + 1, 5, hovered ? TitleGold : TextLight);
+            return x - 3;
         }
 
         static string GetMultiplierText(TowerDefenseDifficulty difficulty)

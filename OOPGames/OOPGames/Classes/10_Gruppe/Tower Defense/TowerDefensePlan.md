@@ -104,4 +104,5 @@
 
 ## Notizen
 -falls noch Zeit, weitere Resourcen über weitere Gebäude, welche passiv Resourcen geben
--kurze Anleitung für Spielsystem und Steuerung
+-Monster Lexikon mit Schwächen und Resistence
+-wenn Monster Lexikon Eintrag vorhanden, zeigt Wellengegner anzeige die Schwächen und Resitance an

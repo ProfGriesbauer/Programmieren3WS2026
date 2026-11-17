@@ -38,12 +38,12 @@ Oberflaeche statt viele WPF-Rechtecke pro Frame zu erzeugen. Die bestehenden
 Minispiele verwenden weiterhin ihre unveraenderten Canvas-Zeichenroutinen.
 Wiederverwendete Farbpinsel und Nearest-Neighbor-Skalierung reduzieren dabei
 unnoetige Frame-Allocations.
-Gebaut Tower verwenden das transparente Spritesheet
-`Assets/TowerDefense/tower_spritesheet.png`. Die acht Sprites werden als
-Physical Archer, Poison Archer, Fire Mage, Ice Mage, Earth Mage, Strom Mage,
-Flamethrower und Ice Area Tower zugeordnet und fuer die Darstellung gecroppt.
-Weg, Podeste, MainBuilding und Umgebung verwenden dazu passende gedeckte
-Oliv-, Braun-, Grau- und Rottoene mit dunklen 4x-Pixelkonturen.
+Die gesamte Tower-Defense-Grafik stammt aus Spritesheets in
+`Assets/TowerDefense` (Tower, Kartenhintergrund, Hauptgebaeude, Gegner, Bosse,
+UI-Icons). `B5_TowerDefenseSprites.cs` laedt die Sheets einmalig und schneidet
+die einzelnen Frames zu; die Pixel-Oberflaeche zeichnet sie mit
+Nearest-Neighbor-Skalierung. Layouts und Generator sind in
+`Tower Defense/SpriteGenerator/README.md` beschrieben.
 
 Die Szene verwendet prozedural erzeugte WPF-Materialien und Geometrie, keine
 externen Texturen oder Modelle. Das WPF-3D-Rendering bietet keine physikalisch
@@ -77,6 +77,8 @@ erhalten.
 - Im Zimmer: Pfeiltasten links/rechts oder A/D waehlen ein Geraet, Enter oder Z oeffnet es.
 - In der Geraeteansicht: 1/2 waehlt ein Spiel, Enter oder Z startet es.
 - Im Spiel: Pfeiltasten oder WASD steuern; Esc oder X geht zur Geraeteansicht zurueck.
+  Ausnahme: Spiele mit `IB5RoomOwnBackKey` (Tower Defense) erhalten Esc/X selbst und
+  oeffnen damit ein eigenes Menue; sie werden ueber `ExitRequested` verlassen.
 - Void Courier: Pfeiltasten oder WASD bewegen das Schiff; Z oder Leertaste feuert.
   Nach Game Over oder dem Sieg startet Enter oder Z eine neue Runde. Dauerfeuer
   und Bewegung puffern Tastatureingaben kurz, da das Framework kein KeyUp liefert.

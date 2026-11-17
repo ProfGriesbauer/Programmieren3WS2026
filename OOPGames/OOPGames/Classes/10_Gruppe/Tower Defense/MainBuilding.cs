@@ -36,5 +36,18 @@ namespace OOPGames
             CurrentHealth -= appliedDamage;
             return appliedDamage;
         }
+
+        // Restores health up to MaxHealth and returns the repaired amount.
+        public int Repair(int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), "Repair amount cannot be negative.");
+            }
+
+            int repaired = Math.Min(amount, MaxHealth - CurrentHealth);
+            CurrentHealth += repaired;
+            return repaired;
+        }
     }
 }

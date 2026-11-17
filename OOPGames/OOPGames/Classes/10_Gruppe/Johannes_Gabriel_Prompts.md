@@ -269,3 +269,51 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 **Datum:** 2026-11-17
 
 > Speichere mir meine neuen Prompts in der Johannes_Gabriel_Prompts.md Datei
+
+## Prompt 45
+
+**Datum:** 2026-11-17
+
+> Ich möchte mein Tower Defense Spiel überarbeiten was das Design angeht. Ich habe schon ein Spritesheet für die verschiedenen Tower angelegt und würde nun mit weiteren Spritesheets den Rest überarbeiten bzw. hinzufügen. Arbeite dafür so gut es geht nur in 10_Gruppe für das Tower Defense Spiel
+
+## Prompt 46
+
+**Datum:** 2026-11-17
+
+> Es sieht sehr gut soweit aus. Nur das Karten Layout gefällt mir noch nicht so gut. Ich hätte gerne 10 Podeste pro Karte und 4 verschiedene Karten, welche immer schwieriger werden vom Weg her. Dabei soll nur eine Karte am Anfang auswählbar sein und wenn man diese geschafft hat die nächste bespielbar sein, bis alle 4 freigeschalten sind
+
+## Prompt 47
+
+**Datum:** 2026-11-17
+
+> Was ich gerne noch hätte wäre ein Menü welches mit Esc geöffnet wird und man dadurch zurück zum Hauptbildschirm kommt und das Spiel verlassen kann. Auf dem Hauptbildschirm soll auch ein Spiel verlassen Button sein. Esc soll nun im Spiel Tower Defense nicht mehr das Spiel automatisch schließen. Dazu hätte ich gerne, dass man das Spiel auch mit der Maus spielen kann
+
+## Prompt 48
+
+**Datum:** 2026-11-17
+
+> Ich hätte gerne noch die Option 3 Spielstände auszuwählen und diese unabhängig voneinander den Spielstand speichern. Dazu soll es möglich sein während einer Welle das Spiel zu verlassen bzw. zum Hauptmenü zu gehen und der aktuelle Wellenstand auf der aktuellen Karte wieder ausgewählt werden kann. Dabei soll beim wieder Starten die Welle von vorne anfangen ohne die zuvor generierten Gegner zu speichern. Dazu soll nachgefragt werden, ob man von diesem Punkt weiterspielen will, wenn man eine Karte schon angefangen hat
+
+## Prompt 49
+
+**Datum:** 2026-11-17
+
+> Stimmt das speichern nach jeder Aktion ist vielleicht nicht so gut. Speichere mir nur nach jeder abgeschlossenen Welle, wodurch man beim verlassen auch das Gold, sowie Türme und Upgrades zum Anfang der Welle passen
+
+## Prompt 50
+
+**Datum:** 2026-11-17
+
+> Erstelle mir nun eine Wellenlogik welche pro Karte 50 Wellen hat. Auf den Wellen 5, 15, 25, 35 und 45 sollen Minibosse mit passenden StandardEnemies kommen. Auf Wellen 10, 20, 30, 40 und 50 Bosse mit auch dazu passenden StandardEnemies, wobei Welle 50 der SkeletonKing sein soll. MiniBosse und Bosse sind immer der letzte Gegner einer Welle. Dazu soll man in dem oberen Layout der Gegner per Mausklick oder per Tastendruck ein kleines Fenster öffnen können, welches die kommenden Gegner der Welle anzeigen mit einem kleinen Icon. Dabei soll nicht die genaue Anzahl der jeweiligen Gegner angezeigt werden, sondern nur welche zu erwarten sind. Jeder Gegner soll Gold fallen lassen, welches direkt auf das Konto des Spielers kommt und das beenden einer Welle gibt zusätzliches Gold. Erstelle dazu auch eine Logik, wodurch das Spiel gut spielbar für die 50 Wellen ist
+
+## Prompt 51
+
+**Datum:** 2026-11-17
+
+> Ich hätte gerne noch verschiedene Upgrade Möglichkeiten, dass man zum einen ganz normal den Schaden verbessern kann, aber auch etwas wie Reichweite und Angriffsgeschwindigkeit, diese dann prozentual abhängig von den Basiswerten. Vielleicht könnte man auch ein Stufe 2 und Stufe 3 Turmupgrade hinzufügen, welches die Basiswerte eines Turmes allgemein erhöht.
+
+## Prompt 52
+
+**Datum:** 2026-11-17
+
+> Erstelle mir noch einen zusätzlichen Button, wenn man das Menü öffnet, in dem das Tower Defense System erklärt wird, sowie die Steuerung für Maus und Tastatur. Dazu wäre es gut, wenn Bilder der Karte als Beispiele genutzt werden und dadurch das Spiel erklärt wird. Auch die Spieloberfläche mit dem Overlay mit Bildern erklären

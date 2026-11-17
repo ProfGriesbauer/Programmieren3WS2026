@@ -8,6 +8,6 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
-    <Resource Include="Assets\TowerDefense\tower_spritesheet.png" />
+    <Resource Include="Assets\TowerDefense\*.png" />
   </ItemGroup>
 </Project>
