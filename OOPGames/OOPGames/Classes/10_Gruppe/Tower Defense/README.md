@@ -4,6 +4,13 @@ Hier werden die Programmdateien für das Tower-Defense-Spiel der Commodore-Konso
 
 Die Klasse `Tower` bildet die gemeinsame Grundlage für verschiedene Tower-Typen.
 
+Das Spiel ist im Commodore-Menue als `Tower Defense` auswaehlbar. Das eigentliche
+Spielfeld und die Spieloberflaeche werden in einem spaeteren Schritt ergaenzt.
+Das Modul zeigt bereits eine Informationsleiste mit Welle, erwarteten Gegnern,
+Gold, Schwierigkeit, Kartenname, Hauptgebaeude-Lebenspunkten und Status. Die
+angezeigten Werte sind bis zur Implementierung der Spiel- und Wellenlogik
+Platzhalter.
+
 `Enemy` beschreibt Gegner mit Bewegung, Leben, Rüstung, Schaden am Hauptgebäude,
 Schadensresistenzen, Schwächen und einer Belohnung. Eine passende Schadensart aus
 `WeakAgainst` verursacht 50 Prozent zusätzlichen Schaden. `MainBuilding` erbt die Angriffswerte von

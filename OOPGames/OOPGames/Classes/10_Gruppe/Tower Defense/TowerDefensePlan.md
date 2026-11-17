@@ -39,11 +39,12 @@
 - 
 
 ## Steuerung und Benutzeroberfläche
--Platzierung der Türme über die Maus und können frei platziert werden
+-Platzierung der Türme über die Maus und können frei platziert werden oder 10 Slots
 -Turm Auswahl über Mausklick
 -Upgrades können über Mausklick oder Taste ausgewählt werden
 -aktuelle Welle, Leben des MainBuildings, Gold und kommende Gegner oben als Leiste
 -wenn Turm ausgewählt erscheint ein Interface am unteren Rand, an dem Upgrades ausgewählt werden können und Stats angezeigt werden 
+-Controller Steuerung
 
 ## Offene Fragen
 
@@ -51,4 +52,4 @@
 
 ## Notizen
 -falls noch Zeit, weitere Resourcen über weitere Gebäude, welche passiv Resourcen geben
-- 
+-kurze Anleitung für Spielsystem und Steuerung

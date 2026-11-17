@@ -54,7 +54,11 @@ namespace OOPGames
                     new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new B5RoomPongGame())
                 }),
             new B5RoomDevice(B5RoomDeviceKind.Commodore, "HEIMCOMPUTER", Color.FromRgb(124, 112, 218), Color.FromRgb(53, 40, 121),
-                new List<B5RoomGameEntry> { new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132))) })
+                new List<B5RoomGameEntry>
+                {
+                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132))),
+                    new B5RoomGameEntry("Tower Defense", Color.FromRgb(82, 105, 190), () => new B5RoomTowerDefenseGame())
+                })
         };
 
         public static IList<B5RoomDevice> Devices { get { return _Devices; } }

@@ -131,6 +131,48 @@ namespace OOPGames
         }
     }
 
+    public sealed class B5RoomTowerDefenseGame : IB5RoomMiniGame
+    {
+        bool _Exit;
+
+        public string Title { get { return "Tower Defense"; } }
+        public int Width { get { return 160; } }
+        public int Height { get { return 120; } }
+        public bool ExitRequested { get { return _Exit; } }
+        public int CurrentWave { get { return 1; } }
+        public int ExpectedEnemies { get { return 10; } }
+        public int Gold { get { return 500; } }
+        public string Difficulty { get { return "Normal"; } }
+        public string MapName { get { return "Unbenannt"; } }
+        public int MainBuildingHealth { get { return 100; } }
+        public string Status { get { return "Bereit"; } }
+
+        public void Start()
+        {
+            _Exit = false;
+        }
+
+        public void Update(IReadOnlyCollection<Key> keys)
+        {
+            foreach (Key key in keys)
+            {
+                if (key == Key.Escape || key == Key.X)
+                    _Exit = true;
+            }
+        }
+
+        public void Draw(Canvas canvas)
+        {
+            canvas.Children.Clear();
+            B5RoomDraw.Rect(canvas, 0, 0, Width, Height, Color.FromRgb(14, 20, 42));
+            B5RoomDraw.Rect(canvas, 0, 0, Width, 25, Color.FromRgb(29, 48, 101));
+            B5RoomDraw.Text(canvas, "WELLE " + CurrentWave + "  GEGNER " + ExpectedEnemies, 3, 3, 8, Colors.White);
+            B5RoomDraw.Text(canvas, "GOLD " + Gold + "  BASIS " + MainBuildingHealth + "%", 3, 13, 8, Color.FromRgb(255, 220, 110));
+            B5RoomDraw.Text(canvas, Difficulty.ToUpperInvariant() + " | " + MapName.ToUpperInvariant(), 3, 31, 8, Colors.White);
+            B5RoomDraw.Text(canvas, "STATUS: " + Status.ToUpperInvariant(), 3, 44, 8, Color.FromRgb(170, 190, 235));
+        }
+    }
+
     public sealed class B5RoomSnakeGame : IB5RoomMiniGame
     {
         readonly List<Point> _Snake = new List<Point>();

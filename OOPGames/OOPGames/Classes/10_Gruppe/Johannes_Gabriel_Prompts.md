@@ -107,3 +107,15 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 **Datum:** 2026-11-12
 
 > Ändere mir die 2 Türme EarthTower und StormTower zu StromMage und EarthMage
+
+## Prompt 18
+
+**Datum:** 2026-11-16
+
+> Ich würde gerne das Tower Defense Spiele auf dem Comodore auswählen und spielen können. Implementiere mir dies soweit, dass  man das auswählen kann. Ein Spielfeld oder allgemeine kosmetische Sachen sollen noch nicht programmiert werden
+
+## Prompt 19
+
+**Datum:** 2026-11-16
+
+> Für das Overlay im Spiel hätte ich gerne eine Spalte oben am Spiel Bildschirm mit aktueller Welle, zu erwartenden Gegnern, Gold (welches für Tower und Upgrades benötigt wird), Schwierigkeit, Map Name. Vielleicht fällt dir noch was ein, was man brauchen könnte
