@@ -130,6 +130,8 @@ namespace OOPGames
                     return new[] { new[] { "PFEILE / WASD", "steuern" }, new[] { "ESC / X", "zurueck zur Geraeteauswahl" } };
                 case B5RoomPhase.Ejecting:
                     return new[] { new[] { "ESC", "abbrechen" }, new[] { "...", "Modul wird ausgeworfen" } };
+                case B5RoomPhase.Focusing:
+                    return new[] { new[] { "ESC / X", "zurueck" }, new[] { "...", "Bildschirm wird fokussiert" } };
                 default:
                     return new[] { new[] { "ESC", "abbrechen" }, new[] { "...", "Modul wird eingesteckt" } };
             }

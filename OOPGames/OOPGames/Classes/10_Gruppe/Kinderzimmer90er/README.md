@@ -17,9 +17,27 @@ gestaltete Ruecken mit Titeln und Autorennamen, Regale sichtbare Kanten und
 Verbindungen, CRT-Bildschirme Einfassungen, Bedienelemente und Lueftungsschlitze.
 Tastenkappen besitzen einzelne Beschriftungen; Poster und Pflanzentopf haben
 zusaetzliche Rahmen- und Oberflaechendetails. Raumabmessungen,
-Geraetepositionen, Kameras und Spielablauf bleiben unveraendert. Die Atari-,
-Game-Boy- und Commodore-Bedienelemente werden weiterhin nur waehrend eines
-laufenden Spiels in der jeweiligen Geraeteansicht eingeblendet.
+Geraetepositionen und Spielablauf bleiben erhalten. Die Einlegeanimation laeuft
+weiterhin in der 3D-Raumszene. Sobald ein Spiel aktiv ist, werden 3D-Viewport,
+Geraeteauswahl und Steuerleiste ausgeblendet und nur das konsolenspezifische
+2D-Spieloverlay angezeigt. Beim Zurueckkehren zur Geraeteauswahl wird die
+bestehende Szene wieder eingeblendet.
+Zwischen Einlegeanimation und Spieloverlay liegt eine kurze Fokusphase, in der
+die Kamera auf den jeweiligen Konsolenbildschirm zoomt.
+Das Overlay liegt dabei in einem konsolenspezifischen Gehaeuse: Gameboy mit
+gruenem Handheld-Rahmen, Atari mit braunem Fernseher-Rahmen und Commodore mit
+beigem CRT-Monitor-Rahmen.
+Das Tower-Defense-Spiel verwendet darin eine Ausgabeaufloesung von
+`640 x 360` im 16:9-Format. Die Zeichenlogik basiert weiterhin auf einer
+320-x-180-Pixelbasis mit ganzzahligem Faktor 2. Die bestehende Tower-Defense-
+Darstellung kann dadurch auf 720p mit Faktor 1 und bei groesseren Fenstern
+weiterhin ohne weiche Zwischenpixel dargestellt werden. Die bestehenden Spiele
+behalten ihre bisherigen Aufloesungen.
+Tower Defense zeichnet seine Pixel-Art seitdem in eine einzelne gerenderte
+Oberflaeche statt viele WPF-Rechtecke pro Frame zu erzeugen. Die bestehenden
+Minispiele verwenden weiterhin ihre unveraenderten Canvas-Zeichenroutinen.
+Wiederverwendete Farbpinsel und Nearest-Neighbor-Skalierung reduzieren dabei
+unnoetige Frame-Allocations.
 
 Die Szene verwendet prozedural erzeugte WPF-Materialien und Geometrie, keine
 externen Texturen oder Modelle. Das WPF-3D-Rendering bietet keine physikalisch
@@ -43,8 +61,10 @@ Bildschirmflaechen bleiben getrennt. Auch die Geraetesteuerungs-Meshes werden
 einmalig optimiert. Unveraenderte Titel-, Interface- und Materialzustaende
 werden nicht erneut gezeichnet beziehungsweise gesetzt. Die Kamera aktualisiert
 ihre Zielwerte weiter waehrend der Bewegung, stoppt aber Property-Updates nach
-dem Einrasten und schreibt ihre feste Aufwaertsrichtung nur einmal. Die Details,
-Materialien, Positionen und Spielregeln bleiben erhalten.
+dem Einrasten und schreibt ihre feste Aufwaertsrichtung nur einmal. Im aktiven
+Spiel wird der 3D-Viewport zudem ausgeblendet und die Kamera nicht weiter
+aktualisiert. Die Details, Materialien, Positionen und Spielregeln bleiben
+erhalten.
 
 ## Steuerung
 

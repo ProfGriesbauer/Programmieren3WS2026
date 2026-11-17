@@ -11,6 +11,12 @@ Gold, Schwierigkeit, Kartenname, Hauptgebaeude-Lebenspunkten und Status. Die
 angezeigten Werte sind bis zur Implementierung der Spiel- und Wellenlogik
 Platzhalter.
 
+Der Tower-Defense-Hauptbildschirm fuehrt ueber `NEUES SPIEL` zuerst zur
+Schwierigkeitsauswahl und danach zur Kartenauswahl. Verfuegbar sind `Easy`,
+`Normal`, `Hard` und `God` mit den Multiplikatoren `0.75`, `1.00`, `1.35` und
+`1.80` fuer spaetere Gegner-Basiswerte. Die erste Karte `Gruene Wiese` besitzt
+einen festen Gegnerpfad und fuenf Stein-Podeste als vorgesehene Tower-Spots.
+
 `Enemy` beschreibt Gegner mit Bewegung, Leben, Rüstung, Schaden am Hauptgebäude,
 Schadensresistenzen, Schwächen und einer Belohnung. Eine passende Schadensart aus
 `WeakAgainst` verursacht 50 Prozent zusätzlichen Schaden. `MainBuilding` erbt die Angriffswerte von

@@ -158,6 +158,21 @@ namespace OOPGames
                 return;
             }
 
+            if (Phase == B5RoomPhase.Focusing)
+            {
+                if (keys.Any(IsBackKey))
+                {
+                    Phase = B5RoomPhase.Device;
+                    _ShowTitle = false;
+                    return;
+                }
+
+                _TransitionTime += 0.04;
+                if (_TransitionTime >= 0.8)
+                    Phase = B5RoomPhase.Playing;
+                return;
+            }
+
             foreach (Key key in keys)
             {
                 if (IsBackKey(key))
@@ -214,7 +229,8 @@ namespace OOPGames
                     ActiveGame = Device.Games[InsertedGame].Create();
                     ActiveGame.Start();
                     _ShowTitle = false;
-                    Phase = B5RoomPhase.Playing;
+                    _TransitionTime = 0;
+                    Phase = B5RoomPhase.Focusing;
                 }
             }
             else if (Phase == B5RoomPhase.Ejecting)

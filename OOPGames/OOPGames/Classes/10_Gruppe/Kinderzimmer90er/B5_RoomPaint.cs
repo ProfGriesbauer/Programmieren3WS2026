@@ -16,6 +16,8 @@ namespace OOPGames
         Model3DGroup _Scene;
         Canvas _GameCanvas;
         Border _GameFrame;
+        Border _ConsoleShell;
+        TextBlock _ConsoleShellTitle;
         Border _Cartridge;
         Canvas _AnimationLayer;
         Border _Sidebar;
@@ -50,6 +52,7 @@ namespace OOPGames
         B5RoomPhase _LastCardPhase = (B5RoomPhase)(-1);
         int _LastCardPending = -1;
         int _LastCardInserted = -1;
+        int _LastOverlayDevice = -1;
         bool _CameraInitialized;
         double _LastWidth = -1;
 
@@ -131,6 +134,7 @@ namespace OOPGames
                 _LastDrawnPhase = (B5RoomPhase)(-1);
                 _CameraInitialized = false;
                 _LastWidth = -1;
+                _LastOverlayDevice = -1;
             }
 
             double width = Math.Max(1, canvas.ActualWidth);
@@ -168,6 +172,28 @@ namespace OOPGames
             };
             _GameFrame.SetValue(Panel.ZIndexProperty, 2);
             _Root.Children.Add(_GameFrame);
+
+            Grid shellContent = new Grid();
+            _ConsoleShellTitle = new TextBlock
+            {
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 9, 0, 0)
+            };
+            shellContent.Children.Add(_ConsoleShellTitle);
+            _ConsoleShell = new Border
+            {
+                BorderThickness = new Thickness(4),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = shellContent,
+                Visibility = Visibility.Collapsed
+            };
+            _ConsoleShell.SetValue(Panel.ZIndexProperty, 1);
+            _Root.Children.Add(_ConsoleShell);
 
             _Cartridge = new Border
             {
@@ -1183,17 +1209,26 @@ namespace OOPGames
         void UpdateInterface(B5RoomField field)
         {
             bool deviceView = field.Phase != B5RoomPhase.Room;
+            bool focusing = field.Phase == B5RoomPhase.Focusing;
+            bool playing = field.Phase == B5RoomPhase.Playing;
             _ControlBar.Update(field);
-            Visibility sidebarVisibility = deviceView ? Visibility.Visible : Visibility.Collapsed;
-            Visibility frameVisibility = field.Phase == B5RoomPhase.Playing || field.ShowTitle
-                ? Visibility.Visible : Visibility.Collapsed;
+            Visibility sidebarVisibility = deviceView && !focusing && !playing ? Visibility.Visible : Visibility.Collapsed;
+            Visibility frameVisibility = playing ? Visibility.Visible : Visibility.Collapsed;
+            Visibility roomVisibility = playing ? Visibility.Collapsed : Visibility.Visible;
+            Visibility controlBarVisibility = focusing || playing ? Visibility.Collapsed : Visibility.Visible;
+            int gameWidth = playing && field.ActiveGame != null ? field.ActiveGame.Width : field.Device.DisplayWidth;
+            int gameHeight = playing && field.ActiveGame != null ? field.ActiveGame.Height : field.Device.DisplayHeight;
             if (_Sidebar.Visibility != sidebarVisibility) _Sidebar.Visibility = sidebarVisibility;
             Thickness sidebarMargin = new Thickness(0, 8, 8, _ControlBar.OccupiedHeight);
             if (_Sidebar.Margin != sidebarMargin) _Sidebar.Margin = sidebarMargin;
             if (_GameFrame.Visibility != frameVisibility) _GameFrame.Visibility = frameVisibility;
-            SizeGameFrame(field);
-            if (_GameCanvas.Width != field.Device.DisplayWidth) _GameCanvas.Width = field.Device.DisplayWidth;
-            if (_GameCanvas.Height != field.Device.DisplayHeight) _GameCanvas.Height = field.Device.DisplayHeight;
+            if (_ConsoleShell.Visibility != frameVisibility) _ConsoleShell.Visibility = frameVisibility;
+            if (_Viewport.Visibility != roomVisibility) _Viewport.Visibility = roomVisibility;
+            if (_ControlBar.Element.Visibility != controlBarVisibility) _ControlBar.Element.Visibility = controlBarVisibility;
+            ConfigureGameOverlay(field);
+            SizeGameFrame(field, gameWidth, gameHeight);
+            if (_GameCanvas.Width != gameWidth) _GameCanvas.Width = gameWidth;
+            if (_GameCanvas.Height != gameHeight) _GameCanvas.Height = gameHeight;
             UpdateCartridgeAnimation(field);
             UpdateScreenLighting(field);
 
@@ -1262,7 +1297,50 @@ namespace OOPGames
             }
         }
 
-        void SizeGameFrame(B5RoomField field)
+        void ConfigureGameOverlay(B5RoomField field)
+        {
+            if (_LastOverlayDevice == field.SelectedDevice) return;
+            _LastOverlayDevice = field.SelectedDevice;
+
+            switch (field.Device.Kind)
+            {
+                case B5RoomDeviceKind.Atari:
+                    _GameFrame.BorderBrush = GetFrozenBrush(Color.FromRgb(151, 92, 54));
+                    _GameFrame.Background = GetFrozenBrush(Color.FromRgb(43, 30, 25));
+                    _GameFrame.CornerRadius = new CornerRadius(2);
+                    _ConsoleShell.BorderBrush = GetFrozenBrush(Color.FromRgb(93, 54, 38));
+                    _ConsoleShell.Background = GetFrozenBrush(Color.FromRgb(111, 73, 52));
+                    _ConsoleShell.CornerRadius = new CornerRadius(10);
+                    _ConsoleShellTitle.Text = "ATARI";
+                    _ConsoleShellTitle.Foreground = GetFrozenBrush(Color.FromRgb(244, 208, 145));
+                    _Root.Background = GetFrozenBrush(Color.FromRgb(47, 35, 31));
+                    break;
+                case B5RoomDeviceKind.Gameboy:
+                    _GameFrame.BorderBrush = GetFrozenBrush(Color.FromRgb(146, 160, 104));
+                    _GameFrame.Background = GetFrozenBrush(Color.FromRgb(42, 52, 33));
+                    _GameFrame.CornerRadius = new CornerRadius(10);
+                    _ConsoleShell.BorderBrush = GetFrozenBrush(Color.FromRgb(78, 88, 55));
+                    _ConsoleShell.Background = GetFrozenBrush(Color.FromRgb(157, 166, 112));
+                    _ConsoleShell.CornerRadius = new CornerRadius(24);
+                    _ConsoleShellTitle.Text = "GAME BOY";
+                    _ConsoleShellTitle.Foreground = GetFrozenBrush(Color.FromRgb(45, 59, 35));
+                    _Root.Background = GetFrozenBrush(Color.FromRgb(34, 45, 31));
+                    break;
+                case B5RoomDeviceKind.Commodore:
+                    _GameFrame.BorderBrush = GetFrozenBrush(Color.FromRgb(181, 159, 119));
+                    _GameFrame.Background = GetFrozenBrush(Color.FromRgb(24, 25, 28));
+                    _GameFrame.CornerRadius = new CornerRadius(3);
+                    _ConsoleShell.BorderBrush = GetFrozenBrush(Color.FromRgb(107, 101, 88));
+                    _ConsoleShell.Background = GetFrozenBrush(Color.FromRgb(190, 185, 169));
+                    _ConsoleShell.CornerRadius = new CornerRadius(7);
+                    _ConsoleShellTitle.Text = "COMMODORE 64";
+                    _ConsoleShellTitle.Foreground = GetFrozenBrush(Color.FromRgb(54, 52, 48));
+                    _Root.Background = GetFrozenBrush(Color.FromRgb(45, 47, 55));
+                    break;
+            }
+        }
+
+        void SizeGameFrame(B5RoomField field, int gameWidth, int gameHeight)
         {
             double rootWidth = Math.Max(1, _Root.ActualWidth);
             double rootHeight = Math.Max(1, _Root.ActualHeight);
@@ -1273,16 +1351,27 @@ namespace OOPGames
             double border = _GameFrame.BorderThickness.Left + _GameFrame.BorderThickness.Right;
             double verticalBorder = _GameFrame.BorderThickness.Top + _GameFrame.BorderThickness.Bottom;
             double scale = Math.Min(
-                (usableWidth - border) / field.Device.DisplayWidth,
-                (usableHeight - verticalBorder) / field.Device.DisplayHeight);
-            scale = Math.Max(0.1, scale);
-            double frameWidth = field.Device.DisplayWidth * scale + border;
-            double frameHeight = field.Device.DisplayHeight * scale + verticalBorder;
+                (usableWidth - border) / gameWidth,
+                (usableHeight - verticalBorder) / gameHeight);
+            if (field.ActiveGame is B5RoomTowerDefenseGame && scale >= 1)
+                scale = Math.Floor(scale);
+            else
+                scale = Math.Max(0.1, scale);
+            double frameWidth = gameWidth * scale + border;
+            double frameHeight = gameHeight * scale + verticalBorder;
             double marginLeft = Math.Max(0, (usableWidth - frameWidth) / 2);
+            double shellHorizontalPadding = field.Device.Kind == B5RoomDeviceKind.Atari ? 52 : 38;
+            double shellVerticalPadding = 32;
             if (Math.Abs(_GameFrame.Width - frameWidth) > 0.1) _GameFrame.Width = frameWidth;
             if (Math.Abs(_GameFrame.Height - frameHeight) > 0.1) _GameFrame.Height = frameHeight;
             Thickness frameMargin = new Thickness(marginLeft, 0, 0, barHeight);
             if (_GameFrame.Margin != frameMargin) _GameFrame.Margin = frameMargin;
+            double shellWidth = frameWidth + shellHorizontalPadding * 2;
+            double shellHeight = frameHeight + shellVerticalPadding * 2;
+            Thickness shellMargin = new Thickness(Math.Max(0, marginLeft - shellHorizontalPadding), 0, 0, barHeight);
+            if (Math.Abs(_ConsoleShell.Width - shellWidth) > 0.1) _ConsoleShell.Width = shellWidth;
+            if (Math.Abs(_ConsoleShell.Height - shellHeight) > 0.1) _ConsoleShell.Height = shellHeight;
+            if (_ConsoleShell.Margin != shellMargin) _ConsoleShell.Margin = shellMargin;
         }
 
         void UpdateScreenLighting(B5RoomField field)
@@ -1357,6 +1446,8 @@ namespace OOPGames
         {
             if (field.Phase == B5RoomPhase.Playing && field.ActiveGame != null)
             {
+                if (!(field.ActiveGame is B5RoomTowerDefenseGame) && _GameCanvas.Tag != null)
+                    _GameCanvas.Tag = null;
                 field.ActiveGame.Draw(_GameCanvas);
                 _LastDrawnPhase = field.Phase;
                 _LastDrawnDevice = field.SelectedDevice;
@@ -1400,6 +1491,9 @@ namespace OOPGames
 
         void UpdateCamera(B5RoomField field, double amount)
         {
+            if (field.Phase == B5RoomPhase.Playing) return;
+
+            bool focusScreen = field.Phase == B5RoomPhase.Focusing;
             Point3D target;
             double distance, azimuth, polar;
             if (field.Phase == B5RoomPhase.Room)
@@ -1409,18 +1503,18 @@ namespace OOPGames
             }
             else if (field.Device.Kind == B5RoomDeviceKind.Atari)
             {
-                target = field.Phase == B5RoomPhase.Playing ? new Point3D(-3.6, 1.62, -1.3) : new Point3D(-3.6, 1.1, -1.8);
-                distance = field.Phase == B5RoomPhase.Playing ? 2.5 : 4.6; azimuth = 0.5; polar = 1.3;
+                target = focusScreen ? new Point3D(-3.6, 1.62, -1.3) : new Point3D(-3.6, 1.1, -1.8);
+                distance = focusScreen ? 1.9 : 4.6; azimuth = 0.5; polar = 1.3;
             }
             else if (field.Device.Kind == B5RoomDeviceKind.Gameboy)
             {
-                target = field.Phase == B5RoomPhase.Playing ? B5GameBoyModel.ScreenCenter : B5GameBoyModel.Center;
-                distance = field.Phase == B5RoomPhase.Playing ? 1.3 : 1.05; azimuth = 0.2; polar = 1.4;
+                target = focusScreen ? B5GameBoyModel.ScreenCenter : B5GameBoyModel.Center;
+                distance = focusScreen ? 0.8 : 1.05; azimuth = 0.2; polar = 1.4;
             }
             else
             {
-                target = field.Phase == B5RoomPhase.Playing ? new Point3D(3.3, 2.05, -1.96) : new Point3D(2.9, 1.95, -2.2);
-                distance = field.Phase == B5RoomPhase.Playing ? 2.4 : 4.3; azimuth = 0.35; polar = 1.35;
+                target = focusScreen ? new Point3D(3.3, 2.05, -1.96) : new Point3D(2.9, 1.95, -2.2);
+                distance = focusScreen ? 1.8 : 4.3; azimuth = 0.35; polar = 1.35;
             }
 
             Point3D desiredPosition = new Point3D(

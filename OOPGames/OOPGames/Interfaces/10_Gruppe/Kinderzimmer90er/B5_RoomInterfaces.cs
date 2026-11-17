@@ -9,6 +9,7 @@ namespace OOPGames
         Device,
         Inserting,
         Ejecting,
+        Focusing,
         Playing
     }
 

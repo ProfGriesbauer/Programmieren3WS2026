@@ -14,6 +14,13 @@ namespace OOPGames
     {
         public static void Rect(Canvas canvas, double x, double y, double width, double height, Color color)
         {
+            TowerDefensePixelSurface surface = canvas.Tag as TowerDefensePixelSurface;
+            if (surface != null)
+            {
+                surface.Rect(x, y, width, height, color);
+                return;
+            }
+
             Rectangle shape = new Rectangle { Width = width, Height = height, Fill = new SolidColorBrush(color) };
             Canvas.SetLeft(shape, x);
             Canvas.SetTop(shape, y);
@@ -22,6 +29,13 @@ namespace OOPGames
 
         public static void Text(Canvas canvas, string text, double x, double y, int size, Color color)
         {
+            TowerDefensePixelSurface surface = canvas.Tag as TowerDefensePixelSurface;
+            if (surface != null)
+            {
+                surface.Text(text, x, y, size, color);
+                return;
+            }
+
             TextBlock block = new TextBlock
             {
                 Text = text,
@@ -128,48 +142,6 @@ namespace OOPGames
             B5RoomDraw.Rect(canvas, _CoinX * 8 + 1, _CoinY * 7 + 22, 5, 5, Color.FromRgb(255, 220, 68));
             B5RoomDraw.Rect(canvas, _X * 8 + 1, _Y * 7 + 22, 6, 6, _Accent);
             B5RoomDraw.Text(canvas, "ARROWS/WASD MOVE", 4, 105, 8, Colors.White);
-        }
-    }
-
-    public sealed class B5RoomTowerDefenseGame : IB5RoomMiniGame
-    {
-        bool _Exit;
-
-        public string Title { get { return "Tower Defense"; } }
-        public int Width { get { return 160; } }
-        public int Height { get { return 120; } }
-        public bool ExitRequested { get { return _Exit; } }
-        public int CurrentWave { get { return 1; } }
-        public int ExpectedEnemies { get { return 10; } }
-        public int Gold { get { return 500; } }
-        public string Difficulty { get { return "Normal"; } }
-        public string MapName { get { return "Unbenannt"; } }
-        public int MainBuildingHealth { get { return 100; } }
-        public string Status { get { return "Bereit"; } }
-
-        public void Start()
-        {
-            _Exit = false;
-        }
-
-        public void Update(IReadOnlyCollection<Key> keys)
-        {
-            foreach (Key key in keys)
-            {
-                if (key == Key.Escape || key == Key.X)
-                    _Exit = true;
-            }
-        }
-
-        public void Draw(Canvas canvas)
-        {
-            canvas.Children.Clear();
-            B5RoomDraw.Rect(canvas, 0, 0, Width, Height, Color.FromRgb(14, 20, 42));
-            B5RoomDraw.Rect(canvas, 0, 0, Width, 25, Color.FromRgb(29, 48, 101));
-            B5RoomDraw.Text(canvas, "WELLE " + CurrentWave + "  GEGNER " + ExpectedEnemies, 3, 3, 8, Colors.White);
-            B5RoomDraw.Text(canvas, "GOLD " + Gold + "  BASIS " + MainBuildingHealth + "%", 3, 13, 8, Color.FromRgb(255, 220, 110));
-            B5RoomDraw.Text(canvas, Difficulty.ToUpperInvariant() + " | " + MapName.ToUpperInvariant(), 3, 31, 8, Colors.White);
-            B5RoomDraw.Text(canvas, "STATUS: " + Status.ToUpperInvariant(), 3, 44, 8, Color.FromRgb(170, 190, 235));
         }
     }
 
