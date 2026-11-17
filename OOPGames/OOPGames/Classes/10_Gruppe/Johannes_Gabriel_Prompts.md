@@ -119,3 +119,153 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 **Datum:** 2026-11-16
 
 > Für das Overlay im Spiel hätte ich gerne eine Spalte oben am Spiel Bildschirm mit aktueller Welle, zu erwartenden Gegnern, Gold (welches für Tower und Upgrades benötigt wird), Schwierigkeit, Map Name. Vielleicht fällt dir noch was ein, was man brauchen könnte
+
+## Prompt 20
+
+**Datum:** 2026-11-17
+
+> Speichere mir die Prompts aus diesem Chat in meiner Johannes_Gabriel_Prompts.md Datei, wie in der Datei beschrieben
+
+## Prompt 21
+
+**Datum:** 2026-11-17
+
+> Kann es sein, dass der Raum selbst auch generiert bleibt, wenn ein Spiel gestartet wird und es dadurch zu leichten lags kommen kann oder wie ist das implementiert worden?
+
+## Prompt 22
+
+**Datum:** 2026-11-17
+
+> Das würde ich gerne direkt versuchen umzusetzen. Der 3D Raum, soll während des Spiels ausgeblendet werden und nur das Spiel-Overlay angezeigt werden. Am besten währe es, wenn nach dem Start eines Spieles, die Animation für das Einlegen des Spiels kommt, danach die Spieleauswahl an der rechten Seite verschwindet und ein Spieleoverlay angezeigt wird, welches abhängig von der ausgewählten Konsole ist. Zum Beispiel bei dem Gameboy wird ein extra Gameboy Overlay genutzt. Dadurch kann der Raum vorerst ausgeblendet werden und beim Schließen eines aktiven Spiels wieder generiert werden
+
+## Prompt 23
+
+**Datum:** 2026-11-17
+
+> Kann man nach dem Einlegen des Spieles und vor der Anzeige des Spiele-Overlays noch das alte Overlay entfernen und eher auf den Bildschirm der Konsole hinzoomen, damit es so aussieht als würde man näher rangehen und wirklich davor sitzen
+
+## Prompt 24
+
+**Datum:** 2026-11-17
+
+> Zwischen einlegen und hinzoomen ist das Spieleoverlay kurzzeitig sichtbar, das möchte ich gerne weg haben, sodass nur die Einlege- und danach Zoom-Animation kommt
+
+## Prompt 25
+
+**Datum:** 2026-11-17
+
+> Das gefällt mir schon besser. Bei dem Gameboy kann man noch näher an den Bildschirm zoomen und bei der Atari und Comodore nocht etwas näher ran
+
+## Prompt 26
+
+**Datum:** 2026-11-17
+
+> Die größe des Spiele-Overlays sieht passend aus, jedoch ist im Vollbild und der normalen Sicht, um das Overlay einfach nur schwarz. Ich hätte gerne, dass der Bereich um das Overlay angepasst an die jeweilige Konsole ist, auf der das Spiel gestartet wurde. Beim Gameboy soll es nach einem Gameboy aussehen, bei der Atari nach einem alten Fernseher und der Comodore nach einem alten PC Bildschirm
+
+## Prompt 27
+
+**Datum:** 2026-11-17
+
+> Jetzt würde ich gerne wieder an den Tower Defense Spiel weiter machen. Dafür würde ich gerne wissen, wie groß das Spiele-Overlay ist und ob es eine Pixelbegrenzung gibt
+
+## Prompt 28
+
+**Datum:** 2026-11-17
+
+> Können wir das Ganze etwas erhöhen, damit die Spiele detailreicher werden können und auch mehr auf dem Bildschirm dargestellt werden kann. Dabei sollen die bisherigen Spiele jedoch nicht verändert werden. Falls das schwer wird, soll vorerst nur die Comodore und dessen Spiele geändert werden, um es zu testen
+
+## Prompt 29
+
+**Datum:** 2026-11-17
+
+> Ich würde das Tower Defense Spiel gerne auf 720p anpassen und später für das Spieledesign ein Pixel Art Style verwenden, welcher trotz größerem Spiele-Overlay und mehr Details flüssig läuft
+
+## Prompt 30
+
+**Datum:** 2026-11-17
+
+> Erstelle mir nun für Tower Defense einen Hauptbildschirm, auf welchem man ein neues Spiel starten und danach die Schwierigkeit und Karte auswählen. Es soll die Schwierigkeiten Easy, Normal, Hard und God geben, welche die Stärke der Gegner abhängig deren Basiswerte anpasst. Bei der Karte soll vorerst nur eine vorhanden sein, welche du gerne gleich mitgenerieren darfst. Bei den Karten sollen die Türme an voreingestellten Spots platziert werden können, welche mit einem kleinen Podest aus Steinen gekennzeichnet werden sollen
+
+## Prompt 31
+
+**Datum:** 2026-11-17
+
+> Kannst du mir auf Basis dieses Bildes ein Design Konzept für Tower, Enemies, Bosse und die Karte erstellen. Das Podest soll flach sein und aus Pflasterstein sein. Während des Spiels soll eine Markierung vorhanden sein, welche angibt auf welches Podest bzw. später Turm man gerade ausgewählt hat und durch Enter soll ein Menü für die Auswahl von Tower oder Upgrades aufkommen, je nach dem, ob man auf einem Podest einen neuen Tower bauen möchte oder einen bestehenden Tower upgraden möchte
+
+## Prompt 32
+
+**Datum:** 2026-11-17
+
+> Das Aussehen der Karte, Tower und MainBuilding sind noch sehr einfach, kannst du mir das detailreicher machen. Die Tower sollen aussehen wie ein Burgturm mit jeweils der passenden Person bzw. Maschine darauf. Also der Physical Archer soll Bogenschützen haben, der Fire Mage einen Feuer Magier und so weiter
+
+## Prompt 33
+
+**Datum:** 2026-11-17
+
+> Woran liegt es, dass du nur einfache Geometrien nutzt um das Spiel zu designen. Liegt es am vorgegebenen Framwork, Pixel-Größe des Overlays oder gibt es ein anderes Problem?
+
+## Prompt 34
+
+**Datum:** 2026-11-17
+
+> Das klingt gut, kannst du das so umsetzen, ohne die vorhandenen Spiele zu beeinflussen und deren spielbarkeit
+
+## Prompt 35
+
+**Datum:** 2026-11-17
+
+> Dann bearbeite mir alles mit dem neuen Pixel-Art-Style und nutze gerne das vorhandene Bild als Inspiration
+
+## Prompt 36
+
+**Datum:** 2026-11-17
+
+> Kannst du mir das Spiel optisch so ändern, dass es ähnlich zu diesem aussieht. Dabei soll das Pilz Theme nicht übernommen werden, sondern normale Türme, so wie das MainBuilding aus Stein sein. Auch das obere Overlay für Gold, Leben, Welle und kommende Enemies soll mit Icons erweitert werden
+
+## Prompt 37
+
+**Datum:** 2026-11-17
+
+> Falls du mehr Pixel und eine höhere Auflösung für das Design benötigst, kannst du dieses gerne erhöhen, dabei aber auch die Flüssigkeit des Spiel beibehalten
+
+## Prompt 38
+
+**Datum:** 2026-11-17
+
+> Verwerfe das erste Design komplett und baue dieses Design mit oberem Overlay und Icons nach. Dabei das Pilz Theme nicht übernehmen, sondern normal Stein für Tower und MainBuilding nutzen. Falls es besser wäre höher als 720p und mehr Pixel zu gehen, mach das bitte
+
+## Prompt 39
+
+**Datum:** 2026-11-17
+
+> Es sieht für mich immer noch genauso aus wie zuvor. Ändere Alles ab, so dass es dem Bild ähnlicher sieht
+
+## Prompt 40
+
+**Datum:** 2026-11-17
+
+> Wenn ich selber Tower designen würde, um für das Spiel zu verwenden, welches Dateiformat würde ich dafür benötigen?
+
+## Prompt 41
+
+**Datum:** 2026-11-17
+
+> Speichere mir meine heutigen Prompts in der Johannes_Gabrie_Prompts.md Datei
+
+## Prompt 42
+
+**Datum:** 2026-11-17
+
+> Kannst du diese Tower als Design für Tower Defense verwenden?
+
+## Prompt 43
+
+**Datum:** 2026-11-17
+
+> Kannst du anhand der neuen Tower, alle anderen Sachen, wie Weg, Podest, MainBuilding und alles weitere an dieses Spritesheet anpassen
+
+## Prompt 44
+
+**Datum:** 2026-11-17
+
+> Speichere mir meine neuen Prompts in der Johannes_Gabriel_Prompts.md Datei

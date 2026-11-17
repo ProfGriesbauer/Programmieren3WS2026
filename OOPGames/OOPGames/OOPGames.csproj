@@ -7,4 +7,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\TowerDefense\tower_spritesheet.png" />
+  </ItemGroup>
 </Project>

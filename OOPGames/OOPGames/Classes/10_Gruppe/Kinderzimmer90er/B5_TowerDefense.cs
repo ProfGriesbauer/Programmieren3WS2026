@@ -427,8 +427,8 @@ namespace OOPGames
             if (_Screen == TowerDefenseScreen.Map)
                 DrawMapScenery(canvas, top);
 
-            Color pathColor = Color.FromRgb(116, 91, 60);
-            Color pathEdge = Color.FromRgb(82, 63, 44);
+            Color pathColor = Color.FromRgb(151, 105, 78);
+            Color pathEdge = Color.FromRgb(68, 61, 58);
             for (int i = 0; i < map.Path.Count - 1; i++)
             {
                 Point from = map.Path[i];
@@ -439,7 +439,7 @@ namespace OOPGames
                     B5RoomDraw.Rect(canvas, x, from.Y + top - 8, Math.Abs(to.X - from.X), 16, pathEdge);
                     B5RoomDraw.Rect(canvas, x, from.Y + top - 5, Math.Abs(to.X - from.X), 10, pathColor);
                     for (double stoneX = x + 5; stoneX < x + Math.Abs(to.X - from.X); stoneX += 12)
-                        B5RoomDraw.Rect(canvas, stoneX, from.Y + top - 1, 7, 1, Color.FromRgb(151, 119, 78));
+                        B5RoomDraw.Rect(canvas, stoneX, from.Y + top - 1, 7, 1, Color.FromRgb(190, 137, 94));
                 }
                 else
                 {
@@ -447,7 +447,7 @@ namespace OOPGames
                     B5RoomDraw.Rect(canvas, from.X - 8, y + top, 16, Math.Abs(to.Y - from.Y), pathEdge);
                     B5RoomDraw.Rect(canvas, from.X - 5, y + top, 10, Math.Abs(to.Y - from.Y), pathColor);
                     for (double stoneY = y + 5; stoneY < y + Math.Abs(to.Y - from.Y); stoneY += 12)
-                        B5RoomDraw.Rect(canvas, from.X - 1, stoneY + top, 1, 7, Color.FromRgb(151, 119, 78));
+                        B5RoomDraw.Rect(canvas, from.X - 1, stoneY + top, 1, 7, Color.FromRgb(190, 137, 94));
                 }
             }
 
@@ -464,37 +464,43 @@ namespace OOPGames
 
         static void DrawStonePedestal(Canvas canvas, double x, double y)
         {
-            Color darkStone = Color.FromRgb(59, 67, 69);
-            Color stone = Color.FromRgb(112, 122, 119);
-            Color lightStone = Color.FromRgb(157, 165, 151);
-            Color crack = Color.FromRgb(76, 83, 81);
-            B5RoomDraw.Rect(canvas, x - 12, y + 5, 24, 6, darkStone);
-            B5RoomDraw.Rect(canvas, x - 10, y, 20, 8, stone);
-            B5RoomDraw.Rect(canvas, x - 6, y - 3, 12, 4, lightStone);
-            B5RoomDraw.Rect(canvas, x - 9, y + 1, 4, 4, lightStone);
-            B5RoomDraw.Rect(canvas, x - 4, y + 1, 1, 4, crack);
-            B5RoomDraw.Rect(canvas, x + 3, y - 2, 1, 3, crack);
+            Color darkStone = Color.FromRgb(61, 60, 57);
+            Color stone = Color.FromRgb(126, 124, 108);
+            Color lightStone = Color.FromRgb(184, 176, 143);
+            Color crack = Color.FromRgb(83, 79, 69);
+            B5RoomDraw.Rect(canvas, x - 13, y + 6, 26, 6, darkStone);
+            B5RoomDraw.Rect(canvas, x - 11, y, 22, 8, stone);
+            B5RoomDraw.Rect(canvas, x - 7, y - 3, 14, 4, lightStone);
+            B5RoomDraw.Rect(canvas, x - 9, y + 1, 5, 4, lightStone);
+            B5RoomDraw.Rect(canvas, x - 3, y + 1, 2, 4, crack);
+            B5RoomDraw.Rect(canvas, x + 3, y - 2, 2, 3, crack);
             B5RoomDraw.Rect(canvas, x + 7, y + 3, 3, 1, crack);
         }
 
         static void DrawTowerSymbol(Canvas canvas, double x, double y, Tower tower, int level)
         {
-            Color stoneDark = Color.FromRgb(57, 61, 66);
-            Color stone = Color.FromRgb(105, 111, 115);
-            Color stoneLight = Color.FromRgb(157, 157, 147);
-            B5RoomDraw.Rect(canvas, x - 9, y - 11, 18, 12, stoneDark);
-            B5RoomDraw.Rect(canvas, x - 7, y - 14, 14, 5, stone);
-            B5RoomDraw.Rect(canvas, x - 8, y - 17, 4, 5, stoneLight);
-            B5RoomDraw.Rect(canvas, x - 2, y - 17, 4, 5, stoneLight);
-            B5RoomDraw.Rect(canvas, x + 4, y - 17, 4, 5, stoneLight);
-            B5RoomDraw.Rect(canvas, x - 9, y - 12, 18, 2, Color.FromRgb(188, 185, 163));
-            B5RoomDraw.Rect(canvas, x - 8, y - 4, 2, 4, Color.FromRgb(132, 137, 130));
-            B5RoomDraw.Rect(canvas, x + 6, y - 9, 2, 5, Color.FromRgb(73, 78, 82));
-            B5RoomDraw.Rect(canvas, x - 6, y - 7, 12, 8, Color.FromRgb(40, 43, 48));
-            DrawTowerUnit(canvas, x, y - 7, tower);
+            TowerDefensePixelSurface surface = canvas.Tag as TowerDefensePixelSurface;
+            if (surface == null) throw new InvalidOperationException("Tower sprites require the pixel surface.");
+            surface.Sprite(GetTowerSpriteIndex(tower), x - 16, y - 43, 32, 48);
             B5RoomDraw.Rect(canvas, x - 10, y + 2, 20, 2, Color.FromRgb(38, 42, 44));
             for (int pip = 0; pip < Math.Min(level, 5); pip++)
                 B5RoomDraw.Rect(canvas, x - 8 + pip * 4, y + 2, 2, 2, Color.FromRgb(246, 202, 76));
+        }
+
+        static int GetTowerSpriteIndex(Tower tower)
+        {
+            switch (tower.Name)
+            {
+                case "Physical Archer": return 0;
+                case "Poison Archer": return 1;
+                case "Fire Mage": return 2;
+                case "Ice Mage": return 3;
+                case "Earth Mage": return 4;
+                case "Strom Mage": return 5;
+                case "Flamethrower": return 6;
+                case "Ice Area Tower": return 7;
+                default: throw new ArgumentException("No sprite is configured for this tower.", nameof(tower));
+            }
         }
 
         static void DrawTowerUnit(Canvas canvas, double x, double y, Tower tower)
@@ -567,12 +573,12 @@ namespace OOPGames
 
         static void DrawMainBuilding(Canvas canvas, double x, double y)
         {
-            Color stone = Color.FromRgb(147, 151, 143);
-            Color stoneLight = Color.FromRgb(198, 197, 173);
-            Color stoneDark = Color.FromRgb(79, 84, 83);
-            Color roof = Color.FromRgb(73, 65, 66);
-            Color wood = Color.FromRgb(82, 49, 39);
-            B5RoomDraw.Rect(canvas, x - 34, y + 17, 68, 5, Color.FromRgb(64, 77, 68));
+            Color stone = Color.FromRgb(137, 133, 119);
+            Color stoneLight = Color.FromRgb(190, 181, 148);
+            Color stoneDark = Color.FromRgb(65, 63, 59);
+            Color roof = Color.FromRgb(91, 61, 58);
+            Color wood = Color.FromRgb(70, 43, 38);
+            B5RoomDraw.Rect(canvas, x - 34, y + 17, 68, 5, Color.FromRgb(57, 67, 55));
             B5RoomDraw.Rect(canvas, x - 28, y - 9, 56, 27, stoneDark);
             B5RoomDraw.Rect(canvas, x - 23, y - 15, 46, 25, stone);
             B5RoomDraw.Rect(canvas, x - 36, y - 4, 15, 22, stone);
@@ -592,15 +598,15 @@ namespace OOPGames
             B5RoomDraw.Rect(canvas, x - 18, y + 10, 2, 2, stoneDark);
             B5RoomDraw.Rect(canvas, x + 14, y + 10, 2, 2, stoneDark);
             B5RoomDraw.Rect(canvas, x - 2, y - 27, 4, 7, Color.FromRgb(213, 178, 72));
-            B5RoomDraw.Rect(canvas, x + 2, y - 27, 7, 2, Color.FromRgb(214, 67, 57));
-            B5RoomDraw.Text(canvas, "BASE", x - 13, y + 24, 6, Color.FromRgb(255, 231, 139));
+            B5RoomDraw.Rect(canvas, x + 2, y - 27, 7, 2, Color.FromRgb(188, 64, 57));
+            B5RoomDraw.Text(canvas, "BASE", x - 13, y + 24, 6, Color.FromRgb(232, 210, 157));
         }
 
         static void DrawMapScenery(Canvas canvas, double top)
         {
-            Color grassDark = Color.FromRgb(20, 102, 59);
-            Color grassLight = Color.FromRgb(48, 132, 67);
-            Color grassBright = Color.FromRgb(74, 151, 70);
+            Color grassDark = Color.FromRgb(68, 103, 48);
+            Color grassLight = Color.FromRgb(111, 151, 59);
+            Color grassBright = Color.FromRgb(151, 176, 70);
             DrawWater(canvas, 0, top + 5, 62, 24);
             DrawWater(canvas, 242, top + 7, 78, 20);
             for (int i = 0; i < 34; i++)
@@ -612,7 +618,7 @@ namespace OOPGames
                     B5RoomDraw.Rect(canvas, x + 4, y - 2, 2, 4, grassBright);
             }
 
-            B5RoomDraw.Rect(canvas, 0, top + 148, 320, 3, Color.FromRgb(15, 70, 47));
+            B5RoomDraw.Rect(canvas, 0, top + 148, 320, 3, Color.FromRgb(54, 80, 44));
             DrawTree(canvas, 22, top + 39);
             DrawTree(canvas, 273, top + 32);
             DrawTree(canvas, 260, top + 147);
@@ -632,27 +638,27 @@ namespace OOPGames
 
         static void DrawWater(Canvas canvas, double x, double y, double width, double height)
         {
-            B5RoomDraw.Rect(canvas, x, y, width, height, Color.FromRgb(70, 153, 183));
-            B5RoomDraw.Rect(canvas, x, y, width, 3, Color.FromRgb(150, 207, 190));
-            B5RoomDraw.Rect(canvas, x + 5, y + 9, 15, 2, Color.FromRgb(98, 182, 197));
-            B5RoomDraw.Rect(canvas, x + width - 24, y + height - 7, 18, 2, Color.FromRgb(45, 122, 164));
-            B5RoomDraw.Rect(canvas, x + 28, y + 4, 2, 3, Color.FromRgb(196, 221, 193));
+            B5RoomDraw.Rect(canvas, x, y, width, height, Color.FromRgb(76, 142, 157));
+            B5RoomDraw.Rect(canvas, x, y, width, 3, Color.FromRgb(156, 190, 171));
+            B5RoomDraw.Rect(canvas, x + 5, y + 9, 15, 2, Color.FromRgb(103, 177, 174));
+            B5RoomDraw.Rect(canvas, x + width - 24, y + height - 7, 18, 2, Color.FromRgb(51, 105, 127));
+            B5RoomDraw.Rect(canvas, x + 28, y + 4, 2, 3, Color.FromRgb(190, 212, 178));
         }
 
         static void DrawBridge(Canvas canvas, double x, double y)
         {
-            B5RoomDraw.Rect(canvas, x, y, 35, 9, Color.FromRgb(91, 54, 38));
-            B5RoomDraw.Rect(canvas, x + 2, y - 2, 31, 3, Color.FromRgb(153, 94, 53));
+            B5RoomDraw.Rect(canvas, x, y, 35, 9, Color.FromRgb(70, 46, 38));
+            B5RoomDraw.Rect(canvas, x + 2, y - 2, 31, 3, Color.FromRgb(143, 88, 57));
             for (int plank = 0; plank < 5; plank++)
-                B5RoomDraw.Rect(canvas, x + 4 + plank * 6, y + 2, 3, 6, Color.FromRgb(181, 115, 61));
-            B5RoomDraw.Rect(canvas, x - 2, y - 5, 3, 14, Color.FromRgb(76, 54, 40));
-            B5RoomDraw.Rect(canvas, x + 34, y - 5, 3, 14, Color.FromRgb(76, 54, 40));
+                B5RoomDraw.Rect(canvas, x + 4 + plank * 6, y + 2, 3, 6, Color.FromRgb(178, 113, 66));
+            B5RoomDraw.Rect(canvas, x - 2, y - 5, 3, 14, Color.FromRgb(58, 45, 39));
+            B5RoomDraw.Rect(canvas, x + 34, y - 5, 3, 14, Color.FromRgb(58, 45, 39));
         }
 
         static void DrawFence(Canvas canvas, double x, double y, double width)
         {
-            Color post = Color.FromRgb(105, 66, 42);
-            Color rail = Color.FromRgb(157, 94, 49);
+            Color post = Color.FromRgb(75, 50, 39);
+            Color rail = Color.FromRgb(146, 88, 54);
             B5RoomDraw.Rect(canvas, x, y, width, 3, rail);
             B5RoomDraw.Rect(canvas, x, y + 8, width, 3, rail);
             for (double postX = x; postX <= x + width; postX += 12)
@@ -661,15 +667,15 @@ namespace OOPGames
 
         static void DrawRock(Canvas canvas, double x, double y)
         {
-            B5RoomDraw.Rect(canvas, x - 5, y + 2, 10, 4, Color.FromRgb(67, 82, 78));
-            B5RoomDraw.Rect(canvas, x - 3, y - 1, 7, 4, Color.FromRgb(118, 130, 119));
-            B5RoomDraw.Rect(canvas, x - 1, y - 1, 3, 2, Color.FromRgb(172, 171, 143));
+            B5RoomDraw.Rect(canvas, x - 5, y + 2, 10, 4, Color.FromRgb(60, 67, 62));
+            B5RoomDraw.Rect(canvas, x - 3, y - 1, 7, 4, Color.FromRgb(119, 121, 105));
+            B5RoomDraw.Rect(canvas, x - 1, y - 1, 3, 2, Color.FromRgb(181, 172, 137));
         }
 
         static void DrawFlowerPatch(Canvas canvas, double x, double y)
         {
-            Color stem = Color.FromRgb(43, 112, 56);
-            Color flower = Color.FromRgb(239, 218, 112);
+            Color stem = Color.FromRgb(58, 105, 45);
+            Color flower = Color.FromRgb(225, 203, 111);
             B5RoomDraw.Rect(canvas, x, y, 1, 5, stem);
             B5RoomDraw.Rect(canvas, x + 4, y - 2, 1, 6, stem);
             B5RoomDraw.Rect(canvas, x + 8, y + 1, 1, 4, stem);
@@ -680,18 +686,18 @@ namespace OOPGames
 
         static void DrawTree(Canvas canvas, double x, double y)
         {
-            B5RoomDraw.Rect(canvas, x - 3, y + 10, 6, 12, Color.FromRgb(83, 55, 37));
-            B5RoomDraw.Rect(canvas, x - 5, y + 12, 2, 8, Color.FromRgb(119, 73, 39));
-            B5RoomDraw.Rect(canvas, x - 10, y - 1, 20, 14, Color.FromRgb(22, 76, 51));
-            B5RoomDraw.Rect(canvas, x - 7, y - 7, 14, 10, Color.FromRgb(27, 105, 57));
-            B5RoomDraw.Rect(canvas, x - 3, y - 10, 7, 6, Color.FromRgb(52, 137, 66));
-            B5RoomDraw.Rect(canvas, x - 8, y + 1, 4, 3, Color.FromRgb(65, 151, 74));
-            B5RoomDraw.Rect(canvas, x + 4, y - 4, 3, 3, Color.FromRgb(76, 166, 78));
+            B5RoomDraw.Rect(canvas, x - 3, y + 10, 6, 12, Color.FromRgb(77, 53, 38));
+            B5RoomDraw.Rect(canvas, x - 5, y + 12, 2, 8, Color.FromRgb(124, 76, 43));
+            B5RoomDraw.Rect(canvas, x - 10, y - 1, 20, 14, Color.FromRgb(55, 82, 40));
+            B5RoomDraw.Rect(canvas, x - 7, y - 7, 14, 10, Color.FromRgb(89, 123, 45));
+            B5RoomDraw.Rect(canvas, x - 3, y - 10, 7, 6, Color.FromRgb(139, 163, 59));
+            B5RoomDraw.Rect(canvas, x - 8, y + 1, 4, 3, Color.FromRgb(156, 177, 64));
+            B5RoomDraw.Rect(canvas, x + 4, y - 4, 3, 3, Color.FromRgb(173, 186, 72));
         }
 
         static void DrawHouse(Canvas canvas, double x, double y, Color roof)
         {
-            B5RoomDraw.Rect(canvas, x - 15, y - 5, 30, 17, Color.FromRgb(213, 192, 143));
+            B5RoomDraw.Rect(canvas, x - 15, y - 5, 30, 17, Color.FromRgb(161, 151, 122));
             B5RoomDraw.Rect(canvas, x - 18, y - 10, 36, 5, roof);
             B5RoomDraw.Rect(canvas, x - 11, y - 16, 22, 7, roof);
             B5RoomDraw.Rect(canvas, x - 3, y + 3, 6, 9, Color.FromRgb(99, 57, 38));

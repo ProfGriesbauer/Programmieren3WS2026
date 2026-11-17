@@ -38,6 +38,12 @@ Oberflaeche statt viele WPF-Rechtecke pro Frame zu erzeugen. Die bestehenden
 Minispiele verwenden weiterhin ihre unveraenderten Canvas-Zeichenroutinen.
 Wiederverwendete Farbpinsel und Nearest-Neighbor-Skalierung reduzieren dabei
 unnoetige Frame-Allocations.
+Gebaut Tower verwenden das transparente Spritesheet
+`Assets/TowerDefense/tower_spritesheet.png`. Die acht Sprites werden als
+Physical Archer, Poison Archer, Fire Mage, Ice Mage, Earth Mage, Strom Mage,
+Flamethrower und Ice Area Tower zugeordnet und fuer die Darstellung gecroppt.
+Weg, Podeste, MainBuilding und Umgebung verwenden dazu passende gedeckte
+Oliv-, Braun-, Grau- und Rottoene mit dunklen 4x-Pixelkonturen.
 
 Die Szene verwendet prozedural erzeugte WPF-Materialien und Geometrie, keine
 externen Texturen oder Modelle. Das WPF-3D-Rendering bietet keine physikalisch

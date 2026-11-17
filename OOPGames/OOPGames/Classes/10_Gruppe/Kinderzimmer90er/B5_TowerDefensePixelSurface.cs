@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace OOPGames
 {
@@ -11,6 +12,8 @@ namespace OOPGames
     {
         readonly DrawingGroup _Drawing = new DrawingGroup();
         readonly Dictionary<int, SolidColorBrush> _Brushes = new Dictionary<int, SolidColorBrush>();
+        readonly BitmapImage _TowerSprites;
+        readonly BitmapSource[] _TowerSpriteFrames;
         DrawingContext _Context;
 
         public TowerDefensePixelSurface(int logicalWidth, int logicalHeight, int pixelScale)
@@ -20,6 +23,22 @@ namespace OOPGames
             if (pixelScale <= 0) throw new ArgumentOutOfRangeException(nameof(pixelScale));
 
             _PixelScale = pixelScale;
+            BitmapImage towerSprites = new BitmapImage();
+            towerSprites.BeginInit();
+            towerSprites.UriSource = new Uri(
+                "pack://application:,,,/OOPGames;component/Assets/TowerDefense/tower_spritesheet.png",
+                UriKind.Absolute);
+            towerSprites.CacheOption = BitmapCacheOption.OnLoad;
+            towerSprites.EndInit();
+            towerSprites.Freeze();
+            _TowerSprites = towerSprites;
+            _TowerSpriteFrames = new BitmapSource[8];
+            for (int spriteIndex = 0; spriteIndex < _TowerSpriteFrames.Length; spriteIndex++)
+            {
+                CroppedBitmap frame = new CroppedBitmap(_TowerSprites, new Int32Rect(spriteIndex * 128, 0, 128, 192));
+                frame.Freeze();
+                _TowerSpriteFrames[spriteIndex] = frame;
+            }
             Image = new Image
             {
                 Width = logicalWidth * pixelScale,
@@ -68,6 +87,17 @@ namespace OOPGames
                 GetBrush(color),
                 1.0);
             _Context.DrawText(formattedText, new Point(x * _PixelScale, y * _PixelScale));
+        }
+
+        public void Sprite(int spriteIndex, double x, double y, double width, double height)
+        {
+            if (_Context == null) throw new InvalidOperationException("The pixel surface is not drawing.");
+            if (spriteIndex < 0 || spriteIndex > 7)
+                throw new ArgumentOutOfRangeException(nameof(spriteIndex));
+
+            _Context.DrawImage(
+                _TowerSpriteFrames[spriteIndex],
+                new Rect(x * _PixelScale, y * _PixelScale, width * _PixelScale, height * _PixelScale));
         }
 
         SolidColorBrush GetBrush(Color color)
