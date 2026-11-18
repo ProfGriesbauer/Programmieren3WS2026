@@ -953,7 +953,7 @@ namespace OOPGames
                 switch (attackFacing)
                 {
                     case PlayerFacing.Back:
-                        return isMoving ? "WalkAttackBackwards" : "IdleAttackBackwards";
+                        return isMoving ? "WalkAttackBack" : "IdleAttackBack";
                     case PlayerFacing.Left:
                         return "IdleAttackLeft";
                     case PlayerFacing.Right:
