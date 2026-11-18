@@ -1223,6 +1223,11 @@ namespace OOPGames
             shop.Update();
             Equal("shop", shop.Sound.CurrentMusic, "Ladenmusik");
             Equal("Ton aus.", shop.Sound.ToggleMute(), "Stummschalten");
+            // Änderung durch: Patrick Lupierz – 16.11.2026 – Sound-Ordner: Musik außen/Gebäude, eigene Dateien bevorzugt
+            Equal("Musik_Aussen", G1C_SoundSystem.FolderFor("town"), "Ordner Stadtmusik");
+            Equal("Musik_Aussen", G1C_SoundSystem.FolderFor("fishing"), "Ordner Angelmusik");
+            Equal("Musik_Gebaeude", G1C_SoundSystem.FolderFor("casino"), "Ordner Casinomusik");
+            Check(G1C_SoundSystem.Resolve("Soundeffekte", "gibt_es_nicht") == null, "Fehlende Datei wird als vorhanden gemeldet");
 
             foreach (string name in new[] { "music_town", "music_home", "music_shop", "music_casino", "music_arcade", "music_fishing", "music_title",
                                             "sfx_win", "sfx_jackpot", "sfx_lose", "sfx_coin", "sfx_door", "sfx_meow", "sfx_woof", "sfx_splash", "sfx_catch" })

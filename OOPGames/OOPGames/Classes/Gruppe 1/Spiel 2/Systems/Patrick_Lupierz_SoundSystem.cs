@@ -69,7 +69,7 @@ namespace OOPGames
                 if (_music != null) { _music.Stop(); _music.Close(); _music = null; }
                 if (theme == null) return;
                 MediaPlayer player = new MediaPlayer();
-                player.Open(new Uri(FileFor("music_" + theme), UriKind.Absolute));
+                player.Open(new Uri(Resolve(FolderFor(theme), theme) ?? FileFor("music_" + theme), UriKind.Absolute));
                 player.Volume = Muted ? 0 : MusicVolume;
                 player.MediaEnded += (s, e) =>
                 {
@@ -95,7 +95,7 @@ namespace OOPGames
                 _effects.RemoveAll(p => p.NaturalDuration.HasTimeSpan && p.Position >= p.NaturalDuration.TimeSpan);
                 if (_effects.Count >= 6) { _effects[0].Close(); _effects.RemoveAt(0); }
                 MediaPlayer player = new MediaPlayer();
-                player.Open(new Uri(FileFor("sfx_" + effect), UriKind.Absolute));
+                player.Open(new Uri(Resolve("Soundeffekte", effect) ?? FileFor("sfx_" + effect), UriKind.Absolute));
                 player.Volume = EffectVolume;
                 player.MediaEnded += (s, e) => player.Close();
                 player.Play();
@@ -108,6 +108,35 @@ namespace OOPGames
         {
             LastError = ex.Message;
             Enabled = false; // ohne Audiogerät o. Ä. läuft das Spiel stumm weiter
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
+        // Aufgabe: Eigene Audiodateien aus G1Casino_Assets\Sounds\<Ordner> (wav oder mp3) bevorzugen.
+        public const string SoundFolderName = "Sounds";
+
+        /// <summary>Unterordner für Musik: Außen (Stadt, Angeln) oder Gebäude (alles andere).</summary>
+        public static string FolderFor(string theme)
+        {
+            return theme == "town" || theme == "fishing" ? "Musik_Aussen" : "Musik_Gebaeude";
+        }
+
+        /// <summary>Sucht eine eigene Datei; null, wenn keine vorhanden ist (dann greift die eingebaute Version).</summary>
+        public static string Resolve(string folder, string name)
+        {
+            try
+            {
+                string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "G1Casino_Assets", SoundFolderName, folder);
+                foreach (string ext in new[] { ".wav", ".mp3" })
+                {
+                    string file = Path.Combine(dir, name + ext);
+                    if (File.Exists(file)) return file;
+                }
+            }
+            catch (Exception)
+            {
+                // Zugriffsfehler: eingebaute Version verwenden
+            }
+            return null;
         }
 
         private string FileFor(string name)

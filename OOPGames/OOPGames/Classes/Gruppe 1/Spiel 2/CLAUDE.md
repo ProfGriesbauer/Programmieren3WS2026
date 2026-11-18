@@ -45,7 +45,7 @@ Data flow: input → `G1C_CasinoHumanPlayer` builds `G1C_CasinoMove` → `G1C_Ca
 | `Fishing/` | `G1C_FishingGame` (bridge fishing minigame, slide bar; catches are items with `SellValue`; 20 fish sprites from a free asset pack, stored as pixel data in `G1C_FishSprites`) |
 | `UI/` | Renderer (`BeginRotation` for grouped rotation, e.g. poker fan), HUD, DialogueBox, CasinoMenu, ResultScreen, MapView, PhoneView, CardView, StartView, Conversation/NpcOverlay views |
 | `Graphics/` | `SpriteLibrary` (sprite-ID → image, PNG override), `BuiltInSprites`, `TownSprites`, `NpcSprites`, `WorldSprites`, `PixelCanvas` |
-| `Assets/` | README only. Custom art: drop `<Sprite-ID>.png` into `G1Casino_Assets/` next to the exe; no csproj change needed |
+| `Assets/` | README; `Sounds/` (music and sound effects, see its README). Custom art: drop `<Sprite-ID>.png` into `G1Casino_Assets/` next to the exe; no csproj change needed. Sounds go to `G1Casino_Assets/Sounds/` the same way |
 | `Plans/`, `Scrum/` | Plans, ProductBacklog, SprintPlanning, Reviews, Retrospectives |
 
 Keep logic, rendering and collision separate; sprites are referenced by ID only (see Assets/README.md for ID schema).
@@ -71,7 +71,7 @@ Keep logic, rendering and collision separate; sprites are referenced by ID only 
 - Family NPCs (`Personality.IsFamily`) never become hostile; pocket money once per game day (`NpcMemory.PocketMoneyDay`). Bikes: `G1C_BikeSystem` (ownership in inventory, category `Fahrzeug`).
 - NPC individual dialogue: add `G1C_DialogueTopic`s to `Personality.Topics` (see `G1C_FamilyNpcRoster`, `G1C_ShopNpcRoster`, `G1C_ExtraTopics` for Eduard's/Denis' NPCs); max 4 options per screen. Small-talk compliment/insult lines come from `G1C_SmallTalk` by `Role`.
 - Pets: `G1C_PetAnimal` (solid, roams only in the *current* scene via `GameManager.Update`, `PetCanEnter`); voices `G1C_AnimalVoices`. Sprite IDs `pet_<cat|dog>_<variant>_<l|r>_<frame>` in `G1C_AnimalSprites`.
-- Sound: `G1C_SoundSystem` is silent unless `Enable()` (only `G1C_CasinoRules.ClearField` does it) – tests stay silent but `CurrentMusic`/`LastEffect` are testable. Music is synthesized (`G1C_ChipTune`) to `%TEMP%/G1Casino_Sounds`; no audio files in the repo.
+- Sound: `G1C_SoundSystem` is silent unless `Enable()` (only `G1C_CasinoRules.ClearField` does it) – tests stay silent but `CurrentMusic`/`LastEffect` are testable. Own sounds: `Assets/Sounds/{Musik_Aussen,Musik_Gebaeude,Soundeffekte}` (names in its README). At runtime `G1Casino_Assets/Sounds/<Ordner>/<name>.wav|mp3` next to the exe is preferred (`G1C_SoundSystem.Resolve`); otherwise the built-in version is used: `G1C_ChipTune` writes it to `%TEMP%/G1Casino_Sounds`.
 - Minigames report sounds via `G1C_CasinoGameBase.SoundRequested`. Admin cheat `G1C_CheatCode` (the word ADMIN, only while a slot machine is active) toggles `G1C_Slots.GuaranteedJackpot`.
 - Furniture: `G1C_FurnitureEditor` (state `FurnitureEditor`, click → tile via `TileAt`, same math as the painter for non-scrolling scenes); limit `G1C_Shop.MaxFurniturePerItem`.
 - Bikes: entering a building sets `G1C_BikeSystem.ParkedAtDoor`; leaving resumes riding. `RideSpriteId` has 4 directions.

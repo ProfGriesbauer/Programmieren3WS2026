@@ -279,8 +279,8 @@ namespace OOPGames
 
         protected override Color BackgroundColor { get { return Color.FromRgb(0x1E, 0x5A, 0x50); } }
 
-        public const double PlayerHandScale = 1.05;   // Patrick Lupierz – 16.11.2026
-        public const double PlayerHandTop = 196;
+        public const double PlayerHandScale = 1.5;   // Patrick Lupierz – 16.11.2026
+        public const double PlayerHandTop = 300;
         public const double PlayerHandCenterX = 240;
 
         protected override void DrawGame(G1C_Renderer r)
