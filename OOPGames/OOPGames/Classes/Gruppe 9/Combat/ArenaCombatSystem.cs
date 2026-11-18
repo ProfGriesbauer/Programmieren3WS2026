@@ -5,12 +5,12 @@ namespace OOPGames
 {
     public sealed class ArenaCombatSystem
     {
-        private readonly Dictionary<Entity, double> _cooldownSeconds =
-            new Dictionary<Entity, double>();
+        private readonly Dictionary<Entity, Dictionary<string, double>> _cooldownSeconds =
+            new Dictionary<Entity, Dictionary<string, double>>();
         private readonly List<RunningAttack> _runningAttacks =
             new List<RunningAttack>();
 
-        public event Action<Entity, Entity> EntityDefeated;
+        public event Action<Entity, Entity, Weapon> EntityDefeated;
 
         public int ActiveAttackCount { get { return _runningAttacks.Count; } }
 
@@ -20,19 +20,38 @@ namespace OOPGames
             {
                 throw new ArgumentNullException(nameof(source));
             }
-            if (!source.IsAlive || source.EquippedWeapon == null)
+            if (source.EquippedWeapon == null)
             {
                 return false;
             }
-            if (_cooldownSeconds.TryGetValue(source, out double remaining)
-                && remaining > 0)
+
+            return TryStartAttack(
+                source, source.EquippedWeapon, directionX, directionY);
+        }
+
+        public bool TryStartAttack(
+            Entity source, Weapon weapon, double directionX, double directionY)
+        {
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+            if (!source.IsAlive)
+            {
+                return false;
+            }
+            if (GetCooldownRemaining(source, weapon) > 0)
             {
                 return false;
             }
 
             double length = Math.Sqrt(
                 directionX * directionX + directionY * directionY);
-            if (length == 0 && source.EquippedWeapon.TargetingMode
+            if (length == 0 && weapon.TargetingMode
                 != WeaponTargetingMode.Self)
             {
                 return false;
@@ -47,11 +66,16 @@ namespace OOPGames
                 directionX = 1;
             }
 
-            Weapon weapon = source.EquippedWeapon;
             IAttackInstance instance = weapon.AttackPattern.BeginAttack(
                 source, directionX, directionY, weapon);
             _runningAttacks.Add(new RunningAttack(source, weapon, instance));
-            _cooldownSeconds[source] = weapon.CooldownSeconds;
+            if (!_cooldownSeconds.TryGetValue(
+                source, out Dictionary<string, double> weaponCooldowns))
+            {
+                weaponCooldowns = new Dictionary<string, double>();
+                _cooldownSeconds.Add(source, weaponCooldowns);
+            }
+            weaponCooldowns[weapon.Id] = weapon.CooldownSeconds;
             source.HasActiveAttack = true;
             source.CurrentAttackVisual = instance.VisualState;
             return true;
@@ -59,9 +83,27 @@ namespace OOPGames
 
         public double GetCooldownRemaining(Entity entity)
         {
-            return _cooldownSeconds.TryGetValue(entity, out double remaining)
-                ? Math.Max(0, remaining)
-                : 0;
+            return entity == null || entity.EquippedWeapon == null
+                ? 0
+                : GetCooldownRemaining(entity, entity.EquippedWeapon);
+        }
+
+        public double GetCooldownRemaining(Entity entity, Weapon weapon)
+        {
+            if (entity == null)
+            {
+                throw new ArgumentNullException(nameof(entity));
+            }
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+
+            return _cooldownSeconds.TryGetValue(
+                    entity, out Dictionary<string, double> weaponCooldowns)
+                && weaponCooldowns.TryGetValue(weapon.Id, out double remaining)
+                    ? Math.Max(0, remaining)
+                    : 0;
         }
 
         public IReadOnlyList<AttackVisualState> GetActiveVisuals()
@@ -89,14 +131,23 @@ namespace OOPGames
             List<Entity> cooldownOwners = new List<Entity>(_cooldownSeconds.Keys);
             foreach (Entity owner in cooldownOwners)
             {
-                double remaining = _cooldownSeconds[owner] - deltaSeconds;
-                if (remaining <= 0 || !owner.IsAlive)
+                Dictionary<string, double> weaponCooldowns = _cooldownSeconds[owner];
+                List<string> weaponIds = new List<string>(weaponCooldowns.Keys);
+                foreach (string weaponId in weaponIds)
+                {
+                    double remaining = weaponCooldowns[weaponId] - deltaSeconds;
+                    if (remaining <= 0 || !owner.IsAlive)
+                    {
+                        weaponCooldowns.Remove(weaponId);
+                    }
+                    else
+                    {
+                        weaponCooldowns[weaponId] = remaining;
+                    }
+                }
+                if (weaponCooldowns.Count == 0)
                 {
                     _cooldownSeconds.Remove(owner);
-                }
-                else
-                {
-                    _cooldownSeconds[owner] = remaining;
                 }
             }
 
@@ -107,6 +158,7 @@ namespace OOPGames
                 {
                     CompleteAttack(attack);
                     _runningAttacks.RemoveAt(i);
+                    RefreshSourceAttackState(attack.Source);
                     continue;
                 }
 
@@ -114,23 +166,40 @@ namespace OOPGames
                 IReadOnlyList<Entity> hits =
                     attack.Instance.Update(deltaSeconds, targets);
                 attack.Source.CurrentAttackVisual = attack.Instance.VisualState;
-                attack.Source.HasActiveAttack = !attack.Instance.IsComplete;
+                attack.Source.HasActiveAttack = true;
 
                 foreach (Entity target in hits)
                 {
-                    if (!target.IsAlive || !attack.HitEntities.Add(target))
+                    if (!target.IsAlive)
                     {
                         continue;
                     }
+                    int hitCount = attack.HitCounts.TryGetValue(
+                        target, out int previousHitCount)
+                        ? previousHitCount
+                        : 0;
+                    if (hitCount >= attack.Weapon.MaximumHitsPerTarget)
+                    {
+                        continue;
+                    }
+                    attack.HitCounts[target] = hitCount + 1;
 
                     bool wasAlive = target.IsAlive;
-                    attack.Weapon.Effect.Apply(attack.Source, target);
+                    attack.Source.EffectWeaponContext = attack.Weapon;
+                    try
+                    {
+                        attack.Weapon.Effect.Apply(attack.Source, target);
+                    }
+                    finally
+                    {
+                        attack.Source.EffectWeaponContext = null;
+                    }
                     if (wasAlive && !target.IsAlive)
                     {
-                        Action<Entity, Entity> handler = EntityDefeated;
+                        Action<Entity, Entity, Weapon> handler = EntityDefeated;
                         if (handler != null)
                         {
-                            handler(attack.Source, target);
+                            handler(attack.Source, target, attack.Weapon);
                         }
                     }
                 }
@@ -139,12 +208,66 @@ namespace OOPGames
                 {
                     CompleteAttack(attack);
                     _runningAttacks.RemoveAt(i);
+                    RefreshSourceAttackState(attack.Source);
                 }
             }
 
+            List<SpreadRequest> spreadRequests = new List<SpreadRequest>();
             foreach (Entity entity in entities)
             {
                 entity.UpdateStatusEffects(deltaSeconds);
+                foreach (ActiveDamageOverTimeEffect effect
+                    in new List<ActiveDamageOverTimeEffect>(
+                        entity.ActiveDamageOverTimeEffects))
+                {
+                    bool wasAlive = entity.IsAlive;
+                    int damage = effect.AdvanceDamage(deltaSeconds);
+                    if (damage > 0)
+                    {
+                        entity.TakeDamage(damage);
+                    }
+                    if (wasAlive && !entity.IsAlive)
+                    {
+                        Action<Entity, Entity, Weapon> handler = EntityDefeated;
+                        if (handler != null && effect.Source != null)
+                        {
+                            handler(effect.Source, entity,
+                                effect.SourceWeapon);
+                        }
+                    }
+                    if (effect.AdvanceSpreadClock(deltaSeconds))
+                    {
+                        spreadRequests.Add(new SpreadRequest(effect, entity));
+                    }
+                }
+                entity.RemoveExpiredDamageOverTimeEffects();
+            }
+
+            foreach (SpreadRequest spread in spreadRequests)
+            {
+                foreach (Entity target in entities)
+                {
+                    if (!target.IsAlive || ReferenceEquals(target, spread.SourceEntity)
+                        || target.Team == CombatTeam.Neutral)
+                    {
+                        continue;
+                    }
+
+                    double offsetX = target.PositionX - spread.SourceEntity.PositionX;
+                    double offsetY = target.PositionY - spread.SourceEntity.PositionY;
+                    double spreadDistance = spread.Effect.SpreadRadius
+                        + target.Size / 2 + spread.SourceEntity.Size / 2;
+                    if (offsetX * offsetX + offsetY * offsetY
+                        <= spreadDistance * spreadDistance)
+                    {
+                        target.ApplyDamageOverTime(
+                            spread.Effect.Id, spread.Effect.Name,
+                            spread.Effect.DamagePerSecond,
+                            spread.Effect.RemainingSeconds,
+                            spread.Effect.SpreadRadius,
+                            spread.Effect.Source, spread.Effect.SourceWeapon);
+                    }
+                }
             }
         }
 
@@ -206,6 +329,26 @@ namespace OOPGames
             }
         }
 
+        private void RefreshSourceAttackState(Entity source)
+        {
+            if (source.IsAlive)
+            {
+                for (int i = _runningAttacks.Count - 1; i >= 0; i--)
+                {
+                    if (ReferenceEquals(_runningAttacks[i].Source, source))
+                    {
+                        source.CurrentAttackVisual =
+                            _runningAttacks[i].Instance.VisualState;
+                        source.HasActiveAttack = true;
+                        return;
+                    }
+                }
+            }
+
+            source.CurrentAttackVisual = null;
+            source.HasActiveAttack = false;
+        }
+
         private sealed class RunningAttack
         {
             public RunningAttack(Entity source, Weapon weapon, IAttackInstance instance)
@@ -213,13 +356,26 @@ namespace OOPGames
                 Source = source;
                 Weapon = weapon;
                 Instance = instance;
-                HitEntities = new HashSet<Entity>();
+                HitCounts = new Dictionary<Entity, int>();
             }
 
             public Entity Source { get; }
             public Weapon Weapon { get; }
             public IAttackInstance Instance { get; }
-            public HashSet<Entity> HitEntities { get; }
+            public Dictionary<Entity, int> HitCounts { get; }
+        }
+
+        private sealed class SpreadRequest
+        {
+            public SpreadRequest(
+                ActiveDamageOverTimeEffect effect, Entity sourceEntity)
+            {
+                Effect = effect;
+                SourceEntity = sourceEntity;
+            }
+
+            public ActiveDamageOverTimeEffect Effect { get; }
+            public Entity SourceEntity { get; }
         }
     }
 }

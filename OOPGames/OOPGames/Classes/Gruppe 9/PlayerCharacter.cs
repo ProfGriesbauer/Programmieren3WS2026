@@ -11,7 +11,7 @@ namespace OOPGames
         public PlayerCharacter(double x, double y)
             : base(x, y, 100, 15, 34, Brushes.DodgerBlue, CombatTeam.Player)
         {
-            EquippedWeapon = WeaponCatalog.PracticeSword;
+            EquippedWeapon = WeaponCatalog.Sword;
         }
 
         public PlayerFacing AttackFacing { get; private set; } = PlayerFacing.Front;

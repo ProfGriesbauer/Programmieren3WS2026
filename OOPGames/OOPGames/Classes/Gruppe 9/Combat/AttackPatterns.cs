@@ -82,23 +82,80 @@ namespace OOPGames
         }
     }
 
+    public sealed class SpinningAttackPattern : IAttackPattern
+    {
+        public SpinningAttackPattern(
+            double range, int rotations, double hitHalfAngleRadians,
+            double durationSeconds)
+        {
+            if (range <= 0) throw new ArgumentOutOfRangeException(nameof(range));
+            if (rotations <= 0) throw new ArgumentOutOfRangeException(nameof(rotations));
+            if (hitHalfAngleRadians <= 0 || hitHalfAngleRadians >= Math.PI / 2)
+            {
+                throw new ArgumentOutOfRangeException(nameof(hitHalfAngleRadians));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+
+            Range = range;
+            Rotations = rotations;
+            HitHalfAngleRadians = hitHalfAngleRadians;
+            DurationSeconds = durationSeconds;
+        }
+
+        public double Range { get; }
+        public int Rotations { get; }
+        public double HitHalfAngleRadians { get; }
+        public double DurationSeconds { get; }
+        public double DebugHalfAngleRadians { get { return Math.PI; } }
+        public double DebugRadius { get { return 0; } }
+        public string Name { get { return "Spinning slash"; } }
+        public AttackVisualKind VisualKind { get { return AttackVisualKind.Sweep; } }
+
+        public IAttackInstance BeginAttack(
+            Entity source, double directionX, double directionY, Weapon weapon)
+        {
+            return new SpinningAttackInstance(
+                source, directionX, directionY, weapon, this);
+        }
+    }
+
     public sealed class ProjectileAttackPattern : IAttackPattern
     {
         public ProjectileAttackPattern(
-            double range, double speed, double radius)
+            double range, double speed, double radius,
+            double autoAimHalfAngleRadians = 0,
+            double homingTurnRateRadiansPerSecond = 0)
         {
             if (range <= 0) throw new ArgumentOutOfRangeException(nameof(range));
             if (speed <= 0) throw new ArgumentOutOfRangeException(nameof(speed));
             if (radius <= 0) throw new ArgumentOutOfRangeException(nameof(radius));
+            if (autoAimHalfAngleRadians < 0
+                || autoAimHalfAngleRadians > Math.PI)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(autoAimHalfAngleRadians));
+            }
+            if (homingTurnRateRadiansPerSecond < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(homingTurnRateRadiansPerSecond));
+            }
 
             Range = range;
             Speed = speed;
             ProjectileRadius = radius;
+            AutoAimHalfAngleRadians = autoAimHalfAngleRadians;
+            HomingTurnRateRadiansPerSecond = homingTurnRateRadiansPerSecond;
         }
 
         public double Range { get; }
         public double Speed { get; }
         public double ProjectileRadius { get; }
+        public double AutoAimHalfAngleRadians { get; }
+        public double HomingTurnRateRadiansPerSecond { get; }
         public double DebugHalfAngleRadians { get { return 0; } }
         public double DebugRadius { get { return ProjectileRadius; } }
         public string Name { get { return "Projectile"; } }
@@ -137,6 +194,37 @@ namespace OOPGames
             Entity source, double directionX, double directionY, Weapon weapon)
         {
             return new SelfPulseAttackInstance(source, weapon, this);
+        }
+    }
+
+    public sealed class RadialAttackPattern : IAttackPattern
+    {
+        public RadialAttackPattern(double radius, double durationSeconds)
+        {
+            if (radius <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(radius));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+
+            Range = radius;
+            DurationSeconds = durationSeconds;
+        }
+
+        public double Range { get; }
+        public double DurationSeconds { get; }
+        public double DebugHalfAngleRadians { get { return Math.PI; } }
+        public double DebugRadius { get { return Range; } }
+        public string Name { get { return "Radial blast"; } }
+        public AttackVisualKind VisualKind { get { return AttackVisualKind.Burst; } }
+
+        public IAttackInstance BeginAttack(
+            Entity source, double directionX, double directionY, Weapon weapon)
+        {
+            return new RadialAttackInstance(source, weapon, this);
         }
     }
 
@@ -283,7 +371,11 @@ namespace OOPGames
             VisualState = new AttackVisualState(
                 source, AttackVisualKind.Sweep, weapon.Effect.Kind,
                 weapon.AnimationPlaceholder, pattern.Range, 0,
-                pattern.HitHalfAngleRadians);
+                pattern.HitHalfAngleRadians)
+            {
+                DirectionX = _baseDirectionX,
+                DirectionY = _baseDirectionY
+            };
         }
 
         public bool IsComplete { get { return _elapsedSeconds >= _pattern.DurationSeconds; } }
@@ -320,12 +412,112 @@ namespace OOPGames
         }
     }
 
+    internal sealed class SpinningAttackInstance : IAttackInstance
+    {
+        private readonly Entity _source;
+        private readonly SpinningAttackPattern _pattern;
+        private readonly double _baseDirectionX;
+        private readonly double _baseDirectionY;
+        private readonly Dictionary<Entity, int> _lastHitRotation =
+            new Dictionary<Entity, int>();
+        private double _elapsedSeconds;
+
+        public SpinningAttackInstance(
+            Entity source, double directionX, double directionY,
+            Weapon weapon, SpinningAttackPattern pattern)
+        {
+            _source = source;
+            _pattern = pattern;
+            AttackGeometry.NormalizeDirection(
+                directionX, directionY, out double baseDirectionX,
+                out double baseDirectionY);
+            _baseDirectionX = baseDirectionX;
+            _baseDirectionY = baseDirectionY;
+            VisualState = new AttackVisualState(
+                source, AttackVisualKind.Sweep, weapon.Effect.Kind,
+                weapon.AnimationPlaceholder, pattern.Range, 0,
+                pattern.HitHalfAngleRadians);
+        }
+
+        public bool IsComplete
+        {
+            get { return _elapsedSeconds >= _pattern.DurationSeconds; }
+        }
+        public AttackVisualState VisualState { get; }
+
+        public IReadOnlyList<Entity> Update(
+            double deltaSeconds, IReadOnlyList<Entity> targets)
+        {
+            double previousProgress = VisualState.Progress;
+            _elapsedSeconds += deltaSeconds;
+            VisualState.Progress = Math.Min(
+                1, _elapsedSeconds / _pattern.DurationSeconds);
+            VisualState.CenterX = _source.PositionX;
+            VisualState.CenterY = _source.PositionY;
+
+            double angle = Math.PI * 2 * _pattern.Rotations * VisualState.Progress;
+            AttackGeometry.RotateDirection(
+                _baseDirectionX, _baseDirectionY, angle,
+                out double directionX, out double directionY);
+            VisualState.DirectionX = directionX;
+            VisualState.DirectionY = directionY;
+
+            double previousAngle = Math.PI * 2
+                * _pattern.Rotations * previousProgress;
+            double angleStep = Math.PI * 2 * _pattern.Rotations
+                * (VisualState.Progress - previousProgress);
+            const double fullRotation = Math.PI * 2;
+            List<Entity> hits = new List<Entity>();
+            foreach (Entity target in targets)
+            {
+                double offsetX = target.PositionX - _source.PositionX;
+                double offsetY = target.PositionY - _source.PositionY;
+                double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
+                if (distance > _pattern.Range + target.Size / 2 || distance == 0)
+                {
+                    continue;
+                }
+
+                double targetAngle = Math.Atan2(
+                    _baseDirectionX * offsetY - _baseDirectionY * offsetX,
+                    _baseDirectionX * offsetX + _baseDirectionY * offsetY);
+                if (targetAngle < 0)
+                {
+                    targetAngle += fullRotation;
+                }
+
+                double tolerance = Math.Min(Math.PI,
+                    _pattern.HitHalfAngleRadians
+                    + Math.Min(Math.PI / 2, angleStep / 2)
+                    + Math.Asin(Math.Min(1, target.Size / (2 * distance))));
+                int firstRotation = Math.Max(0, (int)Math.Ceiling(
+                    (previousAngle - targetAngle - tolerance) / fullRotation));
+                int lastRotation = Math.Min(_pattern.Rotations - 1, (int)Math.Floor(
+                    (angle - targetAngle + tolerance) / fullRotation));
+                int lastHitRotation = _lastHitRotation.TryGetValue(
+                    target, out int previousHitRotation)
+                    ? previousHitRotation
+                    : -1;
+                for (int rotation = Math.Max(firstRotation, lastHitRotation + 1);
+                    rotation <= lastRotation; rotation++)
+                {
+                    _lastHitRotation[target] = rotation;
+                    hits.Add(target);
+                }
+            }
+            return hits;
+        }
+    }
+
     internal sealed class ProjectileAttackInstance : IAttackInstance
     {
         private readonly Entity _source;
         private readonly ProjectileAttackPattern _pattern;
-        private readonly double _directionX;
-        private readonly double _directionY;
+        private readonly double _launchDirectionX;
+        private readonly double _launchDirectionY;
+        private double _directionX;
+        private double _directionY;
+        private Entity _autoAimTarget;
         private double _travelled;
         private bool _hasHit;
 
@@ -337,6 +529,8 @@ namespace OOPGames
             _pattern = pattern;
             AttackGeometry.NormalizeDirection(
                 directionX, directionY, out double normalizedX, out double normalizedY);
+            _launchDirectionX = normalizedX;
+            _launchDirectionY = normalizedY;
             _directionX = normalizedX;
             _directionY = normalizedY;
             double startOffset = source.Size / 2 + pattern.ProjectileRadius;
@@ -366,12 +560,26 @@ namespace OOPGames
                 return Array.Empty<Entity>();
             }
 
+            if (_pattern.AutoAimHalfAngleRadians > 0)
+            {
+                if (_autoAimTarget == null || !_autoAimTarget.IsAlive)
+                {
+                    _autoAimTarget = FindAutoAimTarget(targets);
+                }
+                if (_autoAimTarget != null)
+                {
+                    SteerTowardTarget(deltaSeconds);
+                }
+            }
+
             double previousX = VisualState.ProjectileX;
             double previousY = VisualState.ProjectileY;
             double step = Math.Min(
                 _pattern.Speed * deltaSeconds, _pattern.Range - _travelled);
             VisualState.ProjectileX += _directionX * step;
             VisualState.ProjectileY += _directionY * step;
+            VisualState.DirectionX = _directionX;
+            VisualState.DirectionY = _directionY;
             _travelled += step;
             VisualState.Progress = Math.Min(1, _travelled / _pattern.Range);
 
@@ -398,6 +606,66 @@ namespace OOPGames
 
             _hasHit = true;
             return new[] { firstHit };
+        }
+
+        private Entity FindAutoAimTarget(IReadOnlyList<Entity> targets)
+        {
+            Entity nearestTarget = null;
+            double nearestDistanceSquared = double.MaxValue;
+            double minimumDot = Math.Cos(_pattern.AutoAimHalfAngleRadians);
+            foreach (Entity target in targets)
+            {
+                double offsetX = target.PositionX - _source.PositionX;
+                double offsetY = target.PositionY - _source.PositionY;
+                double distanceSquared = offsetX * offsetX + offsetY * offsetY;
+                double maximumDistance = _pattern.Range + target.Size / 2;
+                if (distanceSquared > maximumDistance * maximumDistance)
+                {
+                    continue;
+                }
+                if (distanceSquared == 0)
+                {
+                    return target;
+                }
+
+                double distance = Math.Sqrt(distanceSquared);
+                double dot = (_launchDirectionX * offsetX
+                    + _launchDirectionY * offsetY) / distance;
+                if (dot >= minimumDot && distanceSquared < nearestDistanceSquared)
+                {
+                    nearestTarget = target;
+                    nearestDistanceSquared = distanceSquared;
+                }
+            }
+
+            return nearestTarget;
+        }
+
+        private void SteerTowardTarget(double deltaSeconds)
+        {
+            double targetX = _autoAimTarget.PositionX - VisualState.ProjectileX;
+            double targetY = _autoAimTarget.PositionY - VisualState.ProjectileY;
+            double targetLength = Math.Sqrt(targetX * targetX + targetY * targetY);
+            if (targetLength == 0)
+            {
+                return;
+            }
+
+            targetX /= targetLength;
+            targetY /= targetLength;
+            double dot = Math.Max(-1, Math.Min(1,
+                _directionX * targetX + _directionY * targetY));
+            double angle = Math.Atan2(
+                _directionX * targetY - _directionY * targetX, dot);
+            double maximumTurn = _pattern.HomingTurnRateRadiansPerSecond
+                * deltaSeconds;
+            double turn = Math.Sign(angle)
+                * Math.Min(Math.Abs(angle), maximumTurn);
+            AttackGeometry.RotateDirection(
+                _directionX, _directionY, turn,
+                out _directionX, out _directionY);
+            AttackGeometry.NormalizeDirection(
+                _directionX, _directionY, out _directionX, out _directionY);
         }
     }
 
@@ -436,6 +704,55 @@ namespace OOPGames
 
             _resolved = true;
             return new[] { _source };
+        }
+    }
+
+    internal sealed class RadialAttackInstance : IAttackInstance
+    {
+        private readonly Entity _source;
+        private readonly RadialAttackPattern _pattern;
+        private double _elapsedSeconds;
+        private bool _resolved;
+
+        public RadialAttackInstance(
+            Entity source, Weapon weapon, RadialAttackPattern pattern)
+        {
+            _source = source;
+            _pattern = pattern;
+            VisualState = new AttackVisualState(
+                source, AttackVisualKind.Burst, weapon.Effect.Kind,
+                weapon.AnimationPlaceholder, pattern.Range, pattern.Range, Math.PI);
+        }
+
+        public bool IsComplete { get { return _elapsedSeconds >= _pattern.DurationSeconds; } }
+        public AttackVisualState VisualState { get; }
+
+        public IReadOnlyList<Entity> Update(
+            double deltaSeconds, IReadOnlyList<Entity> targets)
+        {
+            _elapsedSeconds += deltaSeconds;
+            VisualState.CenterX = _source.PositionX;
+            VisualState.CenterY = _source.PositionY;
+            VisualState.Progress = Math.Min(1, _elapsedSeconds / _pattern.DurationSeconds);
+
+            if (_resolved)
+            {
+                return Array.Empty<Entity>();
+            }
+
+            _resolved = true;
+            List<Entity> hits = new List<Entity>();
+            foreach (Entity target in targets)
+            {
+                double offsetX = target.PositionX - _source.PositionX;
+                double offsetY = target.PositionY - _source.PositionY;
+                double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
+                if (distance <= _pattern.Range + target.Size / 2)
+                {
+                    hits.Add(target);
+                }
+            }
+            return hits;
         }
     }
 }

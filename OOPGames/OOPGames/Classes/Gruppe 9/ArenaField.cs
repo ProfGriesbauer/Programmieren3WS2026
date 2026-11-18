@@ -23,13 +23,19 @@ namespace OOPGames
         private const int EnemySpawnPositionAttemptLimit = 10000;
         private readonly List<PursuerEnemy> _enemies = new List<PursuerEnemy>();
         private readonly ArenaCombatSystem _combatSystem = new ArenaCombatSystem();
-        private Weapon _selectedPlayerWeapon = WeaponCatalog.PracticeSword;
+        private Weapon _selectedPlayerWeapon = WeaponCatalog.Sword;
+        private readonly ArenaProgression _progression = new ArenaProgression();
+        private readonly ArenaKeyBindings _keyBindings = ArenaKeyBindings.LoadDefault();
 
         // The field owns the current player instance.
         public PlayerCharacter Player { get; private set; }
         public IReadOnlyList<PursuerEnemy> Enemies { get { return _enemies; } }
-        public IReadOnlyList<Weapon> TestWeapons { get { return WeaponCatalog.TestWeapons; } }
-        public Weapon SelectedPlayerWeapon { get { return _selectedPlayerWeapon; } }
+        public Weapon SelectedPlayerWeapon
+        {
+            get { return Player == null ? _selectedPlayerWeapon : Player.EquippedWeapon; }
+        }
+        public ArenaProgression Progression { get { return _progression; } }
+        public ArenaKeyBindings KeyBindings { get { return _keyBindings; } }
         public int ActiveAttackCount { get { return _combatSystem.ActiveAttackCount; } }
         public IReadOnlyList<AttackVisualState> ActiveAttackVisuals
         {
@@ -79,24 +85,67 @@ namespace OOPGames
                 throw new ArgumentNullException(nameof(weapon));
             }
 
-            Weapon availableWeapon = null;
-            foreach (Weapon candidate in WeaponCatalog.TestWeapons)
+            if (weapon.Id == WeaponCatalog.Sword.Id)
             {
-                if (candidate.Id == weapon.Id)
-                {
-                    availableWeapon = candidate;
-                    break;
-                }
+                _selectedPlayerWeapon = WeaponCatalog.Sword;
             }
-            if (availableWeapon == null)
+            else if (weapon.Id == WeaponCatalog.MagicWand.Id)
+            {
+                _selectedPlayerWeapon = WeaponCatalog.MagicWand;
+            }
+            else if (weapon.Id == WeaponCatalog.Bow.Id)
+            {
+                _selectedPlayerWeapon = WeaponCatalog.Bow;
+            }
+            else
             {
                 throw new ArgumentException(
-                    "The selected weapon is not available in the test menu.",
+                    "The selected weapon is not available as player equipment.",
                     nameof(weapon));
             }
 
-            _selectedPlayerWeapon = availableWeapon;
-            Player.EquippedWeapon = availableWeapon;
+            RefreshPlayerWeapon();
+        }
+
+        public bool TryUpgradeWeapon(string upgradeId, UpgradeCurrency currency)
+        {
+            bool upgraded;
+            if (_selectedPlayerWeapon.Id == WeaponCatalog.Sword.Id)
+            {
+                upgraded = _progression.TryUpgradeSword(upgradeId, currency);
+            }
+            else if (_selectedPlayerWeapon.Id == WeaponCatalog.MagicWand.Id)
+            {
+                upgraded = _progression.TryUpgradeMagicWand(upgradeId, currency);
+            }
+            else
+            {
+                upgraded = _progression.TryUpgradeBow(upgradeId, currency);
+            }
+            if (!upgraded)
+            {
+                return false;
+            }
+
+            RefreshPlayerWeapon();
+            return true;
+        }
+
+        private void RefreshPlayerWeapon()
+        {
+            if (_selectedPlayerWeapon.Id == WeaponCatalog.Sword.Id)
+            {
+                Player.EquippedWeapon = SwordUpgradeCatalog.CreateSword(_progression);
+            }
+            else if (_selectedPlayerWeapon.Id == WeaponCatalog.MagicWand.Id)
+            {
+                Player.EquippedWeapon = MagicWandUpgradeCatalog.CreateMagicWand(
+                    _progression);
+            }
+            else
+            {
+                Player.EquippedWeapon = BowUpgradeCatalog.CreateBow(_progression);
+            }
         }
 
         public void ResetGame()
@@ -106,6 +155,7 @@ namespace OOPGames
             ShowDamageRanges = false;
             ShowDebugHud = false;
             Score = 0;
+            _progression.Reset();
             AimDirectionX = 0;
             AimDirectionY = 1;
             IsGameStarted = false;
@@ -193,10 +243,10 @@ namespace OOPGames
             double directionX = 0;
             double directionY = 0;
 
-            if (Keyboard.IsKeyDown(Key.W) || Keyboard.IsKeyDown(Key.Up)) directionY -= 1;
-            if (Keyboard.IsKeyDown(Key.S) || Keyboard.IsKeyDown(Key.Down)) directionY += 1;
-            if (Keyboard.IsKeyDown(Key.A) || Keyboard.IsKeyDown(Key.Left)) directionX -= 1;
-            if (Keyboard.IsKeyDown(Key.D) || Keyboard.IsKeyDown(Key.Right)) directionX += 1;
+            if (_keyBindings.IsDown(ArenaAction.MoveUp) || Keyboard.IsKeyDown(Key.Up)) directionY -= 1;
+            if (_keyBindings.IsDown(ArenaAction.MoveDown) || Keyboard.IsKeyDown(Key.Down)) directionY += 1;
+            if (_keyBindings.IsDown(ArenaAction.MoveLeft) || Keyboard.IsKeyDown(Key.Left)) directionX -= 1;
+            if (_keyBindings.IsDown(ArenaAction.MoveRight) || Keyboard.IsKeyDown(Key.Right)) directionX += 1;
 
             Rect movementBounds = MovementBounds;
             Player.Move(directionX, directionY, movementBounds);
@@ -267,7 +317,7 @@ namespace OOPGames
                 spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
         }
 
-        private void OnEntityDefeated(Entity source, Entity target)
+        private void OnEntityDefeated(Entity source, Entity target, Weapon weapon)
         {
             if (target is PursuerEnemy enemy)
             {
@@ -275,6 +325,13 @@ namespace OOPGames
                 if (source.Team == CombatTeam.Player)
                 {
                     Score++;
+                    Weapon progressionWeapon = weapon;
+                    if (weapon != null && Player.EquippedWeapon != null
+                        && weapon.Id != Player.EquippedWeapon.Id)
+                    {
+                        progressionWeapon = Player.EquippedWeapon;
+                    }
+                    _progression.AwardKill(progressionWeapon);
                 }
                 if (IsGameStarted && Player.IsAlive)
                 {
@@ -367,6 +424,11 @@ namespace OOPGames
             return _combatSystem.GetCooldownRemaining(entity);
         }
 
+        public double GetAttackCooldownRemaining(Entity entity, Weapon weapon)
+        {
+            return _combatSystem.GetCooldownRemaining(entity, weapon);
+        }
+
         private static bool HitboxesOverlap(
             double firstX, double firstY, double firstSize,
             double secondX, double secondY, double secondSize)
@@ -388,14 +450,231 @@ namespace OOPGames
             SetAimDirection(aimX, aimY);
             aimX = AimDirectionX;
             aimY = AimDirectionY;
-            Player.Facing = Math.Abs(aimX) >= Math.Abs(aimY)
-                ? (aimX < 0 ? PlayerFacing.Left : PlayerFacing.Right)
-                : (aimY < 0 ? PlayerFacing.Back : PlayerFacing.Front);
+            FaceAttackDirection(aimX, aimY);
 
             if (_combatSystem.TryStartAttack(Player, aimX, aimY))
             {
                 Player.StartAttack();
             }
+        }
+
+        public bool AttackWithWeaponAbility(int slotIndex)
+        {
+            if (!IsGameStarted || !Player.IsAlive)
+            {
+                return false;
+            }
+
+            Weapon ability = _progression.GetWeaponAbilityWeapon(
+                _selectedPlayerWeapon.Id, slotIndex);
+            if (ability == null)
+            {
+                return false;
+            }
+
+            FaceAttackDirection(AimDirectionX, AimDirectionY);
+            bool started = _combatSystem.TryStartAttack(
+                Player, ability, AimDirectionX, AimDirectionY);
+            if (started)
+            {
+                Player.StartAttack();
+            }
+            return started;
+        }
+
+        public bool AttackWithEntityAbility(int slotIndex)
+        {
+            if (!IsGameStarted || !Player.IsAlive)
+            {
+                return false;
+            }
+
+            Weapon ability = _progression.GetEntityAbilityWeapon(slotIndex);
+            if (ability == null)
+            {
+                return false;
+            }
+
+            bool started = _combatSystem.TryStartAttack(
+                Player, ability, AimDirectionX, AimDirectionY);
+            if (started)
+            {
+                Player.StartAttack();
+            }
+            return started;
+        }
+
+        private void FaceAttackDirection(double directionX, double directionY)
+        {
+            Player.Facing = Math.Abs(directionX) >= Math.Abs(directionY)
+                ? (directionX < 0 ? PlayerFacing.Left : PlayerFacing.Right)
+                : (directionY < 0 ? PlayerFacing.Back : PlayerFacing.Front);
+        }
+
+        public bool IsPlayerSpinning
+        {
+            get
+            {
+                return GetPlayerSpinVisual() != null;
+            }
+        }
+
+        public PlayerFacing PlayerSpinFacing
+        {
+            get
+            {
+                AttackVisualState visual = GetPlayerSpinVisual();
+                if (visual == null)
+                {
+                    return Player.Facing;
+                }
+
+                return Math.Abs(visual.DirectionX) >= Math.Abs(visual.DirectionY)
+                    ? (visual.DirectionX < 0 ? PlayerFacing.Left : PlayerFacing.Right)
+                    : (visual.DirectionY < 0 ? PlayerFacing.Back : PlayerFacing.Front);
+            }
+        }
+
+        private AttackVisualState GetPlayerSpinVisual()
+        {
+            foreach (AttackVisualState visual in _combatSystem.GetActiveVisuals())
+            {
+                if (ReferenceEquals(visual.Source, Player)
+                    && visual.AnimationPlaceholder == "sword-spin")
+                {
+                    return visual;
+                }
+            }
+            return null;
+        }
+
+        public bool HandleMouseDown(MouseButton button)
+        {
+            if (!IsGameStarted || !Player.IsAlive)
+            {
+                return false;
+            }
+
+            if (_keyBindings.MatchesMouseButton(ArenaAction.WeaponAttack, button))
+            {
+                AttackWithPlayer(AimDirectionX, AimDirectionY);
+                return true;
+            }
+
+            ArenaAction[] weaponAbilityActions =
+            {
+                ArenaAction.WeaponAbility1, ArenaAction.WeaponAbility2,
+                ArenaAction.WeaponAbility3, ArenaAction.WeaponAbility4
+            };
+            for (int i = 0; i < weaponAbilityActions.Length; i++)
+            {
+                if (_keyBindings.MatchesMouseButton(weaponAbilityActions[i], button))
+                {
+                    AttackWithWeaponAbility(i);
+                    return true;
+                }
+            }
+
+            ArenaAction[] entityAbilityActions =
+            {
+                ArenaAction.EntityAbility1, ArenaAction.EntityAbility2,
+                ArenaAction.EntityAbility3, ArenaAction.EntityAbility4
+            };
+            for (int i = 0; i < entityAbilityActions.Length; i++)
+            {
+                if (_keyBindings.MatchesMouseButton(entityAbilityActions[i], button))
+                {
+                    AttackWithEntityAbility(i);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool HandleKeyDown(Key key)
+        {
+            if (key == Key.None)
+            {
+                return false;
+            }
+
+            if (key == _keyBindings.GetKey(ArenaAction.Pause))
+            {
+                if (IsGameStarted)
+                {
+                    ReturnToStartMenu();
+                    return true;
+                }
+                if (HasActiveGame && Player.IsAlive)
+                {
+                    ContinueGame();
+                    return true;
+                }
+            }
+
+            if (IsGameStarted)
+            {
+                if (_keyBindings.MatchesKey(ArenaAction.WeaponAttack, key))
+                {
+                    AttackWithPlayer(AimDirectionX, AimDirectionY);
+                    return true;
+                }
+                if (key == _keyBindings.GetKey(ArenaAction.ToggleDebugRanges))
+                {
+                    ToggleDamageRanges();
+                    return true;
+                }
+                if (key == _keyBindings.GetKey(ArenaAction.ToggleDebugHud))
+                {
+                    ToggleDebugHud();
+                    return true;
+                }
+                if (key == _keyBindings.GetKey(ArenaAction.SpawnEnemy))
+                {
+                    SpawnEnemy();
+                    return true;
+                }
+
+                ArenaAction[] weaponAbilityActions =
+                {
+                    ArenaAction.WeaponAbility1, ArenaAction.WeaponAbility2,
+                    ArenaAction.WeaponAbility3, ArenaAction.WeaponAbility4
+                };
+                for (int i = 0; i < weaponAbilityActions.Length; i++)
+                {
+                    if (_keyBindings.MatchesKey(weaponAbilityActions[i], key))
+                    {
+                        AttackWithWeaponAbility(i);
+                        return true;
+                    }
+                }
+
+                ArenaAction[] entityAbilityActions =
+                {
+                    ArenaAction.EntityAbility1, ArenaAction.EntityAbility2,
+                    ArenaAction.EntityAbility3, ArenaAction.EntityAbility4
+                };
+                for (int i = 0; i < entityAbilityActions.Length; i++)
+                {
+                    if (_keyBindings.MatchesKey(entityAbilityActions[i], key))
+                    {
+                        AttackWithEntityAbility(i);
+                        return true;
+                    }
+                }
+            }
+
+            if (key == _keyBindings.GetKey(ArenaAction.ZoomIn))
+            {
+                HandleZoomKey(Key.K);
+                return true;
+            }
+            if (key == _keyBindings.GetKey(ArenaAction.ZoomOut))
+            {
+                HandleZoomKey(Key.L);
+                return true;
+            }
+            return false;
         }
 
         // Handle zoom from the routed key event so short key presses are not missed between ticks.

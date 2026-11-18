@@ -16,7 +16,10 @@ namespace OOPGames
         Healing,
         Slow,
         Freeze,
-        Mixed
+        Mixed,
+        Poison,
+        Lightning,
+        Fire
     }
 
     public interface ICombatEffect
@@ -119,11 +122,119 @@ namespace OOPGames
         {
             get { return "Stops movement for " + DurationSeconds.ToString("0.0") + " s"; }
         }
-        public CombatEffectKind Kind { get { return CombatEffectKind.Freeze; } }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Lightning; } }
 
         public void Apply(Entity source, Entity target)
         {
             target.ApplyMovementStatus("freeze", Name, 0, DurationSeconds);
+        }
+    }
+
+    public sealed class StunEffect : ICombatEffect
+    {
+        public StunEffect(double durationSeconds)
+        {
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+
+            DurationSeconds = durationSeconds;
+        }
+
+        public double DurationSeconds { get; }
+        public string Name { get { return "Stun"; } }
+        public string Description
+        {
+            get { return "Stuns for " + DurationSeconds.ToString("0.0") + " s"; }
+        }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Freeze; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            target.ApplyMovementStatus("stun", Name, 0, DurationSeconds);
+        }
+    }
+
+    public sealed class PoisonEffect : ICombatEffect
+    {
+        public PoisonEffect(double damagePerSecond, double durationSeconds)
+        {
+            if (damagePerSecond <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(damagePerSecond));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+
+            DamagePerSecond = damagePerSecond;
+            DurationSeconds = durationSeconds;
+        }
+
+        public double DamagePerSecond { get; }
+        public double DurationSeconds { get; }
+        public string Name { get { return "Poison"; } }
+        public string Description
+        {
+            get
+            {
+                return DamagePerSecond.ToString("0.#") + " damage/s for "
+                    + DurationSeconds.ToString("0.0") + " s";
+            }
+        }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Poison; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            target.ApplyDamageOverTime(
+                "poison", Name, DamagePerSecond, DurationSeconds, 0, source);
+        }
+    }
+
+    public sealed class BurningEffect : ICombatEffect
+    {
+        public BurningEffect(
+            double damagePerSecond, double durationSeconds, double spreadRadius)
+        {
+            if (damagePerSecond <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(damagePerSecond));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+            if (spreadRadius < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(spreadRadius));
+            }
+
+            DamagePerSecond = damagePerSecond;
+            DurationSeconds = durationSeconds;
+            SpreadRadius = spreadRadius;
+        }
+
+        public double DamagePerSecond { get; }
+        public double DurationSeconds { get; }
+        public double SpreadRadius { get; }
+        public string Name { get { return "Burning"; } }
+        public string Description
+        {
+            get
+            {
+                return DamagePerSecond.ToString("0.#") + " fire damage/s for "
+                    + DurationSeconds.ToString("0.0") + " s";
+            }
+        }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Fire; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            target.ApplyDamageOverTime(
+                "burning", Name, DamagePerSecond, DurationSeconds,
+                SpreadRadius, source);
         }
     }
 
@@ -184,5 +295,62 @@ namespace OOPGames
         public string Name { get; }
         public double SpeedMultiplier { get; }
         public double RemainingSeconds { get; internal set; }
+    }
+
+    public sealed class ActiveDamageOverTimeEffect
+    {
+        private double _damageRemainder;
+        private double _spreadRemainingSeconds;
+
+        internal ActiveDamageOverTimeEffect(
+            string id, string name, double damagePerSecond,
+            double remainingSeconds, double spreadRadius,
+            Entity source, Weapon sourceWeapon)
+        {
+            Id = id;
+            Name = name;
+            DamagePerSecond = damagePerSecond;
+            RemainingSeconds = remainingSeconds;
+            SpreadRadius = spreadRadius;
+            Source = source;
+            SourceWeapon = sourceWeapon;
+            _spreadRemainingSeconds = 0;
+        }
+
+        public string Id { get; }
+        public string Name { get; }
+        public double DamagePerSecond { get; internal set; }
+        public double RemainingSeconds { get; internal set; }
+        public double SpreadRadius { get; internal set; }
+        public Entity Source { get; internal set; }
+        public Weapon SourceWeapon { get; internal set; }
+        public bool IsExpired { get { return RemainingSeconds <= 0; } }
+
+        internal int AdvanceDamage(double deltaSeconds)
+        {
+            double elapsed = Math.Min(deltaSeconds, RemainingSeconds);
+            RemainingSeconds -= deltaSeconds;
+            _damageRemainder += DamagePerSecond * elapsed;
+            int damage = (int)_damageRemainder;
+            _damageRemainder -= damage;
+            return damage;
+        }
+
+        internal bool AdvanceSpreadClock(double deltaSeconds)
+        {
+            if (SpreadRadius <= 0 || IsExpired)
+            {
+                return false;
+            }
+
+            _spreadRemainingSeconds -= deltaSeconds;
+            if (_spreadRemainingSeconds > 0)
+            {
+                return false;
+            }
+
+            _spreadRemainingSeconds += 0.8;
+            return true;
+        }
     }
 }

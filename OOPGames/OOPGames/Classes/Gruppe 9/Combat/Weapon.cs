@@ -14,7 +14,8 @@ namespace OOPGames
         public Weapon(
             string id, string name, string description, IAttackPattern attackPattern,
             ICombatEffect effect, double cooldownSeconds,
-            WeaponTargetingMode targetingMode, string animationPlaceholder)
+            WeaponTargetingMode targetingMode, string animationPlaceholder,
+            int maximumHitsPerTarget = 1)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -36,6 +37,10 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(cooldownSeconds));
             }
+            if (maximumHitsPerTarget <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maximumHitsPerTarget));
+            }
 
             Id = id;
             Name = name;
@@ -45,6 +50,7 @@ namespace OOPGames
             CooldownSeconds = cooldownSeconds;
             TargetingMode = targetingMode;
             AnimationPlaceholder = animationPlaceholder ?? string.Empty;
+            MaximumHitsPerTarget = maximumHitsPerTarget;
         }
 
         public string Id { get; }
@@ -55,5 +61,6 @@ namespace OOPGames
         public double CooldownSeconds { get; }
         public WeaponTargetingMode TargetingMode { get; }
         public string AnimationPlaceholder { get; }
+        public int MaximumHitsPerTarget { get; }
     }
 }

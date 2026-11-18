@@ -16,6 +16,8 @@ namespace OOPGames
     {
         private readonly ArenaHudRenderer _hudRenderer = new ArenaHudRenderer();
         private readonly ArenaDebugRenderer _debugRenderer = new ArenaDebugRenderer();
+        private readonly ArenaProgressionMenuRenderer _progressionMenuRenderer =
+            new ArenaProgressionMenuRenderer();
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
         private Canvas _zoomInputCanvas;
@@ -44,8 +46,11 @@ namespace OOPGames
         private AnimationProfile _playerAnimatorProfile;
         private SpriteSheetAnimator _enemyAnimator;
         private ArenaField _pauseMenuField;
-        private bool _showAnimationMenu;
-        private bool _showWeaponMenu;
+        private ArenaField _menuStateField;
+        private MenuPage _menuPage;
+        private MenuPage _menuPageBeforeWeaponUpgrades = MenuPage.Main;
+        private ArenaAction? _keyBindingCaptureAction;
+        private bool _lastGameStarted;
         private double _pauseMenuCanvasWidth;
         private double _pauseMenuCanvasHeight;
 
@@ -57,8 +62,9 @@ namespace OOPGames
             _playerAnimator = null;
             _playerAnimatorProfile = null;
             _enemyAnimator = null;
-            _showAnimationMenu = false;
-            _showWeaponMenu = false;
+            _menuPage = MenuPage.Main;
+            _menuPageBeforeWeaponUpgrades = MenuPage.Main;
+            _keyBindingCaptureAction = null;
         }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
@@ -74,6 +80,7 @@ namespace OOPGames
             {
                 return;
             }
+            SynchronizeMenuState(field);
 
             double width = canvas.ActualWidth;
             double height = canvas.ActualHeight;
@@ -85,6 +92,7 @@ namespace OOPGames
 
             if (!field.IsGameStarted && !field.HasActiveGame)
             {
+                AttachZoomInput(canvas, field);
                 if (!ReferenceEquals(canvas.Tag, StartMenuTag))
                 {
                     PaintStartMenu(canvas, field, width, height);
@@ -157,9 +165,11 @@ namespace OOPGames
 
             _debugRenderer.PaintWorldOverlays(worldCanvas, field, left, top);
 
-            string animationName = GetPlayerAnimationName(
-                field.Player.Facing, field.Player.IsMoving,
-                field.Player.IsAttacking, field.Player.AttackFacing);
+            string animationName = field.IsPlayerSpinning
+                ? GetSpinAnimationName(field.PlayerSpinFacing)
+                : GetPlayerAnimationName(
+                    field.Player.Facing, field.Player.IsMoving,
+                    field.Player.IsAttacking, field.Player.AttackFacing);
             if (_playerAnimator == null
                 || !ReferenceEquals(_playerAnimatorProfile, _selectedAnimationProfile))
             {
@@ -229,7 +239,8 @@ namespace OOPGames
 
             canvas.Children.Add(worldCanvas);
             _hudRenderer.PaintPlayerHud(canvas, field.Player, field.Score,
-                field.GetAttackCooldownRemaining(field.Player));
+                field.GetAttackCooldownRemaining(field.Player),
+                field.Progression, field.KeyBindings);
             _debugRenderer.PaintPanels(canvas, field, width, height);
             if (!field.IsGameStarted)
             {
@@ -239,6 +250,19 @@ namespace OOPGames
                 _pauseMenuCanvasWidth = width;
                 _pauseMenuCanvasHeight = height;
             }
+        }
+
+        private void SynchronizeMenuState(ArenaField field)
+        {
+            if (!ReferenceEquals(_menuStateField, field)
+                || _lastGameStarted != field.IsGameStarted)
+            {
+                _menuPage = MenuPage.Main;
+                _menuPageBeforeWeaponUpgrades = MenuPage.Main;
+                _keyBindingCaptureAction = null;
+                _menuStateField = field;
+            }
+            _lastGameStarted = field.IsGameStarted;
         }
 
         private static string GetEnemyAnimationName(PursuerEnemy enemy)
@@ -267,9 +291,9 @@ namespace OOPGames
                 {
                     if (_zoomInputCanvas != null)
                     {
-                        _zoomInputCanvas.MouseDown -= OnAttackMouseDown;
+                        _zoomInputCanvas.PreviewMouseDown -= OnAttackMouseDown;
                     }
-                    canvas.MouseDown += OnAttackMouseDown;
+                    canvas.PreviewMouseDown += OnAttackMouseDown;
                 }
                 _zoomInputCanvas = canvas;
                 return;
@@ -277,7 +301,7 @@ namespace OOPGames
 
             if (_zoomInputCanvas != null)
             {
-                _zoomInputCanvas.MouseDown -= OnAttackMouseDown;
+                _zoomInputCanvas.PreviewMouseDown -= OnAttackMouseDown;
             }
             if (_zoomInputWindow != null)
             {
@@ -292,7 +316,7 @@ namespace OOPGames
             _zoomInputCanvas = canvas;
             if (_zoomInputWindow != null)
             {
-                _zoomInputCanvas.MouseDown += OnAttackMouseDown;
+                _zoomInputCanvas.PreviewMouseDown += OnAttackMouseDown;
                 _zoomInputWindow.PreviewKeyDown += OnZoomKeyDown;
                 _zoomInputWindow.PreviewMouseWheel += OnZoomMouseWheel;
                 _zoomInputWindow.PreviewMouseMove += OnAimMouseMove;
@@ -302,8 +326,34 @@ namespace OOPGames
 
         private void OnAttackMouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton != MouseButton.Left)
+            if (_keyBindingCaptureAction.HasValue
+                && _menuPage == MenuPage.KeyBindings
+                && _zoomInputField != null)
             {
+                try
+                {
+                    _zoomInputField.KeyBindings.SetMouseButton(
+                        _keyBindingCaptureAction.Value, e.ChangedButton);
+                    _zoomInputField.KeyBindings.Save();
+                    _keyBindingCaptureAction = null;
+                }
+                catch (InvalidOperationException exception)
+                {
+                    MessageBox.Show(exception.Message,
+                        "Tastenbelegung", MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+                catch (ArgumentOutOfRangeException exception)
+                {
+                    MessageBox.Show(exception.Message,
+                        "Tastenbelegung", MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+                if (_zoomInputCanvas != null)
+                {
+                    _zoomInputCanvas.Tag = null;
+                }
+                e.Handled = true;
                 return;
             }
 
@@ -323,7 +373,8 @@ namespace OOPGames
 
             double aimX = clickPosition.X - _zoomInputCanvas.ActualWidth / 2;
             double aimY = clickPosition.Y - _zoomInputCanvas.ActualHeight / 2;
-            _zoomInputField.AttackWithPlayer(aimX, aimY);
+            _zoomInputField.SetAimDirection(aimX, aimY);
+            _zoomInputField.HandleMouseDown(e.ChangedButton);
         }
 
         private void OnAimMouseMove(object sender, MouseEventArgs e)
@@ -351,46 +402,52 @@ namespace OOPGames
         {
             if (!e.IsRepeat)
             {
-                if (e.Key == Key.Escape && _zoomInputField != null)
+                if (_keyBindingCaptureAction.HasValue
+                    && _menuPage == MenuPage.KeyBindings
+                    && _zoomInputField != null)
                 {
-                    _zoomInputField.ReturnToStartMenu();
-                    e.Handled = true;
-                    return;
-                }
-
-                if (e.Key == Key.N && _zoomInputField != null
-                    && _zoomInputField.IsGameStarted)
-                {
-                    _zoomInputField.SpawnEnemy();
-                    e.Handled = true;
-                    return;
-                }
-
-                if (e.Key == Key.B && _zoomInputField != null
-                    && _zoomInputField.IsGameStarted)
-                {
-                    _zoomInputField.ToggleDamageRanges();
-                    e.Handled = true;
-                    return;
-                }
-
-                if (e.Key == Key.H && _zoomInputField != null
-                    && _zoomInputField.IsGameStarted)
-                {
-                    _zoomInputField.ToggleDebugHud();
-                    e.Handled = true;
-                    return;
-                }
-
-                if (_zoomInputField != null)
-                {
-                    _zoomInputField.HandleZoomKey(e.Key);
-                    if (!_zoomInputField.IsGameStarted
-                        && _zoomInputCanvas != null
-                        && (e.Key == Key.K || e.Key == Key.L))
+                    if (e.Key == Key.Escape)
+                    {
+                        _keyBindingCaptureAction = null;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            _zoomInputField.KeyBindings.SetKey(
+                                _keyBindingCaptureAction.Value, e.Key);
+                            _zoomInputField.KeyBindings.Save();
+                            _keyBindingCaptureAction = null;
+                        }
+                        catch (InvalidOperationException exception)
+                        {
+                            MessageBox.Show(exception.Message,
+                                "Tastenbelegung", MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                        }
+                        catch (ArgumentOutOfRangeException exception)
+                        {
+                            MessageBox.Show(exception.Message,
+                                "Tastenbelegung", MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                        }
+                    }
+                    if (_zoomInputCanvas != null)
                     {
                         _zoomInputCanvas.Tag = null;
                     }
+                    e.Handled = true;
+                    return;
+                }
+
+                if (_zoomInputField != null
+                    && _zoomInputField.HandleKeyDown(e.Key))
+                {
+                    if (_zoomInputCanvas != null)
+                    {
+                        _zoomInputCanvas.Tag = null;
+                    }
+                    e.Handled = true;
                 }
             }
         }
@@ -413,7 +470,7 @@ namespace OOPGames
         {
             if (_zoomInputCanvas != null)
             {
-                _zoomInputCanvas.MouseDown -= OnAttackMouseDown;
+                _zoomInputCanvas.PreviewMouseDown -= OnAttackMouseDown;
             }
             if (_zoomInputWindow != null)
             {
@@ -469,6 +526,21 @@ namespace OOPGames
             }
 
             return isMoving ? walkAnimation : idleAnimation;
+        }
+
+        private static string GetSpinAnimationName(PlayerFacing facing)
+        {
+            switch (facing)
+            {
+                case PlayerFacing.Back:
+                    return "Idle Back";
+                case PlayerFacing.Left:
+                    return "Idle Left";
+                case PlayerFacing.Right:
+                    return "Idle Right";
+                default:
+                    return "Idle Front";
+            }
         }
 
         private static SpriteSheetAnimator CreateAnimator(AnimationProfile profile)
@@ -546,11 +618,66 @@ namespace OOPGames
                 Background = new SolidColorBrush(Color.FromRgb(27, 38, 52))
             };
             StackPanel contents = new StackPanel();
-            if (_showWeaponMenu)
+            if (_menuPage == MenuPage.SkillTree)
+            {
+                contents.Children.Add(_progressionMenuRenderer.CreateSkillTree(
+                    field, () => canvas.Tag = null));
+                contents.Children.Add(CreateMenuButton("Back",
+                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                    (sender, e) =>
+                    {
+                        _menuPage = MenuPage.Main;
+                        canvas.Tag = null;
+                    }));
+                panel.Child = contents;
+                DrawStartMenuPanel(canvas, panel, width, height);
+                return;
+            }
+
+            if (_menuPage == MenuPage.WeaponUpgrades)
+            {
+                contents.Children.Add(_progressionMenuRenderer.CreateWeaponUpgrades(
+                    field, () => canvas.Tag = null));
+                contents.Children.Add(CreateMenuButton("Back",
+                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                    (sender, e) =>
+                    {
+                        _menuPage = _menuPageBeforeWeaponUpgrades;
+                        canvas.Tag = null;
+                    }));
+                panel.Child = contents;
+                DrawStartMenuPanel(canvas, panel, width, height);
+                return;
+            }
+
+            if (_menuPage == MenuPage.KeyBindings)
+            {
+                contents.Children.Add(_progressionMenuRenderer.CreateKeyBindings(
+                    field, _keyBindingCaptureAction,
+                    action =>
+                    {
+                        _keyBindingCaptureAction = action;
+                        canvas.Tag = null;
+                    },
+                    () => canvas.Tag = null));
+                contents.Children.Add(CreateMenuButton("Back",
+                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                    (sender, e) =>
+                    {
+                        _menuPage = MenuPage.Main;
+                        _keyBindingCaptureAction = null;
+                        canvas.Tag = null;
+                    }));
+                panel.Child = contents;
+                DrawStartMenuPanel(canvas, panel, width, height);
+                return;
+            }
+
+            if (_menuPage == MenuPage.Equipment)
             {
                 contents.Children.Add(new TextBlock
                 {
-                    Text = "WAFFEN-TESTLABOR",
+                    Text = "AUSRÜSTUNG",
                     FontSize = 24,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White,
@@ -567,22 +694,34 @@ namespace OOPGames
                     HorizontalAlignment = HorizontalAlignment.Center,
                     Margin = new Thickness(0, 0, 0, 8)
                 });
-                foreach (Weapon weapon in field.TestWeapons)
+                foreach (Weapon weapon in new[]
+                {
+                    WeaponCatalog.Sword,
+                    WeaponCatalog.MagicWand,
+                    WeaponCatalog.Bow
+                })
                 {
                     contents.Children.Add(CreateMenuButton(
-                        weapon.Name + " — " + weapon.AttackPattern.Name,
+                        weapon.Name + " — " + weapon.AttackPattern.Name
+                            + " (" + weapon.Effect.Description + ")",
                         GetWeaponButtonBrush(field, weapon),
                         (sender, e) =>
                         {
                             field.SelectPlayerWeapon(weapon);
                             canvas.Tag = null;
                         }));
+                    contents.Children.Add(CreateMenuButton(
+                        weapon.Name + " — Waffenbaum",
+                        new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                        (sender, e) => OpenWeaponUpgrades(
+                            canvas, field, weapon, MenuPage.Equipment),
+                        field.HasActiveGame && !field.IsGameOver));
                 }
                 contents.Children.Add(CreateMenuButton("Back",
                     new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                     (sender, e) =>
                     {
-                        _showWeaponMenu = false;
+                        _menuPage = MenuPage.Main;
                         canvas.Tag = null;
                     }));
                 panel.Child = contents;
@@ -590,7 +729,7 @@ namespace OOPGames
                 return;
             }
 
-            if (_showAnimationMenu)
+            if (_menuPage == MenuPage.Animation)
             {
                 contents.Children.Add(new TextBlock
                 {
@@ -620,7 +759,7 @@ namespace OOPGames
                     new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                     (sender, e) =>
                     {
-                        _showAnimationMenu = false;
+                        _menuPage = MenuPage.Main;
                         canvas.Tag = null;
                     }));
                 panel.Child = contents;
@@ -643,7 +782,7 @@ namespace OOPGames
             {
                 Text = isGameOver
                     ? "Your run has ended"
-                    : field.HasActiveGame ? "Your game is paused" : "Choose a weapon and start",
+                    : field.HasActiveGame ? "Your game is paused" : "Choose equipment and start",
                 FontSize = 15,
                 Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
                 HorizontalAlignment = HorizontalAlignment.Center,
@@ -673,20 +812,43 @@ namespace OOPGames
             contents.Children.Add(CreateMenuButton("How to Play",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                 (sender, e) => ShowNotImplemented("How to Play")));
-            contents.Children.Add(CreateMenuButton("Waffen testen",
+            contents.Children.Add(CreateMenuButton("Ausrüstung",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                 (sender, e) =>
                 {
-                    _showAnimationMenu = false;
-                    _showWeaponMenu = true;
+                    _menuPage = MenuPage.Equipment;
                     canvas.Tag = null;
                 }));
             contents.Children.Add(CreateMenuButton("Choose Animation",
                 new SolidColorBrush(Color.FromRgb(55, 70, 88)),
                 (sender, e) =>
                 {
-                    _showWeaponMenu = false;
-                    _showAnimationMenu = true;
+                    _menuPage = MenuPage.Animation;
+                    canvas.Tag = null;
+                }));
+            if (field.HasActiveGame && !field.IsGameOver)
+            {
+                contents.Children.Add(CreateMenuButton("Skilltree",
+                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                    (sender, e) =>
+                    {
+                        _menuPage = MenuPage.SkillTree;
+                        canvas.Tag = null;
+                    }));
+                contents.Children.Add(CreateMenuButton("Waffen verbessern",
+                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                    (sender, e) =>
+                    {
+                        _menuPageBeforeWeaponUpgrades = MenuPage.Main;
+                        _menuPage = MenuPage.WeaponUpgrades;
+                        canvas.Tag = null;
+                    }));
+            }
+            contents.Children.Add(CreateMenuButton("Tastenbelegung",
+                new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+                (sender, e) =>
+                {
+                    _menuPage = MenuPage.KeyBindings;
                     canvas.Tag = null;
                 }));
             contents.Children.Add(CreateMenuButton("High Scores",
@@ -731,7 +893,9 @@ namespace OOPGames
             canvas.Tag = null;
         }
 
-        private static Button CreateMenuButton(string text, Brush background, RoutedEventHandler onClick)
+        private static Button CreateMenuButton(
+            string text, Brush background, RoutedEventHandler onClick,
+            bool isEnabled = true)
         {
             Button button = new Button
             {
@@ -739,15 +903,41 @@ namespace OOPGames
                 Width = 318,
                 Height = 46,
                 Margin = new Thickness(0, 5, 0, 5),
-                Background = background,
+                Background = isEnabled
+                    ? background
+                    : new SolidColorBrush(Color.FromRgb(65, 68, 73)),
                 Foreground = Brushes.White,
                 BorderThickness = new Thickness(0),
                 FontSize = 15,
                 FontWeight = FontWeights.SemiBold,
-                Cursor = Cursors.Hand
+                Cursor = isEnabled ? Cursors.Hand : Cursors.Arrow,
+                IsEnabled = isEnabled
             };
+            if (!isEnabled)
+            {
+                button.ToolTip = "Waffen-Upgrades sind erst während eines aktiven Runs verfügbar.";
+            }
             button.Click += onClick;
             return button;
+        }
+
+        private void OpenWeaponUpgrades(
+            Canvas canvas, ArenaField field, Weapon weapon, MenuPage returnPage)
+        {
+            field.SelectPlayerWeapon(weapon);
+            _menuPageBeforeWeaponUpgrades = returnPage;
+            _menuPage = MenuPage.WeaponUpgrades;
+            canvas.Tag = null;
+        }
+
+        private enum MenuPage
+        {
+            Main,
+            Equipment,
+            Animation,
+            SkillTree,
+            WeaponUpgrades,
+            KeyBindings
         }
 
         private sealed class AnimationProfile

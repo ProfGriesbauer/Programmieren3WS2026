@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -15,7 +16,8 @@ namespace OOPGames
             new SolidColorBrush(Color.FromArgb(190, 30, 34, 38));
 
         public void PaintPlayerHud(
-            Canvas canvas, PlayerCharacter player, int score, double cooldownSeconds)
+            Canvas canvas, PlayerCharacter player, int score, double cooldownSeconds,
+            ArenaProgression progression, ArenaKeyBindings keyBindings)
         {
             const double width = 220;
             const double height = 26;
@@ -84,6 +86,48 @@ namespace OOPGames
                         : "  |  bereit"),
                 16, 50);
             AddHudText(canvas, "Effekte: " + player.StatusSummary, 16, 73);
+            AddHudText(canvas, "Skillpunkte: " + progression.UniversalPoints
+                + "  |  Waffenpunkte: "
+                + progression.GetWeaponPoints(player.EquippedWeapon.Id), 16, 96);
+
+            List<string> weaponAbilitySlots = new List<string>();
+            for (int i = 0; i < ArenaProgression.AbilitySlotCount; i++)
+            {
+                Weapon ability = progression.GetWeaponAbilityWeapon(
+                    player.EquippedWeapon.Id, i);
+                if (ability != null)
+                {
+                    ArenaAction action =
+                        (ArenaAction)((int)ArenaAction.WeaponAbility1 + i);
+                    weaponAbilitySlots.Add(
+                        keyBindings.GetDisplayName(action) + ": " + ability.Name);
+                }
+            }
+            if (weaponAbilitySlots.Count > 0)
+            {
+                AddHudText(canvas,
+                    "Waffenfähigkeiten: " + string.Join("  | ", weaponAbilitySlots),
+                    16, 119);
+            }
+
+            List<string> entityAbilitySlots = new List<string>();
+            for (int i = 0; i < ArenaProgression.AbilitySlotCount; i++)
+            {
+                Weapon ability = progression.GetEntityAbilityWeapon(i);
+                if (ability != null)
+                {
+                    ArenaAction action =
+                        (ArenaAction)((int)ArenaAction.EntityAbility1 + i);
+                    entityAbilitySlots.Add(
+                        keyBindings.GetDisplayName(action) + ": " + ability.Name);
+                }
+            }
+            if (entityAbilitySlots.Count > 0)
+            {
+                AddHudText(canvas,
+                    "Spielerfähigkeiten: " + string.Join("  | ", entityAbilitySlots),
+                    16, 142);
+            }
         }
 
         public void PaintEntityHealth(
@@ -131,12 +175,25 @@ namespace OOPGames
             }
 
             bool isFrozen = false;
+            bool isBurning = false;
+            bool isPoisoned = false;
             foreach (ActiveStatusEffect effect in entity.ActiveStatusEffects)
             {
                 if (effect.SpeedMultiplier == 0)
                 {
                     isFrozen = true;
-                    break;
+                }
+            }
+            foreach (ActiveDamageOverTimeEffect effect
+                in entity.ActiveDamageOverTimeEffects)
+            {
+                if (effect.Id == "burning")
+                {
+                    isBurning = true;
+                }
+                else if (effect.Id == "poison")
+                {
+                    isPoisoned = true;
                 }
             }
 
@@ -146,7 +203,9 @@ namespace OOPGames
                 Width = diameter,
                 Height = diameter,
                 Fill = Brushes.Transparent,
-                Stroke = isFrozen ? Brushes.LightCyan : Brushes.Plum,
+                Stroke = isFrozen ? Brushes.LightCyan
+                    : isBurning ? Brushes.OrangeRed
+                    : isPoisoned ? Brushes.GreenYellow : Brushes.Plum,
                 StrokeThickness = 3,
                 StrokeDashArray = isFrozen ? null : new DoubleCollection { 2, 2 },
                 IsHitTestVisible = false

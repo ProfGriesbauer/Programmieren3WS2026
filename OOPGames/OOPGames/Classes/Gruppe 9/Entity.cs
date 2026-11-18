@@ -13,6 +13,8 @@ namespace OOPGames
         private double _currentSpeed;
         private readonly List<ActiveStatusEffect> _activeStatusEffects =
             new List<ActiveStatusEffect>();
+        private readonly List<ActiveDamageOverTimeEffect> _damageOverTimeEffects =
+            new List<ActiveDamageOverTimeEffect>();
 
         protected Entity(double positionX, double positionY, int maxHitPoints,
             double maxSpeed, double size, Brush color,
@@ -101,11 +103,16 @@ namespace OOPGames
         public bool IsAlive { get; private set; } = true;
         public CombatTeam Team { get; protected set; }
         public Weapon EquippedWeapon { get; set; }
+        internal Weapon EffectWeaponContext { get; set; }
         public bool HasActiveAttack { get; internal set; }
         public AttackVisualState CurrentAttackVisual { get; internal set; }
         public IReadOnlyList<ActiveStatusEffect> ActiveStatusEffects
         {
             get { return _activeStatusEffects.AsReadOnly(); }
+        }
+        public IReadOnlyList<ActiveDamageOverTimeEffect> ActiveDamageOverTimeEffects
+        {
+            get { return _damageOverTimeEffects.AsReadOnly(); }
         }
         public double EffectiveSpeed
         {
@@ -115,13 +122,19 @@ namespace OOPGames
         {
             get
             {
-                if (_activeStatusEffects.Count == 0)
+                if (_activeStatusEffects.Count == 0
+                    && _damageOverTimeEffects.Count == 0)
                 {
                     return "None";
                 }
 
                 List<string> statuses = new List<string>();
                 foreach (ActiveStatusEffect effect in _activeStatusEffects)
+                {
+                    statuses.Add(effect.Name + " "
+                        + effect.RemainingSeconds.ToString("0.0") + "s");
+                }
+                foreach (ActiveDamageOverTimeEffect effect in _damageOverTimeEffects)
                 {
                     statuses.Add(effect.Name + " "
                         + effect.RemainingSeconds.ToString("0.0") + "s");
@@ -254,6 +267,60 @@ namespace OOPGames
                 id, name, speedMultiplier, durationSeconds));
         }
 
+        public void ApplyDamageOverTime(
+            string id, string name, double damagePerSecond,
+            double durationSeconds, double spreadRadius, Entity source,
+            Weapon sourceWeapon = null)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("A damage effect id is required.", nameof(id));
+            }
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("A damage effect name is required.", nameof(name));
+            }
+            if (damagePerSecond <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(damagePerSecond));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+            if (spreadRadius < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(spreadRadius));
+            }
+            if (!IsAlive)
+            {
+                return;
+            }
+
+            foreach (ActiveDamageOverTimeEffect activeEffect in _damageOverTimeEffects)
+            {
+                if (activeEffect.Id == id)
+                {
+                    activeEffect.DamagePerSecond = Math.Max(
+                        activeEffect.DamagePerSecond, damagePerSecond);
+                    activeEffect.RemainingSeconds = Math.Max(
+                        activeEffect.RemainingSeconds, durationSeconds);
+                    activeEffect.SpreadRadius = Math.Max(
+                        activeEffect.SpreadRadius, spreadRadius);
+                    activeEffect.Source = source;
+                    activeEffect.SourceWeapon = sourceWeapon
+                        ?? (source == null ? null
+                            : source.EffectWeaponContext ?? source.EquippedWeapon);
+                    return;
+                }
+            }
+
+            _damageOverTimeEffects.Add(new ActiveDamageOverTimeEffect(
+                id, name, damagePerSecond, durationSeconds, spreadRadius,
+                source, sourceWeapon ?? (source == null ? null
+                    : source.EffectWeaponContext ?? source.EquippedWeapon)));
+        }
+
         public void UpdateStatusEffects(double deltaSeconds)
         {
             if (deltaSeconds < 0)
@@ -274,6 +341,17 @@ namespace OOPGames
             if (EffectiveSpeed == 0)
             {
                 IsMoving = false;
+            }
+        }
+
+        internal void RemoveExpiredDamageOverTimeEffects()
+        {
+            for (int i = _damageOverTimeEffects.Count - 1; i >= 0; i--)
+            {
+                if (_damageOverTimeEffects[i].IsExpired)
+                {
+                    _damageOverTimeEffects.RemoveAt(i);
+                }
             }
         }
 

@@ -30,6 +30,12 @@ namespace OOPGames
             new SolidColorBrush(Color.FromArgb(120, 190, 120, 255));
         private static readonly Brush MixedEffectBrush =
             new SolidColorBrush(Color.FromArgb(130, 210, 150, 255));
+        private static readonly Brush PoisonEffectBrush =
+            new SolidColorBrush(Color.FromArgb(120, 110, 210, 80));
+        private static readonly Brush FireEffectBrush =
+            new SolidColorBrush(Color.FromArgb(130, 255, 110, 25));
+        private static readonly Brush LightningEffectBrush =
+            new SolidColorBrush(Color.FromArgb(145, 255, 245, 90));
         private static readonly Brush DamageEffectBrush =
             new SolidColorBrush(Color.FromArgb(100, 255, 100, 70));
 
@@ -144,6 +150,18 @@ namespace OOPGames
                     fill = MixedEffectBrush;
                     stroke = Brushes.White;
                     break;
+                case CombatEffectKind.Poison:
+                    fill = PoisonEffectBrush;
+                    stroke = Brushes.GreenYellow;
+                    break;
+                case CombatEffectKind.Fire:
+                    fill = FireEffectBrush;
+                    stroke = Brushes.Orange;
+                    break;
+                case CombatEffectKind.Lightning:
+                    fill = LightningEffectBrush;
+                    stroke = Brushes.Yellow;
+                    break;
                 default:
                     fill = DamageEffectBrush;
                     stroke = Brushes.OrangeRed;
@@ -221,7 +239,7 @@ namespace OOPGames
 
             Border panel = CreateDebugPanel(content, canvasWidth, canvasHeight);
             Canvas.SetLeft(panel, 16);
-            Canvas.SetTop(panel, 102);
+            Canvas.SetTop(panel, 150);
             canvas.Children.Add(panel);
         }
 
