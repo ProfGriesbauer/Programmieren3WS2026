@@ -8,11 +8,9 @@ Im Framework die Regeln **„G5 Satisfactory Rules“**, den Painter
 Framework-Spielfeld, nicht in einem zusätzlichen Fenster. Dort stehen
 **„Spiel starten“**, **„Einstellungen“** und **„Anleitung“** zur Auswahl.
 Rohstoffvorrat und Produktionstempo lassen sich unter Einstellungen wählen.
-Satisfactory registriert keine eigenen Mensch- oder KI-Spieler. Es ist das einzige Fabrik-
-Regelwerk und verwendet die gemeinsame Welt, Gebäude, Items, Rezepte und
-Simulation von Gruppe 5. Für den Zwei-Spieler-Workaround denselben
-Fabrik-Spieler in beiden Spielerfeldern auswählen; das Framework selbst
-alterniert weiterhin zwischen den beiden Spieler-Slots.
+Nach dem Start führt dich ein verpflichtender Mentor Schritt für Schritt durch
+Fördererbau, Erzförderung, Schmelzenbau und Hub. Die Anleitung kann während
+dieser Schritte nicht übersprungen werden.
 
 ## Einstellungen
 
@@ -27,6 +25,11 @@ alterniert weiterhin zwischen den beiden Spieler-Slots.
 | Schmelze auswählen | `S`, danach eine freie Fläche anklicken |
 | Bauwerkzeug abwählen | `Esc` |
 
+Der Mentor erklärt die benötigte Taste und markiert das passende Feld mit einem
+Pfeil. Baue zuerst einen Förderer auf dem markierten Eisenerzvorkommen. Warte,
+bis er Erz abgebaut hat, baue danach eine Schmelze am markierten Ort und klicke
+zum Schluss auf das Hub. Nach Abschluss ist das freie Bauen möglich.
+
 Im Vollbildmodus wird die gesamte Karte an den verfügbaren Bereich angepasst.
 Die oberen zwei Zeilen zeigen Steuerung, aktives Werkzeug, Hub-Bestand und Status.
 Im normalen Fenstermodus bleibt die Karte bei ihrer Standardgröße; der sichtbare
@@ -40,15 +43,11 @@ einer geänderten Ansichtsgröße wird die Hintergrundebene neu aufgebaut.
 
 Förderer bauen auf Rohstoffvorkommen und liefern Erz automatisch zum Hub.
 Schmelzen beziehen passende Erze automatisch aus dem Hub und liefern Barren
-wieder dorthin. Förderer, Schmelzen und Darstellung verwenden die gemeinsamen Gebäudemodelle und
-Schnittstellen von Gruppe 5. Herkunft und Verträge der Bausteine sind in
-[`../Plans/Gemeinsame_Architektur_und_Schnittstellen.md`](../Plans/Gemeinsame_Architektur_und_Schnittstellen.md)
-dokumentiert.
+wieder dorthin. In dieser Version können Gebäude platziert, aber nicht
+verschoben werden; manuelles Abbauen ist nicht vorhanden.
 
 ## Startwelt
 
 Die Karte enthält Eisen- und Kupfervorkommen sowie je eine passende Schmelze.
 Für Kupfer wird die vorhandene Kupferschmelze verwendet; neu platzierte
-Schmelzen starten mit dem Eisenrezept. Die Simulation, Rohstofffelder,
-Förderer, Schmelzen und Darstellung verwenden die gemeinsamen Gruppe-5-
-Schnittstellen und Modelle.
+Schmelzen starten mit dem Eisenrezept.

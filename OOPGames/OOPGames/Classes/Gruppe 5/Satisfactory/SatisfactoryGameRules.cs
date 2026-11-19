@@ -18,6 +18,7 @@ namespace OOPGames
         private readonly Dictionary<G5_GridPosition, G5_ResourceDeposit> _deposits =
             new Dictionary<G5_GridPosition, G5_ResourceDeposit>();
         private readonly SatisfactoryStartScreen _startScreen = new SatisfactoryStartScreen();
+        private readonly SatisfactoryGameMentor _mentor = new SatisfactoryGameMentor();
         private G5_FabrikSpielfeld _field;
         private SatisfactoryFieldView _fieldView;
         private bool _gameStarted;
@@ -56,6 +57,7 @@ namespace OOPGames
                     _smelterCycleTicks = settings.SmelterCycleTicks;
                     _gameStarted = true;
                     ClearField();
+                    _mentor.Begin(_deposits[new G5_GridPosition(5, 2)].RemainingAmount.Value);
                 }
 
                 return;
@@ -67,6 +69,12 @@ namespace OOPGames
             }
             else if (action.Aktionstyp == G5_FabrikAktionstyp.GebaeudePlatzieren)
             {
+                if (_mentor.TryInspectHub(action.X, action.Y))
+                {
+                    _field.SetStatusMeldung(_mentor.Message);
+                    return;
+                }
+
                 PlaceBuilding(action.X, action.Y);
             }
             else
@@ -93,7 +101,7 @@ namespace OOPGames
             }
 
             _field = new G5_FabrikSpielfeld(world, 1, 1);
-            _fieldView = new SatisfactoryFieldView(_field, _startScreen, _gameStarted);
+            _fieldView = new SatisfactoryFieldView(_field, _startScreen, _mentor, _gameStarted);
             AddDeposit(5, 2, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, _resourceAmount);
             AddDeposit(5, 9, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, _resourceAmount);
             AddDeposit(17, 2, G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz, _resourceAmount);
@@ -112,6 +120,7 @@ namespace OOPGames
         public void StartedGameCall()
         {
             _gameStarted = false;
+            _mentor.Reset();
             _startScreen.ShowHome();
             ClearField();
         }
@@ -131,6 +140,11 @@ namespace OOPGames
             _field.Simulation.Tick();
             UpdateVisibleDeposits(miners, depositsBeforeTick);
             TransferMaterials();
+            if (_deposits.TryGetValue(new G5_GridPosition(5, 2), out G5_ResourceDeposit deposit) &&
+                _mentor.ObserveMining(deposit.RemainingAmount.Value))
+            {
+                _field.SetStatusMeldung(_mentor.Message);
+            }
         }
 
         private void SelectTool(G5_Bauwerkzeug tool)
@@ -138,6 +152,12 @@ namespace OOPGames
             if (!Enum.IsDefined(typeof(G5_Bauwerkzeug), tool))
             {
                 _field.SetStatusMeldung("Unbekanntes Bauwerkzeug.");
+                return;
+            }
+
+            if (!_mentor.TrySelectTool(tool, out string mentorMessage))
+            {
+                _field.SetStatusMeldung(mentorMessage);
                 return;
             }
 
@@ -150,6 +170,12 @@ namespace OOPGames
         private void PlaceBuilding(int x, int y)
         {
             G5_Bauwerkzeug tool = ((IG5_FabrikSpielInfo)_field).AktuellesWerkzeug;
+            if (!_mentor.CanPlaceBuilding(tool, x, y, out string mentorMessage))
+            {
+                _field.SetStatusMeldung(mentorMessage);
+                return;
+            }
+
             if (tool == G5_Bauwerkzeug.Keines)
             {
                 _field.SetStatusMeldung("Wähle zuerst F für Förderer oder S für Schmelze.");
@@ -204,6 +230,10 @@ namespace OOPGames
             }
 
             _field.AddGebaeude(building);
+            long depositAmount = building is G5_Miner
+                ? _deposits[new G5_GridPosition(x, y)].RemainingAmount.Value
+                : 0;
+            _mentor.BuildingPlaced(tool, x, y, depositAmount);
             _field.SetStatusMeldung(building.Name + " gebaut.");
         }
 

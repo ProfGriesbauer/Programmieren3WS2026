@@ -157,9 +157,9 @@ namespace OOPGames
                 TextAlignment.Center);
             AddText(canvas, "SATISFACTORY", Brushes.White, left + 54, top + 1, 260, 20, 16,
                 FontWeights.Bold);
-            AddText(canvas, "GRUPPE 5  /  FABRIK-SIMULATION", MutedBrush, left + 54, top + 23,
-                300, 16, 10, FontWeights.SemiBold);
-            AddText(canvas, "DEINE FABRIK BEGINNT HIER", AccentBrush,
+            AddText(canvas, "BAUEN  /  ERWEITERN  /  AUTOMATISIEREN", MutedBrush, left + 54, top + 23,
+                340, 16, 10, FontWeights.SemiBold);
+            AddText(canvas, "DEINE WELT. DEINE FABRIK.", AccentBrush,
                 left + width - 260, top + 11, 260, 18, 10, FontWeights.Bold,
                 TextAlignment.Right);
         }
@@ -179,8 +179,9 @@ namespace OOPGames
             AddText(canvas, "Rohstoffe rein.\nProduktion an.", Brushes.White,
                 left + 26, top + 70, width - 52, 100, 35, FontWeights.Bold);
             AddText(canvas,
-                "Baue deine Fabrik auf der gemeinsamen Gruppe-5-Welt auf. Förderer, Schmelzen und Rezepte verwenden die Modelle deiner Gruppenmitglieder.",
-                MutedBrush, left + 28, top + 185, width - 56, 68, 13);
+                "Setze Förderer auf Erzvorkommen, errichte Schmelzen und lass deine Produktion automatisch laufen.",
+                MutedBrush, left + 28, top + 185, width - 206, 68, 13);
+            DrawFactoryArt(canvas, left + width - 166, top + 170);
 
             DrawStep(canvas, left + 28, top + 280, "01", "Förderer",
                 "F drücken und auf ein Erzvorkommen klicken.");
@@ -238,6 +239,8 @@ namespace OOPGames
                 ResourceLabel() + "  ·  " + SpeedLabel(),
                 Brushes.White, left + 42, top + height - 80, width - 84, 22, 13,
                 FontWeights.SemiBold);
+            AddText(canvas, "Nach dem Start begleitet dich ein Mentor durch die verpflichtende Einführung.",
+                MutedBrush, left + 30, top + 340, width - 60, 38, 11);
         }
 
         private void DrawSettings(Canvas canvas, double left, double top, double width, double height)
@@ -268,17 +271,17 @@ namespace OOPGames
             DrawBackButton(canvas, left + 28, top + 26);
             AddText(canvas, "Anleitung", Brushes.White,
                 left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
-            AddText(canvas, "So bringst du deine Fabrik in Gang:",
+            AddText(canvas, "Diese Einführung ist verpflichtend und nicht überspringbar:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
-            DrawStep(canvas, left + 30, top + 170, "01", "Förderer auswählen",
-                "Drücke F und klicke direkt auf ein Eisen- oder Kupfervorkommen.");
-            DrawStep(canvas, left + 30, top + 250, "02", "Schmelze platzieren",
-                "Drücke S und klicke auf eine freie Fläche.");
-            DrawStep(canvas, left + 30, top + 330, "03", "Produktion beobachten",
-                "Förderer bringen Erz zum Hub. Passende Schmelzen erhalten Erz und lagern Barren im Hub.");
-            DrawStep(canvas, left + 30, top + 425, "04", "Werkzeug wechseln",
-                "Esc hebt das Bauwerkzeug auf. Mit F oder S wählst du ein neues.");
+            DrawStep(canvas, left + 30, top + 170, "01", "Förderer bauen",
+                "Drücke F und platziere ihn auf dem markierten Eisenerzvorkommen.");
+            DrawStep(canvas, left + 30, top + 250, "02", "Erz abbauen",
+                "Warte, bis der Förderer automatisch Erz abgebaut hat.");
+            DrawStep(canvas, left + 30, top + 330, "03", "Schmelze bauen",
+                "Drücke S und platziere sie auf dem markierten freien Feld.");
+            DrawStep(canvas, left + 30, top + 425, "04", "Hub ansehen",
+                "Klicke auf das markierte Hub. Danach ist freies Bauen möglich.");
 
             DrawButton(canvas, left + 28, top + height - 78, width - 56, 48,
                 "SPIEL STARTEN", " ", AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
@@ -347,6 +350,23 @@ namespace OOPGames
             AddText(canvas, heading, Brushes.White, left + 50, top, 300, 21, 13,
                 FontWeights.SemiBold);
             AddText(canvas, detail, MutedBrush, left + 50, top + 24, 390, 40, 11);
+        }
+
+        private static void DrawFactoryArt(Canvas canvas, double left, double top)
+        {
+            AddRoundedRectangle(canvas, BrushFromRgb(48, 96, 84), left, top + 38, 146, 78, 20);
+            AddRoundedRectangle(canvas, BrushFromRgb(71, 130, 102), left + 14, top + 50, 56, 66, 8);
+            AddRoundedRectangle(canvas, BrushFromRgb(208, 126, 62), left + 76, top + 30, 55, 86, 8);
+            AddRoundedRectangle(canvas, BrushFromRgb(87, 107, 111), left + 89, top + 10, 14, 30, 4);
+            AddRoundedRectangle(canvas, BrushFromRgb(87, 107, 111), left + 115, top + 18, 12, 24, 4);
+            AddCircle(canvas, BrushFromRgb(183, 199, 183), left + 82, top - 8, 24, 0.6);
+            AddCircle(canvas, BrushFromRgb(183, 199, 183), left + 99, top - 15, 30, 0.48);
+            AddCircle(canvas, BrushFromRgb(183, 199, 183), left + 119, top - 5, 23, 0.4);
+            AddRoundedRectangle(canvas, BrushFromRgb(226, 181, 73), left + 23, top + 72, 15, 18, 3);
+            AddRoundedRectangle(canvas, BrushFromRgb(226, 181, 73), left + 46, top + 72, 15, 18, 3);
+            AddRoundedRectangle(canvas, BrushFromRgb(242, 197, 91), left + 87, top + 52, 14, 18, 3);
+            AddRoundedRectangle(canvas, BrushFromRgb(242, 197, 91), left + 107, top + 52, 14, 18, 3);
+            AddRoundedRectangle(canvas, BrushFromRgb(50, 78, 63), left - 4, top + 112, 156, 9, 5);
         }
 
         private void DrawFooter(Canvas canvas, double left, double top, double width)
@@ -483,19 +503,25 @@ namespace OOPGames
     {
         private readonly G5_FabrikSpielfeld _field;
         private readonly SatisfactoryStartScreen _startScreen;
+        private readonly SatisfactoryGameMentor _mentor;
 
         internal SatisfactoryFieldView(
             G5_FabrikSpielfeld field,
             SatisfactoryStartScreen startScreen,
+            SatisfactoryGameMentor mentor,
             bool isGameStarted)
         {
             _field = field ?? throw new ArgumentNullException(nameof(field));
             _startScreen = startScreen ?? throw new ArgumentNullException(nameof(startScreen));
+            _mentor = mentor ?? throw new ArgumentNullException(nameof(mentor));
+            MentorOverlay = new Canvas { IsHitTestVisible = false };
             IsGameStarted = isGameStarted;
         }
 
         internal bool IsGameStarted { get; set; }
         internal SatisfactoryStartScreen StartScreen { get { return _startScreen; } }
+        internal SatisfactoryGameMentor Mentor { get { return _mentor; } }
+        internal Canvas MentorOverlay { get; }
 
         int IG5_WeltSpielfeld.Breite => ((IG5_WeltSpielfeld)_field).Breite;
         int IG5_WeltSpielfeld.Hoehe => ((IG5_WeltSpielfeld)_field).Hoehe;

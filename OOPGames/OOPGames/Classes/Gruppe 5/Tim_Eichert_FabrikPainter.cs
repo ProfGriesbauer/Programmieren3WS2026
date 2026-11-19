@@ -38,6 +38,26 @@ namespace OOPGames
             }
 
             PaintWeltField(canvas, welt);
+            if (currentField is SatisfactoryFieldView mentorField)
+            {
+                if (mentorField.Mentor.IsActive)
+                {
+                    mentorField.Mentor.Paint(
+                        mentorField.MentorOverlay,
+                        canvas.ActualWidth,
+                        canvas.ActualHeight,
+                        mentorField);
+                    if (!canvas.Children.Contains(mentorField.MentorOverlay))
+                    {
+                        canvas.Children.Add(mentorField.MentorOverlay);
+                    }
+                }
+                else
+                {
+                    mentorField.MentorOverlay.Children.Clear();
+                    canvas.Children.Remove(mentorField.MentorOverlay);
+                }
+            }
         }
 
         public void TickPaintGameField(Canvas canvas, IGameField currentField)
