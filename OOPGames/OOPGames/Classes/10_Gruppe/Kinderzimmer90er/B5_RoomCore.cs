@@ -46,7 +46,11 @@ namespace OOPGames
         static readonly IList<B5RoomDevice> _Devices = new List<B5RoomDevice>
         {
             new B5RoomDevice(B5RoomDeviceKind.Atari, "ATARI-KONSOLE", Color.FromRgb(206, 117, 55), Color.FromRgb(13, 26, 36),
-                new List<B5RoomGameEntry> { new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(224, 89, 49), () => new B5RoomCoinGame("Muenzen sammeln", Color.FromRgb(13, 26, 36), Color.FromRgb(242, 151, 65))) }),
+                new List<B5RoomGameEntry>
+                {
+                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(224, 89, 49), () => new B5RoomCoinGame("Muenzen sammeln", Color.FromRgb(13, 26, 36), Color.FromRgb(242, 151, 65))),
+                    new B5RoomGameEntry("Pac-Man", Color.FromRgb(240, 200, 40), () => new G10_PacManGame())
+                }),
             new B5RoomDevice(B5RoomDeviceKind.Gameboy, "HANDHELD", Color.FromRgb(145, 190, 96), Color.FromRgb(107, 138, 18),
                 new List<B5RoomGameEntry>
                 {

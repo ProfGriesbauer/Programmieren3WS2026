@@ -562,3 +562,55 @@ Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Reb
 > add the arrow keys for navigation back then suggest a commit for the changes
 
 **Ergebnis:** übernommen – Pfeiltasten wieder eingeführt, zusätzlich zu WASD (Lukas hatte sie im Commit „changed steering“ ersetzt, weil sie damals in den Listen des Hauptfensters landeten; das behebt jetzt das Framework). Neue Hilfsklasse `B5RoomKeys` (`IsLeft`/`IsRight`/`IsUp`/`IsDown`: Pfeiltaste oder WASD), genutzt bei der Geräteauswahl im Zimmer (`B5_RoomCore.cs`) und in Münzen sammeln, Snake und Pong (`B5_RoomGames.cs`); Hinweise in der Steuerleiste („← → / A D“, „PFEILE / WASD“), im Münzspiel und in der README angepasst. Test mit dem echten `MainWindow`: ←/→ wählen das Gerät, im Münzspiel bewegen → und ↓ die Figur, A und W weiterhin; Fokus bleibt auf dem Spiel; Screenshot der Hinweise geprüft. Commit-Nachricht vorgeschlagen.
+
+## 2026-11-19 – Claude Code (Modell: Claude Opus 5.5) – Branch `gruppe10`
+
+### 94
+**Prompt:**
+> Have a look at the project requirements. i would like to add pac-man to the atari with a highly structured object oriented codebase. lets plan this first
+
+**Ergebnis:** abgebrochen – Projektanforderungen und Kinderzimmer-Code (Minispiel-Interface, Registry, Painter, Tower Defense, Void Courier) gelesen; vor dem Schreiben des Plans vom Nutzer unterbrochen.
+
+### 95
+**Prompt:**
+> write the plan in english as well
+
+**Ergebnis:** übernommen (Entwurf) – Plan `Plans/2026-11-19_Johannes_Lacher_PacMan.md` (deutsch) und `Plans/2026-11-19_Johannes_Lacher_PacMan_EN.md` (englisch, gleicher Inhalt) erstellt: Pac-Man als `IB5RoomMiniGame` am Atari, Schichten Modell/Ansicht/Adapter, Geister mit Strategy und State, Level-Tabelle, Schritte, Tests, offene Entscheidungen (u. a. Hub-Änderung für pixelscharfe Spiele). Noch kein Code.
+
+### 96
+**Prompt:**
+> what do you think about the following class structure? did i forget anything?
+>
+> - Game: holds Maze, a list of GameObjects, score and lives; calls update() and draw() on all objects each frame. Use a State pattern for game states (Menu, Playing, GameOver).
+> - Maze: tile grid loaded from a text array (# wall, . dot, o power pellet); provides isWall(x, y). Includes a left/right wrap-around tunnel.
+> - GameObject (abstract): position x, y; abstract update() and draw(); onCollision(other).
+>   - MovingEntity (abstract): direction, speed; move(maze) handles wall stops and tunnel wrap.
+>     - PacMan: nextDirection buffered from input via handleInput().
+>     - Ghost: has a TargetStrategy, a GhostMode and a scatterCorner. At each intersection, picks the direction (no reversing) that minimizes distance to the target tile. frighten() switches mode.
+>   - Collectible (abstract): points; abstract collect(game).
+>     - Dot (10 pts), PowerPellet (50 pts, frightens all ghosts), Fruit (bonus).
+> - TargetStrategy (interface, Strategy pattern): getTarget(ghost, pacman) returns a tile.
+>   - DirectChase (Pac-Man's tile), Ambush (4 tiles ahead of Pac-Man), Flank (derived from Pac-Man and the red ghost), Shy (chases Pac-Man unless within 8 tiles, then its scatter corner).
+> - GhostMode (abstract, State pattern): getTarget(ghost), onCollision(ghost, pacman).
+>   - Chase (uses strategy), Scatter (own corner), Frightened (random direction, can be eaten), Eaten (returns to ghost house, then back to Chase).
+> - Helpers: Direction enum (UP, DOWN, LEFT, RIGHT), Tile class for grid coordinates.
+
+**Ergebnis:** Bewertung der Klassenstruktur im Chat (Vergleich mit dem Plan, fehlende Teile); Plan noch nicht angepasst.
+
+### 97
+**Prompt:**
+> use GhostMode.onCollision(ghost, pacman) in your plan. split draw so game logic and drawing ist independent from each other. move dots to the maze grid. keep fruit as a free object. collecting should return points so the game can react to it. use a context object for flank/inky (pac-man, Blinky, maze). the ghosts schould return to whatever mode is currently active. add a adapter class so pac man does not know about keys. add your suggestions for whats missing. update the plan like you suggested
+
+**Ergebnis:** übernommen (Entwurf) – beide Plan-Fassungen überarbeitet: neuer Abschnitt „Entwurfsentscheidungen“; Namen aus der eigenen Struktur übernommen (`G10_MovingEntity`, `G10_GhostMode`, `G10_Collectible`, Strategien `G10_DirectChase`/`Ambush`/`Flank`/`Shy`); `OnCollision` liefert `G10_CollisionOutcome`; Punkte und Kraftpillen im Raster von `G10_Maze`, Bonusfrucht als freies Objekt; `Collect()` liefert `G10_CollectResult`; Kontextobjekt `G10_GhostContext`; Rückkehr in den gerade aktiven Modus; Adapter als einzige Klasse mit Tasten. Ergänzt: Modi InHouse/LeavingHouse, Phase Paused, `Direction.None`, Tabelle der Geistermodi, zusätzliche Testfälle. Noch kein Code.
+
+### 98
+**Prompt:**
+> start the implementation. use subagents for tasks which can be done in parallel. for example use sonnet 5.5 for the sprite generation.
+
+**Ergebnis:** übernommen – Pac-Man nach Plan umgesetzt (Schritte 1–5) und am Atari registriert (`B5_RoomCore.cs`). Erst die Verträge selbst geschrieben (`Interfaces/10_Gruppe/PacMan/Johannes_Lacher_I_PacMan.cs`, Raster-Typen, Sprite-API), dann zwei Sub-Agenten (Claude Sonnet 5.5) parallel: Sprites und Pixelschrift (`Johannes_Lacher_PacManSprites.cs`) sowie Renderer mit eigener `WriteableBitmap` (`Johannes_Lacher_PacManRenderer.cs`); Modell, Geister, Modi, Level, Punkte, Session und Adapter selbst geschrieben. E1 ohne Hub-Änderung gelöst (eigene Bitmap, Nearest Neighbor). Build ohne Fehler/Warnungen; Testprogramm im Scratchpad gegen die echten Klassen: 70/70 bestanden (u. a. Dauertest über 240.000 Ticks ohne Durchlaufen von Geistern), Screenshots geprüft. Plan um „Stand“ ergänzt, `PacMan/README.md` angelegt. Im laufenden Programm noch nicht von Hand getestet; nicht committet.
+
+### 99
+**Prompt:**
+> continue
+
+**Ergebnis:** Zwischennachricht während der Umsetzung von Eintrag 98; Arbeit fortgesetzt.
