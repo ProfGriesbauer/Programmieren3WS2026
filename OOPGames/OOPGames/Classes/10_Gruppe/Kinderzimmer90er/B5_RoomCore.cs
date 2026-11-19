@@ -63,7 +63,8 @@ namespace OOPGames
                 new List<B5RoomGameEntry>
                 {
                     new B5RoomGameEntry("Tower Defense", Color.FromRgb(82, 105, 190), () => new B5RoomTowerDefenseGame()),
-                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132)))
+                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132))),
+                    new B5RoomGameEntry("Bomberman", Color.FromRgb(159, 78, 68), () => new G10_BombermanGame())
                 })
         };
 

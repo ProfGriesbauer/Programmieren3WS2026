@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Windows.Media;
 
 namespace OOPGames
 {
@@ -134,79 +132,22 @@ namespace OOPGames
         }
     }
 
-    // Plays the generated clips with WPF MediaPlayer (one player per sound, so sounds can overlap).
-    // MediaPlayer needs files, so the clips are written once to the local app data folder.
-    // If that is not possible, the game simply stays silent.
-    // Opening is asynchronous and the very first open in a process can take seconds; a sound that
-    // is not open yet is skipped instead of being played late.
+    // Pac-Man's sounds on the shared media output (Classes/10_Gruppe/Shared): maps each sound
+    // to its generated clip.
     internal sealed class G10_MediaSoundOutput : IG10_SoundOutput
     {
-        const double Volume = 0.6;
-
-        static readonly string Folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Programmieren3WS2026", "Kinderzimmer90er", "PacManSounds");
-
-        readonly Dictionary<G10_Sound, MediaPlayer> _Players = new Dictionary<G10_Sound, MediaPlayer>();
-        readonly HashSet<G10_Sound> _Opened = new HashSet<G10_Sound>();
+        readonly IG10_ClipOutput _Clips;
 
         public G10_MediaSoundOutput()
         {
-            try
-            {
-                Directory.CreateDirectory(Folder);
-                foreach (G10_Sound sound in Enum.GetValues(typeof(G10_Sound)))
-                {
-                    MediaPlayer player = new MediaPlayer { Volume = Volume };
-                    player.MediaOpened += (sender, e) => _Opened.Add(sound);
-                    player.Open(new Uri(WriteClip(G10_SoundSynth.Clip(sound))));
-                    _Players[sound] = player;
-                }
-            }
-            catch (IOException)
-            {
-                _Players.Clear();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                _Players.Clear();
-            }
+            List<G10_SoundClip> clips = new List<G10_SoundClip>();
+            foreach (G10_Sound sound in Enum.GetValues(typeof(G10_Sound))) clips.Add(G10_SoundSynth.Clip(sound));
+            _Clips = new G10_MediaClipOutput("PacManSounds", clips);
         }
 
-        public bool IsReady(G10_Sound sound)
-        {
-            return _Opened.Contains(sound);
-        }
-
-        public void Play(G10_Sound sound)
-        {
-            MediaPlayer player;
-            if (!IsReady(sound) || !_Players.TryGetValue(sound, out player)) return;
-            player.Position = TimeSpan.Zero;
-            player.Play();
-        }
-
-        public void Stop(G10_Sound sound)
-        {
-            MediaPlayer player;
-            if (_Players.TryGetValue(sound, out player)) player.Stop();
-        }
-
-        public void StopAll()
-        {
-            foreach (MediaPlayer player in _Players.Values) player.Stop();
-        }
-
-        // The file name contains a hash of the content: a changed sound gets a new file, and a file
-        // that another player still has open is never overwritten.
-        static string WriteClip(G10_SoundClip clip)
-        {
-            byte[] wav = clip.ToWav();
-            uint hash = 2166136261;
-            foreach (byte b in wav) hash = (hash ^ b) * 16777619;
-            string path = Path.Combine(Folder, "pacman_" + clip.Sound + "_" + hash.ToString("x8") + ".wav");
-            if (!File.Exists(path)) File.WriteAllBytes(path, wav);
-            return path;
-        }
+        public bool IsReady(G10_Sound sound) { return _Clips.IsReady(G10_SoundSynth.Clip(sound)); }
+        public void Play(G10_Sound sound) { _Clips.Play(G10_SoundSynth.Clip(sound)); }
+        public void Stop(G10_Sound sound) { _Clips.Stop(G10_SoundSynth.Clip(sound)); }
+        public void StopAll() { _Clips.StopAll(); }
     }
 }
