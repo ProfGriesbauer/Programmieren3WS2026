@@ -556,7 +556,7 @@ namespace OOPGames
         }
     }
 
-    internal struct G10_SolarShooterInput
+    internal readonly struct G10_SolarShooterInput
     {
         public G10_SolarShooterInput(float horizontal, float vertical, bool firePressed)
         {
@@ -565,9 +565,12 @@ namespace OOPGames
             FirePressed = firePressed;
         }
 
-        public float Horizontal { get; private set; }
-        public float Vertical { get; private set; }
-        public bool FirePressed { get; private set; }
+        public static G10_SolarShooterInput Neutral { get; } =
+            new G10_SolarShooterInput(0, 0, false);
+
+        public float Horizontal { get; }
+        public float Vertical { get; }
+        public bool FirePressed { get; }
     }
 
     internal sealed class G10_EntityDestroyedEventArgs : EventArgs

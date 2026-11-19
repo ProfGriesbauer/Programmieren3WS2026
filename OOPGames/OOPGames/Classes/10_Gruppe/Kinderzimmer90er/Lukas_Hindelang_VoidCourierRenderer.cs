@@ -398,9 +398,9 @@ namespace OOPGames
         void DrawStateOverlay(DrawingContext drawing, IG10_ShooterView session)
         {
             if (session.IsGameOver)
-                Overlay(drawing, "SHIP LOST", "PRESS ENTER", Red);
+                Overlay(drawing, "SHIP LOST", G10_ShooterKeyBindings.Default.RestartPrompt, Red);
             else if (session.IsVictory)
-                Overlay(drawing, "ROUTE SECURE", "PRESS ENTER", Cyan);
+                Overlay(drawing, "ROUTE SECURE", G10_ShooterKeyBindings.Default.RestartPrompt, Cyan);
             else if (session.IsBossWarning)
             {
                 drawing.DrawRoundedRectangle(Panel,

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -8,18 +7,21 @@ namespace OOPGames
     public sealed class G10_SolarShooterGame : IB5RoomMiniGame
     {
         readonly G10_VoidCourierRenderer _Renderer;
-        readonly G10_ShooterInputMapper _InputMapper = new G10_ShooterInputMapper(
-            new G10_InputLatch(),
-            new G10_InputLatch(),
-            new G10_InputLatch());
+        readonly G10_ShooterInputMapper _InputMapper;
         G10_SolarShooterSession _Session;
 
         public G10_SolarShooterGame()
-            : this(new G10_VoidCourierRenderer()) { }
+            : this(new G10_VoidCourierRenderer(),
+                new G10_ShooterInputMapper(
+                    new G10_WpfKeyStateSource(),
+                    G10_ShooterKeyBindings.Default)) { }
 
-        internal G10_SolarShooterGame(G10_VoidCourierRenderer renderer)
+        internal G10_SolarShooterGame(
+            G10_VoidCourierRenderer renderer,
+            G10_ShooterInputMapper inputMapper)
         {
             _Renderer = renderer;
+            _InputMapper = inputMapper;
         }
 
         public string Title { get { return "Void Courier"; } }
@@ -33,12 +35,12 @@ namespace OOPGames
             _InputMapper.Reset();
         }
 
-        public void Update(IReadOnlyCollection<Key> keys)
+        public void Update(System.Collections.Generic.IReadOnlyCollection<Key> keys)
         {
             if (_Session == null) Start();
 
             G10_SolarShooterInput input;
-            bool restart = _InputMapper.Map(keys, out input);
+            bool restart = _InputMapper.Read(out input);
 
             if ((_Session.IsGameOver || _Session.IsVictory) && restart)
             {

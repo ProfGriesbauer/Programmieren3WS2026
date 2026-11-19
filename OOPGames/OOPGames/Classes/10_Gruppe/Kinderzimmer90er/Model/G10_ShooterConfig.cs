@@ -9,7 +9,6 @@ namespace OOPGames
         public const float FixedDeltaSeconds = 0.04f;
         public const float PlayfieldTop = 18;
         public const float HeaderHeight = 18;
-        public const float LatchDuration = 0.12f;
         public const float PlayerStartX = 80;
         public const float PlayerStartY = 124;
         public const float PlayerMinimumX = 7;
