@@ -1,8 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "rFYfHCbq8XL07D1r+1kFWphhJaQPJIXI4uNDog+7/yPswUTlRji/MF2JyvgjBRb6WUJYDmLsLVPXAea3qcFRjg==",
+  "dgSpecHash": "NqC4ex+zjMI=",
   "success": true,
-  "projectFilePath": "C:\\JosefData\\Programmieren3Graffel\\Programmieren3Live2026\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\stjogabr\\.nuget\\packages\\microsoft.netcore.app.ref\\7.0.20\\microsoft.netcore.app.ref.7.0.20.nupkg.sha512",
+    "C:\\Users\\stjogabr\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\7.0.20\\microsoft.windowsdesktop.app.ref.7.0.20.nupkg.sha512",
+    "C:\\Users\\stjogabr\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\7.0.20\\microsoft.aspnetcore.app.ref.7.0.20.nupkg.sha512",
+    "C:\\Users\\stjogabr\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\7.0.20\\microsoft.netcore.app.host.win-x64.7.0.20.nupkg.sha512"
+  ],
   "logs": []
 }

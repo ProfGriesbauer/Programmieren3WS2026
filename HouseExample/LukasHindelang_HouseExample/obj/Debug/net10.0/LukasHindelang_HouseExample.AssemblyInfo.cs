@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LukasHindelang_HouseExample")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e2eca3925978b368ff2d9120bb4d8cbd96437479")]
 [assembly: System.Reflection.AssemblyProductAttribute("LukasHindelang_HouseExample")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LukasHindelang_HouseExample")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
