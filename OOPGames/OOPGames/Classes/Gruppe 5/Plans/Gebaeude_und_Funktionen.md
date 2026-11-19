@@ -193,16 +193,18 @@ Die Designvorschau enthält ein schematisches Rasterbeispiel, in dem Gebäude-Fo
 Die Gebäudesimulation ist zur besseren Orientierung auf mehrere Dateien verteilt:
 
 - [Christian_Frey_FabrikDatenmodelle.cs](../Christian_Frey_FabrikDatenmodelle.cs): Items, Statuswerte, Rasterpositionen, Rezepte und Upgrades
-- [Christian_Frey_FabrikSchnittstellen.cs](../Christian_Frey_FabrikSchnittstellen.cs): Schnittstellen für Itemtransfer und Stromverbraucher
+- [Christian_Frey_FabrikSchnittstellen.cs](../../../Interfaces/gruppe%205/Christian_Frey_FabrikSchnittstellen.cs): gemeinsame Schnittstellen für Itemtransfer und Stromverbraucher
 - [Christian_Frey_FabrikGebaeude.cs](../Christian_Frey_FabrikGebaeude.cs): gemeinsame Gebäudebasis, Puffer, Miner, Produktionsgebäude und Lager
 - [Christian_Frey_FabrikTransportEnergie.cs](../Christian_Frey_FabrikTransportEnergie.cs): Laufband, Stromgenerator, Strommast, Stromnetz und Itemtransfer
 - [Christian_Frey_FabrikSimulation.cs](../Christian_Frey_FabrikSimulation.cs): tickbasierte Fabrikverwaltung und Starterrezepte
 
-Die Dateien bleiben im Namespace `OOPGames`; Typnamen und öffentliche Schnittstellen sind unverändert, damit vorhandene Spielwelt- und UI-Aufrufe weiter funktionieren. Designvorschau und visuelle Gestaltung liegen separat in [Gebaeude_Designvorschau.html](./Gebaeude_Designvorschau.html); die Interaktion mit dem Spielfeld ist in den Gruppe-5-Spielklassen angebunden. Die Gebäudedateien enthalten selbst keine WPF- oder Zeichenlogik.
+Die Dateien bleiben im Namespace `OOPGames`; Typnamen und öffentliche Schnittstellen sind unverändert, damit vorhandene Spielwelt- und UI-Aufrufe weiter funktionieren. Die [Gebaeude_Designvorschau.html](./Gebaeude_Designvorschau.html) dient als Gestaltungsvorlage. Im Spiel zeichnet der [Tim_Eichert_FabrikPainter.cs](../Tim_Eichert_FabrikPainter.cs) die nativen WPF-Vektordarstellungen aus [Tim_Eichert_FabrikGebaeudeZeichner.cs](../Tim_Eichert_FabrikGebaeudeZeichner.cs); die Gebäudemodelle enthalten weiterhin keine WPF-Zeichenlogik.
 
 Produktionszeiten, Kapazitäten, Foerdermengen, Reichweiten und Stromwerte werden als Konstruktor- oder Upgradeparameter uebergeben, statt im Code als festgelegte Spielbalance vorgegeben zu werden. Die Beispielrezepte fuer Erzschmelze, Konstruktor und Assembler sind ueber `G5_StarterRecipes` verfuegbar.
 
-Noch nicht Teil dieser Gebäudeschicht sind Handabbau und Spielerinventar, die Karte und Platzierungsoberfläche, eine grafische WPF-Darstellung, Pumpen fuer Fluessigkeiten/Gase sowie Splitter und Merger. Diese Bereiche benoetigen die dazugehoerige Spielwelt- und UI-Implementierung.
+Die zehn Entwürfe der Vorschau sind als WPF-Zeichnungen umgesetzt: Miner, Schmelze, Konstruktor, Assembler, Lager/HUB, Verbrennungsgenerator, Strommast, Laufband, Splitter und Merger. Gebäudetyp, Footprint und Stufe bestimmen die Darstellung; Stufe 2 und 3 erhalten zusätzliche farbliche Akzente. Diese Grafik erweitert nicht automatisch das Spiel: Die aktuellen Bauwerkzeuge und Regeln platzieren weiterhin nur die bereits unterstützten Gebäude. Splitter und Merger sind reine Darstellungsoptionen, solange ihnen noch Gebäudemodelle, Platzierungsregeln und Simulationslogik fehlen. Animationen und Drehung der Förderwege sind ebenfalls noch nicht angeschlossen.
+
+Handabbau, Spielerinventar und Pumpen fuer Fluessigkeiten/Gase sind weiterhin nicht Teil dieser Umsetzung.
 
 ## Absprachen fuer die spätere Integration
 
@@ -225,10 +227,13 @@ Die folgenden Punkte werden benoetigt, sobald Gebäude mit den parallel entwicke
 
 ### Gemeinsame Produktions- und Transportschnittstellen
 
-- **Gegenstands-IDs:** Werden die `G5_Item`-Werte von der Gruppe als gemeinsame Item-IDs uebernommen oder durch ein Inventar-/Itemmodell der Spielumgebung ersetzt?
-- **Itemtransfer:** Die aktuelle Gebäudeschicht nutzt `G5_IItemEndpoint` fuer typisierte Eingaben, Ausgaben und Bestand. Mit den Laufbändern ist zu klären, ob Transfer weiterhin in Mengen pro Tick oder ueber belegte Rasterfelder und Bandrichtung modelliert wird.
+- **Gegenstands-IDs:** `G5_Item` aus `Christian_Frey_FabrikDatenmodelle.cs` ist die gemeinsame und einzige Item-ID für das Fabrikspiel.
+- **Itemtransfer:** Die Gebäudeschicht nutzt `IG5_ItemEndpoint` fuer typisierte Eingaben, Ausgaben und Bestand. Das Förderband verbindet dieselben Endpunkte; Gegenstände werden nicht in einem parallelen Itemmodell abgebildet.
 - **Stromnetz:** Die aktuelle Implementierung verbindet Verbraucher ueber die Reichweite von `G5_PowerPole` und verteilt Generatorleistung pro Tick. Falls die Spielumgebung bereits Stromnetze oder Leitungsverbindungen modelliert, soll diese Logik dort integriert statt parallel doppelt gefuehrt werden.
 - **Gemeinsame Balance:** Tickdauer, Produktionszeiten, Kapazitäten, Baukosten, Stromwerte, Rohstoff-Endlichkeit und Rezeptliste werden mit allen drei Entwicklern abgestimmt, sobald Umgebung und Bedienung konkretere Vorgaben liefern.
+
+Herkunft der zusammengeführten Teile und der vollständige gemeinsame Vertragssatz stehen in
+[Gemeinsame_Architektur_und_Schnittstellen.md](Gemeinsame_Architektur_und_Schnittstellen.md).
 
 ### Splitter und Merger
 

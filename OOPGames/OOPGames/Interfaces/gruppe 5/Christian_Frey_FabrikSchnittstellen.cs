@@ -1,12 +1,8 @@
-using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
 
 namespace OOPGames
 {
-
-    public interface G5_IItemEndpoint
+    public interface IG5_ItemEndpoint
     {
         G5_GridPosition Position { get; }
         IReadOnlyDictionary<G5_Item, int> TransferableContents { get; }
@@ -16,7 +12,8 @@ namespace OOPGames
         bool TryRestoreExtracted(G5_Item item, int amount);
         int CountOf(G5_Item item);
     }
-    public interface G5_IPowerConsumer
+
+    public interface IG5_PowerConsumer
     {
         G5_GridPosition Position { get; }
         int PowerDemandPerTick { get; }

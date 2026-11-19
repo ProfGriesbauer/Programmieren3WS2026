@@ -1,6 +1,6 @@
 # UML-Klassendiagramm: Spielfeld des 2D-Fabrikspiels
 
-Das Diagramm zeigt den implementierten Fabrikspiel-Prototyp und offene Erweiterungen. `G5_KachelAnsicht` entfällt: Die interne Kachel implementiert direkt ein nur lesendes Interface. Gebäude und Simulation werden aus Chris' Fabrikmodell wiederverwendet.
+Das Diagramm zeigt das zusammengeführte Fabrikspiel. `SatisfactoryGameRules` ist das einzige Regelwerk; Welt/Karte stammen von Tim, Regeln von Maxi und Gebäude-/Item-/Simulationsmodell von Chris. Alle Teile verwenden die gemeinsamen Schnittstellen und dieselbe `G5_Item`-Definition. Die Herkunft und Verwendung der Verträge ist zusätzlich in [Gemeinsame_Architektur_und_Schnittstellen.md](./Gemeinsame_Architektur_und_Schnittstellen.md) beschrieben.
 
 ```mermaid
 classDiagram
@@ -96,6 +96,25 @@ classDiagram
         +Y: int
     }
 
+    class IG5_ItemEndpoint {
+        <<interface>>
+        +Position: G5_GridPosition
+        +TransferableContents: IReadOnlyDictionary~G5_Item,int~
+        +CanReceive(item, amount): bool
+        +TryReceive(item, amount): bool
+        +TryExtract(item, amount): bool
+        +TryRestoreExtracted(item, amount): bool
+    }
+
+    class IG5_PowerConsumer {
+        <<interface>>
+        +Position: G5_GridPosition
+        +PowerDemandPerTick: int
+        +PowerPriority: int
+        +IsPowered: bool
+        +SetPowered(isPowered): void
+    }
+
     class G5_WeltSpielfeld {
         -_breite: int
         -_hoehe: int
@@ -150,7 +169,7 @@ classDiagram
         -_verbindungen: Sammlung~Verbindung~
     }
 
-    class G5_FabrikRules {
+    class SatisfactoryGameRules {
         -_feld: G5_FabrikSpielfeld
         -_vorkommen: Dictionary
         +CurrentField: IGameField
@@ -174,6 +193,27 @@ classDiagram
     class G5_Miner
     class G5_Smelter
     class G5_Storage
+
+    class G5_Item {
+        <<enumeration>>
+        Holz
+        Eisenerz
+        Kupfererz
+        Eisenbarren
+        Kupferbarren
+        Eisenplatte
+        Eisenstange
+        Kupferdraht
+        Schraube
+        Rotor
+    }
+
+    class G5_Recipe {
+        +Name: string
+        +Ingredients: IReadOnlyDictionary~G5_Item,int~
+        +Output: G5_Item
+        +CycleTicks: int
+    }
 
     class IHumanGamePlayer {
         <<framework interface>>
@@ -211,7 +251,7 @@ classDiagram
     }
 
     IGameRules <|-- IGameRules2
-    IGameRules2 <|.. G5_FabrikRules
+    IGameRules2 <|.. SatisfactoryGameRules
     IPaintGame <|-- IPaintGame2
     IGameField <|-- IG5_WeltSpielfeld
     IG5_WeltSpielfeld <|.. G5_WeltSpielfeld
@@ -228,14 +268,19 @@ classDiagram
     G5_WeltSpielfeld "1" *-- "1..*" G5_Kachel : enthält
     G5_WeltSpielfeld "1" *-- "1" G5_Kartenansicht : gemeinsame Ansichtsberechnung
     G5_WeltSpielfeld ..> IG5_KachelInfo : gibt lesend zurück
-    G5_FabrikRules --> G5_FabrikSpielfeld : verwaltet
-    G5_FabrikRules ..> G5_FabrikAktion : verarbeitet
+    SatisfactoryGameRules --> G5_FabrikSpielfeld : verwaltet
+    SatisfactoryGameRules ..> G5_FabrikAktion : verarbeitet
     G5_FabrikSpielfeld *-- G5_WeltSpielfeld : Kartenwelt
     G5_FabrikSpielfeld *-- G5_FactorySimulation : Simulation
     IG5_KartenansichtSteuerung <|.. G5_FabrikSpielfeld
     G5_FactorySimulation o-- G5_Miner
     G5_FactorySimulation o-- G5_Smelter
     G5_FactorySimulation o-- G5_Storage
+    G5_Building ..|> IG5_ItemEndpoint
+    G5_Building ..|> IG5_PowerConsumer
+    G5_Recipe ..> G5_Item : Zutaten und Produkt
+    IG5_ItemEndpoint ..> G5_Item : Bestände
+    G5_FabrikSpielfeld ..> G5_Item : Hub-Mengen
     G5_FabrikPainter ..> IG5_FabrikSpielInfo : liest Anzeige
     G5_FabrikPainter ..> IG5_WeltSpielfeld : liest Kacheln und Koordinaten
     G5_FabrikHumanPlayer ..> IG5_FabrikSpielInfo : liest Bauwerkzeug
@@ -248,7 +293,7 @@ classDiagram
 
 ## Hinweise zur Umsetzung
 
-- Implementiert: `G5_WeltSpielfeld`, `G5_Kachel`, `G5_Kartenansicht`, `IG5_WeltSpielfeld`, `IG5_KartenansichtSteuerung`, `IG5_KachelInfo`, `G5_FabrikRules`, `G5_FabrikSpielfeld`, `G5_FabrikHumanPlayer`, `G5_FabrikPainter` und die Fabrik-Info-/Aktion-Interfaces.
+- Implementiert: `G5_WeltSpielfeld`, `G5_Kachel`, `G5_Kartenansicht`, `IG5_WeltSpielfeld`, `IG5_KartenansichtSteuerung`, `IG5_KachelInfo`, `SatisfactoryGameRules`, `G5_FabrikSpielfeld`, `G5_FabrikHumanPlayer`, `G5_FabrikPainter`, gemeinsame Item-/Gebäudemodelle und die Fabrik-, Transfer- und Strominterfaces.
 - Offen: Laufbänder, Stromnetz, Sicht-Radius, Handabbau/-crafting und Ausbau der Karte. Die Fabrikrollen sind im vorhandenen Registrierungsblock von `MainWindow.xaml.cs` eingetragen.
 - Die Implementierung nutzt aktuell 32 WPF-Layout-Einheiten pro Kachel und einen Zoomfaktor von 0,25 bis 4. Das Begrenzen der Ansicht am Canvas-Rand erfordert noch die sichtbare Canvas-Größe und die gewünschte Bedienung.
 - `IG5_WeltSpielfeld` zeigt nur Breite, Höhe, lesenden Kachelzugriff sowie Bildschirm-/Rasterumrechnung.
@@ -257,10 +302,11 @@ classDiagram
 - Gelände/Hindernis, Rohstoffvorkommen, Gebäude, Laufbänder und Stromnetz sind getrennte Ebenen. Das Stromnetz wird als Overlay modelliert und überschreibt keine Geländedaten.
 - Der Rohstoff-Enum enthält die Typen aus `Anforderungen.md`; die erste Karte muss nicht alle Typen direkt verwenden.
 - `IstErkundet` bleibt dauerhaft erhalten, `IstAktuellSichtbar` wird von den Rules anhand des Sicht-Radius aktualisiert.
-- `CanBePaintedBy` wird am Feld aufgerufen und prüft im Fabrikprototyp auf `IG5_FabrikPainter`. Die Richtung bedeutet: „Dieses Feld kann von diesem Painter gezeichnet werden.“
+- `CanBePaintedBy` wird am Feld aufgerufen und prüft im Fabrikspiel auf `IG5_FabrikPainter`. Die Richtung bedeutet: „Dieses Feld kann von diesem Painter gezeichnet werden.“
 - Das Framework reicht dem Spieler in `GetMove` nur `IMoveSelection` und `IGameField` weiter. Deshalb liest der Spieler die gemeinsame Umrechnung über `IG5_WeltSpielfeld`; er bekommt nicht die Kartenansicht selbst.
 - Gebäude werden in der wiederverwendeten `G5_FactorySimulation` verwaltet und dem Painter nur über `IG5_GebaeudeInfo` gezeigt. Laufbandbelegung ist noch nicht implementiert.
 - In `MainWindow.xaml.cs` wurden ausschließlich Fabrik-Painter, Fabrik-Rules und Fabrik-Human-Player im bestehenden Registrierungsblock ergänzt.
+- `G5_Item` ist die einzige Item-ID im Fabrikspiel. Karten-Rohstofftypen beschreiben die sichtbare Lagerstätte und werden von den Rules auf ein Item gemappt.
 - `~` bezeichnet im Diagramm interne Mitglieder, die nur innerhalb der Assembly verfügbar sind. Die Interface-Mitglieder sind als explizite Implementierungen dargestellt und werden über das jeweilige Interface aufgerufen.
 - Das Raster ist im Diagramm als Sammlung von Kacheln dargestellt. Getrennte Gebäude- und Laufbandbelegungen verhindern, dass diese Ebenen oder Gelände/Rohstoffe einander überschreiben.
 - `IGameRules2.TickGameCall()` ist optional und nur nötig, wenn die zeitbasierte Simulation den Tick-Aufruf des Frameworks nutzt.

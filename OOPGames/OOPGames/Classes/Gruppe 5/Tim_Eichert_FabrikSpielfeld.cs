@@ -131,6 +131,31 @@ namespace OOPGames
                     return G5_FabrikGebaeudeTyp.Schmelze;
                 }
 
+                if (_gebaeude is G5_Constructor)
+                {
+                    return G5_FabrikGebaeudeTyp.Konstruktor;
+                }
+
+                if (_gebaeude is G5_Assembler)
+                {
+                    return G5_FabrikGebaeudeTyp.Assembler;
+                }
+
+                if (_gebaeude is G5_BurningGenerator)
+                {
+                    return G5_FabrikGebaeudeTyp.Verbrennungsgenerator;
+                }
+
+                if (_gebaeude is G5_PowerPole)
+                {
+                    return G5_FabrikGebaeudeTyp.Strommast;
+                }
+
+                if (_gebaeude is G5_Conveyor)
+                {
+                    return G5_FabrikGebaeudeTyp.Laufband;
+                }
+
                 throw new InvalidOperationException("Unbekannter Gebäudetyp in der Fabrikansicht.");
             }
         }

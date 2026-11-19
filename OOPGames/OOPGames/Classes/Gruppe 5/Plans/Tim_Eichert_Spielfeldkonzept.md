@@ -4,7 +4,7 @@
 
 Das Spielfeld ist eine endliche, zweidimensionale Kachelkarte. Es speichert den Zustand der Welt, zeichnet ihn aber nicht selbst und entscheidet nicht eigenständig über Spielregeln. So bleiben Spielfeld, Painter und Rules austauschbar und die Framework-Grenzen werden eingehalten.
 
-Das Konzept orientiert sich am vorhandenen WPF-Framework OOPGames: Das Spielfeld implementiert `IGameField`; der Painter implementiert `IPaintGame` beziehungsweise bei laufender Aktualisierung `IPaintGame2`. `MainWindow.xaml.cs` bleibt vollständig unverändert. Gruppenspezifische Verträge für teamübergreifende Komponenten müssen vor ihrer Verwendung mit dem Team und den Projektvorgaben abgeglichen werden.
+Das Konzept orientiert sich am vorhandenen WPF-Framework OOPGames: Das Spielfeld implementiert `IGameField`; der Painter implementiert `IPaintGame` beziehungsweise bei laufender Aktualisierung `IPaintGame2`. In `MainWindow.xaml.cs` werden die Gruppe-5-Rollen ausschließlich im vorhandenen Registrierungsblock eingetragen. Die gemeinsame Herkunft und die verwendbaren Verträge sind in [Gemeinsame_Architektur_und_Schnittstellen.md](./Gemeinsame_Architektur_und_Schnittstellen.md) dokumentiert.
 
 Das Klassendiagramm dazu liegt in [Tim_Eichert_Spielfeld_UML.md](./Tim_Eichert_Spielfeld_UML.md).
 
@@ -22,7 +22,7 @@ Das übergeordnete Architekturkonzept des gesamten Spiels steht in [Tim_Eichert_
 | `G5_FabrikSpielfeld` | Aggregiert das Spielfeld mit der vorhandenen Fabriksimulation und stellt deren Daten nur lesend für Player/Painter bereit. | Tim |
 | `G5_FabrikPainter` | Zeichnet Karte, Rohstofffelder, HUB, Förderer, Schmelzen und Statusanzeige. Implementiert `IG5_FabrikPainter`. | Tim |
 | `G5_Kartenansicht` | Hält Zoom und Verschiebung privat und rechnet zwischen Bildschirm- und Rasterkoordinaten um. Die Leseumrechnung ist Teil von `IG5_WeltSpielfeld`; die separate `IG5_KartenansichtSteuerung` ist für Painter-Eingaben vorgesehen. | Tim/Painter gemeinsam |
-| `G5_FabrikRules` | Verarbeitet Werkzeugwahl und Platzierung, initialisiert die Testkarte und taktet die Fabriksimulation. | Tim; Ausbau mit Maxi |
+| `SatisfactoryGameRules` | Verarbeitet Werkzeugwahl und Platzierung, initialisiert die Startkarte und taktet die gemeinsame Fabriksimulation. | Maxi |
 | `G5_FabrikHumanPlayer` / `G5_FabrikAktion` | Übersetzt `F`, `S`, `Esc` und Kartenklicks in typisierte Spielaktionen. | Tim; Ausbau mit Maxi |
 | `G5_Building`-Familie | Vorhandene Gebäude aus `Christian_Frey_FabrikGebaeude.cs`; Miner, Schmelze und Lager werden in dieser Version wiederverwendet. | Chris |
 
@@ -32,7 +32,7 @@ Die Dateinamen richten sich nach den Projektvorgaben, zum Beispiel `Tim_Eichert_
 
 Implementiert sind die read-only Kachel-/Spielfeld-Interfaces, das leere Raster, Terrain-/Rohstoffdaten, Rohstoffabbau, Erkundungsstatus, Sichtbarkeit sowie Bildschirm-/Rasterumrechnung mit Zoom- und Verschiebeoperationen. Zoom und Verschieben sind über den getrennten Steuerungsvertrag `IG5_KartenansichtSteuerung` zugänglich, nicht über die lesende Spielfeldschnittstelle.
 
-Zusätzlich ist der erste Karten-/Fabrikprototyp in den Spielklassen implementiert: feste Karte mit zwei Eisenvorkommen und einem HUB, Auswahl von Förderer (`F`) oder Schmelze (`S`), Platzierung per Kartenklick sowie automatische Produktion. Der Förderer gibt Erz an das HUB ab; das HUB versorgt die Schmelze und lagert Eisenbarren ein. Dafür werden die vorhandenen Gebäude- und Simulationstypen von Chris wiederverwendet; ein gezielter Laufzeittest bestätigt die Erz-zu-Barren-Produktion. Painter, Rules und Player sind im vorhandenen Registrierungsblock von `MainWindow.xaml.cs` eingetragen.
+Der Fabrikprototyp wurde mit der von Maxi erstellten Satisfactory-Regelklasse und Chris' gemeinsamem Gebäudemodell zusammengeführt. Die feste Startkarte enthält Eisen- und Kupfervorkommen sowie passende Startschmelzen. `F`/`S` wählen Förderer/Schmelze und Kartenklicks platzieren sie. Hub, Miner, Schmelzen, Rezepte, Items und Tick-Simulation verwenden dieselben Gruppen-5-Klassen. Nur `SatisfactoryGameRules` ist das aktive Regelwerk.
 
 Noch nicht umgesetzt sind Laufbänder, Stromversorgung, Baukosten, Handabbau/-crafting, Gebäudeauswahl per Mausklick/HUD, Sicht-Radius und Kartengenerierung. Im Prototyp sind Gebäude kostenlos und die Logistik zwischen Maschinen läuft vereinfacht automatisch über das HUB.
 
@@ -45,7 +45,7 @@ Eine separate `G5_KachelAnsicht`-Snapshot-Klasse ist für den ersten Entwurf nic
 - `IG5_WeltSpielfeld : IGameField` zeigt Kartenbreite/-höhe, `TryGetKachelInfo(x, y, out info)` sowie `TryBildschirmZuRaster(...)` und `TryRasterZuBildschirm(...)`.
 - `IG5_KachelInfo` zeigt nur Kacheldaten, die andere Komponenten benötigen, zum Beispiel Gelände, Rohstoff, Restmenge und Erkundungsstatus. Der Rückgabewert ist der Interface-Typ, nicht `G5_Kachel`.
 - `IG5_KartenansichtSteuerung` ist ein separater Befehlsvertrag mit nur `Verschieben(...)` und `Zoomieren(...)`. Der Painter kann ihn für Canvas-Eingaben verwenden; die Spielereingabe arbeitet weiterhin mit dem lesenden `IG5_WeltSpielfeld`.
-- `IG5_FabrikSpielInfo` ergänzt für den Prototyp eine read-only Sicht auf Gebäude, HUB-Bestand und UI-Status. `G5_FabrikSpielfeld` implementiert diese Sicht, ohne konkrete Gebäude oder veränderbare Sammlungen herauszugeben.
+- `IG5_FabrikSpielInfo` ergänzt eine read-only Sicht auf Gebäude, Hub-Bestand und UI-Status. `G5_FabrikSpielfeld` implementiert diese Sicht, ohne konkrete Gebäude oder veränderbare Sammlungen herauszugeben.
 - Kachel-Array und `G5_Kartenansicht` bleiben intern. Es gibt keine öffentlichen Setter oder öffentlichen Array-Zugriffe. Belegungs- und Stromnetz-Layer sind erst nach Festlegung der Teamverträge einzubauen.
 - Platzieren und Abbauen laufen über die Rules; dafür nötige Änderungsmethoden am Spielfeld sind `internal` und kontrollieren die Änderung.
 
@@ -96,11 +96,11 @@ Gelände, Rohstoff und platzierte Objekte werden getrennt gespeichert. So kann e
 
 ## Zusammenspiel der Komponenten
 
-1. `G5_FabrikRules` erstellt eine `G5_FabrikSpielfeld`-Ansicht und veröffentlicht sie als `CurrentField`.
+1. `SatisfactoryGameRules` erstellt eine `G5_FabrikSpielfeld`-Ansicht und veröffentlicht sie als `CurrentField`.
 2. OOPGames prüft die Kompatibilität der Regeln und des Painters über die vorgesehenen Interfaces.
 3. `G5_FabrikPainter` liest Kacheln und Fabrikanzeige über read-only Interfaces und zeichnet sie. Er verändert keine Ressourcen und platziert keine Objekte.
-4. `G5_FabrikHumanPlayer` übersetzt Tastenkürzel und Kartenklicks in `G5_FabrikAktion`; die Rules prüfen die Aktion und ändern erst dann den Weltzustand.
-5. `TickGameCall()` aktualisiert die vorhandene Fabriksimulation und verschiebt Items zwischen Förderer, HUB und Schmelze; `TickPaintGameField()` zeichnet den aktuellen Stand.
+4. `G5_FabrikHumanPlayer` übersetzt Tastenkürzel und Kartenklicks in `G5_FabrikAktion`; `SatisfactoryGameRules` prüft die Aktion und ändert erst dann den Weltzustand.
+5. `TickGameCall()` aktualisiert die gemeinsame Fabriksimulation und verschiebt Items zwischen Förderer, Hub und Schmelze; `TickPaintGameField()` zeichnet den aktuellen Stand.
 
 `IGameField` bietet im Framework nur die allgemeine Kompatibilitätsprüfung. Die benötigten Kartendaten werden über ein schmales gruppenspezifisches Interface bereitgestellt, statt den Painter von der konkreten Klasse abhängig zu machen. Dieses Interface gehört in den erlaubten Gruppenordner unter `Interfaces\gruppe 5` und sollte mit allen Teammitgliedern abgestimmt werden.
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 namespace OOPGames
 {
@@ -326,14 +325,4 @@ namespace OOPGames
         }
     }
 
-    internal static class SatisfactoryGameRegistration
-    {
-        [ModuleInitializer]
-        internal static void RegisterGame()
-        {
-            OOPGamesManager.Singleton.RegisterRules(new SatisfactoryGameRules());
-            OOPGamesManager.Singleton.RegisterPainter(new G5_FabrikPainter());
-            OOPGamesManager.Singleton.RegisterPlayer(new G5_FabrikHumanPlayer());
-        }
-    }
 }

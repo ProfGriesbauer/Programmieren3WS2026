@@ -13,7 +13,14 @@ namespace OOPGames
     {
         Hub,
         Foerderer,
-        Schmelze
+        Schmelze,
+        Konstruktor,
+        Assembler,
+        Verbrennungsgenerator,
+        Strommast,
+        Laufband,
+        Splitter,
+        Merger
     }
 
     public enum G5_FabrikAktionstyp

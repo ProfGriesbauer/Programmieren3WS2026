@@ -66,7 +66,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_SubwayRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
-            OOPGamesManager.Singleton.RegisterRules(new G5_FabrikRules());
+            OOPGamesManager.Singleton.RegisterRules(new SatisfactoryGameRules());
             OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe3DragRaceRules());
             OOPGamesManager.Singleton.RegisterRules(new HayDayRules());

@@ -10,8 +10,8 @@ namespace OOPGames
     {
         private readonly G5_ItemBuffer _items;
         private int _itemsPerTick;
-        private G5_IItemEndpoint _source;
-        private G5_IItemEndpoint _destination;
+        private IG5_ItemEndpoint _source;
+        private IG5_ItemEndpoint _destination;
 
         public G5_Conveyor(
             G5_GridPosition position,
@@ -33,7 +33,7 @@ namespace OOPGames
         public IReadOnlyDictionary<G5_Item, int> Contents => _items.Contents;
         public override IReadOnlyDictionary<G5_Item, int> TransferableContents => _items.Contents;
 
-        public void Connect(G5_IItemEndpoint source, G5_IItemEndpoint destination)
+        public void Connect(IG5_ItemEndpoint source, IG5_ItemEndpoint destination)
         {
             if (source == null)
             {
@@ -265,7 +265,7 @@ namespace OOPGames
     {
         private readonly List<G5_PowerPole> _poles = new List<G5_PowerPole>();
         private readonly List<G5_BurningGenerator> _generators = new List<G5_BurningGenerator>();
-        private readonly List<G5_IPowerConsumer> _consumers = new List<G5_IPowerConsumer>();
+        private readonly List<IG5_PowerConsumer> _consumers = new List<IG5_PowerConsumer>();
 
         public void AddPole(G5_PowerPole pole)
         {
@@ -297,7 +297,7 @@ namespace OOPGames
             _generators.Add(generator);
         }
 
-        public void AddConsumer(G5_IPowerConsumer consumer)
+        public void AddConsumer(IG5_PowerConsumer consumer)
         {
             if (consumer == null)
             {
@@ -314,7 +314,7 @@ namespace OOPGames
 
         public void DistributePower()
         {
-            foreach (G5_IPowerConsumer consumer in _consumers)
+            foreach (IG5_PowerConsumer consumer in _consumers)
             {
                 consumer.SetPowered(consumer.PowerDemandPerTick == 0);
             }
@@ -325,7 +325,7 @@ namespace OOPGames
                 List<G5_BurningGenerator> connectedGenerators = _generators
                     .Where(generator => IsConnected(generator.Position, componentPoles))
                     .ToList();
-                List<G5_IPowerConsumer> connectedConsumers = _consumers
+                List<IG5_PowerConsumer> connectedConsumers = _consumers
                     .Where(consumer => consumer.PowerDemandPerTick > 0 &&
                         IsConnected(consumer.Position, componentPoles))
                     .OrderBy(consumer => consumer.PowerPriority)
@@ -335,7 +335,7 @@ namespace OOPGames
 
                 long availablePower = connectedGenerators.Sum(generator => (long)generator.AvailablePower);
                 int powerToGenerate = 0;
-                foreach (G5_IPowerConsumer consumer in connectedConsumers)
+                foreach (IG5_PowerConsumer consumer in connectedConsumers)
                 {
                     if (consumer.PowerDemandPerTick <= availablePower)
                     {
@@ -407,8 +407,8 @@ namespace OOPGames
     public static class G5_ItemTransfer
     {
         public static int Transfer(
-            G5_IItemEndpoint source,
-            G5_IItemEndpoint destination,
+            IG5_ItemEndpoint source,
+            IG5_ItemEndpoint destination,
             G5_Item item,
             int amount)
         {

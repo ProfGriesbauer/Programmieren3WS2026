@@ -204,3 +204,32 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > achso klarden painter die rules und players dürfen hinzugefügt werden
 
 - **Ergebnisvermerk:** `G5_FabrikPainter`, `G5_FabrikRules` und `G5_FabrikHumanPlayer` wurden ausschließlich im bestehenden Registrierungsblock von `MainWindow.xaml.cs` eingetragen. Konzept und UML wurden entsprechend korrigiert.
+
+### 2026-11-19, 09:08 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Die anderen gruppenmitglieder haben auch einige dinge erstellt und gepushed. Kannst du alles zu einem spiel vereinen, damit klassesn wie items auch nur einmal vorhanden sind und die einzelnen programmteile da drauf zugreifen können und nicht jeder ne einzelnge klasse dafür hat. Bitte dokumentiere was du aus welche programm verwendest hast. Außerdem erstelle klare schnittstellen die jeder verwenden kann.
+
+- **Ergebnisvermerk:** Die Gruppe-5-Fabrikteile wurden auf ein gemeinsames Regelwerk zusammengeführt: `SatisfactoryGameRules` verwendet Tims Welt, Spielfeldprojektion, Painter und Player sowie Chris' gemeinsame Items, Rezepte, Gebäude, Transfer-/Strommodelle und Simulation. Die parallele Prototyp-Regelklasse und automatische Doppelregistrierung wurden entfernt. Die Item-/Power-Schnittstellen liegen im Interface-Ordner und folgen dem `IG5_`-Präfix. Herkunft und Verträge sind in `Plans/Gemeinsame_Architektur_und_Schnittstellen.md` dokumentiert.
+
+### 2026-11-19, 09:19 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> welche von den ganzen datein und klassen werden aktuell verwendet, wird alles verwendet ode rgibt es noch alte dinge die nicht mehr verwendet werden und auch keine verwendung mehr haben
+
+- **Ergebnisvermerk:** Die aktuellen Gruppe-5-Dateien und Klassen wurden nach registriertem Spielablauf, nur vorbereiteten Erweiterungen und separaten Spielen klassifiziert. Die Übersicht steht im Abschnitt „Aktueller Nutzungsstand“ in `Plans/Gemeinsame_Architektur_und_Schnittstellen.md`. Insbesondere sind Constructor, Assembler, Förderbänder, Generatoren, Masten, Upgrades und Zoom-/Pan-Eingabe noch nicht im aktuellen Satisfactory-Ablauf angeschlossen; die frühere Regelklasse `G5_FabrikRules` ist lokal entfernt, aber die Änderung noch nicht gepusht.
+
+### 2026-11-19, 09:28 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompts im Wortlaut:**
+
+> Kannst du die designs von chris implementieren
+
+> setzte bitte alle um schau aber das man noch nicht alles im spiel verwenden kann
+
+- **Ergebnisvermerk:** Alle zehn Designs aus Chris' HTML-Vorschau wurden als native WPF-Vektorzeichnungen im Fabrik-Painter umgesetzt. Vorhandene Gebäude werden auf ihre passenden Designs abgebildet; die Stufen 1–3 erhalten optische Akzente. Splitter und Merger sind nur als Zeichnungen vorbereitet, da ihnen Gebäudemodelle und Spielregeln fehlen. Bauwerkzeuge, Regeln und `MainWindow.xaml.cs` wurden nicht geändert; dadurch sind noch nicht verfügbare Gebäude weiterhin nicht platzierbar.

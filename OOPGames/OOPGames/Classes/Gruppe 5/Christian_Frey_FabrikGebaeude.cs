@@ -99,7 +99,7 @@ namespace OOPGames
             _capacity = checked(_capacity + amount);
         }
     }
-    public abstract class G5_Building : G5_IItemEndpoint, G5_IPowerConsumer
+    public abstract class G5_Building : IG5_ItemEndpoint, IG5_PowerConsumer
     {
         private int _powerDemandPerTick;
 

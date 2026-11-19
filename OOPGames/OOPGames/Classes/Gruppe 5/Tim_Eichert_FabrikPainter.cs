@@ -178,54 +178,104 @@ namespace OOPGames
                 return;
             }
 
-            Brush farbe;
-            string beschriftung;
-            switch (gebaeude.Typ)
-            {
-                case G5_FabrikGebaeudeTyp.Hub:
-                    farbe = Brushes.SteelBlue;
-                    beschriftung = "HUB";
-                    break;
-                case G5_FabrikGebaeudeTyp.Foerderer:
-                    farbe = Brushes.DarkOrange;
-                    beschriftung = "F";
-                    break;
-                case G5_FabrikGebaeudeTyp.Schmelze:
-                    farbe = Brushes.Firebrick;
-                    beschriftung = "S";
-                    break;
-                default:
-                    throw new InvalidOperationException("Unbekannter Gebäudetyp in der Darstellung.");
-            }
-
-            Rectangle rechteck = new Rectangle
-            {
-                Width = kachelBreite * gebaeude.Breite,
-                Height = kachelHoehe * gebaeude.Hoehe,
-                Fill = farbe,
-                Stroke = Brushes.White,
-                StrokeThickness = 2,
-                Opacity = 0.9
-            };
-            Canvas.SetLeft(rechteck, position.X);
-            Canvas.SetTop(rechteck, position.Y);
-            canvas.Children.Add(rechteck);
+            double breite = kachelBreite * gebaeude.Breite;
+            double hoehe = kachelHoehe * gebaeude.Hoehe;
+            Canvas abbildung = G5_FabrikGebaeudeZeichner.Create(
+                gebaeude.Typ,
+                gebaeude.Level,
+                breite,
+                hoehe);
+            Canvas.SetLeft(abbildung, position.X);
+            Canvas.SetTop(abbildung, position.Y);
+            canvas.Children.Add(abbildung);
 
             string status = gebaeude.Typ == G5_FabrikGebaeudeTyp.Hub
                 ? "Lager"
                 : StatusText(gebaeude.Status);
+            double statusHoehe = Math.Min(15, hoehe * 0.24);
+            Rectangle statusHintergrund = new Rectangle
+            {
+                Width = breite,
+                Height = statusHoehe,
+                Fill = new SolidColorBrush(Color.FromArgb(205, 24, 29, 27)),
+                Stroke = Brushes.Transparent
+            };
+            Canvas.SetLeft(statusHintergrund, position.X);
+            Canvas.SetTop(statusHintergrund, position.Y + hoehe - statusHoehe);
+            canvas.Children.Add(statusHintergrund);
+
             TextBlock text = new TextBlock
             {
-                Text = beschriftung + Environment.NewLine + status,
+                Text = GebaeudeKurzname(gebaeude.Typ) + " · " + status,
                 Foreground = Brushes.White,
                 FontWeight = FontWeights.Bold,
-                FontSize = Math.Max(9, Math.Min(14, kachelHoehe * 0.4)),
+                FontSize = Math.Max(6, Math.Min(9, statusHoehe * 0.65)),
                 TextAlignment = TextAlignment.Center,
-                Width = rechteck.Width
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Width = breite
             };
             Canvas.SetLeft(text, position.X);
-            Canvas.SetTop(text, position.Y + rechteck.Height * 0.25);
+            Canvas.SetTop(text, position.Y + hoehe - statusHoehe);
             canvas.Children.Add(text);
+
+            Brush levelFarbe = gebaeude.Level >= 3
+                ? new SolidColorBrush(Color.FromRgb(191, 89, 64))
+                : gebaeude.Level == 2
+                    ? new SolidColorBrush(Color.FromRgb(74, 165, 197))
+                    : new SolidColorBrush(Color.FromRgb(171, 128, 56));
+            Rectangle levelHintergrund = new Rectangle
+            {
+                Width = Math.Min(23, breite * 0.38),
+                Height = Math.Min(11, hoehe * 0.18),
+                Fill = levelFarbe,
+                Stroke = Brushes.Black,
+                StrokeThickness = 0.5
+            };
+            Canvas.SetLeft(levelHintergrund, position.X + breite - levelHintergrund.Width - 2);
+            Canvas.SetTop(levelHintergrund, position.Y + 2);
+            canvas.Children.Add(levelHintergrund);
+
+            TextBlock levelText = new TextBlock
+            {
+                Text = "MK" + Math.Max(1, gebaeude.Level),
+                Foreground = Brushes.White,
+                FontWeight = FontWeights.Bold,
+                FontSize = 6,
+                TextAlignment = TextAlignment.Center,
+                Width = levelHintergrund.Width
+            };
+            Canvas.SetLeft(levelText, Canvas.GetLeft(levelHintergrund));
+            Canvas.SetTop(levelText, Canvas.GetTop(levelHintergrund));
+            canvas.Children.Add(levelText);
+        }
+
+        private static string GebaeudeKurzname(G5_FabrikGebaeudeTyp typ)
+        {
+            switch (typ)
+            {
+                case G5_FabrikGebaeudeTyp.Hub:
+                    return "HUB";
+                case G5_FabrikGebaeudeTyp.Foerderer:
+                    return "MINER";
+                case G5_FabrikGebaeudeTyp.Schmelze:
+                    return "SCHMELZE";
+                case G5_FabrikGebaeudeTyp.Konstruktor:
+                    return "KONSTR.";
+                case G5_FabrikGebaeudeTyp.Assembler:
+                    return "ASSEMB.";
+                case G5_FabrikGebaeudeTyp.Verbrennungsgenerator:
+                    return "GENERATOR";
+                case G5_FabrikGebaeudeTyp.Strommast:
+                    return "STROMMAST";
+                case G5_FabrikGebaeudeTyp.Laufband:
+                    return "LAUFBAND";
+                case G5_FabrikGebaeudeTyp.Splitter:
+                    return "SPLITTER";
+                case G5_FabrikGebaeudeTyp.Merger:
+                    return "MERGER";
+                default:
+                    throw new InvalidOperationException("Unbekannter Gebäudetyp in der Beschriftung.");
+            }
         }
 
         private static string StatusText(G5_BuildingStatus status)
