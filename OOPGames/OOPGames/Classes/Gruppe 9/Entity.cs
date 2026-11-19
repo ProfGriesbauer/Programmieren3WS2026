@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 
@@ -10,9 +11,14 @@ namespace OOPGames
         private int _maxHitPoints;
         private double _maxSpeed;
         private double _currentSpeed;
+        private readonly List<ActiveStatusEffect> _activeStatusEffects =
+            new List<ActiveStatusEffect>();
+        private readonly List<ActiveDamageOverTimeEffect> _damageOverTimeEffects =
+            new List<ActiveDamageOverTimeEffect>();
 
         protected Entity(double positionX, double positionY, int maxHitPoints,
-            double maxSpeed, double size, Brush color)
+            double maxSpeed, double size, Brush color,
+            CombatTeam team = CombatTeam.Neutral)
         {
             if (maxHitPoints <= 0)
             {
@@ -35,6 +41,7 @@ namespace OOPGames
             currentSpeed = maxSpeed;
             Size = size;
             Color = color ?? throw new ArgumentNullException(nameof(color));
+            Team = team;
         }
 
         public int MaxHitPoints
@@ -94,11 +101,53 @@ namespace OOPGames
         public double Size { get; }
         public Brush Color { get; }
         public bool IsAlive { get; private set; } = true;
+        public CombatTeam Team { get; protected set; }
+        public Weapon EquippedWeapon { get; set; }
+        internal Weapon EffectWeaponContext { get; set; }
+        public bool HasActiveAttack { get; internal set; }
+        public AttackVisualState CurrentAttackVisual { get; internal set; }
+        public IReadOnlyList<ActiveStatusEffect> ActiveStatusEffects
+        {
+            get { return _activeStatusEffects.AsReadOnly(); }
+        }
+        public IReadOnlyList<ActiveDamageOverTimeEffect> ActiveDamageOverTimeEffects
+        {
+            get { return _damageOverTimeEffects.AsReadOnly(); }
+        }
+        public double EffectiveSpeed
+        {
+            get { return currentSpeed * GetStatusSpeedMultiplier(); }
+        }
+        public string StatusSummary
+        {
+            get
+            {
+                if (_activeStatusEffects.Count == 0
+                    && _damageOverTimeEffects.Count == 0)
+                {
+                    return "None";
+                }
+
+                List<string> statuses = new List<string>();
+                foreach (ActiveStatusEffect effect in _activeStatusEffects)
+                {
+                    statuses.Add(effect.Name + " "
+                        + effect.RemainingSeconds.ToString("0.0") + "s");
+                }
+                foreach (ActiveDamageOverTimeEffect effect in _damageOverTimeEffects)
+                {
+                    statuses.Add(effect.Name + " "
+                        + effect.RemainingSeconds.ToString("0.0") + "s");
+                }
+                return string.Join(", ", statuses);
+            }
+        }
 
         public void Move(double directionX, double directionY, Rect movementBounds)
         {
             double length = Math.Sqrt(directionX * directionX + directionY * directionY);
-            if (length == 0 || currentSpeed == 0 || !IsAlive)
+            double speed = EffectiveSpeed;
+            if (length == 0 || speed == 0 || !IsAlive)
             {
                 IsMoving = false;
                 return;
@@ -119,10 +168,10 @@ namespace OOPGames
             double maximumY = movementBounds.Bottom - radius;
             double nextX = minimumX > maximumX
                 ? movementBounds.Left + movementBounds.Width / 2
-                : Math.Max(minimumX, Math.Min(maximumX, PositionX + directionX * currentSpeed));
+                : Math.Max(minimumX, Math.Min(maximumX, PositionX + directionX * speed));
             double nextY = minimumY > maximumY
                 ? movementBounds.Top + movementBounds.Height / 2
-                : Math.Max(minimumY, Math.Min(maximumY, PositionY + directionY * currentSpeed));
+                : Math.Max(minimumY, Math.Min(maximumY, PositionY + directionY * speed));
 
             IsMoving = nextX != PositionX || nextY != PositionY;
             PositionX = nextX;
@@ -151,6 +200,169 @@ namespace OOPGames
 
             CurrentHitPoints -= damage;
             CheckAndKill();
+        }
+
+        public int Heal(int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount));
+            }
+            if (!IsAlive)
+            {
+                return 0;
+            }
+
+            int previousHitPoints = CurrentHitPoints;
+            CurrentHitPoints = (int)Math.Min(
+                MaxHitPoints, (long)CurrentHitPoints + amount);
+            return CurrentHitPoints - previousHitPoints;
+        }
+
+        public void ApplyMovementStatus(
+            string id, string name, double speedMultiplier, double durationSeconds)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("A status id is required.", nameof(id));
+            }
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("A status name is required.", nameof(name));
+            }
+            if (speedMultiplier < 0 || speedMultiplier > 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(speedMultiplier));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+            if (!IsAlive)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _activeStatusEffects.Count; i++)
+            {
+                ActiveStatusEffect activeEffect = _activeStatusEffects[i];
+                if (activeEffect.Id == id)
+                {
+                    double remainingSeconds = Math.Max(
+                        activeEffect.RemainingSeconds, durationSeconds);
+                    if (speedMultiplier < activeEffect.SpeedMultiplier)
+                    {
+                        _activeStatusEffects[i] = new ActiveStatusEffect(
+                            id, name, speedMultiplier, remainingSeconds);
+                    }
+                    else
+                    {
+                        activeEffect.RemainingSeconds = remainingSeconds;
+                    }
+                    return;
+                }
+            }
+
+            _activeStatusEffects.Add(new ActiveStatusEffect(
+                id, name, speedMultiplier, durationSeconds));
+        }
+
+        public void ApplyDamageOverTime(
+            string id, string name, double damagePerSecond,
+            double durationSeconds, double spreadRadius, Entity source,
+            Weapon sourceWeapon = null)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentException("A damage effect id is required.", nameof(id));
+            }
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("A damage effect name is required.", nameof(name));
+            }
+            if (damagePerSecond <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(damagePerSecond));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+            if (spreadRadius < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(spreadRadius));
+            }
+            if (!IsAlive)
+            {
+                return;
+            }
+
+            foreach (ActiveDamageOverTimeEffect activeEffect in _damageOverTimeEffects)
+            {
+                if (activeEffect.Id == id)
+                {
+                    activeEffect.DamagePerSecond = Math.Max(
+                        activeEffect.DamagePerSecond, damagePerSecond);
+                    activeEffect.RemainingSeconds = Math.Max(
+                        activeEffect.RemainingSeconds, durationSeconds);
+                    activeEffect.SpreadRadius = Math.Max(
+                        activeEffect.SpreadRadius, spreadRadius);
+                    activeEffect.Source = source;
+                    activeEffect.SourceWeapon = sourceWeapon
+                        ?? (source == null ? null
+                            : source.EffectWeaponContext ?? source.EquippedWeapon);
+                    return;
+                }
+            }
+
+            _damageOverTimeEffects.Add(new ActiveDamageOverTimeEffect(
+                id, name, damagePerSecond, durationSeconds, spreadRadius,
+                source, sourceWeapon ?? (source == null ? null
+                    : source.EffectWeaponContext ?? source.EquippedWeapon)));
+        }
+
+        public void UpdateStatusEffects(double deltaSeconds)
+        {
+            if (deltaSeconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
+            }
+
+            for (int i = _activeStatusEffects.Count - 1; i >= 0; i--)
+            {
+                ActiveStatusEffect effect = _activeStatusEffects[i];
+                effect.RemainingSeconds -= deltaSeconds;
+                if (effect.RemainingSeconds <= 0)
+                {
+                    _activeStatusEffects.RemoveAt(i);
+                }
+            }
+
+            if (EffectiveSpeed == 0)
+            {
+                IsMoving = false;
+            }
+        }
+
+        internal void RemoveExpiredDamageOverTimeEffects()
+        {
+            for (int i = _damageOverTimeEffects.Count - 1; i >= 0; i--)
+            {
+                if (_damageOverTimeEffects[i].IsExpired)
+                {
+                    _damageOverTimeEffects.RemoveAt(i);
+                }
+            }
+        }
+
+        private double GetStatusSpeedMultiplier()
+        {
+            double multiplier = 1;
+            foreach (ActiveStatusEffect effect in _activeStatusEffects)
+            {
+                multiplier = Math.Min(multiplier, effect.SpeedMultiplier);
+            }
+            return multiplier;
         }
     }
 }

@@ -9,8 +9,9 @@ namespace OOPGames
         private long _attackStartTimestamp;
 
         public PlayerCharacter(double x, double y)
-            : base(x, y, 100, 15, 34, Brushes.DodgerBlue)
+            : base(x, y, 100, 15, 34, Brushes.DodgerBlue, CombatTeam.Player)
         {
+            EquippedWeapon = WeaponCatalog.Sword;
         }
 
         public PlayerFacing AttackFacing { get; private set; } = PlayerFacing.Front;

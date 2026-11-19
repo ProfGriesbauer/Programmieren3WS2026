@@ -15,12 +15,6 @@ namespace OOPGames
 
         public void ClearField()
         {
-            PainterG9 painter = OOPGamesManager.Singleton.ActivePainter as PainterG9;
-            if (painter != null)
-            {
-                painter.ResetAnimationProfile();
-            }
-
             _field.StartNewGame();
         }
 
@@ -31,7 +25,11 @@ namespace OOPGames
 
         public void StartedGameCall()
         {
-            ClearField();
+            PainterG9 painter = OOPGamesManager.Singleton.ActivePainter as PainterG9;
+            if (painter != null)
+            {
+                painter.ResetAnimationProfile();
+            }
         }
 
         public void TickGameCall()
@@ -43,6 +41,7 @@ namespace OOPGames
 
             _field.UpdatePlayerPosition();
             _field.UpdateEnemyPositions();
+            _field.UpdateCombat(0.04);
         }
     }
 }
