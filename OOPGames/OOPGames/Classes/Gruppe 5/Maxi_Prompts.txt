@@ -116,3 +116,9 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-19 08:48:12] Wenn ich jetzt das Spiel starte existiert nur eine ganz simple Version von Satisfactory. Bitte lösche zumindest gamePlayer (Mensch) und GamePayer(du) und stelle sicher dass die Datei SatisfactoryGameLogic nur für die "Rules" zustädnig ist und kein eigenes Satisfactory erstellt. Die Datei SatisfactoryGameRules soll dann über Schnittstellen zusammen mit den Dateien von Tim Eichert und Christian Frey das Satisfactory im Framework implementieren
 
 [2026-11-19 08:57:43] Als Nächstes Pull damit ich die neuesten Änderungen habe und danach push und commit
+
+[2026-11-19 09:23:33] Prüfe ob die neuen Dateien von Christian und Tim immer noch mit meiner Datei, SatisfactoryGameRules kompatibel ist, und wenn nicht sag mir erst einmal die Probleme
+
+[2026-11-19 09:39:55] Erstelle eine Art Startbildschirm die angezeigt wird bevor man das Spielfeld etc. sieht. Dort soll unter anderem die Anleitung aber auch Settings mit verschiedenen Auswahlmöglichkeiten auswählbar sein. Lege diese Datei in den Ordner Satisfactory. Gestalte dieses Fenster, das auftaucht bitte optisch ansprechend und stelle sicher, dass die Datei von den Schnittstellen her kompatibel ist mit den Dateien meiner Gruppenmitglider und mit dem framework
+
+[2026-11-19 09:47:31] Pull commit und push

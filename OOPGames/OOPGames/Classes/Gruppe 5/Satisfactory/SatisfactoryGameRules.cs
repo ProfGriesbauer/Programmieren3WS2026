@@ -8,10 +8,12 @@ namespace OOPGames
     {
         private const int MapWidth = 24;
         private const int MapHeight = 14;
+        private const int HudHeight = 36;
         private const int BuildingWidth = 2;
         private const int BuildingHeight = 2;
-        private const int MinerCycleTicks = 35;
-        private const int SmelterCycleTicks = 55;
+        private int _resourceAmount = 300;
+        private int _minerCycleTicks = 35;
+        private int _smelterCycleTicks = 55;
 
         private readonly Dictionary<G5_GridPosition, G5_ResourceDeposit> _deposits =
             new Dictionary<G5_GridPosition, G5_ResourceDeposit>();
@@ -59,6 +61,7 @@ namespace OOPGames
             _deposits.Clear();
 
             G5_WeltSpielfeld world = new G5_WeltSpielfeld(MapWidth, MapHeight);
+            world.VerschiebeAnsicht(0, HudHeight);
             for (int y = 0; y < MapHeight; y++)
             {
                 for (int x = 0; x < MapWidth; x++)
@@ -71,10 +74,10 @@ namespace OOPGames
             }
 
             _field = new G5_FabrikSpielfeld(world, 1, 1);
-            AddDeposit(5, 2, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, 300);
-            AddDeposit(5, 9, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, 300);
-            AddDeposit(17, 2, G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz, 300);
-            AddDeposit(17, 9, G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz, 300);
+            AddDeposit(5, 2, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, _resourceAmount);
+            AddDeposit(5, 9, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, _resourceAmount);
+            AddDeposit(17, 2, G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz, _resourceAmount);
+            AddDeposit(17, 9, G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz, _resourceAmount);
 
             AddSmelter(10, 2, "Eisenerz schmelzen");
             AddSmelter(10, 9, "Kupfererz schmelzen");
@@ -88,6 +91,14 @@ namespace OOPGames
 
         public void StartedGameCall()
         {
+            SatisfactoryStartScreen startScreen = new SatisfactoryStartScreen();
+            if (startScreen.ShowDialog() == true)
+            {
+                _resourceAmount = startScreen.SelectedSettings.ResourceAmount;
+                _minerCycleTicks = startScreen.SelectedSettings.MinerCycleTicks;
+                _smelterCycleTicks = startScreen.SelectedSettings.SmelterCycleTicks;
+            }
+
             ClearField();
         }
 
@@ -152,7 +163,7 @@ namespace OOPGames
                     position,
                     deposit,
                     outputCapacity: 20,
-                    cycleTicks: MinerCycleTicks,
+                    cycleTicks: _minerCycleTicks,
                     amountPerCycle: 1,
                     powerDemandPerTick: 0);
             }
@@ -249,11 +260,11 @@ namespace OOPGames
             _field.AddGebaeude(smelter);
         }
 
-        private static G5_Smelter CreateSmelter(int x, int y, string recipeName)
+        private G5_Smelter CreateSmelter(int x, int y, string recipeName)
         {
             G5_Smelter smelter = new G5_Smelter(
                 new G5_GridPosition(x, y),
-                G5_StarterRecipes.CreateSmeltingRecipes(SmelterCycleTicks, powerDemandPerTick: 0),
+                G5_StarterRecipes.CreateSmeltingRecipes(_smelterCycleTicks, powerDemandPerTick: 0),
                 inputCapacity: 20,
                 outputCapacity: 20);
             if (!smelter.SelectRecipe(recipeName))

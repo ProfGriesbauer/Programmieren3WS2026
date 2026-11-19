@@ -4,10 +4,19 @@
 
 Im Framework die Regeln **„G5 Satisfactory Rules“**, den gemeinsamen Gruppe-5-
 Painter **„G5 Fabrik-Welt“** und den gemeinsamen menschlichen Spieler
-**„G5 Fabrik-Spieler“** auswählen. Das ist das einzige Fabrik-Regelwerk. Es
-verwendet die gemeinsame Welt, Gebäude, Items, Rezepte und Simulation von Gruppe 5;
-die separate Prototyp-Regelklasse wurde entfernt. Für den Zwei-Spieler-Workaround
-denselben Fabrik-Spieler in beiden Spielerfeldern auswählen.
+**„G5 Fabrik-Spieler“** auswählen. Beim Start erscheint zuerst ein Fenster mit
+der Anleitung und den Spieleinstellungen. Dort Rohstoffvorrat und
+Produktionstempo wählen und **„Fabrik starten“** anklicken. Satisfactory
+registriert keine eigenen Mensch- oder KI-Spieler. Es ist das einzige Fabrik-
+Regelwerk und verwendet die gemeinsame Welt, Gebäude, Items, Rezepte und
+Simulation von Gruppe 5. Für den Zwei-Spieler-Workaround denselben
+Fabrik-Spieler in beiden Spielerfeldern auswählen; das Framework selbst
+alterniert weiterhin zwischen den beiden Spieler-Slots.
+
+## Einstellungen
+
+- **Rohstoffvorrat:** Knapp (150), Standard (300) oder Reich (600) Erz pro Vorkommen.
+- **Produktionstempo:** Entspannt, Standard oder Schnell für Förderer und Schmelzen.
 
 ## Steuerung
 
