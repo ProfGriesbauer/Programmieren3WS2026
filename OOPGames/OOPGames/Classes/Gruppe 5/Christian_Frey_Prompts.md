@@ -107,3 +107,31 @@
 > geh auch bei den anderen designs von den strikten Blöcken als designgrundlage weg und überarbeite diese nochmal nach den grundlagen die ich dir für den Miner gegeben habe
 
 - **Ergebnisvermerk:** Schmelze, Konstruktor, Assembler, Lager und Verbrennungsgenerator wurden mit runden Kesseln, geöffneten Drehtischen, mehreren Fertigungsstationen und zylindrischen Silos neu gezeichnet. Strommast, Laufband, Splitter und Merger wurden ebenfalls von blockigen Sockeln bzw. Gehäusen auf rundere, funktionsbetonte Formen umgestellt. Die Anschlusssymbole und Levelumschaltung blieben erhalten.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Teile die von mir erstellte Klasse FabrikGebaede sinnvoll in verschiedene Klassen auf um den Überblick zu behalten (z.B. Gebäudefunktionen, Design, Interaktion, etc.)
+
+- **Ergebnisvermerk:** Die bisherige große Gebäudedatei wurde nach Verantwortlichkeiten aufgeteilt: Datenmodelle, Schnittstellen, Gebäude und Produktion, Transport und Energie sowie Fabriksimulation und Starterrezepte. Namespace, Typnamen und öffentliche Schnittstellen blieben unverändert. Zeichen-/Designlogik liegt weiterhin in der separaten Designvorschau; Spielfeldinteraktion verbleibt in den bereits vorhandenen Gruppe-5-Spielklassen.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Jetzt nochmal zum Design. Eingang Ausgang und die Stromanschlüsse sollen nicht direkt sichtbar sein. Diese müssen nur für die Verbindung im Spiel als Anschlüsse vorbereitet sein. Mach außerdem die Designs noch deutlicher. Mach den Assembler zu einem Roboterarm im industriellen Stil mit Greifzange. Mach die Laufband länglich in Förderrichtung und mach sie standardmäßig waagrecht ausgerichtet. Diese sollen dann später um 90° rotiert werden können. Mach die Laufbänder von Splitter und Merger anschließend genauso breit wie das des Laufbands und mach die Verzweigungen passend dazu. Mach auch die andern Designs deutlicher erkennbar (Verbrennungsgenerator klar als Ofen zum Heizen erkennbar, Schmelze als runder Schmelzofen passt, Lager deutlicher, Konstruktor vereinfacht als Werkbank oder Amboss). Vergleiche deine Designs mit Bildern realer Vorbilder und bau diese realistisch und gut erkennbar nach.
+
+- **Ergebnisvermerk:** Die Anschlusssymbole wurden aus den Gebäudemodellen entfernt; die Rastergrafik kennzeichnet Anschlusspositionen nur noch schematisch als logische Verbindungen. Der Assembler ist als Gelenkroboter mit Greifzange, der Konstruktor als Amboss-Werkbank, das Lager als Siloanlage und der Verbrennungsgenerator als Heizofen dargestellt. Laufband, Splitter und Merger verwenden gleich breite waagrechte Förderstrecken; die Vorschau kann das Laufband um 90 Grad drehen. Formreferenzen zu realer Industrie- und Fördertechnik sind in der Vorschau verlinkt; die Modelle bleiben eigenständige SVG-Interpretationen. Die Dokumentation wurde an die unsichtbaren Anschlüsse und vorläufigen Rasterregeln angepasst.
+
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Mach die Schmelze noch deutlicher als Schmelzkessel. Mach das Laufband wieder schwarz und eckig wie vorher, mit den Bändern als Struktur, übernehm das Design auch für die splitter und merger. Bau diese so auf dass sie di eteile auf unserem Grid als Spielfeld auch wirklich sinnvoll verteilen können (z.B. links und rechts raus, momentan sieht es so aus als bleiben sie auf einem Feld). den Konstruktor als Amboss ohne die eckige Plattform unten
+
+- **Ergebnisvermerk:** Die Schmelze wurde zu einem deutlich höheren Schmelzkessel mit breitem Rand, tiefem Feuerraum und glühender Schmelze umgezeichnet. Das Förderband verwendet wieder ein schwarzes Band mit Querleisten und kantigem Rahmen; Splitter und Merger übernehmen diese Bauweise. Der Splitter hat einen oberen Zulauf und getrennte linke/rechte Ausgänge, der Merger die umgekehrte Anordnung; die Anschlüsse liegen mittig an eigenen Seiten eines vorläufigen 3x3-Kachel-Footprints. Der Konstruktor zeigt jetzt nur noch den Amboss, ohne separate Plattform oder Werkbank.

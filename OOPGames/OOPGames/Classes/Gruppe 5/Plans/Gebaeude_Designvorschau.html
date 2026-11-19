@@ -112,6 +112,8 @@
 
     .machine.wide { width: 226px; }
     .machine.belt { width: 235px; height: 150px; }
+    .machine.belt.rotate-90 { transform: rotate(90deg); }
+    .scene.belt-rotated { min-height: 250px; }
     body[data-level="2"] .machine { filter: sepia(.12) hue-rotate(142deg) saturate(.78); }
     body[data-level="3"] .machine { filter: sepia(.32) hue-rotate(326deg) saturate(.86); }
     .scene::before {
@@ -139,23 +141,7 @@
     .kind { color: #dfc477; font-size: .65rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
     .copy p { margin: 0; color: #b7bbb3; font-size: .87rem; }
     .copy .detail { margin-top: 8px; color: #89918c; font-size: .77rem; }
-    .ports { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-    .port {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      border: 1px solid #48514d;
-      border-radius: 4px;
-      padding: 2px 6px;
-      color: #c8cbc2;
-      background: #1b2020;
-      font-size: .69rem;
-    }
-    .port::before { font-weight: 800; }
-    .port.in::before { color: #83c997; content: "←"; }
-    .port.out::before { color: #e2bd62; content: "→"; }
-    .port.power::before { color: #87c6df; content: "ϟ"; }
-    .port.deposit::before { color: #c5aa70; content: "↓"; }
+    .orientation-toggle { margin-top: 10px; padding: 4px 8px; font-size: .76rem; }
 
     .section-heading { margin: 36px 0 6px; font-size: 1.35rem; }
     .section-intro { max-width: 850px; margin: 0 0 18px; color: var(--muted); }
@@ -179,6 +165,8 @@
     .world-scroll { overflow-x: auto; padding: 14px; }
     .world-diagram { display: block; width: 100%; min-width: 720px; height: auto; }
     .world-caption { margin: 0; padding: 0 17px 17px; color: #b7bbb3; font-size: .88rem; }
+    .reference-links { margin: 8px 0 0; }
+    .reference-links a { color: #b6d6d3; }
     .flow-dot { animation: belt-flow 2.8s linear infinite; }
     .flow-dot.delay-1 { animation-delay: -.9s; }
     .flow-dot.delay-2 { animation-delay: -1.8s; }
@@ -226,10 +214,6 @@
         <stop offset=".5" stop-color="#ab8038"/>
         <stop offset="1" stop-color="#624923"/>
       </linearGradient>
-      <linearGradient id="belt-rubber" x2="0" y2="1">
-        <stop stop-color="#454a47"/>
-        <stop offset="1" stop-color="#171c1c"/>
-      </linearGradient>
       <linearGradient id="hot-metal" x2="0" y2="1">
         <stop stop-color="#fff0a1"/>
         <stop offset=".48" stop-color="#f28b34"/>
@@ -241,22 +225,6 @@
       </pattern>
       <g id="bolts" fill="#c6c4ac" stroke="#2b3231" stroke-width="1.2">
         <circle cx="0" cy="0" r="2.2"/><path d="M-1.2 0H1.2" stroke="#454c48"/>
-      </g>
-      <g id="port-in">
-        <rect x="0" y="0" width="23" height="14" rx="3" fill="#202725" stroke="#8ac69a" stroke-width="2"/>
-        <path d="M4 7h12m-5-4 5 4-5 4" fill="none" stroke="#a4dfad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-      <g id="port-out">
-        <rect x="0" y="0" width="23" height="14" rx="3" fill="#202725" stroke="#d4ae55" stroke-width="2"/>
-        <path d="M4 7h12m-5-4 5 4-5 4" fill="none" stroke="#f0d47a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-      <g id="port-power">
-        <circle cx="8" cy="8" r="7" fill="#26353a" stroke="#83c3dc" stroke-width="2"/>
-        <path d="m9 2-4 7h4l-1 5 5-8H9z" fill="#9cdef0"/>
-      </g>
-      <g id="port-bidirectional">
-        <rect x="0" y="0" width="25" height="14" rx="3" fill="#202725" stroke="#adb4aa" stroke-width="2"/>
-        <path d="M4 4h15l-4-3m4 9H4l4 3" fill="none" stroke="#d8d9cf" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
       <g id="machine-miner">
         <ellipse cx="81" cy="91" rx="50" ry="28" fill="#171b1a" opacity=".45"/>
@@ -278,120 +246,100 @@
         <path d="M68 43v12M95 43v12" stroke="#a2a69a" stroke-width="2"/>
         <path d="M82 49v9" stroke="#353c39" stroke-width="12"/>
         <path d="M82 50v8" stroke="#bec1b3" stroke-width="6"/>
-        <path d="M82 57 77 61 82 65 87 69 82 73 77 77 82 81 87 85 82 89 77 93 82 97 87 101 82 105"
-          fill="none" stroke="#252c2a" stroke-width="10" stroke-linejoin="round"/>
-        <path d="M82 57 77 61 82 65 87 69 82 73 77 77 82 81 87 85 82 89 77 93 82 97 87 101 82 105"
-          fill="none" stroke="#d0d0c3" stroke-width="5.5" stroke-linejoin="round"/>
+        <path d="M82 57V107" fill="none" stroke="#252c2a" stroke-width="8" stroke-linecap="round"/>
+        <path d="M82 57V107" fill="none" stroke="#777f78" stroke-width="3" stroke-linecap="round"/>
+        <path d="M82 57C73 59 73 62 82 64S91 69 82 71 73 76 82 78 91 83 82 85 73 90 82 92 91 97 82 99 73 104 82 107"
+          fill="none" stroke="#252c2a" stroke-width="9" stroke-linecap="round"/>
+        <path d="M82 57C73 59 73 62 82 64S91 69 82 71 73 76 82 78 91 83 82 85 73 90 82 92 91 97 82 99 73 104 82 107"
+          fill="none" stroke="#d0d0c3" stroke-width="4" stroke-linecap="round"/>
         <path d="M82 104v7" stroke="#414946" stroke-width="8"/>
         <path d="m75 109 7 15 7-15z" fill="#a5a79a" stroke="#2b3230" stroke-width="2"/>
         <path d="m79 119 3 7 3-7z" fill="#c5a454"/>
         <path d="M70 56h24" stroke="#333a37" stroke-width="4"/>
         <path d="M73 54v-5M91 54v-5" stroke="#bd873e" stroke-width="3"/>
         <use href="#bolts" x="56" y="51"/><use href="#bolts" x="108" y="51"/>
-        <use href="#port-out" x="132" y="78"/>
-        <use href="#port-power" x="117" y="31"/>
       </g>
       <g id="machine-smelter">
-        <ellipse cx="81" cy="93" rx="57" ry="24" fill="#171c1b" opacity=".58"/>
-        <path d="M35 55c0-15 20-27 46-27s46 12 46 27v25c0 12-20 22-46 22S35 92 35 80z" fill="#414a45" stroke="#202725" stroke-width="3"/>
-        <path d="M35 55c0 12 20 22 46 22s46-10 46-22v25c0 12-20 22-46 22S35 92 35 80z" fill="#303835"/>
-        <ellipse cx="81" cy="55" rx="46" ry="27" fill="#737b72" stroke="#282f2c" stroke-width="3"/>
-        <ellipse cx="81" cy="54" rx="34" ry="18" fill="#a77c3e" stroke="#33352f" stroke-width="2"/>
-        <ellipse cx="81" cy="53" rx="22" ry="11" fill="#292e2c" stroke="#c0994a" stroke-width="2"/>
-        <ellipse cx="81" cy="53" rx="14" ry="7" fill="#e2762d"/>
-        <ellipse cx="81" cy="52" rx="8" ry="4" fill="url(#hot-metal)"/>
-        <path d="M43 68c11 9 23 14 38 14s27-5 38-14" fill="none" stroke="#a9afa4" stroke-width="3"/>
-        <path d="M45 82c10 6 22 9 36 9s27-3 37-9" fill="none" stroke="#b48b42" stroke-width="2"/>
-        <path d="M48 43c-8-7-8-16 0-22 8-6 17-4 18 2 1 4-4 6-7 4-3-2-2-5 0-6" fill="none" stroke="#373f3b" stroke-width="10" stroke-linecap="round"/>
-        <path d="M48 43c-8-7-8-16 0-22 8-6 17-4 18 2 1 4-4 6-7 4-3-2-2-5 0-6" fill="none" stroke="#929b91" stroke-width="5" stroke-linecap="round"/>
-        <path d="M108 43c8-7 8-16 0-22-8-6-17-4-18 2-1 4 4 6 7 4 3-2 2-5 0-6" fill="none" stroke="#373f3b" stroke-width="10" stroke-linecap="round"/>
-        <path d="M108 43c8-7 8-16 0-22-8-6-17-4-18 2-1 4 4 6 7 4 3-2 2-5 0-6" fill="none" stroke="#929b91" stroke-width="5" stroke-linecap="round"/>
-        <path d="M35 65c-7 0-11 6-9 13l9 5M127 65c7 0 11 6 9 13l-9 5" fill="none" stroke="#8b9289" stroke-width="7" stroke-linecap="round"/>
-        <use href="#port-in" x="17" y="60"/>
-        <use href="#port-out" x="121" y="60"/>
+        <ellipse cx="81" cy="108" rx="58" ry="16" fill="#171c1b" opacity=".62"/>
+        <path d="M29 53c0-17 23-30 52-30s52 13 52 30v31c0 18-23 32-52 32S29 102 29 84z" fill="#3c4541" stroke="#202725" stroke-width="4"/>
+        <path d="M37 64c12 10 27 15 44 15s32-5 44-15v18c0 13-19 24-44 24S37 95 37 82z" fill="#252c2a"/>
+        <path d="M35 78c13 10 29 15 46 15s33-5 46-15" fill="none" stroke="#858d84" stroke-width="4"/>
+        <path d="M39 91c12 8 26 12 42 12s30-4 42-12" fill="none" stroke="#a87935" stroke-width="3"/>
+        <ellipse cx="81" cy="53" rx="52" ry="29" fill="#727b73" stroke="#202725" stroke-width="4"/>
+        <ellipse cx="81" cy="51" rx="43" ry="22" fill="#a27e45" stroke="#3b3427" stroke-width="3"/>
+        <ellipse cx="81" cy="50" rx="35" ry="17" fill="#252b29" stroke="#c29a4a" stroke-width="2"/>
+        <ellipse cx="81" cy="49" rx="25" ry="11" fill="#d55b24"/>
+        <ellipse cx="81" cy="48" rx="16" ry="7" fill="url(#hot-metal)"/>
+        <path d="M30 61h-8v22h9M132 61h8v22h-9" fill="none" stroke="#8e978f" stroke-width="7" stroke-linejoin="round"/>
+        <path d="M47 111v7M115 111v7" stroke="#252c2a" stroke-width="7" stroke-linecap="round"/>
         <g class="mk2" style="display:none"><path d="M49 32V18l8-4v16M108 28V12l10-4v18" fill="#488e9b" stroke="#283331" stroke-width="2"/></g>
         <g class="mk3" style="display:none"><path d="M45 31V12l10-4v20M103 27V7l13-5v21" fill="#a84e33" stroke="#292d2a" stroke-width="2"/></g>
-        <use href="#port-power" x="75" y="13"/>
-      </g>
-      <g id="machine-constructor">
-        <ellipse cx="81" cy="97" rx="58" ry="24" fill="#171b1a" opacity=".58"/>
-        <path d="M28 66c0-14 24-25 53-25s53 11 53 25v17c0 12-24 22-53 22S28 95 28 83z" fill="#343c39" stroke="#202624" stroke-width="3"/>
-        <ellipse cx="81" cy="65" rx="53" ry="25" fill="#70796f" stroke="#272e2b" stroke-width="3"/>
-        <ellipse cx="81" cy="64" rx="42" ry="18" fill="#424b47" stroke="#9a9d8e" stroke-width="2"/>
-        <ellipse cx="81" cy="64" rx="29" ry="12" fill="#252c2a" stroke="#b9954a" stroke-width="2"/>
-        <circle cx="81" cy="64" r="9" fill="#a9843f" stroke="#282e2b" stroke-width="2"/>
-        <circle cx="81" cy="64" r="4" fill="#e0c779"/>
-        <path d="M81 55v18M72 64h18M75 58l12 12M87 58 75 70" stroke="#d5b055" stroke-width="2"/>
-        <path d="M44 56c3-10 10-16 19-17l6 7-8 10M118 56c-3-10-10-16-19-17l-6 7 8 10" fill="#454e49" stroke="#242b28" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M47 49 34 39c-5-4-11-2-13 3-2 6 3 10 8 10l15 1M115 49l13-10c5-4 11-2 13 3 2 6-3 10-8 10l-15 1" fill="none" stroke="#343c39" stroke-width="7" stroke-linecap="round"/>
-        <path d="m32 47 13 1M128 47l-13 1" stroke="#d1ad5a" stroke-width="3"/>
-        <circle cx="25" cy="43" r="5" fill="#b68e40"/><circle cx="137" cy="43" r="5" fill="#b68e40"/>
-        <path d="M50 83c9 5 19 8 31 8s23-3 31-8" fill="none" stroke="#b9954a" stroke-width="3"/>
-        <use href="#port-in" x="17" y="60"/>
-        <use href="#port-out" x="122" y="60"/>
-        <g class="mk2" style="display:none"><path d="M42 40h-9v43h9M120 43h8v36h-8" fill="none" stroke="#4aa5c5" stroke-width="4"/></g>
-        <g class="mk3" style="display:none"><path d="M42 37H28v49h14M120 40h14v43h-14" fill="none" stroke="#bf5940" stroke-width="5"/></g>
-        <use href="#port-power" x="75" y="13"/>
       </g>
       <g id="machine-assembler">
-        <ellipse cx="81" cy="99" rx="68" ry="27" fill="#171b1a" opacity=".6"/>
-        <path d="M18 62c0-17 28-30 63-30s63 13 63 30v19c0 16-28 29-63 29S18 97 18 81z" fill="#343d3a" stroke="#202725" stroke-width="3"/>
-        <ellipse cx="81" cy="61" rx="63" ry="30" fill="#68736d" stroke="#252d2a" stroke-width="3"/>
-        <ellipse cx="81" cy="59" rx="52" ry="22" fill="#4a5550" stroke="#9aa095" stroke-width="2"/>
-        <path d="M35 54c2-12 13-21 27-21 12 0 20 8 20 19v27c0 10-8 17-20 17-14 0-25-9-27-21z" fill="#292f2d" stroke="#bd9949" stroke-width="3"/>
-        <path d="M42 51c2-8 10-13 19-13 8 0 13 5 13 13v26c0 7-5 12-13 12-9 0-17-6-19-14z" fill="#504c3d"/>
-        <circle cx="61" cy="63" r="12" fill="#ad873f" stroke="#252c29" stroke-width="3"/>
-        <circle cx="61" cy="63" r="5" fill="#e0c779"/>
-        <path d="M61 48v30M46 63h30" stroke="#e1c66d" stroke-width="2"/>
-        <path d="M87 50c2-10 11-17 23-17s21 7 23 17v27c-2 10-11 17-23 17s-21-7-23-17z" fill="#303735" stroke="#bd9949" stroke-width="3"/>
-        <path d="M94 50c2-6 8-10 16-10s14 4 16 10v26c-2 6-8 10-16 10s-14-4-16-10z" fill="#494b41"/>
-        <circle cx="110" cy="62" r="11" fill="#ad873f" stroke="#252c29" stroke-width="3"/>
-        <circle cx="110" cy="62" r="4" fill="#e0c779"/>
-        <path d="M110 48v28M96 62h28" stroke="#e1c66d" stroke-width="2"/>
-        <path d="M78 42c2-12 7-19 13-19s11 7 13 19M91 24v-8" fill="none" stroke="#777f77" stroke-width="6" stroke-linecap="round"/>
-        <circle cx="91" cy="15" r="5" fill="#bd9949" stroke="#29312e" stroke-width="2"/>
-        <path d="M34 87c10 8 27 13 47 13s38-5 48-13" fill="none" stroke="#9ca398" stroke-width="3"/>
-        <g class="mk2" style="display:none"><path d="M31 37 28 24l12-5 5 15M126 37l5-14 12 5-5 14" fill="#4a91a1" stroke="#293230" stroke-width="2"/></g>
-        <g class="mk3" style="display:none"><path d="M29 36 23 16l17-7 9 22M127 35l8-21 17 7-8 20" fill="#a54e37" stroke="#292f2c" stroke-width="2"/></g>
-        <use href="#port-in" x="0" y="46"/>
-        <use href="#port-in" x="0" y="81"/>
-        <use href="#port-out" x="137" y="62"/>
-        <use href="#port-power" x="76" y="1"/>
+        <ellipse cx="83" cy="111" rx="53" ry="18" fill="#171b1a" opacity=".62"/>
+        <path d="M45 83c0-8 17-15 38-15s38 7 38 15v17c0 7-17 13-38 13s-38-6-38-13z" fill="#303835" stroke="#1b2220" stroke-width="3"/>
+        <ellipse cx="83" cy="82" rx="38" ry="16" fill="#626b65" stroke="#252c29" stroke-width="3"/>
+        <ellipse cx="83" cy="80" rx="29" ry="11" fill="#96988b" stroke="#343b37" stroke-width="2"/>
+        <circle cx="80" cy="76" r="15" fill="#252c2a" stroke="#b9954a" stroke-width="3"/>
+        <circle cx="80" cy="76" r="8" fill="#626b65" stroke="#d7bb6f" stroke-width="2"/>
+        <path d="M74 72c8-3 16 2 17 10" fill="none" stroke="#d7bb6f" stroke-width="2"/>
+        <path d="M78 69 91 47" fill="none" stroke="#222927" stroke-width="18" stroke-linecap="round"/>
+        <path d="M78 69 91 47" fill="none" stroke="#8d968d" stroke-width="12" stroke-linecap="round"/>
+        <path d="M80 66 91 48" fill="none" stroke="#c3c2b2" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="94" cy="45" r="12" fill="#343c39" stroke="#202725" stroke-width="3"/>
+        <circle cx="94" cy="45" r="7" fill="#b68e40" stroke="#292f2c" stroke-width="2"/>
+        <path d="M101 42 119 31" fill="none" stroke="#222927" stroke-width="17" stroke-linecap="round"/>
+        <path d="M101 42 119 31" fill="none" stroke="#78827a" stroke-width="11" stroke-linecap="round"/>
+        <path d="M103 39 118 30" fill="none" stroke="#c3c2b2" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="121" cy="30" r="8" fill="#343c39" stroke="#202725" stroke-width="3"/>
+        <path d="M125 28c6-5 11-5 15-2l5 4-6 10-10 1-6-7z" fill="#66716a" stroke="#202725" stroke-width="3" stroke-linejoin="round"/>
+        <path d="m138 30 9-7c4-3 8-1 8 3l-2 5-8 5M138 36l9 7c4 3 8 1 8-3l-2-5-8-4" fill="none" stroke="#222927" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="m139 30 8-6M139 36l8 6" fill="none" stroke="#b7c0b4" stroke-width="3" stroke-linecap="round"/>
+        <g class="mk2" style="display:none"><path d="M59 100c14 11 36 14 55 5" fill="none" stroke="#4aa5c5" stroke-width="4"/></g>
+        <g class="mk3" style="display:none"><path d="M51 104c18 15 46 18 68 8" fill="none" stroke="#bf5940" stroke-width="5"/></g>
+      </g>
+      <g id="machine-constructor">
+        <ellipse cx="81" cy="116" rx="52" ry="14" fill="#171b1a" opacity=".62"/>
+        <path d="m32 71 25-8 13-11h34l15 9 18 5v10l-18 5-12 10-3 11H68l-5-11-14-6-17-4z" fill="#414a45" stroke="#202725" stroke-width="4" stroke-linejoin="round"/>
+        <path d="m32 71 25-8 13-11h34l15 9 18 5-21 5-14-4H75l-15 8z" fill="#a9afa4" stroke="#303835" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="m60 72 15-8h27l13 4 21-2" fill="none" stroke="#e0e0d3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="m60 72 9 7 14 5 4 9 10 1 3-9 9-5 13-3" fill="none" stroke="#7f8981" stroke-width="3" stroke-linejoin="round"/>
+        <path d="m66 100 35 1 9 7-53-1z" fill="#303835" stroke="#202725" stroke-width="3" stroke-linejoin="round"/>
+        <g class="mk2" style="display:none"><path d="M43 82 81 68l37 14" fill="none" stroke="#4aa5c5" stroke-width="4"/></g>
+        <g class="mk3" style="display:none"><path d="M37 84 81 67l44 17" fill="none" stroke="#bf5940" stroke-width="5"/></g>
       </g>
       <g id="machine-storage">
-        <ellipse cx="81" cy="99" rx="60" ry="25" fill="#171b1a" opacity=".58"/>
-        <path d="M35 53c0-15 18-27 40-27 20 0 35 10 35 24v30c0 14-16 25-37 25-22 0-38-11-38-25z" fill="#706044" stroke="#302a21" stroke-width="3"/>
-        <ellipse cx="75" cy="51" rx="40" ry="27" fill="#a28d60" stroke="#453d2f" stroke-width="3"/>
-        <ellipse cx="75" cy="50" rx="29" ry="18" fill="#bc9b5b" stroke="#5d5036" stroke-width="2"/>
-        <path d="M112 63c0-12 11-21 25-21s19 8 19 18v22c0 11-9 20-22 20s-22-9-22-20z" fill="#514b3e" stroke="#302a21" stroke-width="3"/>
-        <ellipse cx="134" cy="60" rx="22" ry="17" fill="#9c8759" stroke="#5d5036" stroke-width="2"/>
-        <ellipse cx="134" cy="60" rx="14" ry="10" fill="#c1a363"/>
-        <path d="M48 39c-9 5-13 12-13 21v19c0 10 11 18 27 21M84 27c12 7 18 16 18 27v25c0 12-14 22-33 25" fill="none" stroke="#6d5a39" stroke-width="4"/>
-        <path d="M41 69c13 9 25 12 38 12s27-5 36-12M39 82c12 8 25 11 39 11s28-4 38-11" fill="none" stroke="#d0b779" stroke-width="2" opacity=".8"/>
-        <path d="M53 39v42M62 34v50M72 31v54M82 32v51M92 37v41" stroke="#806a43" stroke-width="2" opacity=".85"/>
-        <path d="M120 59v25M128 54v34M137 54v34M146 58v25" stroke="#76613e" stroke-width="2"/>
-        <ellipse cx="75" cy="52" rx="8" ry="5" fill="#e1cf9c" opacity=".55"/>
-        <use href="#port-bidirectional" x="1" y="62"/>
-        <use href="#port-bidirectional" x="134" y="62"/>
+        <ellipse cx="81" cy="111" rx="57" ry="18" fill="#171b1a" opacity=".6"/>
+        <path d="M36 50c0-14 19-25 43-25s43 11 43 25v37c0 12-19 22-43 22S36 99 36 87z" fill="#71634a" stroke="#302a21" stroke-width="3"/>
+        <ellipse cx="79" cy="49" rx="43" ry="25" fill="#b39a67" stroke="#453d2f" stroke-width="3"/>
+        <ellipse cx="79" cy="48" rx="32" ry="17" fill="#d0b779" stroke="#68583a" stroke-width="2"/>
+        <ellipse cx="79" cy="47" rx="21" ry="10" fill="#88744d" stroke="#5d5036" stroke-width="2"/>
+        <path d="M44 64c12 9 25 13 36 13s24-4 35-13M43 78c11 9 24 13 37 13s26-4 37-13" fill="none" stroke="#d3bb7d" stroke-width="3"/>
+        <path d="M52 37v53M64 29v70M77 26v77M90 29v70M103 36v54" stroke="#8d774c" stroke-width="2"/>
+        <path d="M47 91 58 106h42l13-15" fill="#514735" stroke="#302a21" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M58 106v7M100 106v7M64 112h30" fill="none" stroke="#9b8557" stroke-width="4" stroke-linecap="round"/>
+        <ellipse cx="127" cy="68" rx="19" ry="13" fill="#746247" stroke="#302a21" stroke-width="3"/>
+        <path d="M108 68v24c0 9 9 16 19 16s19-7 19-16V68" fill="#514b3e" stroke="#302a21" stroke-width="3"/>
+        <ellipse cx="127" cy="67" rx="19" ry="13" fill="#b39a67" stroke="#5d5036" stroke-width="2"/>
+        <path d="M112 81c5 4 10 6 15 6s10-2 15-6" fill="none" stroke="#d0b779" stroke-width="2"/>
+        <path d="M118 57v34M127 55v38M136 58v33" stroke="#806a43" stroke-width="2"/>
         <g class="mk2" style="display:none"><path d="M48 37 47 25l13-6 1 13M98 32l-1-12 13 6 1 12" fill="#4a91a1" stroke="#293230" stroke-width="2"/></g>
         <g class="mk3" style="display:none"><path d="M45 36V17l17-8v22M96 31V12l18 8v17" fill="#a54e37" stroke="#292f2c" stroke-width="2"/></g>
       </g>
       <g id="machine-generator">
-        <ellipse cx="78" cy="100" rx="59" ry="24" fill="#171b1a" opacity=".6"/>
-        <path d="M33 59c0-14 19-25 43-25s43 11 43 25v24c0 13-19 24-43 24S33 96 33 83z" fill="#414946" stroke="#222827" stroke-width="3"/>
-        <ellipse cx="76" cy="58" rx="43" ry="25" fill="#777d70" stroke="#2b302d" stroke-width="3"/>
-        <ellipse cx="76" cy="57" rx="32" ry="17" fill="#88704a" stroke="#453c2c" stroke-width="2"/>
-        <ellipse cx="76" cy="57" rx="21" ry="11" fill="#292e2c" stroke="#b6903e" stroke-width="2"/>
-        <ellipse cx="76" cy="57" rx="12" ry="7" fill="url(#hot-metal)"/>
-        <path d="M70 61c-4-7 5-8 4-14 7 5 5 9 9 12 2-7 6-4 5 1-1 6-5 9-10 9s-8-3-8-8z" fill="#f3a342"/>
-        <path d="M88 66c11-6 24-2 27 7v11c-2 9-13 15-27 15z" fill="#303735" stroke="#252c2a" stroke-width="3"/>
-        <ellipse cx="101" cy="73" rx="15" ry="10" fill="#454d49" stroke="#a48c54" stroke-width="2"/>
-        <path d="M95 74c4-5 8-5 12 0-4 5-8 5-12 0z" fill="url(#grate)"/>
-        <path d="M47 42c-3-12 1-20 8-23 8-3 15 0 14 6-1 5-7 5-9 2M91 39c-2-12 2-19 9-22 8-3 15 0 14 6-1 5-7 5-9 2" fill="none" stroke="#343c39" stroke-width="9" stroke-linecap="round"/>
-        <path d="M47 42c-3-12 1-20 8-23 8-3 15 0 14 6-1 5-7 5-9 2M91 39c-2-12 2-19 9-22 8-3 15 0 14 6-1 5-7 5-9 2" fill="none" stroke="#929a8f" stroke-width="4" stroke-linecap="round"/>
-        <path d="M48 83c9 8 19 12 29 12" fill="none" stroke="#c69e43" stroke-width="3"/>
-        <use href="#port-in" x="17" y="61"/>
-        <use href="#port-power" x="119" y="23"/>
+        <ellipse cx="78" cy="111" rx="54" ry="17" fill="#171b1a" opacity=".62"/>
+        <path d="M35 64c0-15 17-26 42-26s42 11 42 26v28c0 12-17 21-42 21S35 104 35 92z" fill="#414946" stroke="#222827" stroke-width="3"/>
+        <path d="M43 69c0-11 14-19 34-19s34 8 34 19v20c0 9-14 16-34 16S43 98 43 89z" fill="#4a5149" stroke="#777d70" stroke-width="2"/>
+        <path d="M53 73c0-7 10-12 24-12s24 5 24 12v13c0 7-10 12-24 12s-24-5-24-12z" fill="#252b29" stroke="#b6903e" stroke-width="3"/>
+        <path d="M62 83c-5-7 4-10 7-16 5 5 5 10 10 12 1-6 7-8 10-2 3 6-4 15-14 15-7 0-11-3-13-9z" fill="url(#hot-metal)"/>
+        <path d="M47 51c-5-5-5-14 0-18l8 3v15M96 48c7-5 13-4 19 1" fill="none" stroke="#353d39" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M47 51c-5-5-5-14 0-18l8 3v15M96 48c7-5 13-4 19 1" fill="none" stroke="#929a8f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M111 49c5-3 9-8 9-14V23c0-6 4-10 9-10h8" fill="none" stroke="#252c2a" stroke-width="13" stroke-linecap="round"/>
+        <path d="M111 49c5-3 9-8 9-14V23c0-6 4-10 9-10h8" fill="none" stroke="#899087" stroke-width="8" stroke-linecap="round"/>
+        <ellipse cx="141" cy="13" rx="10" ry="6" fill="#343a37" stroke="#202624" stroke-width="3"/>
+        <ellipse cx="141" cy="12" rx="6" ry="3" fill="#222827"/>
+        <path d="M44 90c8 7 20 11 33 11" fill="none" stroke="#c69e43" stroke-width="3"/>
+        <path d="M60 106v7M94 106v7M55 114h44" fill="none" stroke="#929a8f" stroke-width="4" stroke-linecap="round"/>
         <g class="mk2" style="display:none"><path d="M46 32V14l11-5v19M101 29V9l12-5v21" fill="#4b8e9a" stroke="#29312e" stroke-width="2"/></g>
         <g class="mk3" style="display:none"><path d="M43 31V7l14-6v26M98 28V3l16-7v27" fill="#a95034" stroke="#292f2c" stroke-width="2"/></g>
       </g>
@@ -405,59 +353,41 @@
         <path d="M51 31c0-3 3-5 7-5s7 2 7 5v4c0 3-3 5-7 5s-7-2-7-5zM105 31c0-3 3-5 7-5s7 2 7 5v4c0 3-3 5-7 5s-7-2-7-5zM56 47c0-3 2-4 5-4s5 1 5 4v4c0 3-2 4-5 4s-5-1-5-4zM100 47c0-3 2-4 5-4s5 1 5 4v4c0 3-2 4-5 4s-5-1-5-4z" fill="#b99b51" stroke="#343a37" stroke-width="2"/>
         <path d="M81 37 77 48h8z" fill="#c5a650"/>
         <circle cx="55" cy="33" r="2" fill="#d8c878"/><circle cx="112" cy="33" r="2" fill="#d8c878"/>
-        <use href="#port-power" x="74" y="14"/>
         <g class="mk2" style="display:none"><path d="M44 23c18-15 55-15 74 0" fill="none" stroke="#4aa5c5" stroke-width="2" stroke-dasharray="4 3"/></g>
         <g class="mk3" style="display:none"><path d="M36 21c22-21 70-21 91 0M44 63c20 17 54 17 75 0" fill="none" stroke="#bf5940" stroke-width="3" stroke-dasharray="5 3"/></g>
       </g>
       <g id="machine-belt">
-        <path d="M12 72c2-7 12-15 25-21l45-21c8-4 14-4 22 0l38 18c9 4 13 10 5 15l-53 25c-8 4-16 4-25 0L19 80c-6-2-9-5-7-8z" fill="#171b1b" opacity=".65"/>
-        <path d="M13 57c0-4 5-8 12-12l55-26c7-3 13-3 20 0l43 20c7 3 8 8 1 12L89 79c-7 4-14 4-22 1L20 64c-5-2-7-4-7-7z" fill="#555e59" stroke="#252b2a" stroke-width="3"/>
-        <path d="M20 55c0-3 4-6 10-9l50-24c6-3 12-3 18 0l39 18c5 2 6 5 1 8L88 72c-6 3-12 3-18 1L25 59c-3-1-5-2-5-4z" fill="url(#belt-rubber)" stroke="#c69d43" stroke-width="3"/>
-        <path d="M28 52c11 4 22 8 34 12s20 9 29 7l45-22" fill="none" stroke="#a9aaa0" stroke-opacity=".42" stroke-width="2"/>
-        <path d="m38 42 46 21M56 34l48 21M75 26l48 21" stroke="#727873" stroke-width="1.5" stroke-dasharray="3 4"/>
-        <path d="M21 57c-5-3-5-8 0-11l7-3M136 43c6 2 7 7 1 11l-7 4" fill="none" stroke="#b3aaa0" stroke-width="5" stroke-linecap="round"/>
-        <path d="M27 72 39 77M114 78l15-8" stroke="#adb0a5" stroke-width="5" stroke-linecap="round"/>
-        <use href="#port-in" x="1" y="45"/>
-        <use href="#port-out" x="136" y="51"/>
-        <g class="mk2" style="display:none"><path d="m17 47 62-29 68 32" fill="none" stroke="#4c9fbd" stroke-width="4"/></g>
-        <g class="mk3" style="display:none"><path d="m17 45 62-29 68 32M19 58l61 29 65-31" fill="none" stroke="#c15b43" stroke-width="5"/></g>
+        <ellipse cx="80" cy="99" rx="70" ry="11" fill="#111514" opacity=".66"/>
+        <path d="M18 65H142" fill="none" stroke="#111615" stroke-width="42" stroke-linecap="square"/>
+        <path d="M19 65H141" fill="none" stroke="#46504b" stroke-width="34" stroke-linecap="square"/>
+        <path d="M20 65H140" fill="none" stroke="#080c0b" stroke-width="26" stroke-linecap="square"/>
+        <path d="M27 52V78M43 52V78M59 52V78M75 52V78M91 52V78M107 52V78M123 52V78M139 52V78" fill="none" stroke="#303935" stroke-width="3"/>
+        <path d="M22 48V82M138 48V82" fill="none" stroke="#6b746c" stroke-width="4"/>
+        <path d="M38 87v8M80 87v8M122 87v8M31 96H129" fill="none" stroke="#454e49" stroke-width="5" stroke-linecap="square"/>
+        <g class="mk2" style="display:none"><path d="M22 48V82M138 48V82" fill="none" stroke="#4c9fbd" stroke-width="4"/></g>
+        <g class="mk3" style="display:none"><path d="M22 48V82M138 48V82" fill="none" stroke="#c15b43" stroke-width="4"/></g>
       </g>
       <g id="machine-splitter">
-        <ellipse cx="80" cy="82" rx="66" ry="33" fill="#171b1b" opacity=".62"/>
-        <path d="M5 56C34 56 48 57 70 61c19 4 29-3 44-13 12-8 22-13 39-13" fill="none" stroke="#222927" stroke-width="27" stroke-linecap="round"/>
-        <path d="M5 56C34 56 48 57 70 61c19 4 29-3 44-13 12-8 22-13 39-13" fill="none" stroke="#9b8248" stroke-width="20" stroke-linecap="round"/>
-        <path d="M5 56C34 56 48 57 70 61c19 4 29-3 44-13 12-8 22-13 39-13" fill="none" stroke="url(#belt-rubber)" stroke-width="14" stroke-linecap="round"/>
-        <path d="M80 62c18 2 28 7 40 13 10 5 19 7 33 7" fill="none" stroke="#222927" stroke-width="27" stroke-linecap="round"/>
-        <path d="M80 62c18 2 28 7 40 13 10 5 19 7 33 7" fill="none" stroke="#9b8248" stroke-width="20" stroke-linecap="round"/>
-        <path d="M80 62c18 2 28 7 40 13 10 5 19 7 33 7" fill="none" stroke="url(#belt-rubber)" stroke-width="14" stroke-linecap="round"/>
-        <path d="M12 56h46M119 47l24-12M120 79l23 10" fill="none" stroke="#b6b8ad" stroke-width="2" stroke-dasharray="3 5"/>
-        <circle cx="78" cy="61" r="23" fill="#3c4541" stroke="#222927" stroke-width="4"/>
-        <circle cx="78" cy="61" r="16" fill="url(#steel-top)" stroke="#b89443" stroke-width="3"/>
-        <circle cx="78" cy="61" r="7" fill="#333b38" stroke="#d3b35d" stroke-width="2"/>
-        <path d="M71 55c4-5 10-6 15-3M86 66c-4 5-10 6-15 3" fill="none" stroke="#242b29" stroke-width="3" stroke-linecap="round"/>
-        <use href="#port-in" x="0" y="48"/>
-        <use href="#port-out" x="136" y="30"/>
-        <use href="#port-out" x="136" y="75"/>
+        <ellipse cx="80" cy="108" rx="62" ry="12" fill="#111514" opacity=".66"/>
+        <path d="M80 0V65H0M80 65H160" fill="none" stroke="#111615" stroke-width="42" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M80 0V65H0M80 65H160" fill="none" stroke="#46504b" stroke-width="34" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M80 0V65H0M80 65H160" fill="none" stroke="#080c0b" stroke-width="26" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M67 18H93M67 36H93M67 53H93M20 52V78M40 52V78M120 52V78M140 52V78" fill="none" stroke="#303935" stroke-width="3"/>
+        <path d="M58 48h44v34H58z" fill="#252c2a" stroke="#657069" stroke-width="3"/>
+        <path d="m80 53 15 22H85l-5-7-5 7H65z" fill="#b68e40" stroke="#111615" stroke-width="3" stroke-linejoin="miter"/>
+        <g class="mk2" style="display:none"><path d="M58 48h44v34H58z" fill="none" stroke="#4c9fbd" stroke-width="3"/></g>
+        <g class="mk3" style="display:none"><path d="M58 48h44v34H58z" fill="none" stroke="#c15b43" stroke-width="3"/></g>
       </g>
       <g id="machine-merger">
-        <ellipse cx="80" cy="82" rx="66" ry="33" fill="#171b1b" opacity=".62"/>
-        <path d="M5 36C31 36 46 42 60 51c12 8 18 11 31 11" fill="none" stroke="#222927" stroke-width="27" stroke-linecap="round"/>
-        <path d="M5 36C31 36 46 42 60 51c12 8 18 11 31 11" fill="none" stroke="#9b8248" stroke-width="20" stroke-linecap="round"/>
-        <path d="M5 36C31 36 46 42 60 51c12 8 18 11 31 11" fill="none" stroke="url(#belt-rubber)" stroke-width="14" stroke-linecap="round"/>
-        <path d="M5 69c26 0 41-2 55-4 12-2 18-3 31-3" fill="none" stroke="#222927" stroke-width="27" stroke-linecap="round"/>
-        <path d="M5 69c26 0 41-2 55-4 12-2 18-3 31-3" fill="none" stroke="#9b8248" stroke-width="20" stroke-linecap="round"/>
-        <path d="M5 69c26 0 41-2 55-4 12-2 18-3 31-3" fill="none" stroke="url(#belt-rubber)" stroke-width="14" stroke-linecap="round"/>
-        <path d="M83 62c21 0 35-6 62-20" fill="none" stroke="#222927" stroke-width="27" stroke-linecap="round"/>
-        <path d="M83 62c21 0 35-6 62-20" fill="none" stroke="#9b8248" stroke-width="20" stroke-linecap="round"/>
-        <path d="M83 62c21 0 35-6 62-20" fill="none" stroke="url(#belt-rubber)" stroke-width="14" stroke-linecap="round"/>
-        <path d="M12 36h38M12 69h38M112 49l24-8" fill="none" stroke="#b6b8ad" stroke-width="2" stroke-dasharray="3 5"/>
-        <circle cx="79" cy="62" r="24" fill="#3c4541" stroke="#222927" stroke-width="4"/>
-        <circle cx="79" cy="62" r="17" fill="url(#steel-top)" stroke="#b89443" stroke-width="3"/>
-        <circle cx="79" cy="62" r="7" fill="#333b38" stroke="#d3b35d" stroke-width="2"/>
-        <path d="M72 55c4-5 10-6 15-3M87 68c-4 5-10 6-15 3" fill="none" stroke="#242b29" stroke-width="3" stroke-linecap="round"/>
-        <use href="#port-in" x="0" y="22"/>
-        <use href="#port-in" x="0" y="62"/>
-        <use href="#port-out" x="136" y="45"/>
+        <ellipse cx="80" cy="108" rx="62" ry="12" fill="#111514" opacity=".66"/>
+        <path d="M0 65H80V0M160 65H80" fill="none" stroke="#111615" stroke-width="42" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M0 65H80V0M160 65H80" fill="none" stroke="#46504b" stroke-width="34" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M0 65H80V0M160 65H80" fill="none" stroke="#080c0b" stroke-width="26" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M20 52V78M40 52V78M120 52V78M140 52V78M67 53H93M67 35H93M67 17H93" fill="none" stroke="#303935" stroke-width="3"/>
+        <path d="M58 48h44v34H58z" fill="#252c2a" stroke="#657069" stroke-width="3"/>
+        <path d="m65 73 15-21 15 21H85l-5-8-5 8z" fill="#9ba49a" stroke="#111615" stroke-width="3" stroke-linejoin="miter"/>
+        <g class="mk2" style="display:none"><path d="M58 48h44v34H58z" fill="none" stroke="#4c9fbd" stroke-width="3"/></g>
+        <g class="mk3" style="display:none"><path d="M58 48h44v34H58z" fill="none" stroke="#c15b43" stroke-width="3"/></g>
       </g>
     </defs>
   </svg>
@@ -481,52 +411,52 @@
     <section class="gallery" aria-label="Fabrikgebäude">
       <article class="card">
         <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Miner mit zwei Standfüßen, Motor und zentralem Spiralbohrer"><use href="#machine-miner"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Miner</h2><span class="kind">Abbau</span></div><p>Zwei Standfüße tragen den Motorblock; ein zentraler Bohrer mit sichtbarem Spiralprofil steht direkt über dem Vorkommen.</p><p class="detail">MK2: seitliche Antriebe · MK3: zusätzliche Bohrköpfe</p><div class="ports"><span class="port deposit">Vorkommen</span><span class="port out">Rohstoffband</span><span class="port power">Strom</span></div></div>
+        <div class="copy"><div class="title-row"><h2>Miner</h2><span class="kind">Abbau</span></div><p>Zwei Standfüße tragen den Motorblock; ein zentraler Bohrer mit sichtbarem Spiralprofil steht direkt über dem Vorkommen.</p><p class="detail">MK2: seitliche Antriebe · MK3: zusätzliche Bohrköpfe</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Runder Schmelzofen mit glühender Öffnung und gebogenen Abzügen"><use href="#machine-smelter"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Schmelze</h2><span class="kind">Verarbeitung</span></div><p>Runder Schmelzofen mit glühender Beschickungsöffnung und gebogenen Abluftrohren.</p><p class="detail">Erz wird zu Barren · sichtbare Wärme statt dekorativem Emblem</p><div class="ports"><span class="port in">Erz</span><span class="port out">Barren</span><span class="port power">Strom</span></div></div>
+        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Schmelzkessel mit hohem Metallmantel, breitem Rand und glühender Schmelze"><use href="#machine-smelter"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Schmelze</h2><span class="kind">Verarbeitung</span></div><p>Ein massiver, runder Schmelzkessel mit tiefem Feuerraum, breitem Metallrand und glühender Schmelze im Inneren.</p><p class="detail">Erz wird im Kessel zu Barren · der geschlossene Generatorofen bleibt klar unterscheidbar</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Offener Rundtisch-Konstruktor mit rotierendem Werkzeug und Gelenkarmen"><use href="#machine-constructor"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Konstruktor</h2><span class="kind">Bauteile</span></div><p>Offener Rundtisch mit rotierendem Werkzeug und beweglichen Gelenkarmen formt einfache Bauteile.</p><p class="detail">Einfache Rezepte: Barren zu Platten, Stangen oder Draht</p><div class="ports"><span class="port in">Zutat(en)</span><span class="port out">Bauteil</span><span class="port power">Strom</span></div></div>
+        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Freistehender Amboss mit spitzem Horn, breiter Bahn, Hals und Ambossfuß"><use href="#machine-constructor"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Konstruktor</h2><span class="kind">Bauteile</span></div><p>Ein einzelner Amboss ohne Werkbank oder Plattform; Horn, Bahn, Hals und Fuß bilden seine Silhouette.</p><p class="detail">Einfache Rezepte: Barren zu Platten, Stangen oder Draht</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine wide" viewBox="0 0 160 150" role="img" aria-label="Assembler mit zwei runden Fertigungstischen und zentralem Antrieb"><use href="#machine-assembler"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Assembler</h2><span class="kind">Mehrteilig</span></div><p>Zwei runde Fertigungstische und ein zentraler Antrieb kombinieren mehrere Materialzuführungen.</p><p class="detail">Beispiel: Eisenstangen plus Schrauben werden zu Rotoren</p><div class="ports"><span class="port in">Mehrere Zutaten</span><span class="port out">Produkt</span><span class="port power">Strom</span></div></div>
+        <div class="scene"><svg class="machine wide" viewBox="0 0 160 150" role="img" aria-label="Industrieroboter mit zwei Gelenkarmen und geöffneter Greifzange auf einem Drehsockel"><use href="#machine-assembler"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Assembler</h2><span class="kind">Mehrteilig</span></div><p>Ein gelenkiger Industrieroboter auf Drehsockel führt zwei Glieder bis zu einer deutlich sichtbaren Greifzange.</p><p class="detail">Beispiel: Eisenstangen plus Schrauben werden zu Rotoren</p></div>
       </article>
 
       <article class="card">
         <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Lager aus zylindrischen Silos mit gewölbten Deckeln und Füllringen"><use href="#machine-storage"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Lager</h2><span class="kind">Puffer</span></div><p>Zylindrische Silos mit gewölbten Deckeln und umlaufenden Verstärkungsringen puffern Material.</p><p class="detail">Höhere Stufen ergänzen weitere Silos statt größerer Blockgehäuse</p><div class="ports"><span class="port in">Einlagerung</span><span class="port out">Entnahme</span></div></div>
+        <div class="copy"><div class="title-row"><h2>Lager</h2><span class="kind">Puffer</span></div><p>Ein großer, gerippter Hauptsilo mit gewölbtem Dach und konischem Auslauf sowie ein kleiner Nebensilo.</p><p class="detail">Die Silhouette bleibt auch aus der Vogelperspektive als Materiallager lesbar</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Runder Verbrennungsgenerator mit Brennkammer und gebogenen Abzügen"><use href="#machine-generator"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Verbrennungsgenerator</h2><span class="kind">Energie</span></div><p>Runder Kessel, sichtbare Brennkammer und gebogene Abzüge machen die Energieproduktion lesbar.</p><p class="detail">Brennstoffversorgung · höherer Ausbau mit größeren Abzügen</p><div class="ports"><span class="port in">Brennstoff</span><span class="port power">Stromabgabe</span></div></div>
+        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Heizofen mit verglühendem Feuerraum, Brennstofftür und hohem Rauchrohr"><use href="#machine-generator"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Verbrennungsgenerator</h2><span class="kind">Energie</span></div><p>Ein geschlossener Heizofen mit glühendem Feuerraum, Brennstofftür, Rauchrohr und Standfüßen erzeugt Wärme.</p><p class="detail">Brennstoffverbrennung treibt den Generator an</p></div>
       </article>
 
       <article class="card">
         <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Strommast mit Auslegern und sichtbarer Netzreichweite"><use href="#machine-pole"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Strommast</h2><span class="kind">Netz</span></div><p>Metallmast mit Querträgern und Isolatoren; gestrichelte Bögen zeigen die Reichweite.</p><p class="detail">Leitungen werden später in der Spielwelt verbunden dargestellt</p><div class="ports"><span class="port power">Netzverbindung</span></div></div>
+        <div class="copy"><div class="title-row"><h2>Strommast</h2><span class="kind">Netz</span></div><p>Metallmast mit Querträgern und Isolatoren; gestrichelte Bögen zeigen die Reichweite.</p><p class="detail">Leitungen werden später in der Spielwelt verbunden dargestellt</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Laufband mit Gummiband, Rollen und Tragrahmen"><use href="#machine-belt"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Laufband</h2><span class="kind">Transport</span></div><p>Endlosband, Rollen und tragender Rahmen sind aus schräger Draufsicht sichtbar.</p><p class="detail">MK1 Messinggelb · MK2 Blau · MK3 Rostrot</p><div class="ports"><span class="port in">1 Zulauf</span><span class="port out">1 Ablauf</span></div></div>
+        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Eckiges schwarzes Förderband mit gummiertem Band, Querleisten und Tragrahmen"><use href="#machine-belt"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Laufband</h2><span class="kind">Transport</span></div><p>Schwarzes, waagrechtes Gummiband mit Querleisten in einem kantigen Stahlrahmen; die Förderrichtung folgt der Längsachse.</p><p class="detail">MK1 Schwarz · MK2 Blau · MK3 Rostrot · im Spiel um 90° drehbar</p><button class="orientation-toggle" type="button" aria-pressed="false">Vorschau: waagrecht</button></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Splitter mit einem Zulauf und zwei getrennten Ausläufen"><use href="#machine-splitter"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Splitter</h2><span class="kind">1 → 2</span></div><p>Ein ankommendes Band verzweigt im abgedeckten Verteilerkopf auf zwei Ausgänge.</p><p class="detail">Wechselt die Ausgänge ab; bei blockiertem Ast nutzt er den freien, ohne Güter zu verlieren.</p><div class="ports"><span class="port in">1 Zulauf</span><span class="port out">2 Abläufe</span></div></div>
+        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Kantiger T-Splitter mit Zulauf von oben und getrennten Ausgängen links und rechts"><use href="#machine-splitter"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Splitter</h2><span class="kind">1 → 2</span></div><p>Ein oberer Zulauf teilt sich im mittleren Rasterfeld auf getrennte linke und rechte Abgänge auf.</p><p class="detail">Drei mal drei Kacheln; die Abgänge enden mittig an eigenen Seiten und schließen an je ein Nachbarband an.</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Merger mit zwei Zuläufen und einem gemeinsamen Auslauf"><use href="#machine-merger"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Merger</h2><span class="kind">2 → 1</span></div><p>Zwei Zuläufe treffen in einer gemeinsamen, verstärkten Förderstrecke zusammen.</p><p class="detail">Bedient Eingänge abwechselnd; bei vollem Ausgang wartet das Gut im Zulauf.</p><div class="ports"><span class="port in">2 Zuläufe</span><span class="port out">1 Ablauf</span></div></div>
+        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Kantiger T-Merger mit seitlichen Zuläufen links und rechts und Ausgang nach oben"><use href="#machine-merger"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Merger</h2><span class="kind">2 → 1</span></div><p>Linker und rechter Zulauf werden im mittleren Rasterfeld auf einen oberen Ausgang zusammengeführt.</p><p class="detail">Drei mal drei Kacheln; jeder Anschluss liegt mittig an einer eigenen Seite und trifft auf ein Nachbarband.</p></div>
       </article>
     </section>
 
@@ -537,7 +467,7 @@
       <div class="flow-scroll">
         <svg class="flow-diagram" viewBox="0 0 960 330" role="img" aria-labelledby="flow-title flow-desc">
           <title id="flow-title">Ein Band teilt den Erzfluss auf zwei Schmelzen und führt Barren zusammen</title>
-          <desc id="flow-desc">Erzband zu Splitter, zwei Abzweige zu zwei Schmelzen, zwei Ausgänge zu einem Merger und gemeinsames Barrenband.</desc>
+          <desc id="flow-desc">Ein Erzband kommt von links am gedrehten Splitter an. Zwei getrennte Abgänge führen nach oben und unten zu je einer Schmelze; deren Ausgänge treffen auf die beiden Eingänge des gedrehten Mergers. Ein gemeinsames Barrenband verlässt den Merger nach rechts.</desc>
           <defs>
             <pattern id="diagram-ground" width="32" height="32" patternUnits="userSpaceOnUse">
               <path d="M32 0H0V32" fill="none" stroke="#ffffff0b" stroke-width="1"/>
@@ -548,19 +478,19 @@
           </defs>
           <rect width="960" height="330" rx="5" fill="#333a35"/>
           <rect width="960" height="330" rx="5" fill="url(#diagram-ground)"/>
-          <g fill="none" stroke="#262d2a" stroke-width="18" stroke-linecap="square" stroke-linejoin="round">
-            <path d="M30 160H205M275 160H340V94H418M340 160v76H418"/>
-            <path d="M520 94H590V160H650M520 236H590V160"/>
+          <g fill="none" stroke="#111615" stroke-width="18" stroke-linecap="square" stroke-linejoin="round">
+            <path d="M30 160H205M239 132H340V94H418M239 188H340V236H418"/>
+            <path d="M520 94H590V132H684M520 236H590V188H684"/>
             <path d="M720 160H922"/>
           </g>
-          <g fill="none" stroke="#b28b3f" stroke-width="11" stroke-linecap="square" stroke-linejoin="round">
-            <path d="M30 160H205M275 160H340V94H418M340 160v76H418"/>
-            <path d="M520 94H590V160H650M520 236H590V160"/>
+          <g fill="none" stroke="#46504b" stroke-width="11" stroke-linecap="square" stroke-linejoin="round">
+            <path d="M30 160H205M239 132H340V94H418M239 188H340V236H418"/>
+            <path d="M520 94H590V132H684M520 236H590V188H684"/>
             <path d="M720 160H922"/>
           </g>
-          <g fill="none" stroke="#f0d47a" stroke-width="2" stroke-dasharray="3 8" stroke-linecap="round">
-            <path d="M30 160H205M275 160H340V94H418M340 160v76H418"/>
-            <path d="M520 94H590V160H650M520 236H590V160"/>
+          <g fill="none" stroke="#8c948c" stroke-width="2" stroke-dasharray="3 8" stroke-linecap="round">
+            <path d="M30 160H205M239 132H340V94H418M239 188H340V236H418"/>
+            <path d="M520 94H590V132H684M520 236H590V188H684"/>
             <path d="M720 160H922"/>
           </g>
           <g fill="#c9b57a" stroke="#483e2c" stroke-width="2">
@@ -568,16 +498,26 @@
             <rect x="77" y="150" width="16" height="20" rx="3"/>
             <rect x="116" y="150" width="16" height="20" rx="3"/>
             <rect x="155" y="150" width="16" height="20" rx="3"/>
+            <rect x="260" y="122" width="16" height="20" rx="3"/>
+            <rect x="310" y="122" width="16" height="20" rx="3"/>
+            <rect x="332" y="103" width="16" height="20" rx="3"/>
             <rect x="375" y="83" width="16" height="20" rx="3"/>
+            <rect x="260" y="178" width="16" height="20" rx="3"/>
+            <rect x="310" y="178" width="16" height="20" rx="3"/>
+            <rect x="332" y="207" width="16" height="20" rx="3"/>
             <rect x="375" y="226" width="16" height="20" rx="3"/>
             <rect x="551" y="83" width="16" height="20" rx="3"/>
+            <rect x="582" y="105" width="16" height="20" rx="3"/>
+            <rect x="620" y="122" width="16" height="20" rx="3"/>
             <rect x="551" y="226" width="16" height="20" rx="3"/>
+            <rect x="582" y="202" width="16" height="20" rx="3"/>
+            <rect x="620" y="178" width="16" height="20" rx="3"/>
             <rect x="760" y="150" width="16" height="20" rx="3"/>
             <rect x="817" y="150" width="16" height="20" rx="3"/>
             <rect x="874" y="150" width="16" height="20" rx="3"/>
           </g>
-          <g transform="translate(205 124) scale(.43)"><use href="#machine-splitter"/></g>
-          <g transform="translate(650 124) scale(.43)"><use href="#machine-merger"/></g>
+          <g transform="translate(205 132) scale(.43)"><g transform="rotate(-90 80 65)"><use href="#machine-splitter"/></g></g>
+          <g transform="translate(650 132) scale(.43)"><g transform="rotate(90 80 65)"><use href="#machine-merger"/></g></g>
           <g transform="translate(418 53) scale(.56)"><use href="#machine-smelter"/></g>
           <g transform="translate(418 195) scale(.56)"><use href="#machine-smelter"/></g>
           <g fill="#e5d7a3" font-family="Segoe UI, Arial, sans-serif" font-size="13">
@@ -604,7 +544,7 @@
     </section>
 
     <h2 class="section-heading">Schematische Einbindung ins 2D-Kachelraster</h2>
-    <p class="section-intro">Die Anschlüsse liegen beispielhaft an den vier Footprint-Seiten und treffen direkt auf angrenzende Laufbandkacheln. Kachelmaß und Gebäudegrößen sind noch nicht abgestimmt und dienen hier nur zur Veranschaulichung.</p>
+    <p class="section-intro">Das Raster zeigt beispielhafte logische Anschlusspositionen an den Footprint-Seiten. Sie sind keine sichtbaren Bauteile der Gebäudeillustrationen. Kachelmaß und Gebäudegrößen sind noch nicht abgestimmt und dienen nur zur Veranschaulichung.</p>
     <section class="world-card" aria-label="Schematische Draufsicht mit Maschinen-Footprints und Anschlüssen">
       <div class="world-scroll">
         <svg class="world-diagram" viewBox="0 0 960 260" role="img" aria-labelledby="world-title world-desc">
@@ -677,11 +617,23 @@
           <g fill="#83c3dc"><circle cx="724" cy="191" r="4"/></g>
         </svg>
       </div>
-      <p class="world-caption">Grün = Gegenstandseingang, Gelb = Gegenstandsausgang, Blau = Stromanschluss. Die schematischen Footprints (Miner, Schmelze und Konstruktor jeweils beispielhaft 3x2 Kacheln) sind keine Festlegung für die Implementierung; Anschlüsse und Kachelmaß müssen mit der Spielumgebung abgestimmt werden.</p>
+      <p class="world-caption">Die farbigen Punkte markieren ausschließlich logische Anschlusspositionen im Diagramm, nicht sichtbare Teile der Gebäude. Die schematischen Footprints (Miner, Schmelze und Konstruktor jeweils beispielhaft 3x2 Kacheln) sind keine Festlegung für die Implementierung; Anschlussseiten und Kachelmaß müssen mit der Spielumgebung abgestimmt werden.</p>
     </section>
 
-    <aside class="note"><strong>Grafikstil:</strong> eigene Vektorzeichnungen, angelehnt an die Lesbarkeit industrieller Fabrikspiele: kompakte Draufsicht, abgeschrägte Gehäusekanten, materialnahe Farben und funktionale Details. Keine Factorio-Originalgrafiken oder übernommenen Sprites. Geometrie, Farbpalette und MK-Merkmale können vor der Umsetzung in die Spielgrafik noch mit der Gruppe abgestimmt werden.</aside>
-    <footer>Performance: einmalig definierte SVG-Symbole, keine externen Bilder, Bibliotheken oder Schriftdateien; keine Filter- oder Partikelsimulation. Nur die wenigen Transportgut-Punkte im Ablaufbeispiel sind animiert. Bei reduzierter Bewegung werden sie angehalten.</footer>
+    <aside class="note">
+      <strong>Formvergleich:</strong> Die Silhouetten orientieren sich an realen Funktionsformen: Bohrschnecke und Traggestell beim Miner, gelenkige Segmente und Greifer beim Assembler, Horn und Bahn des Ambosses beim Konstruktor, zylindrische Silos beim Lager sowie Feuerraum und Rauchrohr beim Heizofen. Die Förderstrecken verwenden gleich breite, tragende Bänder mit Rollen; Splitter und Merger führen diese in passenden Kurven weiter.
+      <p class="reference-links">Bild- und Formreferenzen:
+        <a href="https://en.wikipedia.org/wiki/Auger">Bohrschnecke</a>,
+        <a href="https://en.wikipedia.org/wiki/Industrial_robot">Industrieroboter</a>,
+        <a href="https://en.wikipedia.org/wiki/Anvil">Amboss</a>,
+        <a href="https://en.wikipedia.org/wiki/Foundry">Gießerei</a>,
+        <a href="https://en.wikipedia.org/wiki/Industrial_furnace">Industrieofen</a>,
+        <a href="https://en.wikipedia.org/wiki/Conveyor_belt">Förderband</a> und
+        <a href="https://en.wikipedia.org/wiki/Silo">Silo</a>.
+        Die SVGs sind eigenständige Interpretationen, keine übernommenen Sprites oder 1:1-Kopien.
+      </p>
+    </aside>
+    <footer>Performance: einmalig definierte SVG-Symbole, keine externen Bilder, Bibliotheken oder Schriftdateien. Es gibt keine Partikelsimulation; die MK-Farbvarianten verwenden einfache CSS-Filter. Nur die wenigen Transportgut-Punkte im Ablaufbeispiel sind animiert und werden bei reduzierter Bewegung angehalten.</footer>
   </main>
   <script>
     const levelButtons = document.querySelectorAll("[data-level-button]");
@@ -692,6 +644,16 @@
           candidate.setAttribute("aria-pressed", String(candidate === button));
         });
       });
+    });
+
+    const belt = document.querySelector(".card .machine.belt");
+    const beltScene = belt.closest(".scene");
+    const orientationToggle = document.querySelector(".orientation-toggle");
+    orientationToggle.addEventListener("click", () => {
+      const rotated = belt.classList.toggle("rotate-90");
+      beltScene.classList.toggle("belt-rotated", rotated);
+      orientationToggle.setAttribute("aria-pressed", String(rotated));
+      orientationToggle.textContent = `Vorschau: ${rotated ? "senkrecht" : "waagrecht"}`;
     });
   </script>
 </body>
