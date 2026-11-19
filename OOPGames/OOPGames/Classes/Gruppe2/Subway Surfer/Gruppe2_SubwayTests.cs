@@ -494,10 +494,10 @@ namespace OOPGames
             }
 
             AssertTrue(field.GuardVisible,
-                "the Bahnrichter remains visible until the two-second intro ends");
+                "the Bahnrichter remains visible through the one-second follow and three-second fall-behind phases");
             rules.TickGameCall();
             AssertTrue(!field.GuardVisible,
-                "the Bahnrichter hides after the two-second intro");
+                "the Bahnrichter hides after the four-second intro");
 
             field.GuardGap = 90;
             AssertTrue(field.GuardVisible,
@@ -812,28 +812,42 @@ namespace OOPGames
                 double introStartScale = GetRunnerScale(guardVisual);
                 AssertTrue(introStartZ > 0.55,
                     "the Bahnrichter starts behind the player");
+                double introStartMovement = GetRunnerAnimationMagnitude(guardVisual);
+                AssertTrue(introStartMovement > 0,
+                    "the Bahnrichter has an active articulated running pose on the first intro frame");
 
-                field.GuardIntroTicks = Gruppe2_SubwayField.GuardIntroDurationTicks / 2;
+                int followTicks = Gruppe2_SubwayField.GuardIntroFollowDurationTicks;
+                field.GuardIntroTicks = Gruppe2_SubwayField.GuardIntroDurationTicks - followTicks;
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
-                double introMiddleZ = GetRunnerZ(guardVisual);
-                double introMiddleScale = GetRunnerScale(guardVisual);
-                double introMiddleMovement = GetRunnerAnimationMagnitude(guardVisual);
-                AssertTrue(introMiddleZ > introStartZ
-                    && Math.Abs(introMiddleScale - introStartScale) < 0.001
-                    && introMiddleMovement > 0,
-                    "the Bahnrichter approaches like an obstacle while his stride slows");
+                double followEndZ = GetRunnerZ(guardVisual);
+                double followEndMovement = GetRunnerAnimationMagnitude(guardVisual);
+                AssertTrue(Math.Abs(followEndZ - introStartZ) < 0.001
+                    && Math.Abs(followEndMovement - introStartMovement) > 0.001,
+                    "the Bahnrichter keeps running behind the player during the follow phase");
+
+                int exitElapsedTicks = Gruppe2_SubwayField.GuardIntroFallBehindDurationTicks / 2;
+                field.GuardIntroTicks = Gruppe2_SubwayField.GuardIntroDurationTicks
+                    - followTicks - exitElapsedTicks;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                double exitMiddleZ = GetRunnerZ(guardVisual);
+                double exitMiddleMovement = GetRunnerAnimationMagnitude(guardVisual);
+                AssertTrue(exitMiddleZ > followEndZ
+                    && exitMiddleMovement > 0,
+                    "the Bahnrichter starts to slow down and leave after following the player");
 
                 field.GuardIntroTicks = 1;
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
                 int visualsBeforeIntroEnds = viewport.Children.OfType<ModelVisual3D>().Count();
-                AssertTrue(GetRunnerZ(guardVisual) > introMiddleZ
+                AssertTrue(GetRunnerZ(guardVisual) > exitMiddleZ
                     && GetRunnerZ(guardVisual) > 7
                     && Math.Abs(GetRunnerScale(guardVisual) - introStartScale) < 0.001
-                    && GetRunnerAnimationMagnitude(guardVisual) < introMiddleMovement,
+                    && GetRunnerAnimationMagnitude(guardVisual) < exitMiddleMovement,
                     "the Bahnrichter slows and passes the camera like an obstacle");
 
                 field.GuardIntroTicks = 0;

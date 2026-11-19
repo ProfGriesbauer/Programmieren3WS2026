@@ -5,7 +5,10 @@ namespace OOPGames
 {
     public sealed class Gruppe2_SubwayField : IGruppe2_SubwayField
     {
-        internal const int GuardIntroDurationTicks = 50;
+        internal const int GuardIntroFollowDurationTicks = 25;
+        internal const int GuardIntroFallBehindDurationTicks = 75;
+        internal const int GuardIntroDurationTicks =
+            GuardIntroFollowDurationTicks + GuardIntroFallBehindDurationTicks;
         private readonly List<Gruppe2_SubwayObstacle> _obstacles = new List<Gruppe2_SubwayObstacle>();
         private readonly List<Gruppe2_SubwayReward> _rewards = new List<Gruppe2_SubwayReward>();
         private readonly Dictionary<Gruppe2_SubwayUpgradeKind, int> _activeUpgrades =

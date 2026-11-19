@@ -61,6 +61,7 @@ namespace OOPGames
         private const double CameraWorldZ = 7;
         private const double GuardChaseZ = 2.5;
         private const double GuardIntroEndZ = CameraWorldZ + 0.25;
+        private const double GuardIntroFollowTicks = Gruppe2_SubwayField.GuardIntroFollowDurationTicks;
         private const double WorldUnitsPerDistance = 0.1;
         // Narrower than the lane spacing (1.55), so cars in neighbouring lanes never touch.
         private const double CarWorldWidth = 1.34;
@@ -419,9 +420,11 @@ namespace OOPGames
             double introElapsedTicks = guardIntro
                 ? Gruppe2_SubwayField.GuardIntroDurationTicks - guardIntroTicks
                 : 0;
-            double introProgress = introElapsedTicks / Gruppe2_SubwayField.GuardIntroDurationTicks;
-            double introRemaining = 1 - introProgress;
-            double retreatProgress = 1 - introRemaining * introRemaining;
+            double exitElapsedTicks = Math.Max(0, introElapsedTicks - GuardIntroFollowTicks);
+            double exitProgress = Math.Min(1, exitElapsedTicks
+                / (Gruppe2_SubwayField.GuardIntroDurationTicks - GuardIntroFollowTicks));
+            double exitRemaining = 1 - exitProgress;
+            double retreatProgress = 1 - exitRemaining * exitRemaining;
             double z = guardIntro
                 ? GuardChaseZ + (GuardIntroEndZ - GuardChaseZ) * retreatProgress
                 : guard ? GuardChaseZ : RunnerWorldZ;
@@ -434,9 +437,9 @@ namespace OOPGames
             bool hasSkateboard = !guard
                 && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Surfboard);
             bool skating = hasSkateboard && field.Level != Gruppe2_SubwayLevel.Air && field.JumpHeight == 0;
-            double introRunPhase = introElapsedTicks * (1 - introProgress * 0.5);
+            double introRunPhase = introElapsedTicks + 1 - exitElapsedTicks * exitProgress * 0.5;
             double run = guardIntro
-                ? Math.Sin(introRunPhase * 0.48) * introRemaining
+                ? Math.Sin(introRunPhase * 0.48) * exitRemaining
                 : Math.Sin(field.Distance * 0.48);
             double movement = skating
                 ? Math.Sin(field.Distance * 0.32)
@@ -778,14 +781,10 @@ namespace OOPGames
 
             if (guard)
             {
-                AddRunnerLimb(rider, -0.22, 1.57, -0.01, -0.55, 1.01, 0.03,
-                    0.17 * run, outfit);
-                AddRunnerLimb(rider, 0.22, 1.57, -0.01, 0.55, 1.01, 0.03,
-                    -0.17 * run, outfit);
-                AddRunnerLimb(rider, -0.16, 0.97, 0, -0.20, 0.08, 0.06,
-                    -0.24 * run, PantsMaterial);
-                AddRunnerLimb(rider, 0.16, 0.97, 0, 0.20, 0.08, 0.06,
-                    0.24 * run, PantsMaterial);
+                AddRunningArm(rider, -1, -run, outfit);
+                AddRunningArm(rider, 1, run, outfit);
+                AddRunningLeg(rider, -0.16, run, RunnerShoeMaterial);
+                AddRunningLeg(rider, 0.16, -run, RunnerShoeMaterial);
             }
             else
             {
@@ -824,10 +823,10 @@ namespace OOPGames
                 }
                 else
                 {
-                    AddRunningArm(rider, -1, -run);
-                    AddRunningArm(rider, 1, run);
-                    AddRunningLeg(rider, -0.16, run);
-                    AddRunningLeg(rider, 0.16, -run);
+                    AddRunningArm(rider, -1, -run, outfit);
+                    AddRunningArm(rider, 1, run, outfit);
+                    AddRunningLeg(rider, -0.16, run, RunnerShoeMaterial);
+                    AddRunningLeg(rider, 0.16, -run, RunnerShoeMaterial);
                 }
             }
 
@@ -914,19 +913,21 @@ namespace OOPGames
             runner.Children.Add(limb);
         }
 
-        private static void AddRunningArm(Model3DGroup rider, int side, double stride)
+        private static void AddRunningArm(
+            Model3DGroup rider, int side, double stride, Material outfit)
         {
             double shoulderX = side * 0.22;
             Point3D elbow = new Point3D(side * 0.35, 1.30, stride * 0.13);
             Point3D hand = new Point3D(side * 0.43, 1.14, -stride * 0.18);
             AddRunnerLimb(rider, shoulderX, 1.57, -0.01,
-                elbow.X, elbow.Y, elbow.Z, 0, RunnerOutfitMaterial);
+                elbow.X, elbow.Y, elbow.Z, 0, outfit);
             AddRunnerLimb(rider, elbow.X, elbow.Y, elbow.Z,
-                hand.X, hand.Y, hand.Z, 0, RunnerOutfitMaterial);
+                hand.X, hand.Y, hand.Z, 0, outfit);
             AddScaledSphere(rider, hand.X, hand.Y, hand.Z, 0.06, 0.06, 0.06, SkinMaterial);
         }
 
-        private static void AddRunningLeg(Model3DGroup rider, double hipX, double stride)
+        private static void AddRunningLeg(
+            Model3DGroup rider, double hipX, double stride, Material shoeMaterial)
         {
             const double HipHeight = 0.82;
             double footX = hipX * 0.75;
@@ -944,7 +945,7 @@ namespace OOPGames
             AddBox(foot, footX - 0.11, footY - 0.04, footZ - 0.13,
                 footX + 0.11, footY + 0.02, footZ + 0.13, PantsMaterial);
             AddBox(foot, footX - 0.11, footY, footZ - 0.14,
-                footX + 0.11, footY + 0.09, footZ + 0.14, RunnerShoeMaterial);
+                footX + 0.11, footY + 0.09, footZ + 0.14, shoeMaterial);
             rider.Children.Add(foot);
         }
 
