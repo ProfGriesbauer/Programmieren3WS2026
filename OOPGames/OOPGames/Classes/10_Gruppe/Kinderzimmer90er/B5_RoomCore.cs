@@ -55,7 +55,7 @@ namespace OOPGames
                 {
                     new B5RoomGameEntry("Snake", Color.FromRgb(116, 158, 70), () => new G10_SnakeGame()),
                     new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new G10_PongGame()),
-                    new B5RoomGameEntry("Void Courier", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame()),
+                    new B5RoomGameEntry("SolarShooter", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame()),
                     new B5RoomGameEntry("Tetris", Color.FromRgb(112, 165, 201), () => new G10_TetrisGame())
                 }),
             new B5RoomDevice(B5RoomDeviceKind.Commodore, "HEIMCOMPUTER", Color.FromRgb(124, 112, 218), Color.FromRgb(53, 40, 121),

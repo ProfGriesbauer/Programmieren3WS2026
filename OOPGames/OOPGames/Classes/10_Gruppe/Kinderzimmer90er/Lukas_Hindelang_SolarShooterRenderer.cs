@@ -7,7 +7,7 @@ using System.Windows.Media;
 
 namespace OOPGames
 {
-    internal sealed class G10_VoidCourierRenderer
+    internal sealed class G10_SolarShooterRenderer
     {
         const int Width = (int)G10_ShooterConfig.WorldWidth;
         const int Height = (int)G10_ShooterConfig.WorldHeight;
@@ -110,12 +110,31 @@ namespace OOPGames
 
         readonly G10_EffectSystem _Effects = new G10_EffectSystem();
         float _BossHitFlash;
-        G10_VoidCourierVisualHost _Host;
+        G10_SolarShooterVisualHost _Host;
         IG10_ShooterView _ObservedSession;
 
-        public void Draw(Canvas canvas, IG10_ShooterView session)
+        public void Draw(
+            Canvas canvas,
+            IG10_ShooterView session,
+            G10_SolarShooterMenu menu,
+            G10_SolarShooterModeSave modeSave,
+            G10_MissionDirector missionDirector)
         {
             EnsureHost(canvas);
+            if (menu.Screen != G10_SolarShooterMenuScreen.Playing &&
+                menu.Screen != G10_SolarShooterMenuScreen.Paused)
+            {
+                _Host.Render(delegate(DrawingContext drawing)
+                {
+                    drawing.PushClip(new RectangleGeometry(new Rect(0, 0, Width, Height)));
+                    if (session == null) DrawMenuBackdrop(drawing);
+                    else DrawBackdrop(drawing, session);
+                    DrawMenu(drawing, menu, modeSave);
+                    drawing.Pop();
+                });
+                return;
+            }
+
             ObserveSession(session);
             _Effects.Update(G10_ShooterConfig.FixedDeltaSeconds);
             _BossHitFlash = Math.Max(0, _BossHitFlash - G10_ShooterConfig.FixedDeltaSeconds);
@@ -124,6 +143,7 @@ namespace OOPGames
                 drawing.PushClip(new RectangleGeometry(new Rect(0, 0, Width, Height)));
                 DrawBackdrop(drawing, session);
                 DrawHud(drawing, session);
+                DrawMissionHud(drawing, session, missionDirector);
 
                 foreach (G10_SolarShooterProjectile projectile in session.PlayerProjectiles)
                     DrawProjectile(drawing, projectile, true);
@@ -137,16 +157,126 @@ namespace OOPGames
                     DrawBoss(drawing, session.Boss, session.StageIndex, session.TickNumber);
                 DrawBursts(drawing);
                 DrawPlayer(drawing, session);
-                DrawStateOverlay(drawing, session);
+                DrawStateOverlay(drawing, session, missionDirector);
+                if (menu.Screen == G10_SolarShooterMenuScreen.Paused)
+                    DrawPauseMenu(drawing, menu);
                 drawing.Pop();
             });
+        }
+
+        void DrawMenuBackdrop(DrawingContext drawing)
+        {
+            drawing.DrawRectangle(Background, null, new Rect(0, 0, Width, Height));
+            DrawStarLayer(drawing, 0, 42, 0, 1.2, 0.72);
+            drawing.DrawEllipse(GreenNebula, null, new Point(40, 75), 48, 37);
+            drawing.DrawEllipse(VioletNebula, null, new Point(132, 108), 39, 43);
+        }
+
+        void DrawMenu(DrawingContext drawing, G10_SolarShooterMenu menu, G10_SolarShooterModeSave modeSave)
+        {
+            drawing.DrawRectangle(Panel, null, new Rect(8, 8, Width - 16, Height - 16));
+            drawing.DrawRoundedRectangle(null,
+                new Pen(Solid(Color.FromArgb(210, 77, 220, 255)), 0.8),
+                new Rect(8, 8, Width - 16, Height - 16), 3, 3);
+
+            if (menu.Screen == G10_SolarShooterMenuScreen.Main)
+                DrawMainMenu(drawing, menu, modeSave);
+            else if (menu.Screen == G10_SolarShooterMenuScreen.ModeSelection)
+                DrawModeSelection(drawing, menu);
+            else if (menu.Screen == G10_SolarShooterMenuScreen.Leaderboard)
+                DrawLeaderboard(drawing, menu, modeSave);
+            else
+                DrawHelp(drawing, menu);
+        }
+
+        void DrawMainMenu(
+            DrawingContext drawing,
+            G10_SolarShooterMenu menu,
+            G10_SolarShooterModeSave modeSave)
+        {
+            DrawText(drawing, "SOLAR SHOOTER", 0, 15, 11, White, true, true);
+            DrawText(drawing, menu.SelectedMode.Name, 0, 29, 4.5, Cyan, true, true);
+            for (int i = 0; i < menu.MainOptionCount; i++)
+                DrawMenuOption(drawing, menu.MainOption(i), i == menu.Selection, 40 + i * 12);
+            DrawText(drawing,
+                "BEST " + modeSave.BestScore.ToString("D7") + "  STAGE " + modeSave.BestStage,
+                0, 118, 4, MutedText, false, true);
+            if (!string.IsNullOrEmpty(menu.StatusMessage))
+                DrawText(drawing, menu.StatusMessage, 0, 128, 3.8, Amber, false, true);
+            DrawText(drawing, "ARROWS / ENTER   ESC: ZURÜCK", 0, 136, 3.5, MutedText, false, true);
+        }
+
+        void DrawModeSelection(DrawingContext drawing, G10_SolarShooterMenu menu)
+        {
+            DrawText(drawing, "MODUS WÄHLEN", 0, 28, 8, White, true, true);
+            DrawMenuOption(drawing, menu.ModeOption(0), menu.Selection == 0, 58);
+            DrawMenuOption(drawing, menu.ModeOption(1), menu.Selection == 1, 76);
+            DrawText(drawing, "KLASSIK: 3 STAGES + BOSSE", 0, 101, 4.2, MutedText, false, true);
+            DrawText(drawing, "MISSIONEN: AUFGABEN IM FLUG", 0, 111, 4.2, MutedText, false, true);
+            DrawText(drawing, "ENTER: AUSWÄHLEN   ESC: ZURÜCK", 0, 132, 3.6, MutedText, false, true);
+        }
+
+        void DrawLeaderboard(
+            DrawingContext drawing,
+            G10_SolarShooterMenu menu,
+            G10_SolarShooterModeSave modeSave)
+        {
+            DrawText(drawing, "BESTENLISTE", 0, 22, 8, White, true, true);
+            DrawText(drawing, "<  " + menu.SelectedMode.Name + "  >", 0, 40, 5, Cyan, true, true);
+            DrawText(drawing, "BESTPUNKTZAHL", 28, 63, 4.3, MutedText);
+            DrawText(drawing, modeSave.BestScore.ToString("D7"), 101, 62, 6, White, true);
+            DrawText(drawing, "STAGE ERREICHT", 28, 78, 4.3, MutedText);
+            DrawText(drawing, modeSave.BestStage.ToString(), 115, 77, 6, White, true);
+            DrawText(drawing, "MISSIONEN", 28, 93, 4.3, MutedText);
+            DrawText(drawing, modeSave.BestMissionsCompleted.ToString(), 115, 92, 6, White, true);
+            DrawText(drawing, "LINKS / RECHTS: MODUS", 0, 125, 4, MutedText, false, true);
+            DrawText(drawing, "ESC: ZURÜCK", 0, 135, 4, MutedText, false, true);
+        }
+
+        void DrawMenuOption(DrawingContext drawing, string label, bool selected, double y)
+        {
+            Rect bounds = new Rect(30, y, 100, 10);
+            if (selected)
+            {
+                drawing.DrawRoundedRectangle(
+                    Solid(Color.FromArgb(180, 39, 93, 123)),
+                    new Pen(Solid(Color.FromArgb(220, 77, 220, 255)), 0.45),
+                    bounds, 1.5, 1.5);
+            }
+            DrawText(drawing, (selected ? "> " : "  ") + label, 36, y + 1,
+                4.5, selected ? White : MutedText, selected);
+        }
+
+        void DrawPauseMenu(DrawingContext drawing, G10_SolarShooterMenu menu)
+        {
+            drawing.DrawRectangle(Solid(Color.FromArgb(165, 0, 3, 15)), null,
+                new Rect(0, 0, Width, Height));
+            drawing.DrawRoundedRectangle(Panel,
+                new Pen(Solid(Color.FromArgb(220, 77, 220, 255)), 0.8),
+                new Rect(25, 43, 110, 56), 3, 3);
+            DrawText(drawing, "PAUSE", 0, 51, 8, White, true, true);
+            for (int i = 0; i < menu.PauseOptionCount; i++)
+                DrawMenuOption(drawing, menu.PauseOption(i), i == menu.Selection, 68 + i * 16);
+        }
+
+        void DrawHelp(DrawingContext drawing, G10_SolarShooterMenu menu)
+        {
+            DrawText(drawing, "ANLEITUNG", 0, 18, 8, White, true, true);
+            DrawText(drawing, menu.HelpTitle, 0, 39, 5.2, Cyan, true, true);
+            for (int i = 0; i < menu.HelpLines.Count; i++)
+                DrawText(drawing, menu.HelpLines[i], 11, 57 + i * 11, 4.1, White);
+            DrawText(drawing,
+                (menu.HelpPageIndex + 1) + " / " + menu.HelpPageCount,
+                0, 111, 4.2, Amber, false, true);
+            DrawText(drawing, "< / >  SEITE WECHSELN", 0, 123, 3.8, MutedText, false, true);
+            DrawText(drawing, "ENTER WEITER   ESC ZURUECK", 0, 134, 3.8, MutedText, false, true);
         }
 
         void EnsureHost(Canvas canvas)
         {
             if (_Host != null && canvas.Children.Contains(_Host)) return;
 
-            _Host = new G10_VoidCourierVisualHost { Width = Width, Height = Height };
+            _Host = new G10_SolarShooterVisualHost { Width = Width, Height = Height };
             canvas.Children.Clear();
             canvas.Children.Add(_Host);
         }
@@ -232,7 +362,7 @@ namespace OOPGames
                 Color.FromArgb(220, 75, 201, 255), new Point(0, 0), new Point(1, 0)), 0.8),
                 new Point(0, HeaderHeight - 0.5), new Point(Width, HeaderHeight - 0.5));
 
-            DrawText(drawing, "VOID COURIER", 4, 2, 5.2, White);
+            DrawText(drawing, "SOLAR SHOOTER", 4, 2, 5.2, White);
             DrawText(drawing, "SCORE " + session.Score.ToString("D7"), 62, 2, 4.7, White);
             DrawText(drawing, "HULL", 4, 10, 3.8, MutedText);
             DrawText(drawing, session.Stage.Name, 33, 10, 3.8, Cyan);
@@ -396,7 +526,45 @@ namespace OOPGames
             }
         }
 
-        void DrawStateOverlay(DrawingContext drawing, IG10_ShooterView session)
+        void DrawMissionHud(
+            DrawingContext drawing,
+            IG10_ShooterView session,
+            G10_MissionDirector missionDirector)
+        {
+            if (missionDirector == null) return;
+
+            if (!string.IsNullOrEmpty(missionDirector.BannerText))
+            {
+                drawing.DrawRoundedRectangle(Panel,
+                    new Pen(Solid(Color.FromArgb(210, 89, 205, 244)), 0.6),
+                    new Rect(14, 31, 132, 19), 2, 2);
+                DrawText(drawing, missionDirector.BannerText, 0, 33, 3.8, Cyan, true, true);
+                DrawText(drawing, missionDirector.BannerDetails, 0, 40, 3.2, White, false, true);
+            }
+
+            IG10_Mission mission = missionDirector.CurrentMission;
+            if (mission == null || mission.Status != G10_MissionStatus.Active) return;
+
+            drawing.DrawRoundedRectangle(Panel,
+                new Pen(Solid(Color.FromArgb(190, 83, 169, 214)), 0.55),
+                new Rect(17, 127, 126, 14), 2, 2);
+            DrawText(drawing, mission.Title + ": " + mission.ProgressText,
+                21, 129, 4.2, White, true);
+            DrawText(drawing, mission.Description, 21, 135, 3.5, MutedText);
+            if (session.ShieldSeconds > 0)
+                DrawText(drawing, "SHIELD " + session.ShieldSeconds.ToString("0.0") + "s",
+                    119, 2, 3.4, Cyan);
+            if (missionDirector.ComboCount > 1)
+                DrawText(drawing, "COMBO x" + Math.Min(
+                    missionDirector.ComboCount,
+                    G10_SolarShooterMissionConfig.MaximumComboMultiplier),
+                    66, 11, 3.5, Amber, true);
+        }
+
+        void DrawStateOverlay(
+            DrawingContext drawing,
+            IG10_ShooterView session,
+            G10_MissionDirector missionDirector)
         {
             if (session.IsGameOver)
                 Overlay(drawing, "SHIP LOST", G10_ShooterKeyBindings.Default.RestartPrompt, Red);
@@ -417,6 +585,12 @@ namespace OOPGames
                     new Rect(35, 60, 90, 23), 3, 3);
                 DrawText(drawing, "SECTOR CLEAR", 48, 66, 6.4, White, true);
             }
+
+            if (missionDirector != null && (session.IsGameOver || session.IsVictory))
+                DrawText(drawing,
+                    "MISSIONEN GESCHAFFT: " + missionDirector.MissionsCompleted +
+                    "/" + missionDirector.MissionsAttempted,
+                    0, 85, 4.2, Cyan, true, true);
         }
 
         void Overlay(DrawingContext drawing, string title, string prompt, Brush accent)
@@ -515,12 +689,12 @@ namespace OOPGames
         public double Age { get; set; }
     }
 
-    internal sealed class G10_VoidCourierVisualHost : FrameworkElement
+    internal sealed class G10_SolarShooterVisualHost : FrameworkElement
     {
         readonly VisualCollection _Children;
         readonly DrawingVisual _Visual = new DrawingVisual();
 
-        public G10_VoidCourierVisualHost()
+        public G10_SolarShooterVisualHost()
         {
             _Children = new VisualCollection(this) { _Visual };
             SnapsToDevicePixels = true;

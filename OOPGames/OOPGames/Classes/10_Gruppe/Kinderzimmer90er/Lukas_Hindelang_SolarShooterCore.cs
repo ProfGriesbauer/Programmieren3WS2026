@@ -34,7 +34,7 @@ namespace OOPGames
         IReadOnlyList<G10_SolarShooterProjectile> EnemyProjectiles { get; }
         IReadOnlyList<G10_SolarShooterPowerCell> PowerCells { get; }
         void RemovePlayerProjectile(G10_SolarShooterProjectile projectile);
-        void DestroyEnemy(G10_SolarShooterEnemy enemy);
+        void DestroyEnemy(G10_SolarShooterEnemy enemy, int weaponLevel);
         void RemoveEnemy(G10_SolarShooterEnemy enemy);
         void RemoveEnemyProjectile(G10_SolarShooterProjectile projectile);
         void HitPlayer();
@@ -54,12 +54,16 @@ namespace OOPGames
         int StageIndex { get; }
         int Score { get; }
         int TickNumber { get; }
+        float ShieldSeconds { get; }
         bool IsGameOver { get; }
         bool IsVictory { get; }
         bool IsBossWarning { get; }
         bool IsStageTransition { get; }
         event EventHandler<G10_EntityDestroyedEventArgs> EnemyDestroyed;
         event EventHandler<G10_EntityDestroyedEventArgs> PlayerHit;
+        event EventHandler<G10_ShotFiredEventArgs> ShotFired;
+        event EventHandler<EventArgs> PowerCellCollected;
+        event EventHandler<EventArgs> PowerCellEscaped;
         event EventHandler<G10_BossHitEventArgs> BossHit;
         event EventHandler<G10_EntityDestroyedEventArgs> BossDefeated;
     }
@@ -147,7 +151,7 @@ namespace OOPGames
                     if (!Intersects(projectile, enemy)) continue;
 
                     world.RemovePlayerProjectile(projectile);
-                    world.DestroyEnemy(enemy);
+                    world.DestroyEnemy(enemy, projectile.WeaponLevel);
                     break;
                 }
             }
@@ -199,12 +203,15 @@ namespace OOPGames
         public float Cooldown { get { return 0.24f; } }
         public void Fire(G10_SolarShooterPlayer player, IList<G10_SolarShooterProjectile> projectiles)
         {
-            projectiles.Add(Create(player, 0));
+            projectiles.Add(Create(player, 0, player.WeaponLevel));
         }
-        public static G10_SolarShooterProjectile Create(G10_SolarShooterPlayer player, float horizontalOffset)
+        public static G10_SolarShooterProjectile Create(
+            G10_SolarShooterPlayer player,
+            float horizontalOffset,
+            int weaponLevel)
         {
             return new G10_SolarShooterProjectile(
-                player.X + horizontalOffset, player.Y - 7, horizontalOffset * 1.5f, -150);
+                player.X + horizontalOffset, player.Y - 7, horizontalOffset * 1.5f, -150, weaponLevel);
         }
     }
 
@@ -213,8 +220,8 @@ namespace OOPGames
         public float Cooldown { get { return 0.24f; } }
         public void Fire(G10_SolarShooterPlayer player, IList<G10_SolarShooterProjectile> projectiles)
         {
-            projectiles.Add(G10_SingleShotWeapon.Create(player, -3));
-            projectiles.Add(G10_SingleShotWeapon.Create(player, 3));
+            projectiles.Add(G10_SingleShotWeapon.Create(player, -3, player.WeaponLevel));
+            projectiles.Add(G10_SingleShotWeapon.Create(player, 3, player.WeaponLevel));
         }
     }
 
@@ -223,9 +230,9 @@ namespace OOPGames
         public float Cooldown { get { return 0.3f; } }
         public void Fire(G10_SolarShooterPlayer player, IList<G10_SolarShooterProjectile> projectiles)
         {
-            projectiles.Add(G10_SingleShotWeapon.Create(player, -5));
-            projectiles.Add(G10_SingleShotWeapon.Create(player, 0));
-            projectiles.Add(G10_SingleShotWeapon.Create(player, 5));
+            projectiles.Add(G10_SingleShotWeapon.Create(player, -5, player.WeaponLevel));
+            projectiles.Add(G10_SingleShotWeapon.Create(player, 0, player.WeaponLevel));
+            projectiles.Add(G10_SingleShotWeapon.Create(player, 5, player.WeaponLevel));
         }
     }
 
@@ -286,6 +293,11 @@ namespace OOPGames
         public int Score { get; private set; }
         public int EnemiesDefeated { get; private set; }
 
+        public G10_ShooterProgress(int score)
+        {
+            Score = Math.Max(0, score);
+        }
+
         public bool RegisterEnemyDefeated(int pointValue)
         {
             Score += pointValue;
@@ -301,6 +313,16 @@ namespace OOPGames
         public void RegisterPowerCellOverflow(int pointValue)
         {
             Score += pointValue;
+        }
+
+        public void ApplyPenalty(int points)
+        {
+            Score = Math.Max(0, Score - Math.Max(0, points));
+        }
+
+        public void AddScore(int points)
+        {
+            Score += Math.Max(0, points);
         }
 
         public void ResetStage()
@@ -324,6 +346,7 @@ namespace OOPGames
         }
 
         public abstract int PointValue { get; }
+        public abstract string MissionType { get; }
         public abstract G10_ShooterEnemyAppearance Appearance { get; }
         public G10_SolarShooterProjectile UpdateAndTryFire(
             float deltaSeconds,
@@ -349,6 +372,7 @@ namespace OOPGames
             : base(x, y, direction, firstShot) { }
 
         public override int PointValue { get { return 75; } }
+        public override string MissionType { get { return "Driftling"; } }
         public override G10_ShooterEnemyAppearance Appearance { get { return _Appearance; } }
         protected override float FireInterval { get { return 1.9f; } }
         public override G10_SolarShooterBounds Bounds
@@ -379,6 +403,7 @@ namespace OOPGames
             : base(x, y, direction, firstShot) { }
 
         public override int PointValue { get { return 125; } }
+        public override string MissionType { get { return "Needlewing"; } }
         public override G10_ShooterEnemyAppearance Appearance { get { return _Appearance; } }
         protected override float FireInterval { get { return 1.9f; } }
         public override G10_SolarShooterBounds Bounds
@@ -411,6 +436,7 @@ namespace OOPGames
             : base(x, y, direction, firstShot) { }
 
         public override int PointValue { get { return 175; } }
+        public override string MissionType { get { return "Bulwark"; } }
         public override G10_ShooterEnemyAppearance Appearance { get { return _Appearance; } }
         protected override float FireInterval { get { return 1.35f; } }
         public override G10_SolarShooterBounds Bounds
@@ -548,16 +574,23 @@ namespace OOPGames
 
     internal sealed class G10_SolarShooterProjectile : G10_ShooterEntity
     {
-        public G10_SolarShooterProjectile(float x, float y, float velocityX, float velocityY)
+        public G10_SolarShooterProjectile(
+            float x,
+            float y,
+            float velocityX,
+            float velocityY,
+            int weaponLevel = 1)
         {
             X = x;
             Y = y;
             VelocityX = velocityX;
             VelocityY = velocityY;
+            WeaponLevel = weaponLevel;
         }
 
         public float VelocityX { get; private set; }
         public float VelocityY { get; private set; }
+        public int WeaponLevel { get; private set; }
         public override G10_SolarShooterBounds Bounds
         {
             get { return new G10_SolarShooterBounds(X - 1, Y - 2, 2, 4); }
@@ -584,7 +617,7 @@ namespace OOPGames
         {
             X = x;
             Y = y;
-            Lives = 3;
+            Lives = G10_ShooterConfig.MaximumLives;
             WeaponLevel = 1;
         }
 
@@ -612,16 +645,22 @@ namespace OOPGames
                 G10_ShooterConfig.PlayerMinimumY, G10_ShooterConfig.PlayerMaximumY);
         }
 
-        public void Fire(bool firePressed, IList<G10_SolarShooterProjectile> projectiles)
+        public bool Fire(bool firePressed, IList<G10_SolarShooterProjectile> projectiles)
         {
-            if (!firePressed || _ShotCooldown > 0) return;
+            if (!firePressed || _ShotCooldown > 0) return false;
             IG10_Weapon weapon = _Weapons[WeaponLevel - 1];
             weapon.Fire(this, projectiles);
             _ShotCooldown = weapon.Cooldown;
+            return true;
         }
 
         public void UpgradeWeapon() { WeaponLevel = Math.Min(3, WeaponLevel + 1); }
         public void DowngradeWeapon() { WeaponLevel = Math.Max(1, WeaponLevel - 1); }
+        public void AddLife() { Lives = Math.Min(G10_ShooterConfig.MaximumLives, Lives + 1); }
+        public void RestoreWeaponLevel(int weaponLevel)
+        {
+            WeaponLevel = Math.Max(1, Math.Min(3, weaponLevel));
+        }
 
         public bool TakeHit()
         {
@@ -665,15 +704,36 @@ namespace OOPGames
     internal sealed class G10_EntityDestroyedEventArgs : EventArgs
     {
         public G10_EntityDestroyedEventArgs(float x, float y, bool large)
+            : this(x, y, large, null, 1) { }
+
+        public G10_EntityDestroyedEventArgs(
+            float x,
+            float y,
+            bool large,
+            string enemyType,
+            int weaponLevel,
+            int pointValue = 0)
         {
             X = x;
             Y = y;
             Large = large;
+            EnemyType = enemyType;
+            WeaponLevel = weaponLevel;
+            PointValue = pointValue;
         }
 
         public float X { get; private set; }
         public float Y { get; private set; }
         public bool Large { get; private set; }
+        public string EnemyType { get; private set; }
+        public int WeaponLevel { get; private set; }
+        public int PointValue { get; private set; }
+    }
+
+    internal sealed class G10_ShotFiredEventArgs : EventArgs
+    {
+        public G10_ShotFiredEventArgs(int weaponLevel) { WeaponLevel = weaponLevel; }
+        public int WeaponLevel { get; private set; }
     }
 
     internal sealed class G10_BossHitEventArgs : EventArgs
@@ -688,7 +748,7 @@ namespace OOPGames
         readonly IReadOnlyList<G10_SolarShooterStage> _Stages;
         readonly G10_EnemySpawner _Spawner = new G10_EnemySpawner();
         readonly G10_CollisionResolver _CollisionResolver = new G10_CollisionResolver();
-        readonly G10_ShooterProgress _Progress = new G10_ShooterProgress();
+        readonly G10_ShooterProgress _Progress;
         readonly List<G10_SolarShooterEnemy> _Enemies = new List<G10_SolarShooterEnemy>();
         readonly List<G10_SolarShooterProjectile> _PlayerProjectiles = new List<G10_SolarShooterProjectile>();
         readonly List<G10_SolarShooterProjectile> _EnemyProjectiles = new List<G10_SolarShooterProjectile>();
@@ -701,15 +761,25 @@ namespace OOPGames
         float _SpawnCooldown = 0.8f;
         float _BossWarningTimer;
         float _StageTransitionTimer;
+        float _ShieldSeconds;
 
         public G10_SolarShooterSession()
             : this(G10_SolarShooterStage.All) { }
 
         public G10_SolarShooterSession(IReadOnlyList<G10_SolarShooterStage> stages)
+            : this(stages, 0, 0, 1) { }
+
+        public G10_SolarShooterSession(
+            IReadOnlyList<G10_SolarShooterStage> stages,
+            int startingStageIndex,
+            int startingScore,
+            int startingWeaponLevel)
         {
             if (stages == null || stages.Count == 0)
                 throw new ArgumentException("At least one shooter stage is required.", "stages");
             _Stages = stages;
+            StageIndex = Math.Max(0, Math.Min(stages.Count - 1, startingStageIndex));
+            _Progress = new G10_ShooterProgress(startingScore);
             _EnemyView = _Enemies.AsReadOnly();
             _PlayerProjectileView = _PlayerProjectiles.AsReadOnly();
             _EnemyProjectileView = _EnemyProjectiles.AsReadOnly();
@@ -717,6 +787,7 @@ namespace OOPGames
             Player = new G10_SolarShooterPlayer(
                 G10_ShooterConfig.PlayerStartX,
                 G10_ShooterConfig.PlayerStartY);
+            Player.RestoreWeaponLevel(startingWeaponLevel);
         }
 
         public G10_SolarShooterPlayer Player { get; private set; }
@@ -738,9 +809,13 @@ namespace OOPGames
         public bool IsVictory { get { return _Phase == G10_ShooterPhase.Victory; } }
         public bool IsBossWarning { get { return _Phase == G10_ShooterPhase.BossWarning; } }
         public bool IsStageTransition { get { return _Phase == G10_ShooterPhase.StageTransition; } }
+        public float ShieldSeconds { get { return _ShieldSeconds; } }
 
         public event EventHandler<G10_EntityDestroyedEventArgs> EnemyDestroyed;
         public event EventHandler<G10_EntityDestroyedEventArgs> PlayerHit;
+        public event EventHandler<G10_ShotFiredEventArgs> ShotFired;
+        public event EventHandler<EventArgs> PowerCellCollected;
+        public event EventHandler<EventArgs> PowerCellEscaped;
         public event EventHandler<G10_BossHitEventArgs> BossHit;
         public event EventHandler<G10_EntityDestroyedEventArgs> BossDefeated;
 
@@ -749,9 +824,9 @@ namespace OOPGames
             _PlayerProjectiles.Remove(projectile);
         }
 
-        void IG10_ShooterCollisionContext.DestroyEnemy(G10_SolarShooterEnemy enemy)
+        void IG10_ShooterCollisionContext.DestroyEnemy(G10_SolarShooterEnemy enemy, int weaponLevel)
         {
-            if (_Enemies.Remove(enemy)) RegisterEnemyDestroyed(enemy);
+            if (_Enemies.Remove(enemy)) RegisterEnemyDestroyed(enemy, weaponLevel);
         }
 
         void IG10_ShooterCollisionContext.RemoveEnemy(G10_SolarShooterEnemy enemy)
@@ -766,6 +841,7 @@ namespace OOPGames
 
         void IG10_ShooterCollisionContext.HitPlayer()
         {
+            if (_ShieldSeconds > 0) return;
             if (Player.TakeHit()) OnPlayerHit();
         }
 
@@ -776,6 +852,8 @@ namespace OOPGames
             if (!_PowerCells.Remove(powerCell)) return;
             if (Player.WeaponLevel < 3) Player.UpgradeWeapon();
             else _Progress.RegisterPowerCellOverflow(250);
+            EventHandler<EventArgs> handler = PowerCellCollected;
+            if (handler != null) handler(this, EventArgs.Empty);
         }
 
         public void Update(float deltaSeconds, G10_SolarShooterInput input)
@@ -783,6 +861,7 @@ namespace OOPGames
             if (IsGameOver || IsVictory) return;
             TickNumber++;
             Player.Update(deltaSeconds);
+            _ShieldSeconds = Math.Max(0, _ShieldSeconds - deltaSeconds);
             Player.Move(input.Horizontal, input.Vertical, deltaSeconds);
 
             if (IsStageTransition)
@@ -799,7 +878,11 @@ namespace OOPGames
                 return;
             }
 
-            Player.Fire(input.FirePressed, _PlayerProjectiles);
+            if (Player.Fire(input.FirePressed, _PlayerProjectiles))
+            {
+                EventHandler<G10_ShotFiredEventArgs> handler = ShotFired;
+                if (handler != null) handler(this, new G10_ShotFiredEventArgs(Player.WeaponLevel));
+            }
             if (Boss == null) UpdateEnemies(deltaSeconds);
             else UpdateBoss(deltaSeconds);
             UpdateProjectiles(_PlayerProjectiles, deltaSeconds);
@@ -872,17 +955,29 @@ namespace OOPGames
             {
                 _PowerCells[i].Update(deltaSeconds);
                 if (_PowerCells[i].Y > G10_ShooterConfig.WorldHeight + 6)
+                {
                     _PowerCells.RemoveAt(i);
+                    EventHandler<EventArgs> handler = PowerCellEscaped;
+                    if (handler != null) handler(this, EventArgs.Empty);
+                }
             }
         }
 
-        void RegisterEnemyDestroyed(G10_SolarShooterEnemy enemy)
+        void RegisterEnemyDestroyed(G10_SolarShooterEnemy enemy, int weaponLevel)
         {
             if (_Progress.RegisterEnemyDefeated(enemy.PointValue))
                 _PowerCells.Add(new G10_SolarShooterPowerCell(enemy.X, enemy.Y));
             EventHandler<G10_EntityDestroyedEventArgs> handler = EnemyDestroyed;
-            if (handler != null) handler(this, new G10_EntityDestroyedEventArgs(enemy.X, enemy.Y, false));
+            if (handler != null)
+                handler(this, new G10_EntityDestroyedEventArgs(
+                    enemy.X, enemy.Y, false, enemy.MissionType,
+                    weaponLevel, enemy.PointValue));
         }
+
+        public void GrantExtraLife() { Player.AddLife(); }
+        public void AddScore(int points) { _Progress.AddScore(points); }
+        public void ActivateShield(float seconds) { _ShieldSeconds = Math.Max(_ShieldSeconds, seconds); }
+        public void ApplyScorePenalty(int points) { _Progress.ApplyPenalty(points); }
 
         internal void HitBoss()
         {
