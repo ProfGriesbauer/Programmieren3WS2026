@@ -35,6 +35,7 @@ internal static class Program
             TestWeaponSelectionSurvivesRestart();
             TestEquipmentMenuSelection();
             TestProgressionAndKeyBindingMenus();
+            TestRangeKnockbackStatsAndGodMode();
 
             Console.WriteLine("OK: " + _assertions + " arena assertions passed.");
             return 0;
@@ -93,7 +94,7 @@ internal static class Program
             EquippedWeapon = WeaponCatalog.Sword
         };
         TestEntity enemy = new TestEntity(150, 100, 30, 10, CombatTeam.Enemies);
-        TestEntity ally = new TestEntity(150, 100, 30, 10, CombatTeam.Player);
+        TestEntity ally = new TestEntity(150, 300, 30, 10, CombatTeam.Player);
         TestEntity outsideCone = new TestEntity(130, 205, 30, 10, CombatTeam.Enemies);
         ArenaCombatSystem combat = new ArenaCombatSystem();
         IReadOnlyList<Entity> entities = new List<Entity>
@@ -110,6 +111,8 @@ internal static class Program
         }
         Assert(enemy.CurrentHitPoints == 16,
             "melee cone applies one hit to an opponent");
+        Assert(enemy.PositionX > 150 && enemy.PositionX <= 158,
+            "weapon hits apply a light knockback");
         Assert(ally.CurrentHitPoints == 30 && outsideCone.CurrentHitPoints == 30,
             "melee cone excludes allies and targets outside its range");
 
@@ -169,6 +172,8 @@ internal static class Program
         combat.Update(0.04, new List<Entity> { player, enemy });
         Assert(player.CurrentHitPoints == player.MaxHitPoints - 10,
             "enemy weapon applies damage through the shared combat system");
+        Assert(player.PositionX < 100,
+            "enemy weapon knockback pushes the player away from the attacker");
     }
 
     private static void TestHealingWeapon()
@@ -657,7 +662,10 @@ internal static class Program
             FindMenuButton(canvas, "Waffen verbessern").RaiseEvent(
                 new RoutedEventArgs(Button.ClickEvent));
             painter.PaintGameField(canvas, field);
-            FindMenuButton(canvas, "Kaufen mit universellen Punkten (1)").RaiseEvent(
+            field.Progression.AwardKill(WeaponCatalog.Sword);
+            canvas.Tag = null;
+            painter.PaintGameField(canvas, field);
+            FindMenuButton(canvas, "Verbessern (1 Waffenpunkte)").RaiseEvent(
                 new RoutedEventArgs(Button.ClickEvent));
             Assert(field.Progression.GetWeaponUpgradeRank(
                 SwordUpgradeCatalog.StrikeDamage) == 1,
@@ -693,7 +701,10 @@ internal static class Program
             painter.PaintGameField(canvas, field);
             Assert(field.SelectedPlayerWeapon.Id == WeaponCatalog.Bow.Id,
                 "bow can be selected directly from its upgrade-tree entry");
-            FindMenuButton(canvas, "Kaufen mit universellen Punkten (1)").RaiseEvent(
+            field.Progression.AwardKill(WeaponCatalog.Bow);
+            canvas.Tag = null;
+            painter.PaintGameField(canvas, field);
+            FindMenuButton(canvas, "Verbessern (1 Waffenpunkte)").RaiseEvent(
                 new RoutedEventArgs(Button.ClickEvent));
             Assert(field.Progression.GetWeaponUpgradeRank(
                 BowUpgradeCatalog.AutoAim) == 1,
@@ -710,11 +721,107 @@ internal static class Program
             Assert(FindMenuButton(canvas, "Nach oben bewegen: "
                 + field.KeyBindings.GetDisplayName(ArenaAction.MoveUp)) != null,
                 "keybinding menu displays the current control mapping");
+            FindMenuButton(canvas, "Back").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            painter.PaintGameField(canvas, field);
+            FindMenuButton(canvas, "Godmode: AUS — aktivieren").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            Assert(field.IsGodMode,
+                "main menu can enable god mode");
+            painter.PaintGameField(canvas, field);
+            FindMenuButton(canvas, "Godmode: AN — deaktivieren").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            Assert(!field.IsGodMode,
+                "main menu can disable god mode");
         }
         finally
         {
             Environment.CurrentDirectory = previousDirectory;
         }
+    }
+
+    private static void TestRangeKnockbackStatsAndGodMode()
+    {
+        ArenaProgression progression = new ArenaProgression();
+        progression.AwardKill(WeaponCatalog.Bow);
+        Assert(progression.TryUpgradeBow(
+            BowUpgradeCatalog.Range, UpgradeCurrency.Weapon, true),
+            "weapon range can be upgraded with weapon points");
+        progression.AwardKill(WeaponCatalog.Bow);
+        Assert(progression.CanUpgradeBow(
+            BowUpgradeCatalog.Range, UpgradeCurrency.Weapon, out int nextCost, true),
+            "missing weapon points can be covered by skill points");
+        progression.GetWeaponUpgradePayment(
+            WeaponCatalog.Bow.Id, nextCost,
+            out int weaponPointsSpent, out int skillPointsSpent);
+        Assert(weaponPointsSpent == 1 && skillPointsSpent == 1
+            && progression.TryUpgradeBow(
+                BowUpgradeCatalog.Range, UpgradeCurrency.Weapon, true),
+            "weapon upgrades spend weapon points first and skills only for the difference");
+        Assert(Math.Abs(((ProjectileAttackPattern)BowUpgradeCatalog.CreateBow(progression)
+            .AttackPattern).Range - 780) < 0.001,
+            "bow range ranks increase projectile range");
+
+        ArenaProgression freeProgression = new ArenaProgression();
+        freeProgression.SetGodMode(true);
+        freeProgression.AwardKill(WeaponCatalog.Bow);
+        freeProgression.SetGodMode(false);
+        Assert(freeProgression.GetWeaponPoints(WeaponCatalog.Bow.Id) == 1,
+            "weapon kills still accrue normally while god mode is active");
+        freeProgression.SetGodMode(true);
+        Assert(freeProgression.TryUpgradeSword(
+                SwordUpgradeCatalog.Range, UpgradeCurrency.Weapon, true)
+            && freeProgression.TryUpgradeSword(
+                SwordUpgradeCatalog.Knockback, UpgradeCurrency.Weapon, true)
+            && freeProgression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.Range, UpgradeCurrency.Weapon, true)
+            && freeProgression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.Knockback, UpgradeCurrency.Weapon, true)
+            && freeProgression.TryUpgradeBow(
+                BowUpgradeCatalog.Range, UpgradeCurrency.Weapon, true)
+            && freeProgression.TryUpgradeBow(
+                BowUpgradeCatalog.Knockback, UpgradeCurrency.Weapon, true),
+            "all weapon families support range and knockback upgrades");
+        Weapon upgradedSword = SwordUpgradeCatalog.CreateSword(freeProgression);
+        Weapon upgradedWand = MagicWandUpgradeCatalog.CreateMagicWand(freeProgression);
+        Weapon upgradedBow = BowUpgradeCatalog.CreateBow(freeProgression);
+        Assert(Math.Abs(((SweepingArcAttackPattern)upgradedSword.AttackPattern)
+                .Range - 110) < 0.001
+            && Math.Abs(((ProjectileAttackPattern)upgradedWand.AttackPattern)
+                .Range - 572) < 0.001
+            && Math.Abs(((ProjectileAttackPattern)upgradedBow.AttackPattern)
+                .Range - 715) < 0.001
+            && upgradedSword.KnockbackDistance == 13
+            && upgradedWand.KnockbackDistance == 13
+            && upgradedBow.KnockbackDistance == 13,
+            "each weapon upgrade adjusts its range and hit knockback");
+
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        Assert(field.TryUpgradePlayerStat(ArenaProgression.MaximumHealth)
+            && field.Player.MaxHitPoints == PlayerCharacter.BaseMaxHitPoints
+                + ArenaProgression.HealthIncreasePerRank,
+            "skill tree can increase maximum player health");
+        Assert(field.TryUpgradePlayerStat(ArenaProgression.MaximumSpeed)
+            && field.Player.MaxSpeed == PlayerCharacter.BaseMaxSpeed
+                + ArenaProgression.SpeedIncreasePerRank,
+            "skill tree can increase maximum player speed");
+
+        field.ToggleGodMode();
+        int healthBeforeDamage = field.Player.CurrentHitPoints;
+        field.Player.TakeDamage(20);
+        Assert(field.IsGodMode
+            && field.Progression.UniversalPoints == int.MaxValue
+            && field.Progression.GetWeaponPoints(WeaponCatalog.Sword.Id) == int.MaxValue
+            && field.Player.CurrentHitPoints == healthBeforeDamage,
+            "god mode grants unlimited points and prevents player damage");
+        field.ToggleGodMode();
+        field.Player.TakeDamage(1);
+        Assert(!field.IsGodMode && field.Player.DamageFlashIntensity > 0,
+            "leaving god mode restores damage and displays a white damage flash");
+        field.Player.UpdateStatusEffects(0.18);
+        Assert(field.Player.DamageFlashIntensity == 0,
+            "the damage flash ends after a short interval");
     }
 
     private static Button FindMenuButton(Canvas canvas, string content)

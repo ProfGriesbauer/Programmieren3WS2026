@@ -86,9 +86,16 @@ namespace OOPGames
                         : "  |  bereit"),
                 16, 50);
             AddHudText(canvas, "Effekte: " + player.StatusSummary, 16, 73);
-            AddHudText(canvas, "Skillpunkte: " + progression.UniversalPoints
-                + "  |  Waffenpunkte: "
-                + progression.GetWeaponPoints(player.EquippedWeapon.Id), 16, 96);
+            AddHudText(canvas, progression.IsGodMode
+                ? "Skillpunkte: unbegrenzt  |  Waffenpunkte: unbegrenzt"
+                : "Skillpunkte: " + progression.UniversalPoints
+                    + "  |  Waffenpunkte: "
+                    + progression.GetWeaponPoints(player.EquippedWeapon.Id), 16, 96);
+            AddHudText(canvas, "Sprint: Strg halten", 16, 165);
+            if (player.IsInvulnerable)
+            {
+                AddHudText(canvas, "GODMODE AKTIV", 16, 188);
+            }
 
             List<string> weaponAbilitySlots = new List<string>();
             for (int i = 0; i < ArenaProgression.AbilitySlotCount; i++)

@@ -61,6 +61,7 @@ namespace OOPGames
         }
         public bool HasActiveGame { get; private set; }
         public bool IsGameOver { get { return HasActiveGame && !Player.IsAlive; } }
+        public bool IsGodMode { get { return _progression.IsGodMode; } }
         public bool ShowDamageRanges { get; private set; }
         public bool ShowDebugHud { get; private set; }
         public int Score { get; private set; }
@@ -89,6 +90,7 @@ namespace OOPGames
             _combatSystem.Clear();
             Player = new PlayerCharacter(MapWidth / 2, MapHeight / 2);
             Player.EquippedWeapon = _selectedPlayerWeapon;
+            Player.IsInvulnerable = IsGodMode;
             _enemies.Clear();
             Point spawnPosition = GetRandomEnemySpawnPosition(Player);
             _enemies.Add(new PursuerEnemy(
@@ -148,6 +150,83 @@ namespace OOPGames
             return true;
         }
 
+        public bool CanUpgradeWeapon(
+            string upgradeId, out int cost,
+            out int weaponPointsSpent, out int skillPointsSpent)
+        {
+            bool canUpgrade;
+            if (_selectedPlayerWeapon.Id == WeaponCatalog.Sword.Id)
+            {
+                canUpgrade = _progression.CanUpgradeSword(
+                    upgradeId, UpgradeCurrency.Weapon, out cost, true);
+            }
+            else if (_selectedPlayerWeapon.Id == WeaponCatalog.MagicWand.Id)
+            {
+                canUpgrade = _progression.CanUpgradeMagicWand(
+                    upgradeId, UpgradeCurrency.Weapon, out cost, true);
+            }
+            else
+            {
+                canUpgrade = _progression.CanUpgradeBow(
+                    upgradeId, UpgradeCurrency.Weapon, out cost, true);
+            }
+
+            _progression.GetWeaponUpgradePayment(
+                _selectedPlayerWeapon.Id, cost,
+                out weaponPointsSpent, out skillPointsSpent);
+            return canUpgrade;
+        }
+
+        public bool TryUpgradeWeaponWithSkillPoints(string upgradeId)
+        {
+            bool upgraded;
+            if (_selectedPlayerWeapon.Id == WeaponCatalog.Sword.Id)
+            {
+                upgraded = _progression.TryUpgradeSword(
+                    upgradeId, UpgradeCurrency.Weapon, true);
+            }
+            else if (_selectedPlayerWeapon.Id == WeaponCatalog.MagicWand.Id)
+            {
+                upgraded = _progression.TryUpgradeMagicWand(
+                    upgradeId, UpgradeCurrency.Weapon, true);
+            }
+            else
+            {
+                upgraded = _progression.TryUpgradeBow(
+                    upgradeId, UpgradeCurrency.Weapon, true);
+            }
+            if (!upgraded)
+            {
+                return false;
+            }
+
+            RefreshPlayerWeapon();
+            return true;
+        }
+
+        public bool TryUpgradePlayerStat(string statId)
+        {
+            if (!_progression.TryUpgradePlayerStat(statId))
+            {
+                return false;
+            }
+
+            Player.MaxHitPoints = PlayerCharacter.BaseMaxHitPoints
+                + _progression.GetSkillRank(ArenaProgression.MaximumHealth)
+                    * ArenaProgression.HealthIncreasePerRank;
+            Player.MaxSpeed = PlayerCharacter.BaseMaxSpeed
+                + _progression.GetSkillRank(ArenaProgression.MaximumSpeed)
+                    * ArenaProgression.SpeedIncreasePerRank;
+            Player.currentSpeed = Player.MaxSpeed;
+            return true;
+        }
+
+        public void ToggleGodMode()
+        {
+            _progression.SetGodMode(!IsGodMode);
+            Player.IsInvulnerable = IsGodMode;
+        }
+
         private void RefreshPlayerWeapon()
         {
             if (_selectedPlayerWeapon.Id == WeaponCatalog.Sword.Id)
@@ -173,6 +252,7 @@ namespace OOPGames
             ShowDebugHud = false;
             Score = 0;
             _progression.Reset();
+            Player.IsInvulnerable = false;
             AimDirectionX = 0;
             AimDirectionY = 1;
             IsGameStarted = false;
@@ -269,7 +349,12 @@ namespace OOPGames
             if (_keyBindings.IsDown(ArenaAction.MoveRight) || Keyboard.IsKeyDown(Key.Right)) directionX += 1;
 
             Rect movementBounds = MovementBounds;
-            Player.Move(directionX, directionY, movementBounds, speedScale);
+            double sprintScale = Keyboard.IsKeyDown(Key.LeftCtrl)
+                || Keyboard.IsKeyDown(Key.RightCtrl)
+                    ? 1.5
+                    : 1;
+            Player.Move(directionX, directionY, movementBounds,
+                speedScale * sprintScale);
             if (OverlapsAnotherEntity(Player))
             {
                 Player.PositionX = previousX;
@@ -319,7 +404,8 @@ namespace OOPGames
                 return;
             }
 
-            _combatSystem.Update(deltaSeconds, GetCombatEntities());
+            _combatSystem.Update(
+                deltaSeconds, GetCombatEntities(), MovementBounds);
             if (!Player.IsAlive)
             {
                 IsWeaponWheelOpen = false;

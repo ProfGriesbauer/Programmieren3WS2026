@@ -26,6 +26,11 @@ namespace OOPGames
         public const int KillsPerUniversalPoint = 5;
         public const int WeaponPointsPerKill = 1;
         public const int AbilitySlotCount = 4;
+        public const string MaximumHealth = "maximum-health";
+        public const string MaximumSpeed = "maximum-speed";
+        public const int PlayerStatMaximumRank = 5;
+        public const int HealthIncreasePerRank = 20;
+        public const double SpeedIncreasePerRank = 2;
 
         private readonly Dictionary<string, int> _weaponPoints =
             new Dictionary<string, int>();
@@ -37,9 +42,14 @@ namespace OOPGames
             new string[AbilitySlotCount];
         private readonly Dictionary<string, string[]> _weaponAbilities =
             new Dictionary<string, string[]>();
+        private int _universalPoints;
 
-        public int UniversalPoints { get; private set; }
+        public int UniversalPoints
+        {
+            get { return IsGodMode ? int.MaxValue : _universalPoints; }
+        }
         public int TotalKills { get; private set; }
+        public bool IsGodMode { get; private set; }
         public IReadOnlyList<string> EntityAbilities
         {
             get { return Array.AsReadOnly(_entityAbilities); }
@@ -47,7 +57,9 @@ namespace OOPGames
 
         public int GetWeaponPoints(string weaponId)
         {
-            return _weaponPoints.TryGetValue(weaponId, out int points) ? points : 0;
+            return IsGodMode
+                ? int.MaxValue
+                : GetStoredWeaponPoints(weaponId);
         }
 
         public int GetSkillRank(string skillId)
@@ -103,13 +115,19 @@ namespace OOPGames
 
         public void Reset()
         {
-            UniversalPoints = StartingUniversalPoints;
+            _universalPoints = StartingUniversalPoints;
             TotalKills = 0;
+            IsGodMode = false;
             _weaponPoints.Clear();
             _skillRanks.Clear();
             _weaponUpgradeRanks.Clear();
             _weaponAbilities.Clear();
             Array.Clear(_entityAbilities, 0, _entityAbilities.Length);
+        }
+
+        public void SetGodMode(bool enabled)
+        {
+            IsGodMode = enabled;
         }
 
         public void AwardKill(Weapon weapon)
@@ -125,10 +143,11 @@ namespace OOPGames
                 : weapon.Id == SwordUpgradeCatalog.SpinAbility
                     ? WeaponCatalog.Sword.Id
                     : weapon.Id;
-            _weaponPoints[weaponId] = GetWeaponPoints(weaponId) + WeaponPointsPerKill;
+            _weaponPoints[weaponId] =
+                GetStoredWeaponPoints(weaponId) + WeaponPointsPerKill;
             if (TotalKills % KillsPerUniversalPoint == 0)
             {
-                UniversalPoints += UniversalPointsPerKillMilestone;
+                _universalPoints += UniversalPointsPerKillMilestone;
             }
         }
 
@@ -143,17 +162,54 @@ namespace OOPGames
             }
 
             int cost = definition.GetNextRankCost(currentRank);
-            if (UniversalPoints < cost)
+            if (!IsGodMode && _universalPoints < cost)
             {
                 return false;
             }
 
-            UniversalPoints -= cost;
+            if (!IsGodMode)
+            {
+                _universalPoints -= cost;
+            }
             _skillRanks[skillId] = currentRank + 1;
             if (currentRank == 0)
             {
                 AssignToFirstFreeSlot(_entityAbilities, skillId);
             }
+            return true;
+        }
+
+        public int GetPlayerStatMaximumRank(string statId)
+        {
+            ValidatePlayerStatId(statId);
+            return PlayerStatMaximumRank;
+        }
+
+        public int GetPlayerStatNextRankCost(string statId)
+        {
+            ValidatePlayerStatId(statId);
+            return 2 * (GetSkillRank(statId) + 1);
+        }
+
+        public bool CanUpgradePlayerStat(string statId)
+        {
+            ValidatePlayerStatId(statId);
+            return GetSkillRank(statId) < PlayerStatMaximumRank
+                && (IsGodMode || _universalPoints >= GetPlayerStatNextRankCost(statId));
+        }
+
+        public bool TryUpgradePlayerStat(string statId)
+        {
+            if (!CanUpgradePlayerStat(statId))
+            {
+                return false;
+            }
+
+            if (!IsGodMode)
+            {
+                _universalPoints -= GetPlayerStatNextRankCost(statId);
+            }
+            _skillRanks[statId] = GetSkillRank(statId) + 1;
             return true;
         }
 
@@ -234,26 +290,31 @@ namespace OOPGames
         }
 
         public bool CanUpgradeMagicWand(
-            string upgradeId, UpgradeCurrency currency, out int cost)
+            string upgradeId, UpgradeCurrency currency, out int cost,
+            bool allowSkillPointFallback = false)
         {
             cost = MagicWandUpgradeCatalog.GetNextRankCost(
                 this, upgradeId, out int maximumRank, out string prerequisite);
             return CanPurchaseWeaponUpgrade(
                 WeaponCatalog.MagicWand.Id, upgradeId, currency, cost,
                 maximumRank, prerequisite, MagicWandUpgradeCatalog.IsElement(upgradeId),
-                SelectedMagicWandElement);
+                SelectedMagicWandElement, allowSkillPointFallback);
         }
 
         public bool TryUpgradeMagicWand(
-            string upgradeId, UpgradeCurrency currency)
+            string upgradeId, UpgradeCurrency currency,
+            bool allowSkillPointFallback = false)
         {
-            if (!CanUpgradeMagicWand(upgradeId, currency, out int cost))
+            if (!CanUpgradeMagicWand(
+                upgradeId, currency, out int cost, allowSkillPointFallback))
             {
                 return false;
             }
 
             int currentRank = GetWeaponUpgradeRank(upgradeId);
-            PurchaseUpgrade(WeaponCatalog.MagicWand.Id, upgradeId, currency, cost);
+            PurchaseUpgrade(
+                WeaponCatalog.MagicWand.Id, upgradeId, currency, cost,
+                allowSkillPointFallback);
             if (upgradeId == MagicWandUpgradeCatalog.Strike && currentRank == 0)
             {
                 AssignToFirstFreeSlot(
@@ -264,49 +325,59 @@ namespace OOPGames
         }
 
         public bool CanUpgradeBow(
-            string upgradeId, UpgradeCurrency currency, out int cost)
+            string upgradeId, UpgradeCurrency currency, out int cost,
+            bool allowSkillPointFallback = false)
         {
             cost = BowUpgradeCatalog.GetNextRankCost(
                 this, upgradeId, out int maximumRank, out string prerequisite);
             return CanPurchaseWeaponUpgrade(
                 WeaponCatalog.Bow.Id, upgradeId, currency, cost,
                 maximumRank, prerequisite, BowUpgradeCatalog.IsElement(upgradeId),
-                SelectedBowElement);
+                SelectedBowElement, allowSkillPointFallback);
         }
 
         public bool TryUpgradeBow(
-            string upgradeId, UpgradeCurrency currency)
+            string upgradeId, UpgradeCurrency currency,
+            bool allowSkillPointFallback = false)
         {
-            if (!CanUpgradeBow(upgradeId, currency, out int cost))
+            if (!CanUpgradeBow(
+                upgradeId, currency, out int cost, allowSkillPointFallback))
             {
                 return false;
             }
 
-            PurchaseUpgrade(WeaponCatalog.Bow.Id, upgradeId, currency, cost);
+            PurchaseUpgrade(
+                WeaponCatalog.Bow.Id, upgradeId, currency, cost,
+                allowSkillPointFallback);
             return true;
         }
 
         public bool CanUpgradeSword(
-            string upgradeId, UpgradeCurrency currency, out int cost)
+            string upgradeId, UpgradeCurrency currency, out int cost,
+            bool allowSkillPointFallback = false)
         {
             cost = SwordUpgradeCatalog.GetNextRankCost(
                 this, upgradeId, out int maximumRank, out string prerequisite);
             return CanPurchaseWeaponUpgrade(
                 WeaponCatalog.Sword.Id, upgradeId, currency, cost,
                 maximumRank, prerequisite, SwordUpgradeCatalog.IsElement(upgradeId),
-                SelectedSwordElement);
+                SelectedSwordElement, allowSkillPointFallback);
         }
 
         public bool TryUpgradeSword(
-            string upgradeId, UpgradeCurrency currency)
+            string upgradeId, UpgradeCurrency currency,
+            bool allowSkillPointFallback = false)
         {
-            if (!CanUpgradeSword(upgradeId, currency, out int cost))
+            if (!CanUpgradeSword(
+                upgradeId, currency, out int cost, allowSkillPointFallback))
             {
                 return false;
             }
 
             int currentRank = GetWeaponUpgradeRank(upgradeId);
-            PurchaseUpgrade(WeaponCatalog.Sword.Id, upgradeId, currency, cost);
+            PurchaseUpgrade(
+                WeaponCatalog.Sword.Id, upgradeId, currency, cost,
+                allowSkillPointFallback);
             if (upgradeId == SwordUpgradeCatalog.Spin && currentRank == 0)
             {
                 AssignToFirstFreeSlot(
@@ -329,7 +400,8 @@ namespace OOPGames
         private bool CanPurchaseWeaponUpgrade(
             string weaponId, string upgradeId, UpgradeCurrency currency,
             int cost, int maximumRank, string prerequisite,
-            bool isElement, WeaponElement selectedElement)
+            bool isElement, WeaponElement selectedElement,
+            bool allowSkillPointFallback)
         {
             if (GetWeaponUpgradeRank(upgradeId) >= maximumRank
                 || !string.IsNullOrEmpty(prerequisite)
@@ -351,25 +423,91 @@ namespace OOPGames
                 return false;
             }
 
-            return currency == UpgradeCurrency.Universal
-                ? UniversalPoints >= cost
-                : GetWeaponPoints(weaponId) >= cost;
+            if (IsGodMode)
+            {
+                return true;
+            }
+            if (currency == UpgradeCurrency.Universal)
+            {
+                return _universalPoints >= cost;
+            }
+
+            int weaponPoints = GetStoredWeaponPoints(weaponId);
+            return weaponPoints >= cost
+                || allowSkillPointFallback
+                    && _universalPoints >= cost - weaponPoints;
         }
 
         private void PurchaseUpgrade(
             string weaponId, string upgradeId,
-            UpgradeCurrency currency, int cost)
+            UpgradeCurrency currency, int cost, bool allowSkillPointFallback)
         {
+            if (IsGodMode)
+            {
+                _weaponUpgradeRanks[upgradeId] =
+                    GetWeaponUpgradeRank(upgradeId) + 1;
+                return;
+            }
+
             if (currency == UpgradeCurrency.Universal)
             {
-                UniversalPoints -= cost;
+                _universalPoints -= cost;
+            }
+            else if (allowSkillPointFallback)
+            {
+                int weaponPointsSpent = Math.Min(
+                    GetStoredWeaponPoints(weaponId), cost);
+                _weaponPoints[weaponId] =
+                    GetStoredWeaponPoints(weaponId) - weaponPointsSpent;
+                _universalPoints -= cost - weaponPointsSpent;
             }
             else
             {
-                _weaponPoints[weaponId] -= cost;
+                _weaponPoints[weaponId] =
+                    GetStoredWeaponPoints(weaponId) - cost;
             }
 
             _weaponUpgradeRanks[upgradeId] = GetWeaponUpgradeRank(upgradeId) + 1;
+        }
+
+        public void GetWeaponUpgradePayment(
+            string weaponId, int cost,
+            out int weaponPointsSpent, out int skillPointsSpent)
+        {
+            if (string.IsNullOrWhiteSpace(weaponId))
+            {
+                throw new ArgumentException("A weapon id is required.", nameof(weaponId));
+            }
+            if (cost < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cost));
+            }
+
+            if (IsGodMode)
+            {
+                weaponPointsSpent = 0;
+                skillPointsSpent = 0;
+                return;
+            }
+
+            weaponPointsSpent = Math.Min(GetStoredWeaponPoints(weaponId), cost);
+            skillPointsSpent = cost - weaponPointsSpent;
+        }
+
+        private int GetStoredWeaponPoints(string weaponId)
+        {
+            return _weaponPoints.TryGetValue(weaponId, out int points)
+                ? points
+                : 0;
+        }
+
+        private static void ValidatePlayerStatId(string statId)
+        {
+            if (statId != MaximumHealth && statId != MaximumSpeed)
+            {
+                throw new ArgumentException(
+                    "Unknown player stat upgrade: " + statId, nameof(statId));
+            }
         }
 
         private string[] GetWeaponAbilitySlots(string weaponId)

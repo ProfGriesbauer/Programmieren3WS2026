@@ -11,6 +11,7 @@ namespace OOPGames
         private int _maxHitPoints;
         private double _maxSpeed;
         private double _currentSpeed;
+        private double _damageFlashRemainingSeconds;
         private readonly List<ActiveStatusEffect> _activeStatusEffects =
             new List<ActiveStatusEffect>();
         private readonly List<ActiveDamageOverTimeEffect> _damageOverTimeEffects =
@@ -101,6 +102,15 @@ namespace OOPGames
         public double Size { get; }
         public Brush Color { get; }
         public bool IsAlive { get; private set; } = true;
+        public bool IsInvulnerable { get; set; }
+        public double DamageFlashIntensity
+        {
+            get
+            {
+                return Math.Max(0, Math.Min(
+                    1, _damageFlashRemainingSeconds / DamageFlashDurationSeconds));
+            }
+        }
         public CombatTeam Team { get; protected set; }
         public Weapon EquippedWeapon { get; set; }
         internal Weapon EffectWeaponContext { get; set; }
@@ -206,12 +216,17 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(damage));
             }
-            if (!IsAlive)
+            if (!IsAlive || IsInvulnerable)
             {
                 return;
             }
 
+            int previousHitPoints = CurrentHitPoints;
             CurrentHitPoints -= damage;
+            if (CurrentHitPoints < previousHitPoints)
+            {
+                _damageFlashRemainingSeconds = DamageFlashDurationSeconds;
+            }
             CheckAndKill();
         }
 
@@ -341,6 +356,8 @@ namespace OOPGames
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
             }
 
+            _damageFlashRemainingSeconds = Math.Max(
+                0, _damageFlashRemainingSeconds - deltaSeconds);
             for (int i = _activeStatusEffects.Count - 1; i >= 0; i--)
             {
                 ActiveStatusEffect effect = _activeStatusEffects[i];
@@ -377,5 +394,7 @@ namespace OOPGames
             }
             return multiplier;
         }
+
+        private const double DamageFlashDurationSeconds = 0.18;
     }
 }

@@ -21,7 +21,9 @@ namespace OOPGames
             ArenaProgression progression = field.Progression;
             StackPanel content = CreateContent(
                 "SPIELER-SKILLTREE",
-                "Universelle Punkte: " + progression.UniversalPoints
+                (progression.IsGodMode
+                    ? "Skillpunkte: unbegrenzt"
+                    : "Skillpunkte: " + progression.UniversalPoints)
                     + "  |  Kills: " + progression.TotalKills
                     + "  |  1 Punkt je 5 Kills. Spielerfähigkeiten sind unabhängig von Waffen.");
 
@@ -37,6 +39,26 @@ namespace OOPGames
                 Header = "Spielerfähigkeiten",
                 IsExpanded = true
             };
+            TreeViewItem stats = new TreeViewItem
+            {
+                Header = "Spielerwerte",
+                IsExpanded = true
+            };
+            AddPlayerStatUpgrade(
+                stats, field, ArenaProgression.MaximumHealth,
+                "Maximale Gesundheit",
+                "Erhöht die maximale Gesundheit um "
+                    + ArenaProgression.HealthIncreasePerRank + ".",
+                field.Player.MaxHitPoints,
+                ArenaProgression.HealthIncreasePerRank, refresh);
+            AddPlayerStatUpgrade(
+                stats, field, ArenaProgression.MaximumSpeed,
+                "Maximale Geschwindigkeit",
+                "Erhöht die Bewegungsgeschwindigkeit um "
+                    + ArenaProgression.SpeedIncreasePerRank + ".",
+                field.Player.MaxSpeed,
+                ArenaProgression.SpeedIncreasePerRank, refresh);
+            root.Items.Add(stats);
             foreach (PlayerAbilityDefinition definition in PlayerAbilityCatalog.Definitions)
             {
                 int rank = progression.GetSkillRank(definition.Id);
@@ -86,9 +108,13 @@ namespace OOPGames
 
             StackPanel content = CreateContent(
                 weaponName.ToUpperInvariant() + " — WAFFENBAUM",
-                "Universelle Punkte: " + progression.UniversalPoints
-                    + "  |  Waffenpunkte: " + weaponPoints
-                    + "  |  LMB: Grundangriff, RMB: Waffenfähigkeit 1. "
+                (field.IsGodMode
+                    ? "Godmode: unbegrenzte Punkte, Upgrades kostenlos."
+                    : "Waffenpunkte: " + weaponPoints
+                        + "  |  Skillpunkte: " + progression.UniversalPoints
+                        + ". Waffenpunkte werden zuerst eingesetzt; fehlende Punkte "
+                        + "können nach Bestätigung aus Skillpunkten bezahlt werden.")
+                    + " LMB: Grundangriff, RMB: Waffenfähigkeit 1. "
                     + "Elemente wirken auf die Waffenangriffe.");
 
             TreeView tree = new TreeView
@@ -112,10 +138,9 @@ namespace OOPGames
                 int cost = GetNextRankCost(
                     progression, upgrade.Id, isSword, isBow,
                     out int maximumRank, out string prerequisite);
-                bool canPurchaseWeapon = CanUpgrade(
-                    progression, upgrade.Id, UpgradeCurrency.Weapon, isSword, isBow);
-                bool canPurchaseUniversal = CanUpgrade(
-                    progression, upgrade.Id, UpgradeCurrency.Universal, isSword, isBow);
+                bool canPurchase = field.CanUpgradeWeapon(
+                    upgrade.Id, out cost,
+                    out int weaponPointsToSpend, out int skillPointsToSpend);
 
                 TreeViewItem node = new TreeViewItem
                 {
@@ -144,10 +169,9 @@ namespace OOPGames
                     AddText(node, "Ein anderer Elementzweig ist bereits gewählt.");
                 }
 
-                AddPurchaseButton(node, field, upgrade, UpgradeCurrency.Weapon,
-                    canPurchaseWeapon, cost, refresh);
-                AddPurchaseButton(node, field, upgrade, UpgradeCurrency.Universal,
-                    canPurchaseUniversal, cost, refresh);
+                AddPurchaseButton(node, field, upgrade,
+                    canPurchase, cost, weaponPointsToSpend,
+                    skillPointsToSpend, refresh);
 
                 if (!string.IsNullOrEmpty(prerequisite)
                     && nodes.TryGetValue(prerequisite, out TreeViewItem parent))
@@ -315,34 +339,62 @@ namespace OOPGames
                 : MagicWandUpgradeCatalog.IsElement(id);
         }
 
-        private static bool CanUpgrade(
-            ArenaProgression progression, string id,
-            UpgradeCurrency currency, bool isSword, bool isBow)
+        private static void AddPlayerStatUpgrade(
+            TreeViewItem parent, ArenaField field, string statId,
+            string name, string description, double currentValue,
+            double increasePerRank, Action refresh)
         {
-            if (isSword)
+            ArenaProgression progression = field.Progression;
+            int rank = progression.GetSkillRank(statId);
+            int maximumRank = progression.GetPlayerStatMaximumRank(statId);
+            int cost = progression.GetPlayerStatNextRankCost(statId);
+            TreeViewItem node = new TreeViewItem
             {
-                return progression.CanUpgradeSword(id, currency, out _);
-            }
-            if (isBow)
+                Header = name + " — Rang " + rank + "/" + maximumRank,
+                IsExpanded = true
+            };
+            AddText(node, description + " Aktuell: " + currentValue + ".");
+            AddButton(node,
+                "Verbessern (" + cost + " Skillpunkte)",
+                progression.CanUpgradePlayerStat(statId),
+                () =>
             {
-                return progression.CanUpgradeBow(id, currency, out _);
-            }
-            return progression.CanUpgradeMagicWand(id, currency, out _);
+                field.TryUpgradePlayerStat(statId);
+                refresh();
+            });
+            parent.Items.Add(node);
         }
 
         private static void AddPurchaseButton(
             ItemsControl content, ArenaField field,
-            WeaponUpgradeDefinition upgrade, UpgradeCurrency currency,
-            bool enabled, int cost, Action refresh)
+            WeaponUpgradeDefinition upgrade, bool enabled, int cost,
+            int weaponPointsToSpend, int skillPointsToSpend,
+            Action refresh)
         {
-            string currencyName = currency == UpgradeCurrency.Weapon
-                ? "Waffenpunkten"
-                : "universellen Punkten";
             AddButton(content,
-                "Kaufen mit " + currencyName + " (" + cost + ")",
+                field.IsGodMode
+                    ? "Kostenlos verbessern (" + cost + ")"
+                    : "Verbessern (" + weaponPointsToSpend
+                        + " Waffenpunkte"
+                        + (skillPointsToSpend > 0
+                            ? " + " + skillPointsToSpend + " Skillpunkte"
+                            : string.Empty)
+                        + ")",
                 enabled, () =>
                 {
-                    field.TryUpgradeWeapon(upgrade.Id, currency);
+                    if (skillPointsToSpend > 0
+                        && MessageBox.Show(
+                            "Es fehlen " + skillPointsToSpend
+                                + " Waffenpunkte. Möchtest du die Differenz mit "
+                                + skillPointsToSpend + " Skillpunkten bezahlen?",
+                            "Upgrade bestätigen",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question) != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+
+                    field.TryUpgradeWeaponWithSkillPoints(upgrade.Id);
                     refresh();
                 });
         }
