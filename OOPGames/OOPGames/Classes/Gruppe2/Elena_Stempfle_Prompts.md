@@ -378,4 +378,4 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 
 > Ich committe die Änderungen aus den Prompts 20–23 (Subway-Surfer-Dateien, Gruppen-Interface und diese Prompt-Datei). Die fremden obj-Dateien in `HouseExample/` kommen nicht in den Commit. Danach folgen `git pull --rebase` und `git push`. Damit geht auch der noch nicht gepushte Commit aus Prompt 19 mit auf den Server.
 
-**Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt.
+**Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt. Beim Pull gab es einen Konflikt in `Gruppe2_SubwayTests.cs`: Lani hatte denselben Ampel-Fehler im Spawn-Test gleich behoben. Ich habe die Version mit erklärendem Kommentar behalten. Lanis neue Tests und meine laufen jetzt zusammen; Build und Tests waren vor dem Push 3-mal grün.
