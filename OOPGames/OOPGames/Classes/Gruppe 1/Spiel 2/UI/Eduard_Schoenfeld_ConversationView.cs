@@ -54,7 +54,9 @@ namespace OOPGames
             r.Text(npc.Name, 10, panelY + 96, 10, G1C_UiColors.PanelBorder, 108);
             r.Text(npc.Personality.Role, 10, panelY + 110, 8, G1C_UiColors.Text, 108);
 
-            r.WrappedText(c.Line, OptionX, panelY + 8, 10, G1C_UiColors.Text, optionWidth - 4);
+            r.DrawRect(OptionX - 2, panelY + 6, optionWidth + 2, 48, G1C_UiColors.PanelFill,
+                       G1C_UiColors.PanelInner, 1);
+            r.WrappedText(c.Line, OptionX + 2, panelY + 8, 9, G1C_UiColors.Text, optionWidth - 8);
 
             for (int i = 0; i < c.Options.Count; i++)
             {

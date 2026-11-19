@@ -158,7 +158,7 @@ namespace OOPGames
         public const int EntryFee = 5;
         public const int WinReward = 20;
         public const int CanvasW = 480, CanvasH = 320;
-        private const double ViewW = 330, ViewH = 220;
+        private const double ViewW = 390, ViewH = 260;
 
         private readonly G1C_GuestGameEntry _entry;
         private readonly Canvas _canvas = new Canvas { Width = CanvasW, Height = CanvasH, Background = Brushes.White };

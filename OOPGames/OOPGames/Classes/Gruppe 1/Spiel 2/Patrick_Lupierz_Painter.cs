@@ -189,7 +189,9 @@ namespace OOPGames
                 // Laufbeine (Standbild, leichtes Wippen beim Treten); von vorn liegt der Lenker vor der Figur.
                 if (!riding)
                 {
-                    DrawEntity(r, _animation.GetSpriteId(player), player.VisualX, player.VisualY, 1, 1, tileSize, mapX, mapY);
+                    string playerSprite = _animation.GetSpriteId(player);
+                    double limpOffset = player.Humping && player.IsMoving ? (game.TickCount % 2 == 0 ? 0.12 : -0.05) : 0;
+                    DrawEntity(r, playerSprite, player.VisualX, player.VisualY + limpOffset, 1, 1, tileSize, mapX, mapY);
                     return;
                 }
                 string bike = game.Bikes.RideSpriteId(player.Facing);

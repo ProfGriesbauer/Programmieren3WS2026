@@ -61,6 +61,11 @@ namespace OOPGames
         public int LoanRespectDay { get; set; }
         public int LoanSmsDay { get; set; }
         public int LoanSmsCount { get; set; }
+        public int LoanStartDay { get; set; }
+        public int LoanWarningStage { get; set; }
+        public bool LoanDoorThreat { get; set; }
+        public bool LoanBonesBroken { get; set; }
+        public bool LoanCatKidnapped { get; set; }
         public int AudioMaster { get; set; } = 80;
         public int AudioMusic { get; set; } = 50;
         public int AudioEffects { get; set; } = 80;
@@ -119,6 +124,7 @@ namespace OOPGames
                     data.LoanRespectDay = 0;
                     data.LoanSmsDay = 0;
                     data.LoanSmsCount = 0;
+                    data.LoanStartDay = 0;
                     data.AudioMaster = 80;
                     data.AudioMusic = 50;
                     data.AudioEffects = 80;

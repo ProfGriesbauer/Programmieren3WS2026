@@ -705,8 +705,8 @@ namespace OOPGames
         private static void AnglerFishData()
         {
             G1C_GameManager game = RunningGame();
-            Check(game.Exterior.TownNpcs.Any(n => n.Name == "Angler Fabian"), "Angler-NPC fehlt");
-            G1C_NpcCharacter angler = game.Npcs.Find("Angler Fabian");
+            Check(game.Exterior.TownNpcs.Any(n => n.Name == "Denis der Angler"), "Angler-NPC fehlt");
+            G1C_NpcCharacter angler = game.Npcs.Find("Denis der Angler");
             Check(angler != null, "Angler-Profil fehlt");
             Check(angler.Personality.Topics.Any(t => t.Question.Contains("Angelspiel")), "Angel-Tutorial-Thema fehlt");
             Check(angler.Personality.Topics.Any(t => t.Question.Contains("Fische")), "Fischliste-Thema fehlt");

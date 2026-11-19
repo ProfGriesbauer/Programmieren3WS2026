@@ -91,6 +91,9 @@ namespace OOPGames
             _movement = CreateMovement();
             _interactions = new G1C_InteractionManager(World);
             Npcs = new G1C_NpcSystem(World, Money, Finance, _random); // Änderung durch: Eduard Schoenfeld
+            Npcs.Player = Player;
+            Npcs.OnNurseTreat = TreatBrokenLegs;
+            Npcs.OnLoanRepaid = ApplyLoanRepaidConsequences;
             Npcs.Clock = Clock; // Änderung durch: Patrick Lupierz – 15.11.2026
             Npcs.IsPresent = npc => World.IsPresent(npc); // Änderung durch: Patrick Lupierz – 18.11.2026 – Tagesablauf
             _exteriorNpcRoaming = new G1C_ExteriorNpcRoamingSystem(Exterior, Player, _random); // Erweiterung durch Denis Mock
@@ -621,12 +624,29 @@ namespace OOPGames
             }
             if (Finance.ApplyLoanSmsDay(Clock.Day))
             {
-                string text = Finance.LoanSmsCount == 1
-                    ? "Du hast immer noch Schulden bei mir. Denk daran, bevor ich persoenlich vorbeikomme."
-                    : Finance.LoanSmsCount < 4
-                        ? "Die Frist laeuft. " + Finance.LoanOwed + " Chips stehen noch offen. Zahl heute."
-                        : "Letzte Warnung: " + Finance.LoanOwed + " Chips Schulden. Ich komme vorbei, wenn du nicht zahlst.";
+                int debt = Finance.LoanOwed;
+                int age = System.Math.Max(0, Clock.Day - Finance.LoanStartDay);
+                string text;
+                switch (Finance.LoanWarningStage)
+                {
+                    case 5:
+                        text = "LETZTE PHASE: " + debt + " Chips, " + age + " Tage offen, Sozialschmarotzer. Milo bleibt weg. Heute entscheidet sich, ob deine Tür oder deine Knochen dran sind.";
+                        break;
+                    case 4:
+                        text = "DU MACHST ES SCHWERER: " + debt + " Chips sind seit " + age + " Tagen offen. Saftsack, die nächste Nacht kostet dich vielleicht das Gehen.";
+                        break;
+                    case 3:
+                        text = "DAS IST KEINE FREUNDLICHE ERINNERUNG: " + debt + " Chips seit " + age + " Tagen. Ich stehe heute vor deiner Tür, Versager.";
+                        break;
+                    case 2:
+                        text = "Du hast " + age + " Tage gezögert. " + debt + " Chips stehen noch offen, Lappen. Morgen wird Viktor persönlicher.";
+                        break;
+                    default:
+                        text = "Erste Mahnung: " + debt + " Chips, " + age + " Tag(e) offen. Freundlich zahlt es sich aus. Ich will mein Geld.";
+                        break;
+                }
                 Phone.Receive("Geldhai Viktor", text, Clock);
+                if (Finance.LoanSmsCount >= 3) ApplySharkConsequences();
             }
             return interest;
         }
@@ -1021,6 +1041,9 @@ namespace OOPGames
                 ArcadeHighscores = new Dictionary<string, int>(ArcadeHighscores),
                 LoanInterestDay = Finance.LoanInterestLastDay, LoanRespectDay = Finance.LoanRespectLastDay,
                 LoanSmsDay = Finance.LoanSmsLastDay, LoanSmsCount = Finance.LoanSmsCount,
+                LoanStartDay = Finance.LoanStartDay,
+                LoanWarningStage = Finance.LoanWarningStage, LoanDoorThreat = Finance.LoanDoorThreat,
+                LoanBonesBroken = Finance.LoanBonesBroken, LoanCatKidnapped = Finance.LoanCatKidnapped,
                 AudioMaster = Sound.Settings.Master, AudioMusic = Sound.Settings.Music,
                 AudioEffects = Sound.Settings.Effects, AudioMuted = Sound.Muted
             };
@@ -1040,6 +1063,13 @@ namespace OOPGames
             Clock.TotalTicks = data.ClockTicks;
             Finance.RestoreInterest(data.BankInterestDay, data.BankInterestTotal, Clock.Day); // Patrick Lupierz – 15.11.2026
             Finance.RestoreLoanState(data.LoanInterestDay, data.LoanRespectDay, data.LoanSmsDay, data.LoanSmsCount, Clock.Day);
+            Finance.RestoreLoanStartDay(data.LoanStartDay, Clock.Day);
+            if (data.LoanDoorThreat) Finance.RestoreLoanState(data.LoanInterestDay, data.LoanRespectDay, data.LoanSmsDay,
+                System.Math.Max(data.LoanSmsCount, 3), Clock.Day);
+            if (!data.LoanBonesBroken) Finance.ClearBoneDamage();
+            if (data.LoanBonesBroken) Bikes.SetBlockedByShark(true);
+            else Bikes.SetBlockedByShark(false);
+            Home.SetHouseCatPresent(!data.LoanCatKidnapped);
             TickCount = Math.Max(0, data.PlayTicks);
             GamesPlayed = Math.Max(0, data.GamesPlayed);
             Npcs.RestoreReputation(data.Reputation);
@@ -1242,6 +1272,60 @@ namespace OOPGames
         public const int LoanSharkRange = 2;
         public bool LoanSharkApproached { get; private set; }
 
+        private void ApplySharkConsequences()
+        {
+            if (Finance.LoanDoorThreat)
+            {
+                G1C_Npc shark = Exterior.TownNpcs.FirstOrDefault(n => n.Interaction == G1C_InteractionType.LoanShark);
+                if (shark != null)
+                {
+                    shark.Teleport(MapDoorX(), MapDoorY(), G1C_Direction.Down);
+                    Npcs.Bubbles.ShowReaction(shark, "Hier ist deine letzte Warnung, Versager.", TickCount);
+                }
+            }
+            if (Finance.LoanBonesBroken)
+            {
+                Player.Humping = true;
+                Player.StepTicks = Math.Max(Player.StepTicks, 9);
+                Bikes.SetBlockedByShark(true);
+                NotifySystemMessage("Viktor hat dir die Knochen gebrochen. Du humpelst und kannst kein Fahrrad fahren.");
+            }
+            if (Finance.LoanCatKidnapped)
+            {
+                Home.SetHouseCatPresent(false);
+                Phone.Receive("Geldhai Viktor", "Ich habe eure Katze Milo. Bezahle deine Schulden – dann bekommst du sie zurück.", Clock);
+            }
+        }
+
+        private int MapDoorX() { return Exterior.Map.DoorX(G1C_WorldLocation.Home); }
+        private int MapDoorY() { return Exterior.Map.DoorY(G1C_WorldLocation.Home) + 1; }
+
+        private void ApplyLoanRepaidConsequences()
+        {
+            Player.Humping = false;
+            Player.StepTicks = G1C_Player.TicksPerStep;
+            Bikes.SetBlockedByShark(false);
+            Home.SetHouseCatPresent(true);
+            Phone.Receive("Geldhai Viktor",
+                "Schulden bezahlt. Milo ist wieder sicher. Wir sind quitt - für heute.", Clock);
+            G1C_Npc shark = Exterior.TownNpcs.FirstOrDefault(n => n.Interaction == G1C_InteractionType.LoanShark);
+            if (shark != null)
+            {
+                shark.Teleport(35, 45, G1C_Direction.Down);
+                Npcs.Bubbles.ShowReaction(shark, "Bezahlt. Ich bin zufrieden.", TickCount);
+            }
+            NotifySystemMessage("Die Schulden sind bezahlt. Dein Humpeln endet und Milo ist zurück.");
+        }
+
+        private void TreatBrokenLegs()
+        {
+            Player.Humping = false;
+            Player.StepTicks = G1C_Player.TicksPerStep;
+            Bikes.SetBlockedByShark(false);
+            Finance.ClearBoneDamage();
+            NotifySystemMessage("Schwester Emma hat dich behandelt. Du kannst wieder laufen und Fahrrad fahren.");
+        }
+
         private void UpdateLoanSharkApproach()
         {
             G1C_Npc shark = Exterior.TownNpcs.FirstOrDefault(n => n.Interaction == G1C_InteractionType.LoanShark);
@@ -1334,6 +1418,7 @@ namespace OOPGames
                 if (!Player.IsMoving)
                 {
                     Player.StepTicks = Bikes.StepTicks(Buffs.StepTicks); // Patrick Lupierz – Fahrrad
+                    if (Finance.LoanBonesBroken) Player.StepTicks = Math.Max(Player.StepTicks, 9);
                     // Änderung durch: Patrick Lupierz – 16.11.2026 – Admin-Cheat: dauerhaft erhöhte Geschwindigkeit (endet
                     // erst, wenn ADMIN erneut getippt wird); schneller als Fahrrad und Energydrink.
                     if (Cheats.JackpotActive) Player.StepTicks = Math.Min(Player.StepTicks, G1C_CheatCode.SpeedStepTicks);

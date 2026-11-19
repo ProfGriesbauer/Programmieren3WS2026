@@ -146,7 +146,7 @@ namespace OOPGames
             int y = fishing.Y;
             if (!Map.IsWalkable(x, y) || ObjectAt(x, y) != null) x = fishing.X - 2;
             if (!Map.IsWalkable(x, y) || ObjectAt(x, y) != null) return;
-            G1C_Npc npc = new G1C_Npc("Angler Fabian", "dealer_green", x, y, G1C_Direction.Left, G1C_InteractionType.Talk);
+            G1C_Npc npc = new G1C_Npc("Denis der Angler", "angler_denis", x, y, G1C_Direction.Left, G1C_InteractionType.Talk);
             _townNpcs.Add(npc);
             _objects.Add(npc);
         }

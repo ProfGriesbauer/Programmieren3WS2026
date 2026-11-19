@@ -263,8 +263,24 @@ namespace OOPGames
                 return;
             }
 
+            if (_serviceOffered == G1C_InteractionType.Nurse)
+            {
+                if (_system.Finance.LoanBonesBroken)
+                    AddOption("Beine behandeln lassen (2000 Chips).", TreatWithNurse);
+                else
+                    AddOption("Kannst du mich untersuchen?", () => Say("Du bist wieder beweglich. Keine Behandlung nötig.", G1C_NpcExpression.Happy));
+                if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0));
+                AddOption("Ich gehe wieder.", Close);
+                return;
+            }
+
             if (_serviceOffered == G1C_InteractionType.LoanShark)
             {
+                if (_system.Finance.LoanDoorThreat)
+                {
+                    ShowSharkThreatOptions(0);
+                    return;
+                }
                 if (_system.Finance.LoanOwed > 0)
                 {
                     AddOption("50 Chips zurückzahlen.", () => RepayLoan(50));
@@ -272,13 +288,11 @@ namespace OOPGames
                 }
                 else
                 {
-                    AddOption("500 Chips leihen.", () => BorrowFromShark(500));
-                    AddOption("1000 Chips leihen.", () => BorrowFromShark(1000));
-                    AddOption("2500 Chips leihen.", () => BorrowFromShark(2500));
-                    AddOption("5000 Chips leihen.", () => BorrowFromShark(5000));
-                    AddOption("Konditionen erklären.", ExplainLoan);
+                    AddOption("Mit Viktor reden.", SmallTalk);
+                    AddOption("Über einen Kredit sprechen.", ShowLoanOptions);
                 }
-                AddOption("Lass uns plaudern.", SmallTalk);
+                if (_system.Finance.LoanOwed > 0)
+                    AddOption("Mit Viktor reden.", SmallTalk);
                 AddOption("Ich gehe wieder.", Close);
                 return;
             }
@@ -534,7 +548,24 @@ namespace OOPGames
         private void RepayLoan(int amount)
         {
             string reply = _system.Finance.Repay(_system.Money, amount);
+            if (_system.Finance.LoanOwed == 0)
+            {
+                if (_system.OnLoanRepaid != null) _system.OnLoanRepaid();
+            }
             Say(reply, _system.Finance.LoanOwed == 0 ? G1C_NpcExpression.Happy : G1C_NpcExpression.Thoughtful);
+            ShowRoot();
+        }
+
+        private void TreatWithNurse()
+        {
+            if (!_system.Money.TryWithdraw(2000))
+            {
+                Say("Behandlung 2000 Chips. Du hast nicht genug Chips.", G1C_NpcExpression.Thoughtful);
+                ShowRoot();
+                return;
+            }
+            if (_system.OnNurseTreat != null) _system.OnNurseTreat();
+            Say("Die Behandlung ist bezahlt. Deine Beine sind versorgt, du humpelst nicht mehr und kannst wieder Fahrrad fahren.", G1C_NpcExpression.Happy);
             ShowRoot();
         }
 
@@ -542,6 +573,39 @@ namespace OOPGames
         {
             Say("Du kannst bis zu 5000 Chips wählen.\nJeden neuen Tag steigen die Schulden um 50 %. Währenddessen verlierst du taeglich Respekt. Kein neuer Kredit, solange die alte Schuld offen ist.",
                 G1C_NpcExpression.Thoughtful);
+        }
+
+        private void ShowSharkThreatOptions(int page)
+        {
+            _options.Clear();
+            Selected = 0;
+            int debt = _system.Finance.LoanOwed;
+            int day = _system.Clock != null ? _system.Clock.Day : 1;
+            int age = System.Math.Max(0, day - _system.Finance.LoanStartDay);
+            int stage = _system.Finance.LoanWarningStage;
+            string threat = stage >= 5
+                ? "Letzte Phase. Milo wartet nicht ewig, und deine Knochen auch nicht."
+                : stage >= 4
+                    ? "Du hast meine Geduld verbrannt. Nächstes Mal rede ich nicht mehr."
+                    : "Saftsack, deine Frist läuft heute ab.";
+            Say(threat, G1C_NpcExpression.Angry);
+
+            AddOption("Wie lange stehen die Schulden offen?", () => Say("Seit " + age + " Tag(en). Du hast genug Zeit gehabt, Sozialschmarotzer.", G1C_NpcExpression.Angry));
+            AddOption("Wie hoch ist die Schuld jetzt?", () => Say(debt + " Chips. Ohne Zahlung wachsen sie jeden Tag um 50 Prozent.", G1C_NpcExpression.Thoughtful));
+            AddOption("Ich kann heute nicht alles zahlen.", () => Say("Dann zahl mindestens etwas, Saftsack. Ausreden retten dir Milo nicht.", G1C_NpcExpression.Angry));
+            AddOption(stage >= 5 ? "Alles zahlen - kein Kommentar." : "Meine Schulden bezahlen.", () => RepayLoan(debt));
+        }
+
+        private void ShowLoanOptions()
+        {
+            _options.Clear();
+            Selected = 0;
+            Say("Gut, dass du gefragt hast. Kredit aufnehmen kannst du jetzt - aber du zahlst jeden Tag 50 Prozent Zinsen.", G1C_NpcExpression.Thoughtful);
+            AddOption("500 Chips leihen.", () => BorrowFromShark(500));
+            AddOption("1000 Chips leihen.", () => BorrowFromShark(1000));
+            AddOption("2500 Chips leihen.", () => BorrowFromShark(2500));
+            AddOption("5000 Chips leihen.", () => BorrowFromShark(5000));
+            AddOption("Zuruck.", ShowRoot);
         }
 
         private void RequestFurnitureShop()

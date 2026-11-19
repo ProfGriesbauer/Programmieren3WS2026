@@ -19,6 +19,11 @@ namespace OOPGames
         public int LoanRespectLastDay { get; private set; } = 1;
         public int LoanSmsLastDay { get; private set; } = 0;
         public int LoanSmsCount { get; private set; }
+        public int LoanStartDay { get; private set; } = 1;
+        public int LoanWarningStage { get; private set; }
+        public bool LoanDoorThreat { get; private set; }
+        public bool LoanBonesBroken { get; private set; }
+        public bool LoanCatKidnapped { get; private set; }
 
         /// <summary>Letzter Spieltag, für den bereits Zinsen gutgeschrieben wurden.</summary>
         public int LastInterestDay { get; private set; } = 1;
@@ -62,7 +67,12 @@ namespace OOPGames
             LoanInterestLastDay = currentDay;
             LoanRespectLastDay = currentDay;
             LoanSmsLastDay = 0;
+            LoanStartDay = currentDay;
             LoanSmsCount = 0;
+            LoanWarningStage = 0;
+            LoanDoorThreat = false;
+            LoanBonesBroken = false;
+            LoanCatKidnapped = false;
             Log("Geldhai-Kredit +" + amount);
             return "Du erhältst " + amount + " Chips. Offene Schuld: " + LoanOwed + " Chips.";
         }
@@ -74,6 +84,18 @@ namespace OOPGames
             if (money == null || payment == 0 || !money.TryWithdraw(payment))
                 return "Nicht genug Chips für diese Rückzahlung.";
             LoanOwed -= payment;
+            if (LoanOwed <= 0)
+            {
+                LoanDoorThreat = false;
+                LoanBonesBroken = false;
+                LoanCatKidnapped = false;
+                LoanWarningStage = 0;
+                LoanWarningStage = 0;
+                if (LoanCatKidnapped)
+                {
+                    LoanCatKidnapped = false;
+                }
+            }
             return payment + " Chips zurückgezahlt. Offen: " + LoanOwed + " Chips.";
         }
 
@@ -139,6 +161,14 @@ namespace OOPGames
             if (LoanOwed <= 0 || currentDay <= LoanSmsLastDay) return false;
             LoanSmsLastDay = currentDay;
             LoanSmsCount++;
+            int age = System.Math.Max(0, currentDay - LoanStartDay);
+            LoanWarningStage = age >= 10 || LoanOwed >= 15000 ? 5
+                : age >= 7 || LoanOwed >= 7500 ? 4
+                : age >= 4 || LoanOwed >= 5000 ? 3
+                : age >= 2 || LoanOwed >= 2500 ? 2 : 1;
+            LoanDoorThreat = LoanWarningStage >= 3;
+            LoanBonesBroken = LoanWarningStage >= 4;
+            LoanCatKidnapped = LoanWarningStage >= 5;
             return true;
         }
 
@@ -148,6 +178,25 @@ namespace OOPGames
             LoanRespectLastDay = respectDay > 0 ? System.Math.Min(respectDay, currentDay) : currentDay;
             LoanSmsLastDay = smsDay > 0 ? System.Math.Min(smsDay, currentDay) : 0;
             LoanSmsCount = System.Math.Max(0, smsCount);
+            if (LoanStartDay <= 0) LoanStartDay = currentDay;
+            int age = System.Math.Max(0, currentDay - LoanStartDay);
+            LoanWarningStage = age >= 10 || LoanOwed >= 15000 ? 5
+                : age >= 7 || LoanOwed >= 7500 ? 4
+                : age >= 4 || LoanOwed >= 5000 ? 3
+                : age >= 2 || LoanOwed >= 2500 ? 2 : 1;
+            LoanDoorThreat = LoanWarningStage >= 3;
+            LoanBonesBroken = LoanWarningStage >= 4;
+            LoanCatKidnapped = LoanWarningStage >= 5;
+        }
+
+        public void RestoreLoanStartDay(int startDay, int currentDay)
+        {
+            LoanStartDay = startDay > 0 ? startDay : currentDay;
+        }
+
+        public void ClearBoneDamage()
+        {
+            LoanBonesBroken = false;
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026

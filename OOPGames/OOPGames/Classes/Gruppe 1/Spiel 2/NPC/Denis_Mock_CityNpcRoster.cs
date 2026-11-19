@@ -48,6 +48,7 @@ namespace OOPGames
                     GeneralMonologues = new[] { "Ein kurzer Spaziergang hilft beim Nachdenken.", "Ich sollte später noch in die Bibliothek." }
                 }, 80, 50, 25),
                 CreateAngler(),
+                CreateNurse(),
                 new G1C_NpcCharacter("Geldhai Viktor", "dealer_red", new G1C_NpcPersonality
                 {
                     Role = "Kreditgeber",
@@ -97,7 +98,7 @@ namespace OOPGames
                 Generosity = 0.6,
                 Pride = 0.3,
                 RiskAppetite = 0.2,
-                FirstMeeting = "Ich kenne jeden guten Angelplatz. Dieser hier ist einer davon.",
+                FirstMeeting = "Hoi, ich bin Denis. Ich sitze hier am Wasser und passe auf die Pose auf.",
                 GeneralInfo = "Am Brückengeländer steht eine Angel.",
                 PersonalStory = "Ich beobachte die Pose, bevor ich selbst die Schnur werfe.",
                 GeneralMonologues = new[] { "Warte auf das Zucken.", "Nicht zu früh anhauen." }
@@ -109,22 +110,48 @@ namespace OOPGames
             p.Topics.Add(new G1C_DialogueTopic("Welche Fische gibt es?", context =>
             {
                 System.Text.StringBuilder text = new System.Text.StringBuilder();
+                int shown = 0;
                 foreach (G1C_CatchInfo catchInfo in G1C_FishingGame.Catches)
                 {
                     if (!catchInfo.IsFish) continue;
                     G1C_Item item = G1C_ItemCatalog.Get(catchInfo.ItemId);
                     if (item == null) continue;
                     string rarity = catchInfo.Weight <= 2 ? "sehr selten" : catchInfo.Weight <= 4 ? "selten" : catchInfo.Weight <= 7 ? "ungewoehnlich" : "haeufig";
-                    string property = "Tempo " + catchInfo.Speed.ToString("0.0") + ", Sprunghaftigkeit " + catchInfo.Erratic.ToString("0.0");
-                    text.Append(item.Name).Append(" | ").Append(rarity).Append(" | ").Append(item.SellValue).Append(" Chips | ")
-                        .Append(property).Append(" | Verkauf in jedem Laden\n");
+                    text.Append(item.Name).Append(": ").Append(rarity).Append(", ").Append(item.SellValue).Append(" Chips\n");
+                    if (++shown >= 5) break;
                 }
+                text.Append("Weitere Arten erscheinen beim Angeln.");
                 return text.ToString();
             }, G1C_NpcExpression.Thoughtful));
             p.Topics.Add(new G1C_DialogueTopic("Wofuer sind die Fische?", context =>
                 "Gefangene Fische werden ins Inventar gelegt und koennen in jedem Laden verkauft werden.\n" +
                 "Der verkaufte Wert steht in der Fischliste. Weitere Quests oder Rezepte koennen spaeter dieselben Fischdaten verwenden.", G1C_NpcExpression.Thoughtful));
-            return new G1C_NpcCharacter("Angler Fabian", "dealer_green", p, 120, 55, 40);
+            p.Topics.Add(new G1C_DialogueTopic("Wann kann ich hier am besten angeln?", context =>
+                "Am ruhigsten ist es am frühen Morgen und am späten Abend. Dann beißt es zwar nicht immer, aber die seltenen Fische kommen eher.", G1C_NpcExpression.Happy));
+            p.Topics.Add(new G1C_DialogueTopic("Hast du einen besonderen Tipp?", context =>
+                "Bleib ruhig, drücke erst bei der Zuckbewegung und halte den Fisch mit A und D im grünen Bereich. Hast du den Schwarm verloren, beginne einfach neu.", G1C_NpcExpression.Thoughtful));
+            return new G1C_NpcCharacter("Denis der Angler", "angler_denis", p, 120, 55, 40);
+        }
+
+        private static G1C_NpcCharacter CreateNurse()
+        {
+            G1C_NpcPersonality p = new G1C_NpcPersonality
+            {
+                Role = "Krankenschwester",
+                Traits = "ruhig, fürsorglich, direkt",
+                Generosity = 0.5,
+                Pride = 0.2,
+                RiskAppetite = 0.1,
+                FirstMeeting = "Guten Tag. Ich bin Schwester Emma. Ich kümmere mich um Verletzungen.",
+                GeneralInfo = "Nach einem Übergriff kostet eine vollständige Behandlung 2000 Chips.",
+                PersonalStory = "Ich habe schon Schlimmeres gesehen als verlorene Spielschulden.",
+                GeneralMonologues = new[] { "Bitte gerade sitzen.", "Gesundheit ist kein Kredit.", "Zum Glück sind keine Knochen gebrochen." }
+            };
+            p.Topics.Add(new G1C_DialogueTopic("Was kostet eine Behandlung?", context =>
+                "Eine vollständige Behandlung nach Viktors Übergriff kostet 2000 Chips.", G1C_NpcExpression.Thoughtful));
+            p.Topics.Add(new G1C_DialogueTopic("Warum muss ich bezahlen?", context =>
+                "Weil Medikamente, Verbände und Physiotherapie Geld kosten. Ohne Behandlung bleibst du langsamer und kannst kein Fahrrad fahren.", G1C_NpcExpression.Thoughtful));
+            return new G1C_NpcCharacter("Schwester Emma", "dealer_blue", p, 80, 45, 30);
         }
     }
 }

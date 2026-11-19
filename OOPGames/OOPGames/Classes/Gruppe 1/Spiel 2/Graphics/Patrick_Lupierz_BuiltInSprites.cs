@@ -34,6 +34,7 @@ namespace OOPGames
         private static readonly Dictionary<string, CharacterPalette> Palettes = new Dictionary<string, CharacterPalette>
         {
             { "player",       new CharacterPalette { Hair = Hex(0xD83030), Skin = Hex(0xF8C898), Shirt = Hex(0x3060C8), Vest = Hex(0x3060C8), Pants = Hex(0x383848), Shoes = Hex(0xD83030) } },
+            { "angler_denis", new CharacterPalette { Hair = Hex(0x6A4018), Skin = Hex(0xE8B080), Shirt = Hex(0xE8E0C0), Vest = Hex(0x3A8A48), Pants = Hex(0x3A8A48), Shoes = Hex(0xF0D820) } },
             { "dealer_red",   new CharacterPalette { Hair = Hex(0x2A2A2A), Skin = Hex(0xF0C090), Shirt = White,          Vest = Hex(0xB02030), Pants = Hex(0x202020), Shoes = Hex(0x101010) } },
             { "dealer_green", new CharacterPalette { Hair = Hex(0x8A5020), Skin = Hex(0xE8B080), Shirt = White,          Vest = Hex(0x208040), Pants = Hex(0x202020), Shoes = Hex(0x101010) } },
             { "dealer_blue",  new CharacterPalette { Hair = Hex(0x404040), Skin = Hex(0xC89060), Shirt = White,          Vest = Hex(0x2848A8), Pants = Hex(0x202020), Shoes = Hex(0x101010) } },

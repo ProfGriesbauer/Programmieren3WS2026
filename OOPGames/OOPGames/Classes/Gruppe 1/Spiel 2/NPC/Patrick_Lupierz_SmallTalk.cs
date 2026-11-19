@@ -182,7 +182,17 @@ namespace OOPGames
                     yield return new G1C_DialogueTopic("Wovon lebst du eigentlich?", G1C_DialogueTopic.Cycle(
                         "Von Zinsen. Deinen, bald.", "Und von Leuten, die zu viele Fragen stellen. Also: Kredit oder nicht?"));
                     yield return new G1C_DialogueTopic("Was passiert, wenn ich nicht zahle?", G1C_DialogueTopic.Cycle(
-                        "Dann wachsen deine Schulden um 50 % pro Tag. Dazu verlierts du taeglich Respekt und ich schreibe dir eine SMS."));
+                        "Dann wächst deine Schuld jeden Tag um 50 %. Danach folgen Warnungen. Du wirst vor deiner Tür bedroht, bevor ich dich zwinge zu zahlen."));
+                    yield return new G1C_DialogueTopic("Wie schlecht steht es gerade?", G1C_DialogueTopic.Cycle(
+                        "Die Schuldenhöhe entscheidet gemeinsam mit der offenen Zeit über meine Härte. Je länger du wartest, desto weniger rede ich freundlich."));
+                    yield return new G1C_DialogueTopic("Was passiert nach der letzten Warnung?", G1C_DialogueTopic.Cycle(
+                        "Dann wirst du krankgeschlagen, verlierst das Fahrrad und Milo verschwindet. Danach brauchst du zuerst die Schuld und eventuell die Schwester Emma."));
+                    yield return new G1C_DialogueTopic("Was kostet dein Kredit?", G1C_DialogueTopic.Cycle(
+                        "500 bis 5000 Chips. Ohne Rückzahlung wird das jeden Tag teurer."));
+                    yield return new G1C_DialogueTopic("Warum rufst du nicht ständig an?", G1C_DialogueTopic.Cycle(
+                        "Weil gute Drohungen Wirkung brauchen. Ich schreibe alle drei Tage, bis du zahlst."));
+                    yield return new G1C_DialogueTopic("Was passiert mit Milo?", G1C_DialogueTopic.Cycle(
+                        "Die Katze bleibt an einem sicheren Ort, bis deine Schulden weg sind. Kein Spiel, Saftsack."));
                     break;
                 case "Bankierin Frida":
                     yield return new G1C_DialogueTopic("Sind meine Chips bei euch sicher?", G1C_DialogueTopic.Cycle(

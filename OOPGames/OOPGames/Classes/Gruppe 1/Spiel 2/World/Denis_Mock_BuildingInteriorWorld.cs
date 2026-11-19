@@ -69,6 +69,8 @@ namespace OOPGames
         private void BuildHospital()
         {
             AddFurniture("Empfangstresen", "obj_counter", 2, 2, 3, 1);
+            _objects.Add(new G1C_Npc("Schwester Emma", "dealer_blue", 4, 3,
+                                     G1C_Direction.Down, G1C_InteractionType.Nurse));
             AddFurniture("Behandlungsbett", "obj_medical_bed", 3, 4, 2, 1);
             AddFurniture("Behandlungsbett", "obj_medical_bed", 9, 4, 2, 1);
             AddFurniture("Medizinschrank", "obj_clinic_cabinet", 3, 7, 2, 2);
