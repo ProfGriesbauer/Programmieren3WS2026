@@ -5,6 +5,7 @@ namespace OOPGames
 {
     public sealed class Gruppe2_SubwayField : IGruppe2_SubwayField
     {
+        internal const int GuardIntroDurationTicks = 50;
         private readonly List<Gruppe2_SubwayObstacle> _obstacles = new List<Gruppe2_SubwayObstacle>();
         private readonly List<Gruppe2_SubwayReward> _rewards = new List<Gruppe2_SubwayReward>();
         private readonly Dictionary<Gruppe2_SubwayUpgradeKind, int> _activeUpgrades =
@@ -44,7 +45,7 @@ namespace OOPGames
         public int Coins { get; internal set; }
         public double Speed { get; internal set; }
         public double GuardGap { get; internal set; }
-        public bool GuardVisible { get { return GuardGap < 92; } }
+        public bool GuardVisible { get { return GuardIntroTicks > 0 || GuardGap < 92; } }
         public bool GameOver { get; internal set; }
         public string Message { get; internal set; }
         public IReadOnlyList<Gruppe2_SubwayObstacle> Obstacles { get { return _obstacles; } }
@@ -60,6 +61,7 @@ namespace OOPGames
         internal int DropDurationTicks { get; set; }
         public int RollTicks { get; internal set; }
         internal int JetpackTicks { get; set; }
+        internal int GuardIntroTicks { get; set; }
         public int MessageTicks { get; internal set; }
 
         public bool CanBePaintedBy(IPaintGame painter)
@@ -92,6 +94,7 @@ namespace OOPGames
             DropDurationTicks = 0;
             RollTicks = 0;
             JetpackTicks = 0;
+            GuardIntroTicks = GuardIntroDurationTicks;
             MessageTicks = 100;
         }
     }

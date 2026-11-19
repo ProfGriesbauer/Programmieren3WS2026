@@ -14,6 +14,7 @@ namespace OOPGames
         public static void RunAllTests()
         {
             TestInitialState();
+            TestGuardIntroVisibility();
             TestMovementAndLaneBounds();
             TestJumpAndRollTransitions();
             TestProgressionAndReset();
@@ -228,6 +229,31 @@ namespace OOPGames
                 "starting speed matches the design sheet");
             AssertTrue(field.GuardGap == 100,
                 "guard starts at a full distance");
+            AssertTrue(field.GuardVisible
+                && field.GuardIntroTicks == Gruppe2_SubwayField.GuardIntroDurationTicks,
+                "the Bahnrichter appears during the opening animation");
+        }
+
+        private static void TestGuardIntroVisibility()
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            rules.ClearField();
+            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+
+            for (int tick = 0; tick < Gruppe2_SubwayField.GuardIntroDurationTicks - 1; tick++)
+            {
+                rules.TickGameCall();
+            }
+
+            AssertTrue(field.GuardVisible,
+                "the Bahnrichter remains visible until the two-second intro ends");
+            rules.TickGameCall();
+            AssertTrue(!field.GuardVisible,
+                "the Bahnrichter hides after the two-second intro");
+
+            field.GuardGap = 90;
+            AssertTrue(field.GuardVisible,
+                "the Bahnrichter appears again when the chase gets close");
         }
 
         private static void TestMovementAndLaneBounds()
@@ -374,6 +400,7 @@ namespace OOPGames
                 Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
                 rules.ClearField();
                 Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+                field.GuardIntroTicks = 0;
                 Gruppe2_SubwayPainter painter = new Gruppe2_SubwayPainter();
                 painter.PaintGameField(canvas, field);
 

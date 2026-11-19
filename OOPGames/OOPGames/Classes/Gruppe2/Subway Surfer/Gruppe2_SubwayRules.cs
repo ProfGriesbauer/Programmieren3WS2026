@@ -126,6 +126,7 @@ namespace OOPGames
         private void TickTimers()
         {
             DecreaseTimers(_field.MutableUpgrades);
+            _field.GuardIntroTicks = Math.Max(0, _field.GuardIntroTicks - 1);
 
             _field.JumpTicks = Math.Max(0, _field.JumpTicks - 1);
             _field.DropTicks = Math.Max(0, _field.DropTicks - 1);

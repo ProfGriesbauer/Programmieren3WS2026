@@ -454,3 +454,11 @@ Assistant answer:
 - I gave both characters camera-facing rear hair silhouettes, with a longer ponytail for the player, to make their away-facing orientation clearer.
 - I replaced 3D upgrade boxes with larger pink spinning coins and updated the 2D upgrade-reward rendering to use pink coins as well.
 - I added visual regression checks for the rear hair and pink upgrade coin appearance. The Subway Surfer tests passed, and the application build succeeded.
+
+### Prompt 38
+User prompt:
+> the bahnichter should appear at the beginning of the game for 2 seconds
+
+Assistant answer:
+- I made the Bahnrichter visible for the first 50 game ticks (2 seconds at the game's 40 ms tick interval), then hid him until the normal chase distance makes him visible again.
+- I added regression checks for the intro visibility duration and the later chase appearance. All Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
