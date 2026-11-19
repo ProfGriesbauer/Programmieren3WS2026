@@ -54,6 +54,11 @@ namespace OOPGames
         /// starts at 1, rises slightly (small arc) and ends at 0 on the track.
         /// </summary>
         double DropHeight { get; }
+        /// <summary>
+        /// Jetpack flight: 0 on the ground, rises in an arc to 1 (flight level above the
+        /// train roofs), stays at 1 while flying and sinks back in the same arc at the end.
+        /// </summary>
+        double JetpackHeight { get; }
         int Score { get; }
         int Coins { get; }
         double Distance { get; }
@@ -95,17 +100,21 @@ namespace OOPGames
             Gruppe2_SubwayRewardKind kind,
             int lane,
             double distance,
-            Gruppe2_SubwayUpgradeKind upgrade = Gruppe2_SubwayUpgradeKind.Magnet)
+            Gruppe2_SubwayUpgradeKind upgrade = Gruppe2_SubwayUpgradeKind.Magnet,
+            bool elevated = false)
         {
             Kind = kind;
             Lane = lane;
             Distance = distance;
             Upgrade = upgrade;
+            Elevated = elevated;
         }
 
         public Gruppe2_SubwayRewardKind Kind { get; }
         public int Lane { get; }
         public double Distance { get; internal set; }
         public Gruppe2_SubwayUpgradeKind Upgrade { get; }
+        /// <summary>True for coins floating at jetpack flight level; only collectable while flying.</summary>
+        public bool Elevated { get; }
     }
 }

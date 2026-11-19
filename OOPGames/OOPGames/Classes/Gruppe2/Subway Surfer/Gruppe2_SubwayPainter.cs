@@ -32,11 +32,13 @@ namespace OOPGames
         private static readonly Material SkateboardGraphicMaterial = Material(Color.FromRgb(231, 49, 135));
         private static readonly Material SkateboardTruckMaterial = Material(Color.FromRgb(176, 190, 197));
         private static readonly Model3DGroup SkateboardModel = CreateSkateboardModel();
+        private static readonly Model3DGroup JetpackModel = CreateJetpackModel();
+        private static readonly Model3DGroup JetpackFlameModel = CreateJetpackFlameModel();
         private static readonly Model3DGroup CargoWagonModel = CreateCargoWagonModel();
         private static readonly Model3DGroup TrainModel = CreateTrainModel();
         private static readonly Model3DGroup CargoRampModel = CreateCargoRampModel();
         private static readonly Model3DGroup CoinModel = CreateCoinModel(
-            Color.FromRgb(255, 203, 32), Color.FromRgb(179, 126, 16));
+            Color.FromRgb(255, 203, 32), Color.FromRgb(179, 126, 16), glow: true);
         private static readonly Model3DGroup UpgradeCoinModel = CreateCoinModel(
             Color.FromRgb(255, 72, 170), Color.FromRgb(160, 18, 92));
         private static readonly Model3DGroup TrackModel = CreateTrackModel();
@@ -66,25 +68,29 @@ namespace OOPGames
         // Runner and guard are drawn smaller and slimmer so they do not hide the track.
         private const double RunnerHeightScale = 0.68;
         private const double RunnerWidthScale = 0.55;
+        // Body angle while flying with the jetpack (almost lying flat in the air).
+        private const double JetpackLyingDegrees = 75;
 
         public string Name { get { return "Gruppe 2 - Subway Surfer Painter"; } }
+
+        // Smooth, arc-shaped lane change of the runner; the camera follows it.
+        private readonly Gruppe2_SubwayLaneChange _laneChange = new Gruppe2_SubwayLaneChange();
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
             canvas.Focusable = true;
-            Draw(canvas, currentField, RunnerLaneX(currentField));
+            _laneChange.Reset(RunnerLaneX(currentField));
+            Draw(canvas, currentField, _laneChange);
             Keyboard.Focus(canvas);
         }
 
         public void TickPaintGameField(Canvas canvas, IGameField currentField)
         {
-            Draw(canvas, currentField, RunnerLaneX(currentField));
+            _laneChange.Update(RunnerLaneX(currentField));
+            Draw(canvas, currentField, _laneChange);
         }
 
-        /// <summary>
-        /// X position of the runner's lane. The camera stands right behind it,
-        /// so it changes lanes together with the runner, who is always seen from behind.
-        /// </summary>
+        /// <summary>X position of the lane the rules put the runner on.</summary>
         private static double RunnerLaneX(IGameField currentField)
         {
             IGruppe2_SubwayField field = currentField as IGruppe2_SubwayField;
@@ -112,7 +118,7 @@ namespace OOPGames
             return brush;
         }
 
-        private static void Draw(Canvas canvas, IGameField currentField, double runnerX)
+        private static void Draw(Canvas canvas, IGameField currentField, Gruppe2_SubwayLaneChange laneChange)
         {
             IGruppe2_SubwayField field = currentField as IGruppe2_SubwayField;
             canvas.Children.Clear();
@@ -125,7 +131,7 @@ namespace OOPGames
             double height = Math.Max(260, canvas.ActualHeight);
             canvas.Background = SkyBrush;
 
-            DrawThreeDimensionalScene(canvas, width, height, field, runnerX);
+            DrawThreeDimensionalScene(canvas, width, height, field, laneChange);
             DrawHud(canvas, width, height, field);
             if (field.GameOver)
             {
@@ -134,7 +140,7 @@ namespace OOPGames
         }
 
         private static void DrawThreeDimensionalScene(
-            Canvas canvas, double width, double height, IGruppe2_SubwayField field, double runnerX)
+            Canvas canvas, double width, double height, IGruppe2_SubwayField field, Gruppe2_SubwayLaneChange laneChange)
         {
             Viewport3D viewport = new Viewport3D
             {
@@ -143,7 +149,7 @@ namespace OOPGames
                 ClipToBounds = true,
                 IsHitTestVisible = false,
                 Camera = new PerspectiveCamera(
-                    new Point3D(runnerX, 2.2 + RunnerGroundHeight(field), CameraWorldZ),
+                    new Point3D(laneChange.X, 2.2 + RunnerGroundHeight(field), CameraWorldZ),
                     new Vector3D(0, -0.10, -1),
                     new Vector3D(0, 1, 0),
                     55)
@@ -172,7 +178,7 @@ namespace OOPGames
             {
                 if (reward.Kind == Gruppe2_SubwayRewardKind.Coin)
                 {
-                    AddThreeDimensionalCoin(viewport, reward, field.Distance);
+                    AddThreeDimensionalCoin(viewport, reward, field, laneChange.X);
                 }
                 else
                 {
@@ -180,19 +186,19 @@ namespace OOPGames
                 }
             }
 
-            ModelVisual3D runner = AddThreeDimensionalRunner(viewport, field, runnerX, false, 0);
+            ModelVisual3D runner = AddThreeDimensionalRunner(viewport, field, laneChange, false, 0);
             if (field.GuardVisible)
             {
                 Gruppe2_SubwayField subwayField = field as Gruppe2_SubwayField;
                 int guardIntroTicks = subwayField == null ? 0 : subwayField.GuardIntroTicks;
-                AddThreeDimensionalRunner(viewport, field, runnerX, true, guardIntroTicks);
+                AddThreeDimensionalRunner(viewport, field, laneChange, true, guardIntroTicks);
             }
 
             // The runner's shadow falls onto the ramp or roof she stands on; all others onto the track.
             // Shadows are inserted after all world objects but before the runner (and guard):
             // they stand on top of the shadows, never behind them, so transparency stays correct
             // and the runner remains the last visual of the scene.
-            double runnerGround = RunnerGroundHeight(field);
+            double runnerGround = CarRoofHeight * RunnerSupportLevel(field);
             ModelVisual3D shadows = Gruppe2_SubwaySceneLighting.CreateShadows(
                 viewport.Children.Skip(firstShadowCaster).OfType<ModelVisual3D>().ToList(),
                 caster => caster == runner ? runnerGround : 0);
@@ -310,13 +316,19 @@ namespace OOPGames
         /// </summary>
         private static double RunnerGroundHeight(IGruppe2_SubwayField field)
         {
-            if (field.Level == Gruppe2_SubwayLevel.TrainRoof)
-            {
-                return CarRoofHeight;
-            }
+            double jetpackHeight = field.JetpackHeight * Gruppe2_SubwayTrainLayout.JetpackAltitudeInRoofHeights;
+            return CarRoofHeight * Math.Max(Math.Max(RunnerSupportLevel(field), field.DropHeight), jetpackHeight);
+        }
 
-            double rampProgress = Gruppe2_SubwayTrainLayout.RampProgressUnderRunner(field.Obstacles, field.Lane);
-            return CarRoofHeight * Math.Max(rampProgress, field.DropHeight);
+        /// <summary>
+        /// Height of the surface below the runner in roof heights: 1 on a train roof,
+        /// rising on a ramp, otherwise 0. The runner's shadow falls onto this surface.
+        /// </summary>
+        private static double RunnerSupportLevel(IGruppe2_SubwayField field)
+        {
+            return field.Level == Gruppe2_SubwayLevel.TrainRoof
+                ? 1
+                : Gruppe2_SubwayTrainLayout.RampProgressUnderRunner(field.Obstacles, field.Lane);
         }
 
         private static Dictionary<Gruppe2_SubwayObstacleKind, Model3DGroup> CreateObstacleModels()
@@ -332,14 +344,28 @@ namespace OOPGames
         }
 
         private static void AddThreeDimensionalCoin(
-            Viewport3D viewport, Gruppe2_SubwayReward reward, double distance)
+            Viewport3D viewport, Gruppe2_SubwayReward reward, IGruppe2_SubwayField field, double runnerX)
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(0.34, 0.34, 0.10));
             transform.Children.Add(new RotateTransform3D(
-                new AxisAngleRotation3D(new Vector3D(0, 1, 0), distance * 11)));
-            transform.Children.Add(new TranslateTransform3D(
-                LaneWorldX(reward.Lane), 0.82, WorldZ(reward.Distance)));
+                new AxisAngleRotation3D(new Vector3D(0, 1, 0), field.Distance * 11)));
+            // Coins of the jetpack trail float at flight level, just above the flying runner.
+            double x = LaneWorldX(reward.Lane);
+            double y = reward.Elevated
+                ? CarRoofHeight * Gruppe2_SubwayTrainLayout.JetpackAltitudeInRoofHeights + 0.6
+                : 0.82;
+
+            double pull = MagnetPull(reward, field);
+            if (pull > 0)
+            {
+                // The magnet pulls the coin sideways and up/down towards the runner's chest.
+                double runnerChest = RunnerGroundHeight(field) + 0.8;
+                x += (runnerX - x) * pull;
+                y += (runnerChest - y) * pull;
+            }
+
+            transform.Children.Add(new TranslateTransform3D(x, y, WorldZ(reward.Distance)));
             viewport.Children.Add(new ModelVisual3D
             {
                 Content = CoinModel,
@@ -363,14 +389,32 @@ namespace OOPGames
             });
         }
 
+        /// <summary>
+        /// How far a coin has been pulled towards the runner by the magnet (0 = not at all,
+        /// 1 = at the runner). Uses the same conditions as the rules for collecting it.
+        /// </summary>
+        private static double MagnetPull(Gruppe2_SubwayReward reward, IGruppe2_SubwayField field)
+        {
+            bool sameLevel = reward.Elevated == (field.JetpackHeight > 0.5);
+            if (!field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Magnet) || !sameLevel
+                || Math.Abs(reward.Lane - field.Lane) > 1
+                || reward.Distance <= 0 || reward.Distance >= Gruppe2_SubwayTrainLayout.MagnetRange)
+            {
+                return 0;
+            }
+
+            double progress = 1 - reward.Distance / Gruppe2_SubwayTrainLayout.MagnetRange;
+            return progress * progress * (3 - 2 * progress);
+        }
+
         private static ModelVisual3D AddThreeDimensionalRunner(
             Viewport3D viewport,
             IGruppe2_SubwayField field,
-            double runnerX,
+            Gruppe2_SubwayLaneChange laneChange,
             bool guard,
             int guardIntroTicks)
         {
-            double x = runnerX - (guard ? 0.35 : 0);
+            double x = laneChange.X - (guard ? 0.35 : 0);
             bool guardIntro = guard && guardIntroTicks > 0;
             double introElapsedTicks = guardIntro
                 ? Gruppe2_SubwayField.GuardIntroDurationTicks - guardIntroTicks
@@ -384,12 +428,12 @@ namespace OOPGames
             double jumpPeak = field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.JumpStick)
                 ? CarRoofHeight * 1.25
                 : 1.15;
+            // JumpHeight is 0 unless a jump is running, on the track as well as on a train roof.
             double jump = guard ? 0
-                : RunnerGroundHeight(field)
-                    + (field.Level == Gruppe2_SubwayLevel.Air ? jumpPeak * field.JumpHeight : 0);
+                : RunnerGroundHeight(field) + laneChange.Hop + jumpPeak * field.JumpHeight;
             bool hasSkateboard = !guard
                 && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Surfboard);
-            bool skating = hasSkateboard && field.Level != Gruppe2_SubwayLevel.Air;
+            bool skating = hasSkateboard && field.Level != Gruppe2_SubwayLevel.Air && field.JumpHeight == 0;
             double introRunPhase = introElapsedTicks * (1 - introProgress * 0.5);
             double run = guardIntro
                 ? Math.Sin(introRunPhase * 0.48) * introRemaining
@@ -399,13 +443,26 @@ namespace OOPGames
                 : run;
             double sideToSide = skating ? movement * 0.08 : 0;
             double animation = guard || !hasSkateboard ? run : skating ? movement : 0;
-            Model3DGroup runnerModel = CreateRunnerModel(guard, animation, hasSkateboard);
+            bool wearsJetpack = !guard && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Jetpack);
+            double flight = guard ? 0 : field.JetpackHeight;
+            Model3DGroup runnerModel = CreateRunnerModel(guard, animation, hasSkateboard,
+                wearsJetpack, flight > 0);
             double heightScale = RunnerHeightScale * (!guard && field.RollTicks > 0 ? 0.55 : 1);
             double footOffset = !guard && !hasSkateboard ? -0.17 * heightScale : 0;
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(RunnerWidthScale, heightScale, RunnerWidthScale));
             transform.Children.Add(new RotateTransform3D(
                 new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180)));
+
+            if (flight > 0)
+            {
+                // While climbing the runner tilts forward until she lies flat in the air
+                // (head in flight direction), and straightens up again while sinking.
+                transform.Children.Add(new RotateTransform3D(
+                    new AxisAngleRotation3D(new Vector3D(1, 0, 0), -JetpackLyingDegrees * flight),
+                    new Point3D(0, 0.8 * heightScale, 0)));
+            }
+
             transform.Children.Add(new TranslateTransform3D(x + sideToSide, jump + footOffset, z));
             ModelVisual3D visual = new ModelVisual3D { Content = runnerModel, Transform = transform };
             viewport.Children.Add(visual);
@@ -511,33 +568,50 @@ namespace OOPGames
 
         /// <summary>
         /// Cargo ramp in model space: rises from the low end (z = Start) to roof height (z = End).
-        /// Yellow/black warning stripes on the driving surface, red side walls with a light top edge.
+        /// Brown wooden driving surface with two black boards running up in the running
+        /// direction, and dark wooden side walls.
         /// AddTrainPart mirrors it so the low end faces the runner.
         /// </summary>
         private static Model3DGroup CreateCargoRampModel()
         {
-            const int StripeCount = 8;
             const double Start = -0.75;
             const double End = 0.75;
             const double InnerX = 0.52;
             const double OuterX = 0.66;
             const double Top = 1.0;
             const double WallLip = 0.24;
+            const double BoardInnerX = 0.10;
+            const double BoardOuterX = 0.44;
+            const double BoardThickness = 0.035;
             Model3DGroup ramp = new Model3DGroup();
-            Material yellow = Material(Color.FromRgb(244, 181, 35));
-            Material black = Material(Color.FromRgb(38, 38, 40));
-            Material wall = Material(Color.FromRgb(196, 48, 40));
-            Material wallEdge = Material(Color.FromRgb(238, 236, 220));
-            Func<double, double> surface = z => Top * (z - Start) / (End - Start);
+            Material ground = Material(Color.FromRgb(132, 88, 52));
+            Material board = Material(Color.FromRgb(30, 30, 32));
+            Material wall = Material(Color.FromRgb(88, 56, 34));
+            Material wallEdge = Material(Color.FromRgb(118, 78, 48));
+            // The boards end exactly at roof height (Top), the surface below them.
+            Func<double, double> surface = z => (Top - BoardThickness) * (z - Start) / (End - Start);
 
-            for (int stripe = 0; stripe < StripeCount; stripe++)
+            AddQuad(ramp,
+                new Point3D(-InnerX, surface(Start), Start), new Point3D(InnerX, surface(Start), Start),
+                new Point3D(InnerX, surface(End), End), new Point3D(-InnerX, surface(End), End), ground);
+
+            for (int side = -1; side <= 1; side += 2)
             {
-                double z0 = Start + (End - Start) * stripe / StripeCount;
-                double z1 = Start + (End - Start) * (stripe + 1) / StripeCount;
+                // A black board lying on the brown surface, running up the ramp.
+                double left = side < 0 ? -BoardOuterX : BoardInnerX;
+                double right = side < 0 ? -BoardInnerX : BoardOuterX;
                 AddQuad(ramp,
-                    new Point3D(-InnerX, surface(z0), z0), new Point3D(InnerX, surface(z0), z0),
-                    new Point3D(InnerX, surface(z1), z1), new Point3D(-InnerX, surface(z1), z1),
-                    stripe % 2 == 0 ? yellow : black);
+                    new Point3D(left, surface(Start) + BoardThickness, Start),
+                    new Point3D(right, surface(Start) + BoardThickness, Start),
+                    new Point3D(right, surface(End) + BoardThickness, End),
+                    new Point3D(left, surface(End) + BoardThickness, End), board);
+                foreach (double x in new[] { left, right })
+                {
+                    AddQuad(ramp,
+                        new Point3D(x, surface(Start), Start), new Point3D(x, surface(End), End),
+                        new Point3D(x, surface(End) + BoardThickness, End),
+                        new Point3D(x, surface(Start) + BoardThickness, Start), board);
+                }
             }
 
             for (int side = -1; side <= 1; side += 2)
@@ -614,11 +688,23 @@ namespace OOPGames
             return model;
         }
 
-        private static Model3DGroup CreateCoinModel(Color faceColor, Color edgeColor)
+        /// <summary>Diffuse colour plus a slight glow of the same colour (about 45 %).</summary>
+        private static Material GlowingMaterial(Color color)
+        {
+            MaterialGroup material = new MaterialGroup();
+            material.Children.Add(new DiffuseMaterial(Brush(color)));
+            material.Children.Add(new EmissiveMaterial(Brush(Color.FromRgb(
+                (byte)(color.R * 0.45), (byte)(color.G * 0.45), (byte)(color.B * 0.45)))));
+            material.Freeze();
+            return material;
+        }
+
+        private static Model3DGroup CreateCoinModel(Color faceColor, Color edgeColor, bool glow = false)
         {
             Model3DGroup coin = new Model3DGroup();
-            Material face = Material(faceColor);
-            Material edge = Material(edgeColor);
+            // A slight glow keeps the gold coins bright even on the side facing away from the sun.
+            Material face = glow ? GlowingMaterial(faceColor) : Material(faceColor);
+            Material edge = glow ? GlowingMaterial(edgeColor) : Material(edgeColor);
             const int segments = 20;
             const double radius = 0.5;
             const double depth = 0.10;
@@ -644,7 +730,8 @@ namespace OOPGames
             return coin;
         }
 
-        private static Model3DGroup CreateRunnerModel(bool guard, double run, bool hasSkateboard)
+        private static Model3DGroup CreateRunnerModel(
+            bool guard, double run, bool hasSkateboard, bool jetpack, bool flying)
         {
             Model3DGroup runner = new Model3DGroup();
             Model3DGroup rider = new Model3DGroup();
@@ -652,9 +739,19 @@ namespace OOPGames
             Material hair = guard ? GuardHairMaterial : RunnerHairMaterial;
             double characterMovement = guard || !hasSkateboard ? run : 0;
 
-            if (!guard && hasSkateboard)
+            // While flying the skateboard stays behind; the jetpack is worn as long as the upgrade lasts.
+            if (!guard && hasSkateboard && !flying)
             {
                 runner.Children.Add(SkateboardModel);
+            }
+
+            if (jetpack)
+            {
+                runner.Children.Add(JetpackModel);
+                if (flying)
+                {
+                    runner.Children.Add(JetpackFlameModel);
+                }
             }
             AddBox(rider, -0.34, 0.91, -0.18, 0.34, 1.70, 0.18, outfit);
             AddScaledSphere(rider, 0, 1.98, 0, 0.25, 0.31, 0.24, SkinMaterial);
@@ -737,6 +834,46 @@ namespace OOPGames
             runner.Children.Add(rider);
             runner.Freeze();
             return runner;
+        }
+
+        /// <summary>
+        /// Jetpack worn on the back (in the runner model the back is the -z side):
+        /// two silver tanks with red caps on a dark frame, nozzles at the bottom.
+        /// </summary>
+        private static Model3DGroup CreateJetpackModel()
+        {
+            Model3DGroup jetpack = new Model3DGroup();
+            Material frame = Material(Color.FromRgb(52, 56, 62));
+            Material tank = Material(Color.FromRgb(196, 202, 210));
+            Material cap = Material(Color.FromRgb(204, 48, 40));
+            AddBox(jetpack, -0.22, 1.02, -0.24, 0.22, 1.58, -0.18, frame);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                AddScaledSphere(jetpack, side * 0.15, 1.30, -0.34, 0.12, 0.32, 0.12, tank);
+                AddScaledSphere(jetpack, side * 0.15, 1.62, -0.34, 0.08, 0.06, 0.08, cap);
+                AddBox(jetpack, side * 0.15 - 0.06, 0.90, -0.40, side * 0.15 + 0.06, 1.00, -0.28, frame);
+            }
+
+            jetpack.Freeze();
+            return jetpack;
+        }
+
+        /// <summary>Glowing exhaust flames below the two jetpack nozzles.</summary>
+        private static Model3DGroup CreateJetpackFlameModel()
+        {
+            Model3DGroup flames = new Model3DGroup();
+            Material outer = new EmissiveMaterial(Brush(Color.FromRgb(255, 120, 24)));
+            Material inner = new EmissiveMaterial(Brush(Color.FromRgb(255, 226, 90)));
+            outer.Freeze();
+            inner.Freeze();
+            for (int side = -1; side <= 1; side += 2)
+            {
+                AddScaledSphere(flames, side * 0.15, 0.72, -0.34, 0.08, 0.20, 0.08, outer);
+                AddScaledSphere(flames, side * 0.15, 0.78, -0.34, 0.05, 0.12, 0.05, inner);
+            }
+
+            flames.Freeze();
+            return flames;
         }
 
         private static Model3DGroup CreateSkateboardModel()
@@ -1510,9 +1647,10 @@ namespace OOPGames
             AddBox(signal, -0.07, 0, -0.08, 0.07, 1.65, 0.08, pole);
             AddBox(signal, -0.22, 0.02, -0.16, 0.22, 0.12, 0.16,
                 Material(Color.FromRgb(88, 85, 75)));
-            AddBox(signal, -0.48, 1.36, -0.25, 0.48, 2.84, 0.25, housing);
-            AddBox(signal, -0.52, 2.82, -0.29, 0.52, 2.94, 0.29, pole);
-            AddBox(signal, -0.40, 1.27, -0.22, 0.40, 1.37, 0.22, pole);
+            // Slim housing, so the signal between two tracks does not look bulky.
+            AddBox(signal, -0.28, 1.36, -0.22, 0.28, 2.84, 0.22, housing);
+            AddBox(signal, -0.32, 2.82, -0.26, 0.32, 2.94, 0.26, pole);
+            AddBox(signal, -0.24, 1.27, -0.20, 0.24, 1.37, 0.20, pole);
 
             AddSignalLens(signal, 2.51, Color.FromRgb(242, 35, 38));
             AddSignalLens(signal, 2.10, Color.FromRgb(255, 190, 28));
@@ -1535,8 +1673,8 @@ namespace OOPGames
                 {
                     Children = new Transform3DCollection
                     {
-                        new ScaleTransform3D(0.30, 0.30, 0.10),
-                        new TranslateTransform3D(0, y, 0.27)
+                        new ScaleTransform3D(0.21, 0.21, 0.10),
+                        new TranslateTransform3D(0, y, 0.24)
                     }
                 }
             });
@@ -1547,8 +1685,8 @@ namespace OOPGames
                 {
                     Children = new Transform3DCollection
                     {
-                        new ScaleTransform3D(0.21, 0.21, 0.12),
-                        new TranslateTransform3D(0, y, 0.34)
+                        new ScaleTransform3D(0.15, 0.15, 0.12),
+                        new TranslateTransform3D(0, y, 0.31)
                     }
                 }
             });

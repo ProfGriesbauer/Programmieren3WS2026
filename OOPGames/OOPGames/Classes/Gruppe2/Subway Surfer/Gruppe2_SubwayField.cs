@@ -41,6 +41,22 @@ namespace OOPGames
                 return 1 + Hop * progress - (1 + Hop) * progress * progress;
             }
         }
+        public double JetpackHeight
+        {
+            get
+            {
+                if (JetpackTicks <= 0 || JetpackDurationTicks <= 0)
+                {
+                    return 0;
+                }
+
+                // Climb at the start, sink at the end - both with the same smooth arc.
+                int climb = Gruppe2_SubwayTrainLayout.JetpackClimbTicks;
+                int elapsed = JetpackDurationTicks - JetpackTicks;
+                double progress = Math.Min(1.0, Math.Min(elapsed, JetpackTicks) / (double)climb);
+                return progress * progress * (3 - 2 * progress);
+            }
+        }
         public int Score { get; internal set; }
         public int Coins { get; internal set; }
         public double Speed { get; internal set; }
@@ -61,6 +77,7 @@ namespace OOPGames
         internal int DropDurationTicks { get; set; }
         public int RollTicks { get; internal set; }
         internal int JetpackTicks { get; set; }
+        internal int JetpackDurationTicks { get; set; }
         internal int GuardIntroTicks { get; set; }
         public int MessageTicks { get; internal set; }
 
@@ -94,6 +111,7 @@ namespace OOPGames
             DropDurationTicks = 0;
             RollTicks = 0;
             JetpackTicks = 0;
+            JetpackDurationTicks = 0;
             GuardIntroTicks = GuardIntroDurationTicks;
             MessageTicks = 100;
         }

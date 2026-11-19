@@ -47,6 +47,18 @@ namespace OOPGames
             return IsCar(obstacle.Kind) ? obstacle.Distance + CarLength : obstacle.Distance;
         }
 
+        /// <summary>
+        /// Distance from which the magnet pulls coins of the own and the neighbouring lanes
+        /// towards the runner (used by the rules for collecting and by the painter for the pull).
+        /// </summary>
+        public const double MagnetRange = 30;
+
+        /// <summary>Jetpack flight level, measured in train roof heights.</summary>
+        public const double JetpackAltitudeInRoofHeights = 2.0;
+
+        /// <summary>Ticks to climb up to the flight level (and to sink back down at the end).</summary>
+        public const int JetpackClimbTicks = 30;
+
         public static bool IsBehindRunner(Gruppe2_SubwayObstacle obstacle)
         {
             double limit = IsTrainPart(obstacle.Kind) ? TrainRemoveBehindDistance : RemoveBehindDistance;
@@ -73,6 +85,16 @@ namespace OOPGames
                 && NearEnd(obstacle) <= 0
                 && obstacle.Distance > CollisionDistance);
             return ramp == null ? 0 : Math.Min(1, -NearEnd(ramp) / RampLength);
+        }
+
+        /// <summary>True if a train part (ramp, wagon, locomotive) of the lane reaches into [from, to].</summary>
+        public static bool IsLaneOccupiedByTrain(
+            IEnumerable<Gruppe2_SubwayObstacle> obstacles, int lane, double from, double to)
+        {
+            return obstacles.Any(obstacle => obstacle.Lane == lane
+                && IsTrainPart(obstacle.Kind)
+                && NearEnd(obstacle) < to
+                && FarEnd(obstacle) > from);
         }
 
         /// <summary>True while any part of a convoy in the given lane has not yet passed the runner.</summary>

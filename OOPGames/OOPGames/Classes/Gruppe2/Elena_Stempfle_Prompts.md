@@ -486,3 +486,227 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 > - Die Schatten werden jetzt vor der Läuferin in die Szene eingefügt statt ganz am Ende. Lanis Tests erwarten die Läuferin als letztes Objekt, und für die Transparenz ist die Reihenfolge gleichwertig.
 > - Die Läuferin gleitet beim Spurwechsel nicht mehr über mehrere Bilder (das war nur meine Zugabe), sondern springt mit der Kamera sofort auf die neue Spur, wie es Lanis Test erwartet. Die Kamera folgt also weiterhin der Spur.
 > - Build: 0 Warnungen, 0 Fehler. Alle Tests (auch Lanis neue) 4-mal hintereinander bestanden. Zusammengeführte Szene gerendert und kontrolliert.
+
+## 29. Hüpfstab: kein automatischer Sprung beim Einsammeln
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Kannst du bei der Regel für den Hüpfstab implementieren, dass man nicht sofort einen hohen Sprung macht sobald man den hüpfstab bekommt
+
+**Antwort:**
+
+> Die Änderung liegt in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> **Ursache:** In `GrantUpgrade` hat das Einsammeln des Hüpfstabs sofort einen hohen Sprung gestartet (Sprungdauer 42 Ticks, Zustand „in der Luft“).
+>
+> **Änderung:** Der Hüpfstab wird beim Einsammeln nur noch aktiviert. Der hohe, lange Sprung kommt erst, wenn man selbst springt (W / Pfeil hoch). Diese Logik war in `DoMove` schon vorhanden.
+>
+> **Test:** `TestJumpStickDoesNotJumpOnPickup` prüft drei Dinge: Nach dem Einsammeln ist der Hüpfstab aktiv, die Läuferin bleibt auf dem Gleis, und der nächste Sprung ist der lange Hüpfstab-Sprung.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Hüpfstab springt nicht mehr automatisch. Noch nicht committet.
+
+## 30. Weicher Spurwechsel im Bogen
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> beim Spurwechseln kannst du da mehr einen Bogen reinmachen, heist das es nicht so ein abgehackter Gleiswechsel ist sondern ein bisschen weicherer
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Neue Klasse `Gruppe2_SubwayLaneChange`** (`Elena_Stempfle_SubwayLaneChange.cs`): Sie animiert den Spurwechsel rein optisch. Das Framework zeichnet alle 40 ms, der Wechsel dauert 7 Bilder (ca. 0,3 s). Dabei gilt:
+>    - Die Figur gleitet mit sanftem Anfahren und Abbremsen (Smoothstep) zur neuen Spur.
+>    - Sie hebt in einem kleinen Bogen leicht ab und legt sich bis zu 14° in die Kurve, wie beim Carven auf dem Skateboard.
+>    - Bei einem schnellen Doppelwechsel startet die neue Animation an der aktuellen Position, damit nichts springt.
+> 2. **Painter:** Kamera, Läuferin und Bahnwärter nutzen die animierte Position. Die Kamera gleitet mit, man sieht die Läuferin also weiter von hinten. Bogen und Neigung gelten nur für die Läuferin.
+> 3. **Regeln unverändert:** Die Spur wechselt in den Rules weiterhin sofort beim Tastendruck. Kollisionen hängen also nicht von der Animation ab.
+> 4. **Tests:**
+>    - Neuer Test `TestLaneChangeIsSmoothArc` prüft das schrittweise Gleiten, den Bogen, die Neigung und das aufrechte Ankommen auf der neuen Spur.
+>    - Lanis Test `TestThreeDimensionalSceneAndHud` habe ich minimal angepasst: Er erwartete die Figur direkt nach dem Tastendruck mittig auf der neuen Spur. Jetzt wartet er die 7 Bilder des Wechsels ab und prüft dann dasselbe.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden. Gerenderte Bildfolge des Spurwechsels kontrolliert.
+
+**Ergebnisvermerk:** Spurwechsel weich im Bogen mit Neigung, Kamera folgt. Noch nicht committet.
+
+## 31. Senkrechter Spurwechsel, Rampe mit zwei Brettern, seitlicher Zug-Crash tödlich
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> der übergang zwischen den Gleisen sieht nicht gut aus, es sieht so aus als ob man die Figur am kopf ziehen würde und dann der rest vom Körper hinterher geht kannst du es so machen das der Körper immer senkrecht bleibt aber er trotzdem in einem bogen die Spur wechselt. zudem ändere das Design von der Güterrampe, so das es zwei Schwarze bretter sind, welche in in Laufrichtung auf dei Rampe gehen und der Untergrund ist braun: Außerdem stirbt man auch wenn man seitlich in einen Zug versucht zu laufen
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Spurwechsel:** Der „am Kopf gezogen“-Effekt kam von der Neigung um den Fußpunkt (bis 14°). Die Neigung ist komplett entfernt, der Körper bleibt senkrecht. Die Figur gleitet weiter weich zur neuen Spur und hebt dabei in einem etwas höheren Bogen ab. Lanis leichtes Hin-und-her-Wiegen beim Skaten ist unverändert.
+> 2. **Güterrampe:** Die Fahrfläche ist braunes Holz, darauf liegen zwei leicht erhöhte schwarze Bretter, die in Laufrichtung hinaufführen. Die Bretter enden genau auf Dachhöhe. Die Seitenwände aus Prompt 20 sind geblieben, jetzt in dunklem Holzbraun statt rot-weiß. Die gelb-schwarzen Streifen sind entfernt.
+> 3. **Seitlich in einen Zug:** Bisher wurde der Spurwechsel nur blockiert, und der Bahnwärter kam näher. Jetzt ist das Spiel vorbei. Ein Surfboard rettet einmal, wie bei den anderen tödlichen Hindernissen.
+> 4. **Tests:** Der Spurwechsel-Test prüft keine Neigung mehr. Der Test für den seitlichen Zug-Crash erwartet jetzt das Spielende und prüft zusätzlich die Rettung durch das Surfboard.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden. Gerenderte Bilder kontrolliert: Rampe mit zwei schwarzen Brettern auf braunem Holz, senkrechte Figur während des Spurwechsels.
+
+**Ergebnisvermerk:** Spurwechsel mit senkrechtem Körper im Bogen, neue Rampenoptik, seitlicher Zug-Crash ist tödlich. Noch nicht committet.
+
+## 32. Alle Objekte auf derselben Linie, längere Züge
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Okay, jetzt hätte ich gerne das auf der selben Linie erscheinen, weil bis jetzt ist es so das die Züge schon von weitem sichtbar sind und die kleinen objekte kurz bevor ich an ihnen vorbei muss  auftauchen. Ich hätte gerne das sie da auftauchen wo bis jetzt auch der zug auftaucht. Zudem können die Loks auch Wagons hinter sich herziehen, so das sie länger sind. Dasselbe gilt auch für den Zug mit der Laderampe der darf auch länger sein, oder unterschiedliche Längen haben
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Eine Spawn-Linie:** Hindernisse, Ampeln, Münzen und Upgrade-Boxen erscheinen jetzt wie die Züge bei Entfernung 420 am Horizont (`SpawnDistance`). Bisher erschienen sie erst bei 82 bzw. 145.
+> 2. **Strecke beim Start gefüllt:** Sonst käme das erste Hindernis erst nach etwa 17 Sekunden. Beim ersten Spieltick wird die Strecke zwischen 124 und 420 deshalb schon mit vier Wellen gefüllt. Das passiert erst beim ersten Tick und nicht in `ClearField`: Das Framework ruft `StartedGameCall` vor `ClearField` auf, und Lanis Test erwartet direkt nach `ClearField` eine leere Strecke.
+> 3. **Loks ziehen Wagen:** Eine einzelne Lok fährt vorne und zieht 1 bis 4 Güterwagen hinter sich her. Ohne Rampe muss man ausweichen (oder mit Hüpfstab aufspringen).
+> 4. **Rampen-Züge unterschiedlich lang:** Hinter der Rampe folgen 1 bis 5 Güterwagen und eine Lok (vorher 1 bis 3).
+> 5. **Nichts ineinander:** Ein neuer Zug oder ein neues Hindernis wird nur gesetzt, wenn auf diesem Abschnitt der Spur kein Zug steht (10 Einheiten Abstand, `IsLaneOccupiedByTrain`). Züge kommen nie auf die sichere Spur. Dadurch gibt es immer eine Spur ganz ohne Zug, und an jeder Stelle der Strecke ist mindestens eine Spur frei.
+> 6. **Tests:**
+>    - Der Spawn-Test prüft jetzt in mehreren Läufen an jeder Stelle der Strecke (0 bis 600), dass mindestens eine Spur frei ist. Bisher prüfte er nur die erste Welle.
+>    - Der Rampen-Test prüft die zusammenhängenden Wagen hinter der Rampe bis zur Lok, denn dahinter darf mit Abstand ein weiterer Zug stehen.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 5-mal hintereinander bestanden. Gerenderte Szenen kontrolliert: Objekte tauchen am Horizont auf, die Strecke ist von Anfang an gefüllt.
+
+**Ergebnisvermerk:** Alle Objekte erscheinen auf derselben Linie wie die Züge, Loks ziehen Wagen, Rampen-Züge haben unterschiedliche Längen. Noch nicht committet.
+
+## 33. Breitere Bretter auf der Rampe
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Die schwarzen blaken von der Rampe bitte ein bisschen breiter
+
+**Antwort:**
+
+> Die Änderung liegt in `CreateCargoRampModel` im Painter (`Classes/Gruppe2/Subway Surfer/`). Die beiden schwarzen Bretter reichen jetzt von 0,10 bis 0,44 Einheiten neben der Mitte statt von 0,16 bis 0,38. Sie sind also 0,34 statt 0,22 breit, gut 50 % breiter. Dazwischen bleibt ein schmaler brauner Streifen, und zur Seitenwand bleibt Abstand.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests bestanden. Gerendertes Bild der Rampe kontrolliert.
+
+**Ergebnisvermerk:** Rampenbretter breiter. Noch nicht committet.
+
+## 34. Springen auf dem Zugdach (von Zug zu Zug), schmalere Ampel
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> ich kann auch auf dem Zugdach springen und von Zug zu Zug hüpfen, wenn es der abstand zwischen den Zügen zulässt. Zudem bitte die Lampe schmäler machen
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig. „Lampe“ habe ich als Ampel zwischen den Gleisen verstanden.
+>
+> 1. **Springen auf dem Dach:** Mit W / Pfeil hoch kann man jetzt auch auf einem Zugdach springen (vorher nur auf dem Gleis). Der Sprung bleibt ein Dach-Sprung: Der Bogen beginnt auf Dachhöhe, und solange man in der Luft ist, fällt man über einer Lücke nicht herunter. Endet der Sprung über dem nächsten Zug, steht man auf dessen Dach. Endet er über der Lücke, fällt man im bekannten Bogen aufs Gleis. Mit Hüpfstab ist der Sprung länger, also auch größere Lücken schaffbar. S bricht einen Dach-Sprung ab.
+> 2. **Darstellung:** Die Sprunghöhe wird jetzt auf jede Standhöhe addiert, also auch auf das Dach. Lanis Skate-Wiegen pausiert während eines Sprungs.
+> 3. **Ampel:** Gehäuse, Dach und Halterung sind rund 40 % schmaler, die drei Lichter etwas kleiner, damit sie ins Gehäuse passen. Die Kollisionsregel der Ampel ist unverändert.
+> 4. **Test:** `TestJumpFromRoofToRoofOverGap` baut zwei Züge mit 12 Einheiten Lücke auf. Mit Sprung kurz vor dem Zugende landet man auf dem zweiten Zug. Ohne Sprung fällt man in die Lücke und prallt gegen den zweiten Zug.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden. Gerendertes Bild der schmaleren Ampel kontrolliert.
+
+**Ergebnisvermerk:** Dach-Sprünge von Zug zu Zug möglich, Ampel schmaler. Noch nicht committet.
+
+## 35. Jetpack: Flug auf eigener Ebene über den Zügen
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> mit dem Jetpak komm ich eine höhere Ebene, bis jetzt lauf ich einfach auf dem Boden weiter (so sieht es zumindestens aus), ich müsste aber eine Ebene über den Zugdächern fliegen mi diesem Jetpack. Kannst du das bitte so implementieren, das wenn ich das Upgrade Jetpack aufsammel, das ich einen Rucksack bekomme deer aussieht weiein Jetpack und das ich dann in die Luft  fliege bis ich die Ausgangshöhe erreicht habe. Wenn ich die Ausgangshöhe erreicht habe "liege" ich mehr oder weniger in der Luft und fliege bis das Upgrade zuende ist. WEnn es zuende ist Fliege ich im selben Bogen, wie ich hochgekommen bin , auf den Boden zurück . zudem kann ich in der Luft auch Münzen sammeln
+
+**Antwort:**
+
+> Die Änderungen liegen in `Classes/Gruppe2/Subway Surfer/` und im Gruppen-Interface `Interfaces/Gruppe2/Stefanie_Kolb_Gruppe2_SubwaySurferInterfaces.cs`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Flughöhe:** Die eigene Flugebene liegt bei 2 Zugdach-Höhen (`JetpackAltitudeInRoofHeights`). Das Field berechnet daraus `JetpackHeight` (neu im Interface): In den ersten 30 Ticks steigt sie in einem weichen Bogen von 0 auf 1, dann bleibt sie bei 1, und in den letzten 30 Ticks sinkt sie im selben Bogen auf 0. Die Kamera folgt der Höhe.
+> 2. **Haltung:** Beim Aufsteigen kippt die Figur nach vorne, bis sie auf Flughöhe fast waagrecht (75°) in der Luft liegt. Beim Sinken richtet sie sich wieder auf.
+> 3. **Jetpack-Rucksack:** Solange das Upgrade aktiv ist, trägt die Figur auf dem Rücken einen Jetpack: zwei Silbertanks mit roten Kappen, ein Gestell und Düsen. Im Flug leuchten unter den Düsen orange-gelbe Flammen, und das Skateboard verschwindet.
+> 4. **Im Flug:** Hindernisse, Züge, Rampen und Ampeln auf den Gleisen ziehen unten durch und können nicht treffen. Rollen (S) geht in der Luft nicht.
+> 5. **Landung:** Am Ende sinkt man im selben Bogen auf den Boden. Steht beim Sinken ein Zug darunter, landet man auf dessen Dach, sobald die Dachhöhe erreicht ist.
+> 6. **Münzen in der Luft:** Beim Einsammeln entsteht auf Flughöhe eine Münzspur in Achterreihen, die die Spur wechseln. Die Münzen sind so verteilt, dass sie während des Reiseflugs ankommen. Luftmünzen (`Elevated`, neu am `Gruppe2_SubwayReward`) kann man nur im Flug einsammeln, Bodenmünzen nur ohne Flug.
+> 7. **Münzfarbe:** Die Münzen leuchten leicht, damit sie mit der neuen Sonne auch auf der Schattenseite golden wirken.
+> 8. **Test:** `TestJetpackFlight` prüft den gesamten Ablauf: Flugstart, Münzspur, stetiges Steigen bis auf Flughöhe, keine Kollision mit einer großen Absperrung, nur die Luftmünze zählt, Sinken im Bogen und Landung.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 4-mal hintereinander bestanden. Gerenderte Bilder von Aufstieg, Reiseflug und Sinkflug kontrolliert.
+
+**Ergebnisvermerk:** Jetpack-Flug mit Aufstieg, liegendem Reiseflug, Abstieg im Bogen, Jetpack-Rucksack und Münzen in der Luft. Noch nicht committet.
+
+## 36. Sichtbarer Magnet, mehr Abstand nach dem Zug
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Der Magnet funktioniert noch nicht, sobald ich dieses Upgrade habe sammelt er alle Münzen ein an denn nich vorbeilaufe, auch wenn ich nicht durch sie hindurch laufe. Zudem erweitere bitte den Abstand von dem Hinderniss welches direkt nach dem Zug mit Güterrampe kommt, so das ich noch reagieren kann sobald ich auf dem Boden angekommen bin
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Magnet:** Dass er auch Münzen der Nachbarspuren einsammelt, ist seine Aufgabe. Ich habe „funktioniert noch nicht“ so verstanden, dass man davon nichts sah: Die Münzen verschwanden einfach. Jetzt gilt:
+>    - Münzen der eigenen und der Nachbarspuren werden ab 30 Einheiten Entfernung sichtbar seitlich und in der Höhe zur Brust der Läuferin gezogen (`MagnetPull` im Painter, gleiche Bedingungen wie in den Rules).
+>    - Die Reichweite (`MagnetRange`, vorher 18) steht jetzt einmal in der gemeinsamen Zug-Geometrie und gilt für Rules und Painter.
+>    - Im Jetpack-Flug zieht der Magnet die Luftmünzen.
+> 2. **Abstand nach dem Zug:** Hinter dem Ende eines Zugs bleiben jetzt mindestens 60 Einheiten × Tempo frei, bevor auf derselben Spur das nächste Hindernis oder der nächste Zug kommt (vorher 10). Der Fall vom Dach braucht etwa 22 Einheiten, danach bleibt also gut eine Sekunde zum Reagieren. Weil der Abstand mit dem Tempo wächst, bleibt die Reaktionszeit auch bei hohem Tempo gleich.
+> 3. **Tests:**
+>    - Neuer Test: Mit Magnet wird eine Münze auf der Nachbarspur eingesammelt, ohne Magnet nicht.
+>    - Der Spawn-Test prüft zusätzlich, dass hinter dem letzten Wagen jedes Zugs mindestens 60 Einheiten frei sind.
+>    - Der Jetpack-Test wertet jetzt jedes Sinken unter Reiseflughöhe als Bogen, weil das Sinken auf einem Zugdach korrekt schon bei halber Flughöhe enden kann.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 6-mal hintereinander bestanden. Gerendertes Bild kontrolliert: Münzen der Nachbarspur werden sichtbar zur Läuferin gezogen.
+
+**Ergebnisvermerk:** Magnet zieht Münzen sichtbar heran, Hindernisse halten Reaktionsabstand nach Zügen. Noch nicht committet.
+
+## 37. Commit
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du alle Änderungen committen
+
+**Antwort:**
+
+> Ich committe alle eigenen Änderungen aus den Prompts 29–37: Subway-Surfer-Dateien, die neue Spurwechsel-Klasse, das Gruppen-Interface und diese Prompt-Datei. Die fremden obj-Dateien in `HouseExample/` kommen nicht in den Commit. Gepullt und gepusht wird nicht, weil das nicht angefragt war.
+
+**Ergebnisvermerk:** Commit lokal erstellt, nicht gepusht.
+
+## 38. Pull und Push
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du dann alles dann pullen und dann meine commits pushen
+
+**Antwort:**
+
+> Beim `git pull --rebase` gab es Konflikte in `Gruppe2_SubwayField.cs` und `Gruppe2_SubwayPainter.cs`. Lani hatte parallel Folgendes geändert:
+> - eine Intro-Animation für den Bahnwärter,
+> - Upgrades als große Münzen statt Kisten,
+> - das Skateboard nur noch mit dem Surfboard-Upgrade (sonst läuft die Figur),
+> - die Kameraposition als Konstante,
+> - Haare und Bewegung der Figur.
+>
+> Ich habe Lanis Stand als Grundlage behalten und meine Funktionen ergänzt:
+> - **Field:** Lanis Intro-Zähler und meine Jetpack-Dauer sind beide drin.
+> - **Kamera:** Lanis Kamerakonstante, kombiniert mit meinem weichen Spurwechsel.
+> - **Läuferin:** Lanis Intro, Laufbewegung und Skateboard-Regel, dazu meine Sprunghöhe auf dem Dach, der Bogen beim Spurwechsel, die Jetpack-Flughaltung und der Jetpack-Rucksack. Das Skateboard verschwindet im Flug.
+> - **Münzen:** Lanis Münzmodell mit einstellbaren Farben bleibt. Mein Leuchten gilt nur für die Goldmünzen, denn Lanis Test erkennt die rosa Upgrade-Münze an ihrem reinen Diffus-Material. Meine Upgrade-Kiste ist entfernt, weil Lani sie durch Münzen ersetzt hat.
+> - Lanis Tests habe ich nicht verändert.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests (auch Lanis neue) 4-mal hintereinander bestanden. Gerenderte Szene kontrolliert.
+
+**Ergebnisvermerk:** Konflikte zusammengeführt, Rebase abgeschlossen und gepusht.

@@ -20,9 +20,16 @@ namespace OOPGames
             Gruppe2_SubwayObstacleKind.Curb,
             Gruppe2_SubwayObstacleKind.CargoWagon
         };
-        // Trains appear near the horizon of the 3D scene; the longest convoy ends before 520.
-        private const double TrainRampSpawnDistance = 420;
-        private const double ObstacleSpawnDistance = 82;
+        // Every object (trains, obstacles, signals, coins) appears on the same line near
+        // the horizon of the 3D scene; the longest convoy still ends inside the visible track.
+        private const double SpawnDistance = 420;
+        private const double WaveSpacing = 74;
+        // Free space kept between a new object and a train already standing in the lane.
+        private const double TrainClearance = 10;
+        // Free track behind the end of a train: the drop from the roof takes about 22 units,
+        // after landing the runner needs time to react. Scaled with the speed at spawn time.
+        private const double ReactionDistanceAfterTrain = 60;
+        private bool _trackPrefilled;
         private const int MinimumDropTicks = 12;
         private Gruppe2_SubwayField _field = new Gruppe2_SubwayField();
         private readonly HashSet<Gruppe2_SubwayObstacle> _passedTrainParts =
@@ -41,6 +48,7 @@ namespace OOPGames
         {
             _field.Reset();
             _passedTrainParts.Clear();
+            _trackPrefilled = false;
             _nextWaveAt = 25;
         }
 
@@ -65,18 +73,36 @@ namespace OOPGames
                     break;
                 case Key.Up:
                 case Key.W:
-                    if (_field.Level == Gruppe2_SubwayLevel.Track)
+                    bool onRoof = _field.Level == Gruppe2_SubwayLevel.TrainRoof;
+                    if ((_field.Level == Gruppe2_SubwayLevel.Track || onRoof) && _field.JumpTicks == 0)
                     {
                         _field.JumpDurationTicks = _field.HasUpgrade(Gruppe2_SubwayUpgradeKind.JumpStick) ? 42 : 30;
                         _field.JumpTicks = _field.JumpDurationTicks;
                         _field.RollTicks = 0;
-                        _field.Level = Gruppe2_SubwayLevel.Air;
+                        // A jump on a roof stays a roof jump: the arc starts at roof height and
+                        // can carry the runner over a gap onto the next train.
+                        if (!onRoof)
+                        {
+                            _field.Level = Gruppe2_SubwayLevel.Air;
+                        }
                     }
                     break;
                 case Key.Down:
                 case Key.S:
+                    if (_field.JetpackTicks > 0)
+                    {
+                        // No rolling or landing while flying with the jetpack.
+                        break;
+                    }
+
                     _field.RollTicks = 24;
-                    if (_field.Level == Gruppe2_SubwayLevel.Air)
+                    if (_field.Level == Gruppe2_SubwayLevel.TrainRoof)
+                    {
+                        // Cancels a roof jump; above a gap the runner then drops off.
+                        _field.JumpTicks = 0;
+                        _field.JumpDurationTicks = 0;
+                    }
+                    else if (_field.Level == Gruppe2_SubwayLevel.Air)
                     {
                         _field.JumpTicks = 0;
                         _field.JumpDurationTicks = 0;
@@ -134,6 +160,17 @@ namespace OOPGames
             _field.RollTicks = Math.Max(0, _field.RollTicks - 1);
             _field.JetpackTicks = Math.Max(0, _field.JetpackTicks - 1);
 
+            // Sinking at the end of a jetpack flight: if a train is below once the runner
+            // is down to roof height, the flight ends on its roof.
+            bool sinking = _field.JetpackTicks > 0 && _field.JetpackTicks < Gruppe2_SubwayTrainLayout.JetpackClimbTicks;
+            if (sinking
+                && _field.JetpackHeight * Gruppe2_SubwayTrainLayout.JetpackAltitudeInRoofHeights <= 1
+                && Gruppe2_SubwayTrainLayout.IsCarUnderRunner(_field.Obstacles, _field.Lane))
+            {
+                _field.JetpackTicks = 0;
+                _field.MutableUpgrades.Remove(Gruppe2_SubwayUpgradeKind.Jetpack);
+            }
+
             bool stillInAir = _field.JumpTicks > 0 || _field.DropTicks > 0 || _field.JetpackTicks > 0;
             if (_field.Level == Gruppe2_SubwayLevel.Air && !stillInAir)
             {
@@ -184,7 +221,10 @@ namespace OOPGames
 
         private void UpdateTrainRoof()
         {
+            // While jumping on the roof the runner is in the air and does not fall into a gap;
+            // only when the jump ends without a car below does the drop start.
             if (_field.Level == Gruppe2_SubwayLevel.TrainRoof
+                && _field.JumpTicks == 0
                 && !Gruppe2_SubwayTrainLayout.IsCarUnderRunner(_field.Obstacles, _field.Lane))
             {
                 // Drop off in a small arc. The fall lasts until the car that was just left
@@ -212,86 +252,131 @@ namespace OOPGames
 
         private void SpawnWaves()
         {
+            if (!_trackPrefilled)
+            {
+                // At the start the track between the runner and the spawn line is filled,
+                // so the first obstacles do not need the whole way from the horizon.
+                _trackPrefilled = true;
+                for (double distance = SpawnDistance - 4 * WaveSpacing; distance < SpawnDistance; distance += WaveSpacing)
+                {
+                    SpawnWave(distance);
+                }
+            }
+
             while (_field.Distance >= _nextWaveAt)
             {
-                List<int> trainFreeLanes = Enumerable.Range(0, 3)
-                    .Where(lane => !Gruppe2_SubwayTrainLayout.HasTrainAhead(_field.Obstacles, lane))
-                    .ToList();
-                int safeLane = trainFreeLanes.Count > 0
-                    ? trainFreeLanes[_random.Next(trainFreeLanes.Count)]
-                    : _random.Next(0, 3);
-                List<int> blockedLanes = trainFreeLanes
-                    .Where(lane => lane != safeLane)
-                    .OrderBy(_ => _random.Next())
-                    .Take(_random.Next(1, 3))
-                    .ToList();
-
-                foreach (int lane in blockedLanes)
-                {
-                    Gruppe2_SubwayObstacleKind kind =
-                        SpawnableObstacleKinds[_random.Next(SpawnableObstacleKinds.Length)];
-                    // A ramp always brings a walkable convoy; a single locomotive or
-                    // wagon without ramp has to be dodged.
-                    if (kind == Gruppe2_SubwayObstacleKind.CargoRamp)
-                    {
-                        SpawnTrainConvoy(lane);
-                    }
-                    else
-                    {
-                        double spawnDistance = Gruppe2_SubwayTrainLayout.IsCar(kind)
-                            ? TrainRampSpawnDistance
-                            : ObstacleSpawnDistance;
-                        _field.MutableObstacles.Add(
-                            new Gruppe2_SubwayObstacle(kind, lane, spawnDistance));
-                    }
-                }
-
-                if (_random.Next(0, 2) == 0)
-                {
-                    _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                        Gruppe2_SubwayObstacleKind.Signal, _random.Next(0, 2), 145));
-                }
-
-                if (_random.Next(0, 4) == 0)
-                {
-                    _field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                        Gruppe2_SubwayRewardKind.UpgradeBox, safeLane, 82,
-                        (Gruppe2_SubwayUpgradeKind)_random.Next(0, 5)));
-                }
-                else
-                {
-                    int coinCount = _random.Next(3, 7);
-                    for (int coin = 0; coin < coinCount; coin++)
-                    {
-                        _field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                            Gruppe2_SubwayRewardKind.Coin, safeLane, 82 + coin * 5));
-                    }
-                }
-
-                _nextWaveAt += 74;
+                SpawnWave(SpawnDistance);
+                _nextWaveAt += WaveSpacing;
             }
         }
 
         /// <summary>
-        /// A convoy always starts with the ramp; right behind the ramp follow one to three
-        /// cargo wagons and a locomotive, so the runner always lands on a walkable roof.
+        /// One wave at the given distance: obstacles or trains on one or two lanes,
+        /// coins or an upgrade box on the safe lane.
+        /// The safe lane never has a train ahead, and trains are only placed on other lanes,
+        /// so at least one lane always stays free of trains.
         /// </summary>
-        private void SpawnTrainConvoy(int lane)
+        private void SpawnWave(double distance)
         {
-            _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoRamp, lane, TrainRampSpawnDistance));
+            List<int> trainFreeLanes = Enumerable.Range(0, 3)
+                .Where(lane => !Gruppe2_SubwayTrainLayout.HasTrainAhead(_field.Obstacles, lane))
+                .ToList();
+            int safeLane = trainFreeLanes.Count > 0
+                ? trainFreeLanes[_random.Next(trainFreeLanes.Count)]
+                : _random.Next(0, 3);
+            List<int> blockedLanes = Enumerable.Range(0, 3)
+                .Where(lane => lane != safeLane)
+                .OrderBy(_ => _random.Next())
+                .Take(_random.Next(1, 3))
+                .ToList();
 
-            int wagonCount = _random.Next(1, 4);
-            for (int wagon = 0; wagon < wagonCount; wagon++)
+            foreach (int lane in blockedLanes)
             {
-                _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                    Gruppe2_SubwayObstacleKind.CargoWagon, lane,
-                    TrainRampSpawnDistance + wagon * Gruppe2_SubwayTrainLayout.CarSpacing));
+                Gruppe2_SubwayObstacleKind kind =
+                    SpawnableObstacleKinds[_random.Next(SpawnableObstacleKinds.Length)];
+                switch (kind)
+                {
+                    case Gruppe2_SubwayObstacleKind.CargoRamp:
+                        // Ramp, one to five cargo wagons and a locomotive: walkable, different lengths.
+                        SpawnTrain(lane, distance, true, _random.Next(1, 6));
+                        break;
+                    case Gruppe2_SubwayObstacleKind.Train:
+                        // Locomotive in front pulling one to four wagons: has to be dodged.
+                        SpawnTrain(lane, distance, false, _random.Next(1, 5));
+                        break;
+                    default:
+                        double length = Gruppe2_SubwayTrainLayout.IsCar(kind) ? Gruppe2_SubwayTrainLayout.CarSpacing : 0;
+                        if (IsLaneFree(lane, distance, distance + length))
+                        {
+                            _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, lane, distance));
+                        }
+                        break;
+                }
             }
 
-            _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.Train, lane,
-                TrainRampSpawnDistance + wagonCount * Gruppe2_SubwayTrainLayout.CarSpacing));
+            if (_random.Next(0, 2) == 0)
+            {
+                _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                    Gruppe2_SubwayObstacleKind.Signal, _random.Next(0, 2), distance));
+            }
+
+            if (_random.Next(0, 4) == 0)
+            {
+                _field.MutableRewards.Add(new Gruppe2_SubwayReward(
+                    Gruppe2_SubwayRewardKind.UpgradeBox, safeLane, distance,
+                    (Gruppe2_SubwayUpgradeKind)_random.Next(0, 5)));
+            }
+            else
+            {
+                int coinCount = _random.Next(3, 7);
+                for (int coin = 0; coin < coinCount; coin++)
+                {
+                    _field.MutableRewards.Add(new Gruppe2_SubwayReward(
+                        Gruppe2_SubwayRewardKind.Coin, safeLane, distance + coin * 5));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Places a train whose front is at <paramref name="front"/>.
+        /// With ramp: ramp, wagons, locomotive at the end (the runner walks up and over).
+        /// Without ramp: locomotive in front, wagons behind (the runner has to dodge).
+        /// Nothing is placed if another train already stands in that part of the lane.
+        /// </summary>
+        private void SpawnTrain(int lane, double front, bool withRamp, int wagonCount)
+        {
+            double spacing = Gruppe2_SubwayTrainLayout.CarSpacing;
+            double start = withRamp ? front - Gruppe2_SubwayTrainLayout.RampLength : front;
+            double end = front + (wagonCount + 1) * spacing;
+            if (!IsLaneFree(lane, start, end))
+            {
+                return;
+            }
+
+            if (withRamp)
+            {
+                _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                    Gruppe2_SubwayObstacleKind.CargoRamp, lane, front));
+            }
+
+            for (int car = 0; car <= wagonCount; car++)
+            {
+                bool locomotive = withRamp ? car == wagonCount : car == 0;
+                _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                    locomotive ? Gruppe2_SubwayObstacleKind.Train : Gruppe2_SubwayObstacleKind.CargoWagon,
+                    lane, front + car * spacing));
+            }
+        }
+
+        /// <summary>
+        /// New objects always appear behind (further away than) the trains already on the
+        /// track, so the gap behind the end of a train is the one that matters for reacting.
+        /// </summary>
+        private bool IsLaneFree(int lane, double from, double to)
+        {
+            double gapBehindTrain = Math.Max(TrainClearance, ReactionDistanceAfterTrain * _field.Speed);
+            return !Gruppe2_SubwayTrainLayout.IsLaneOccupiedByTrain(
+                _field.Obstacles, lane, from - gapBehindTrain, to + TrainClearance);
         }
 
         private void AdvanceObjects()
@@ -319,9 +404,12 @@ namespace OOPGames
                 bool attracted = reward.Kind == Gruppe2_SubwayRewardKind.Coin
                     && _field.HasUpgrade(Gruppe2_SubwayUpgradeKind.Magnet)
                     && Math.Abs(reward.Lane - _field.Lane) <= 1
-                    && reward.Distance < 18;
+                    && reward.Distance < Gruppe2_SubwayTrainLayout.MagnetRange;
 
-                if (!inRange || (reward.Lane != _field.Lane && !attracted))
+                // Coins at flight level can only be reached while flying high, ground coins
+                // only below it.
+                bool flyingHigh = _field.JetpackHeight > 0.5;
+                if (!inRange || (reward.Lane != _field.Lane && !attracted) || reward.Elevated != flyingHigh)
                 {
                     continue;
                 }
@@ -347,17 +435,56 @@ namespace OOPGames
             switch (upgrade)
             {
                 case Gruppe2_SubwayUpgradeKind.Jetpack:
-                    _field.JetpackTicks = duration;
-                    _field.Level = Gruppe2_SubwayLevel.Air;
+                    StartJetpackFlight(duration);
                     break;
-                case Gruppe2_SubwayUpgradeKind.JumpStick:
-                    _field.JumpDurationTicks = 42;
-                    _field.JumpTicks = Math.Max(_field.JumpTicks, _field.JumpDurationTicks);
-                    _field.Level = Gruppe2_SubwayLevel.Air;
-                    break;
+                // The jump stick only becomes active here; the high jump happens
+                // the next time the player presses jump (see DoMove).
             }
 
             SetMessage("Upgrade: " + UpgradeName(upgrade));
+        }
+
+        /// <summary>
+        /// Jetpack: climb in an arc to the flight level above the train roofs, fly there
+        /// until the upgrade runs out, then sink back in the same arc (see JetpackHeight).
+        /// A trail of coins floats at flight level along the way.
+        /// </summary>
+        private void StartJetpackFlight(int duration)
+        {
+            // A second jetpack while flying keeps the current height (no new climb).
+            int climb = Gruppe2_SubwayTrainLayout.JetpackClimbTicks;
+            int currentClimb = _field.JetpackTicks > 0
+                ? Math.Min(climb, Math.Min(_field.JetpackDurationTicks - _field.JetpackTicks, _field.JetpackTicks))
+                : 0;
+            _field.JetpackTicks = duration;
+            _field.JetpackDurationTicks = duration + currentClimb;
+            _field.JumpTicks = 0;
+            _field.JumpDurationTicks = 0;
+            _field.DropTicks = 0;
+            _field.RollTicks = 0;
+            _field.Level = Gruppe2_SubwayLevel.Air;
+            SpawnJetpackCoins(duration - climb);
+        }
+
+        /// <summary>Coins at flight level, in short rows that switch to a neighbouring lane.</summary>
+        private void SpawnJetpackCoins(int cruiseTicks)
+        {
+            const double CoinSpacing = 6;
+            const int CoinsPerRow = 8;
+            double start = Gruppe2_SubwayTrainLayout.JetpackClimbTicks * _field.Speed;
+            double end = Math.Min(SpawnDistance, cruiseTicks * _field.Speed);
+            int lane = _field.Lane;
+            int coinInRow = 0;
+            for (double distance = start; distance < end; distance += CoinSpacing)
+            {
+                _field.MutableRewards.Add(new Gruppe2_SubwayReward(
+                    Gruppe2_SubwayRewardKind.Coin, lane, distance, elevated: true));
+                if (++coinInRow == CoinsPerRow)
+                {
+                    coinInRow = 0;
+                    lane = lane == 0 ? 1 : lane == 2 ? 1 : lane + (_random.Next(0, 2) == 0 ? -1 : 1);
+                }
+            }
         }
 
         private void ResolveObstacles()
@@ -374,6 +501,17 @@ namespace OOPGames
                     // Train parts stay in the list until their far end has passed,
                     // so they are drawn under the runner; they only collide once.
                     _passedTrainParts.Add(obstacle);
+                }
+
+                if (_field.JetpackTicks > 0)
+                {
+                    // Flying with the jetpack: everything on the track passes below.
+                    if (!trainPart)
+                    {
+                        _field.MutableObstacles.Remove(obstacle);
+                    }
+
+                    continue;
                 }
 
                 if (obstacle.Lane != _field.Lane)
@@ -459,7 +597,8 @@ namespace OOPGames
             if (_field.Level != Gruppe2_SubwayLevel.TrainRoof && !CanReachTrainRoof()
                 && Gruppe2_SubwayTrainLayout.IsCarUnderRunner(_field.Obstacles, targetLane))
             {
-                HitOrEnd(false, "Seitlich gegen den Zug - der Bahnbaer kommt naeher!");
+                // Running sideways into a train is fatal (the surfboard still saves the runner).
+                HitOrEnd(true, "Seitlich gegen den Zug gelaufen!");
                 return;
             }
 
@@ -469,8 +608,9 @@ namespace OOPGames
 
         private void ResolveSignalLaneChange(int previousLane, int currentLane)
         {
-            if (previousLane == currentLane)
+            if (previousLane == currentLane || _field.JetpackTicks > 0)
             {
+                // Flying with the jetpack passes high above the signals.
                 return;
             }
 
