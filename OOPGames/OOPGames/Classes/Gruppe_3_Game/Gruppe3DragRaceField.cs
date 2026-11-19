@@ -16,6 +16,12 @@ namespace OOPGames
         public bool CarSelectionComplete { get; internal set; }
         public string SelectionFeedbackText { get; internal set; }
         public DateTime SelectionFeedbackUntil { get; internal set; }
+        public double PlayerOneSpeed { get; internal set; }
+        public double PlayerTwoSpeed { get; internal set; }
+        public int PlayerOneGear { get; internal set; }
+        public int PlayerTwoGear { get; internal set; }
+        public double PlayerOneRpm { get; internal set; }
+        public double PlayerTwoRpm { get; internal set; }
 
         public bool CanBePaintedBy(IPaintGame painter)
         {

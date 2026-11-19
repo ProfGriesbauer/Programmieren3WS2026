@@ -103,7 +103,8 @@ namespace OOPGames
 
             _field.Distance += _field.Speed;
             _field.Score = (int)_field.Distance + _field.Coins * 10;
-            _field.Speed = Math.Min(2.1, 1 + _field.Score / 1500.0);
+            // The speed keeps rising with the score, without an upper limit.
+            _field.Speed = 1 + _field.Score / 1500.0;
 
             TickTimers();
             SpawnWaves();
@@ -138,6 +139,40 @@ namespace OOPGames
             {
                 Land();
             }
+        }
+
+        /// <summary>
+        /// A train roof can only be reached without a ramp by jumping with the
+        /// jump stick, or by flying with the jetpack. A normal jump is too low.
+        /// </summary>
+        private bool CanReachTrainRoof()
+        {
+            bool jumpingWithStick = _field.JumpTicks > 0
+                && _field.HasUpgrade(Gruppe2_SubwayUpgradeKind.JumpStick);
+            return jumpingWithStick || _field.JetpackTicks > 0;
+        }
+
+        /// <summary>
+        /// The front of a car reaches the runner: walk on (roof), fly over (jetpack),
+        /// land on the roof (jump stick) or crash.
+        /// </summary>
+        private void ReachCarFront(string crashMessage)
+        {
+            if (_field.Level == Gruppe2_SubwayLevel.TrainRoof || _field.JetpackTicks > 0)
+            {
+                return;
+            }
+
+            if (!CanReachTrainRoof())
+            {
+                HitOrEnd(true, crashMessage);
+                return;
+            }
+
+            _field.JumpTicks = 0;
+            _field.JumpDurationTicks = 0;
+            _field.Level = Gruppe2_SubwayLevel.TrainRoof;
+            SetMessage("Mit dem Huepfstab aufs Zugdach!");
         }
 
         private void Land()
@@ -353,10 +388,7 @@ namespace OOPGames
                 switch (obstacle.Kind)
                 {
                     case Gruppe2_SubwayObstacleKind.Train:
-                        if (!airborne && !onRoof)
-                        {
-                            HitOrEnd(true, "Zug! Weiche rechtzeitig aus oder springe ueber die Rampe aufs Dach.");
-                        }
+                        ReachCarFront("Zug! Weiche aus oder nimm die Rampe - aufspringen nur mit Huepfstab.");
                         break;
                     case Gruppe2_SubwayObstacleKind.CargoRamp:
                         // The runner walks up the ramp automatically; only a jetpack flies over it.
@@ -375,10 +407,7 @@ namespace OOPGames
                         }
                         break;
                     case Gruppe2_SubwayObstacleKind.CargoWagon:
-                        if (!airborne && !onRoof)
-                        {
-                            HitOrEnd(true, "Gueterwagen! Springe auf die Rampe und laufe ueber die Wagen.");
-                        }
+                        ReachCarFront("Gueterwagen! Nimm die Rampe - aufspringen nur mit Huepfstab.");
                         break;
                     case Gruppe2_SubwayObstacleKind.LargeBarrier:
                         if (!rolling && !onRoof)
@@ -427,7 +456,7 @@ namespace OOPGames
                 return;
             }
 
-            if (_field.Level == Gruppe2_SubwayLevel.Track
+            if (_field.Level != Gruppe2_SubwayLevel.TrainRoof && !CanReachTrainRoof()
                 && Gruppe2_SubwayTrainLayout.IsCarUnderRunner(_field.Obstacles, targetLane))
             {
                 HitOrEnd(false, "Seitlich gegen den Zug - der Bahnbaer kommt naeher!");

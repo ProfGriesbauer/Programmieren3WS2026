@@ -31,6 +31,58 @@ namespace OOPGames
             TestSingleTrainsWithoutRampAreSpawned();
             TestRampCanBeWalkedUpWithoutJumping();
             TestBarriersNeedJumpOrRoll();
+            TestTrainsWithoutRampNeedJumpStick();
+            TestSpeedKeepsRisingAboveFormerLimit();
+        }
+
+        private static void TestSpeedKeepsRisingAboveFormerLimit()
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            rules.ClearField();
+            field.Distance = 3000;
+            rules.TickGameCall();
+            double speedAt3000 = field.Speed;
+            field.Distance = 6000;
+            rules.TickGameCall();
+
+            AssertTrue(speedAt3000 > 2.1 && field.Speed > speedAt3000,
+                "the speed keeps rising continuously beyond 2.1");
+        }
+
+        private static void TestTrainsWithoutRampNeedJumpStick()
+        {
+            foreach (Gruppe2_SubwayObstacleKind car in new[]
+                { Gruppe2_SubwayObstacleKind.Train, Gruppe2_SubwayObstacleKind.CargoWagon })
+            {
+                AssertTrue(!JumpOntoCar(car, false),
+                    "a normal jump onto a " + car + " without ramp ends the run");
+                AssertTrue(JumpOntoCar(car, true),
+                    "with the jump stick the runner can jump onto a " + car + " without ramp");
+            }
+        }
+
+        /// <summary>Returns true if the runner reaches the roof of a lone car by jumping.</summary>
+        private static bool JumpOntoCar(Gruppe2_SubwayObstacleKind kind, bool withJumpStick)
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            rules.ClearField();
+            if (withJumpStick)
+            {
+                field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.JumpStick] = 200;
+            }
+
+            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, 1, 3));
+            rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
+            bool reachedRoof = false;
+            for (int tick = 0; tick < 30 && !field.GameOver; tick++)
+            {
+                rules.TickGameCall();
+                reachedRoof |= field.Level == Gruppe2_SubwayLevel.TrainRoof;
+            }
+
+            return reachedRoof && !field.GameOver;
         }
 
         private static void TestRampCanBeWalkedUpWithoutJumping()
@@ -404,9 +456,8 @@ namespace OOPGames
                 Gruppe2_SubwayPainter painter = new Gruppe2_SubwayPainter();
                 painter.PaintGameField(canvas, field);
 
-                AssertTrue(canvas.Background is SolidColorBrush
-                    && ((SolidColorBrush)canvas.Background).Color == Colors.LightSkyBlue,
-                    "the scene paints a sky background");
+                AssertTrue(canvas.Background is LinearGradientBrush,
+                    "the scene paints a sky gradient background");
 
                 Viewport3D viewport = canvas.Children.OfType<Viewport3D>().FirstOrDefault();
                 AssertTrue(viewport != null && viewport.Camera is PerspectiveCamera,
@@ -448,9 +499,11 @@ namespace OOPGames
 
                 string[] labels = canvas.Children.OfType<TextBlock>()
                     .Select(block => block.Text).ToArray();
-                AssertTrue(labels.Any(text => text.StartsWith("TEMPO  ", StringComparison.Ordinal))
-                    && labels.Any(text => text.StartsWith("SCORE  0", StringComparison.Ordinal))
-                    && labels.Any(text => text.Contains("M\u00dcNZEN  0", StringComparison.Ordinal)),
+                // HUD design: label above value, coins next to a coin icon.
+                AssertTrue(labels.Contains("TEMPO")
+                    && (labels.Contains("x1.0") || labels.Contains("x1,0"))
+                    && labels.Contains("PUNKTE")
+                    && labels.Count(text => text == "0") >= 2,
                     "the HUD displays speed, score, and coins");
                 AssertTrue(labels.Any(text => text.Contains("A/D Spur wechseln", StringComparison.Ordinal))
                     && labels.Any(text => text == "TRAIN RUN"),

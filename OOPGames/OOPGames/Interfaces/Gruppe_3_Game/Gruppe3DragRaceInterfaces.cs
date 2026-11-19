@@ -15,6 +15,12 @@ namespace OOPGames
         bool CarSelectionComplete { get; }
         string SelectionFeedbackText { get; }
         DateTime SelectionFeedbackUntil { get; }
+        double PlayerOneSpeed { get; }
+        double PlayerTwoSpeed { get; }
+        int PlayerOneGear { get; }
+        int PlayerTwoGear { get; }
+        double PlayerOneRpm { get; }
+        double PlayerTwoRpm { get; }
     }
 
     public interface IGruppe3DragRaceMove : IPlayMove

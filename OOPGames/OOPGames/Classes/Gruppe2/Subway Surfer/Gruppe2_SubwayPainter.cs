@@ -12,7 +12,8 @@ namespace OOPGames
 {
     public sealed class Gruppe2_SubwayPainter : IPaintGame2
     {
-        private static readonly Brush SkyBrush = Brush(Colors.LightSkyBlue);
+        private static readonly Brush SkyBrush = CreateSkyBrush();
+        private static readonly Model3DGroup SceneLights = Gruppe2_SubwaySceneLighting.CreateLights();
         private static readonly Brush TrackBrush = Brush(Color.FromRgb(77, 74, 69));
         private static readonly Brush RailBrush = Brush(Color.FromRgb(203, 210, 216));
         private static readonly Brush PinkBrush = Brush(Color.FromRgb(231, 49, 135));
@@ -47,6 +48,9 @@ namespace OOPGames
         private static readonly Model3DGroup SignalModel = CreateSignalModel();
         private const double CityModelScale = 0.72;
         private const double CityRepeatDistance = 42;
+        // Extra distance (model units) between the houses and the outer tracks,
+        // so the houses never cut into the track bed and sleepers.
+        private const double CityTrackClearance = 1.6;
         private const double TrackHorizonRatio = 0.40;
         private const double TrackBottomRatio = 0.94;
         private const double ObjectTrackDepthRatio = 0.82;
@@ -56,7 +60,8 @@ namespace OOPGames
         private const double GuardChaseZ = 2.5;
         private const double GuardIntroEndZ = CameraWorldZ + 0.25;
         private const double WorldUnitsPerDistance = 0.1;
-        private const double CarWorldWidth = 1.84;
+        // Narrower than the lane spacing (1.55), so cars in neighbouring lanes never touch.
+        private const double CarWorldWidth = 1.34;
         private const double CarRoofHeight = 2.42;
         // Runner and guard are drawn smaller and slimmer so they do not hide the track.
         private const double RunnerHeightScale = 0.68;
@@ -67,13 +72,37 @@ namespace OOPGames
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
             canvas.Focusable = true;
-            Draw(canvas, currentField);
+            Draw(canvas, currentField, RunnerLaneX(currentField));
             Keyboard.Focus(canvas);
         }
 
         public void TickPaintGameField(Canvas canvas, IGameField currentField)
         {
-            Draw(canvas, currentField);
+            Draw(canvas, currentField, RunnerLaneX(currentField));
+        }
+
+        /// <summary>
+        /// X position of the runner's lane. The camera stands right behind it,
+        /// so it changes lanes together with the runner, who is always seen from behind.
+        /// </summary>
+        private static double RunnerLaneX(IGameField currentField)
+        {
+            IGruppe2_SubwayField field = currentField as IGruppe2_SubwayField;
+            return field == null ? 0 : LaneWorldX(field.Lane);
+        }
+
+        private static Brush CreateSkyBrush()
+        {
+            LinearGradientBrush sky = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(0, 1)
+            };
+            sky.GradientStops.Add(new GradientStop(Color.FromRgb(62, 128, 201), 0));
+            sky.GradientStops.Add(new GradientStop(Color.FromRgb(150, 198, 236), 0.35));
+            sky.GradientStops.Add(new GradientStop(Color.FromRgb(226, 236, 240), 0.5));
+            sky.Freeze();
+            return sky;
         }
 
         private static Brush Brush(Color color)
@@ -83,7 +112,7 @@ namespace OOPGames
             return brush;
         }
 
-        private static void Draw(Canvas canvas, IGameField currentField)
+        private static void Draw(Canvas canvas, IGameField currentField, double runnerX)
         {
             IGruppe2_SubwayField field = currentField as IGruppe2_SubwayField;
             canvas.Children.Clear();
@@ -96,7 +125,7 @@ namespace OOPGames
             double height = Math.Max(260, canvas.ActualHeight);
             canvas.Background = SkyBrush;
 
-            DrawThreeDimensionalScene(canvas, width, height, field);
+            DrawThreeDimensionalScene(canvas, width, height, field, runnerX);
             DrawHud(canvas, width, height, field);
             if (field.GameOver)
             {
@@ -105,7 +134,7 @@ namespace OOPGames
         }
 
         private static void DrawThreeDimensionalScene(
-            Canvas canvas, double width, double height, IGruppe2_SubwayField field)
+            Canvas canvas, double width, double height, IGruppe2_SubwayField field, double runnerX)
         {
             Viewport3D viewport = new Viewport3D
             {
@@ -114,17 +143,16 @@ namespace OOPGames
                 ClipToBounds = true,
                 IsHitTestVisible = false,
                 Camera = new PerspectiveCamera(
-                    new Point3D(0, 2.2 + RunnerGroundHeight(field), CameraWorldZ),
+                    new Point3D(runnerX, 2.2 + RunnerGroundHeight(field), CameraWorldZ),
                     new Vector3D(0, -0.10, -1),
                     new Vector3D(0, 1, 0),
                     55)
             };
 
             Model3DGroup scene = new Model3DGroup();
-            scene.Children.Add(new AmbientLight(Color.FromRgb(145, 145, 145)));
-            scene.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
+            scene.Children.Add(SceneLights);
             AddBox(scene, -18, -0.45, -70, 18, -0.08, 12,
-                Material(Color.FromRgb(148, 112, 78)));
+                Material(Color.FromRgb(140, 112, 84)));
             viewport.Children.Add(new ModelVisual3D { Content = scene });
             AddThreeDimensionalTrack(viewport, field.Distance);
 
@@ -133,6 +161,8 @@ namespace OOPGames
             viewport.Children.Add(CreateCityVisual(cityScroll - CityRepeatDistance * CityModelScale));
             viewport.Children.Add(CreateCityVisual(cityScroll + CityRepeatDistance * CityModelScale));
 
+            // Everything added from here on casts a shadow.
+            int firstShadowCaster = viewport.Children.Count;
             foreach (Gruppe2_SubwayObstacle obstacle in field.Obstacles)
             {
                 AddThreeDimensionalObstacle(viewport, obstacle);
@@ -150,14 +180,23 @@ namespace OOPGames
                 }
             }
 
-            AddThreeDimensionalRunner(viewport, field, false, 0);
+            ModelVisual3D runner = AddThreeDimensionalRunner(viewport, field, runnerX, false, 0);
             if (field.GuardVisible)
             {
                 Gruppe2_SubwayField subwayField = field as Gruppe2_SubwayField;
                 int guardIntroTicks = subwayField == null ? 0 : subwayField.GuardIntroTicks;
-                AddThreeDimensionalRunner(viewport, field, true, guardIntroTicks);
+                AddThreeDimensionalRunner(viewport, field, runnerX, true, guardIntroTicks);
             }
 
+            // The runner's shadow falls onto the ramp or roof she stands on; all others onto the track.
+            // Shadows are inserted after all world objects but before the runner (and guard):
+            // they stand on top of the shadows, never behind them, so transparency stays correct
+            // and the runner remains the last visual of the scene.
+            double runnerGround = RunnerGroundHeight(field);
+            ModelVisual3D shadows = Gruppe2_SubwaySceneLighting.CreateShadows(
+                viewport.Children.Skip(firstShadowCaster).OfType<ModelVisual3D>().ToList(),
+                caster => caster == runner ? runnerGround : 0);
+            viewport.Children.Insert(viewport.Children.IndexOf(runner), shadows);
             canvas.Children.Add(viewport);
         }
 
@@ -324,10 +363,14 @@ namespace OOPGames
             });
         }
 
-        private static void AddThreeDimensionalRunner(
-            Viewport3D viewport, IGruppe2_SubwayField field, bool guard, int guardIntroTicks)
+        private static ModelVisual3D AddThreeDimensionalRunner(
+            Viewport3D viewport,
+            IGruppe2_SubwayField field,
+            double runnerX,
+            bool guard,
+            int guardIntroTicks)
         {
-            double x = LaneWorldX(field.Lane) - (guard ? 0.35 : 0);
+            double x = runnerX - (guard ? 0.35 : 0);
             bool guardIntro = guard && guardIntroTicks > 0;
             double introElapsedTicks = guardIntro
                 ? Gruppe2_SubwayField.GuardIntroDurationTicks - guardIntroTicks
@@ -335,12 +378,15 @@ namespace OOPGames
             double introProgress = introElapsedTicks / Gruppe2_SubwayField.GuardIntroDurationTicks;
             double introRemaining = 1 - introProgress;
             double retreatProgress = 1 - introRemaining * introRemaining;
-            double z = guard
-                ? guardIntro ? GuardChaseZ + (GuardIntroEndZ - GuardChaseZ) * retreatProgress : GuardChaseZ
-                : RunnerWorldZ;
+            double z = guardIntro
+                ? GuardChaseZ + (GuardIntroEndZ - GuardChaseZ) * retreatProgress
+                : guard ? GuardChaseZ : RunnerWorldZ;
+            double jumpPeak = field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.JumpStick)
+                ? CarRoofHeight * 1.25
+                : 1.15;
             double jump = guard ? 0
                 : RunnerGroundHeight(field)
-                    + (field.Level == Gruppe2_SubwayLevel.Air ? 1.15 * field.JumpHeight : 0);
+                    + (field.Level == Gruppe2_SubwayLevel.Air ? jumpPeak * field.JumpHeight : 0);
             bool hasSkateboard = !guard
                 && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Surfboard);
             bool skating = hasSkateboard && field.Level != Gruppe2_SubwayLevel.Air;
@@ -353,7 +399,7 @@ namespace OOPGames
                 : run;
             double sideToSide = skating ? movement * 0.08 : 0;
             double animation = guard || !hasSkateboard ? run : skating ? movement : 0;
-            Model3DGroup runner = CreateRunnerModel(guard, animation, hasSkateboard);
+            Model3DGroup runnerModel = CreateRunnerModel(guard, animation, hasSkateboard);
             double heightScale = RunnerHeightScale * (!guard && field.RollTicks > 0 ? 0.55 : 1);
             double footOffset = !guard && !hasSkateboard ? -0.17 * heightScale : 0;
             Transform3DGroup transform = new Transform3DGroup();
@@ -361,7 +407,9 @@ namespace OOPGames
             transform.Children.Add(new RotateTransform3D(
                 new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180)));
             transform.Children.Add(new TranslateTransform3D(x + sideToSide, jump + footOffset, z));
-            viewport.Children.Add(new ModelVisual3D { Content = runner, Transform = transform });
+            ModelVisual3D visual = new ModelVisual3D { Content = runnerModel, Transform = transform };
+            viewport.Children.Add(visual);
+            return visual;
         }
 
         private static double LaneWorldX(int lane)
@@ -810,7 +858,7 @@ namespace OOPGames
                 for (int index = 0; index < buildings.GetLength(0); index++)
                 {
                     AddCityBuilding(city,
-                        side * buildings[index, 0],
+                        side * (buildings[index, 0] + CityTrackClearance),
                         buildings[index, 1],
                         buildings[index, 2],
                         buildings[index, 3],
@@ -820,8 +868,6 @@ namespace OOPGames
                 }
             }
 
-            city.Children.Add(new AmbientLight(Color.FromRgb(122, 122, 122)));
-            city.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
             city.Freeze();
             return city;
         }
@@ -1431,8 +1477,6 @@ namespace OOPGames
             AddWheel(model, -0.80, -0.68, -1.0);
             AddWheel(model, -0.80, -0.68, 1.0);
 
-            model.Children.Add(new AmbientLight(Color.FromRgb(105, 105, 105)));
-            model.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
             model.Freeze();
             return model;
         }
@@ -1452,8 +1496,6 @@ namespace OOPGames
                 Color.FromRgb(73, 164, 67));
             AddBushCluster(bush, 0.24, 0.13, 0.10, 0.34, 0.36, 0.34,
                 Color.FromRgb(61, 151, 59));
-            bush.Children.Add(new AmbientLight(Color.FromRgb(135, 135, 135)));
-            bush.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
             bush.Freeze();
             return bush;
         }
@@ -1476,8 +1518,6 @@ namespace OOPGames
             AddSignalLens(signal, 2.10, Color.FromRgb(255, 190, 28));
             AddSignalLens(signal, 1.69, Color.FromRgb(55, 222, 75));
 
-            signal.Children.Add(new AmbientLight(Color.FromRgb(110, 110, 110)));
-            signal.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
             signal.Freeze();
             return signal;
         }
@@ -2103,43 +2143,82 @@ namespace OOPGames
 
         private static void DrawHud(Canvas canvas, double width, double height, IGruppe2_SubwayField field)
         {
-            AddRectangle(canvas, 10, 10, Math.Min(width * 0.48, 190), 78,
-                new SolidColorBrush(Color.FromArgb(210, 20, 27, 38)));
-            AddText(canvas, "TEMPO  x" + field.Speed.ToString("0.0"), 20, 16, 15,
-                Brushes.Gold, FontWeights.Bold);
+            // Left: speed and active upgrades.
+            AddPanel(canvas, 12, 12, 188, 58);
+            AddText(canvas, "TEMPO", 24, 18, 10, HudLabelBrush, FontWeights.SemiBold);
+            AddText(canvas, "x" + field.Speed.ToString("0.0"), 24, 30, 20, Brushes.White, FontWeights.Bold);
             string upgrades = field.ActiveUpgrades.Count == 0
-                ? "Upgrades: keine"
-                : "Upgrades: " + string.Join(", ", field.ActiveUpgrades.Keys.Select(UpgradeLabel));
-            AddText(canvas, upgrades, 20, 40, 11, Brushes.White, FontWeights.Normal);
+                ? "keine Upgrades"
+                : string.Join(" · ", field.ActiveUpgrades.Keys.Select(UpgradeLabel));
+            AddText(canvas, upgrades, 92, 35, 11, HudLabelBrush, FontWeights.Normal);
 
-            if (field.MessageTicks > 0 || field.GameOver)
-            {
-                AddText(canvas, field.Message, width * 0.2, height - 61, 13,
-                    field.GameOver ? Brushes.OrangeRed : Brushes.White, FontWeights.Bold);
-            }
+            // Right: score and coins.
+            AddPanel(canvas, width - 172, 12, 160, 58);
+            AddText(canvas, "PUNKTE", width - 160, 18, 10, HudLabelBrush, FontWeights.SemiBold);
+            AddText(canvas, field.Score.ToString(), width - 160, 30, 20, Brushes.White, FontWeights.Bold);
+            AddEllipse(canvas, width - 78, 37, 14, 14, HudGoldBrush, Brush(Color.FromRgb(176, 128, 20)), 1.5);
+            AddText(canvas, field.Coins.ToString(), width - 58, 33, 15, HudGoldBrush, FontWeights.Bold);
+
+            // Centre: title.
+            AddText(canvas, "TRAIN RUN", width / 2 - 56, 16, 20, Brushes.White, FontWeights.Black);
 
             if (field.GuardVisible)
             {
-                AddText(canvas, "Bahnwaerter  " + field.GuardGap.ToString("0") + " m",
-                    14, height - 58, 12, Brushes.White, FontWeights.Bold);
+                AddPanel(canvas, 12, 78, 188, 26);
+                AddEllipse(canvas, 22, 87, 9, 9, Brush(Color.FromRgb(226, 68, 58)), null, 0);
+                AddText(canvas, "Bahnwärter " + field.GuardGap.ToString("0") + " m", 38, 82, 12,
+                    Brushes.White, FontWeights.SemiBold);
             }
 
-            AddRectangle(canvas, width - 142, 12, 132, 58,
-                new SolidColorBrush(Color.FromArgb(220, 22, 30, 39)));
-            AddText(canvas, "SCORE  " + field.Score, width - 132, 16, 16,
-                Brushes.White, FontWeights.Bold);
-            AddText(canvas, "MÜNZEN  " + field.Coins, width - 132, 41, 13,
-                Brushes.Gold, FontWeights.SemiBold);
+            if (field.MessageTicks > 0 || field.GameOver)
+            {
+                double messageWidth = Math.Min(width - 40, 420);
+                AddPanel(canvas, (width - messageWidth) / 2, height - 82, messageWidth, 30);
+                AddCenteredText(canvas, field.Message, (width - messageWidth) / 2, height - 76, messageWidth, 13,
+                    field.GameOver ? Brush(Color.FromRgb(255, 120, 96)) : Brushes.White, FontWeights.SemiBold);
+            }
 
-            AddRectangle(canvas, 0, height - 37, width, 37,
-                new SolidColorBrush(Color.FromArgb(195, 26, 34, 41)));
-            AddText(canvas, "A/D Spur wechseln     W Springen     S Rollen",
-                14, height - 31, 13, Brushes.White, FontWeights.SemiBold);
+            double controlsWidth = Math.Min(width - 40, 380);
+            AddPanel(canvas, (width - controlsWidth) / 2, height - 42, controlsWidth, 28);
+            AddCenteredText(canvas, "A/D Spur wechseln     W Springen     S Rollen",
+                (width - controlsWidth) / 2, height - 37, controlsWidth, 12, HudLabelBrush, FontWeights.SemiBold);
+        }
 
-            AddRectangle(canvas, width / 2 - 62, 10, 124, 30,
-                Brush(Color.FromRgb(25, 82, 105)), Brushes.White, 1);
-            AddText(canvas, "TRAIN RUN", width / 2 - 53, 14, 17,
-                Brushes.Gold, FontWeights.Black);
+        private static readonly Brush HudPanelBrush = Brush(Color.FromArgb(150, 14, 20, 32));
+        private static readonly Brush HudLabelBrush = Brush(Color.FromRgb(196, 206, 220));
+        private static readonly Brush HudGoldBrush = Brush(Color.FromRgb(250, 196, 46));
+
+        private static void AddPanel(Canvas canvas, double x, double y, double width, double height)
+        {
+            Rectangle panel = new Rectangle
+            {
+                Width = width,
+                Height = height,
+                RadiusX = 10,
+                RadiusY = 10,
+                Fill = HudPanelBrush
+            };
+            Canvas.SetLeft(panel, x);
+            Canvas.SetTop(panel, y);
+            canvas.Children.Add(panel);
+        }
+
+        private static void AddCenteredText(Canvas canvas, string text, double x, double y, double width,
+            double size, Brush brush, FontWeight weight)
+        {
+            TextBlock block = new TextBlock
+            {
+                Text = text,
+                Width = width,
+                TextAlignment = TextAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                FontSize = size,
+                Foreground = brush,
+                FontWeight = weight
+            };
+            Canvas.SetLeft(block, x);
+            Canvas.SetTop(block, y);
+            canvas.Children.Add(block);
         }
 
         private static string UpgradeLabel(Gruppe2_SubwayUpgradeKind upgrade)
@@ -2157,12 +2236,14 @@ namespace OOPGames
 
         private static void DrawGameOver(Canvas canvas, double width, double height)
         {
-            AddRectangle(canvas, width * 0.18, height * 0.36, width * 0.64, height * 0.24,
-                new SolidColorBrush(Color.FromArgb(225, 15, 18, 24)));
-            AddText(canvas, "SPIEL VORBEI", width * 0.29, height * 0.39, 30,
-                Brushes.OrangeRed, FontWeights.Bold);
-            AddText(canvas, "Starte ein neues Spiel fuer eine weitere Runde.", width * 0.23,
-                height * 0.49, 15, Brushes.White, FontWeights.SemiBold);
+            double panelWidth = Math.Min(width - 40, 420);
+            double left = (width - panelWidth) / 2;
+            AddRectangle(canvas, 0, 0, width, height, Brush(Color.FromArgb(90, 0, 0, 0)));
+            AddPanel(canvas, left, height * 0.36, panelWidth, 110);
+            AddCenteredText(canvas, "SPIEL VORBEI", left, height * 0.36 + 18, panelWidth, 30,
+                Brush(Color.FromRgb(255, 120, 96)), FontWeights.Black);
+            AddCenteredText(canvas, "Starte ein neues Spiel für eine weitere Runde.", left,
+                height * 0.36 + 66, panelWidth, 14, HudLabelBrush, FontWeights.SemiBold);
         }
 
         private static void AddRectangle(Canvas canvas, double x, double y, double width, double height,
