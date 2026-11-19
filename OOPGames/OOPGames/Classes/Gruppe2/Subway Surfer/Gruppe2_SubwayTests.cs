@@ -4,6 +4,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace OOPGames
 {
@@ -14,8 +16,11 @@ namespace OOPGames
             TestInitialState();
             TestMovementAndLaneBounds();
             TestJumpAndRollTransitions();
+            TestProgressionAndReset();
+            TestJumpArc();
             TestHumanPlayerInput();
             TestPainterFocusesGameCanvas();
+            TestThreeDimensionalSceneAndHud();
             TestFatalAndNonFatalObstacles();
             TestRewardCollectionAndUpgrades();
             TestWaveSpawningKeepsOneSafeLane();
@@ -74,6 +79,47 @@ namespace OOPGames
                 "down key returns the runner to the track");
         }
 
+        private static void TestProgressionAndReset()
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            rules.ClearField();
+            IGruppe2_SubwayField field = (IGruppe2_SubwayField)rules.CurrentField;
+
+            for (int tick = 0; tick < 24; tick++)
+            {
+                rules.TickGameCall();
+            }
+
+            AssertTrue(field.Distance > 0 && field.Score > 0,
+                "distance and score advance while running");
+            AssertTrue(field.Speed > 1,
+                "speed increases as the score grows");
+
+            rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
+            rules.ClearField();
+
+            AssertTrue(field.Lane == 1 && field.Level == Gruppe2_SubwayLevel.Track,
+                "starting a new run resets the runner position");
+            AssertTrue(field.Distance == 0 && field.Score == 0 && field.Coins == 0 && field.Speed == 1,
+                "starting a new run resets progression");
+            AssertTrue(field.GuardGap == 100 && !field.GameOver
+                && field.Obstacles.Count == 0 && field.Rewards.Count == 0
+                && field.ActiveUpgrades.Count == 0,
+                "starting a new run clears hazards, rewards, upgrades, and guard state");
+        }
+
+        private static void TestJumpArc()
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            rules.ClearField();
+            IGruppe2_SubwayField field = (IGruppe2_SubwayField)rules.CurrentField;
+            rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
+            rules.TickGameCall();
+
+            AssertTrue(field.Level == Gruppe2_SubwayLevel.Air && field.JumpHeight > 0,
+                "jumping moves the runner through a visible air arc");
+        }
+
         private static void TestHumanPlayerInput()
         {
             Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
@@ -117,6 +163,58 @@ namespace OOPGames
                     "game canvas accepts keyboard focus");
                 AssertTrue(Keyboard.FocusedElement == canvas,
                     "painting a new game focuses the canvas instead of the start button");
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        private static void TestThreeDimensionalSceneAndHud()
+        {
+            Window window = new Window
+            {
+                Width = 640,
+                Height = 480,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.ToolWindow
+            };
+            Canvas canvas = new Canvas();
+            window.Content = canvas;
+
+            try
+            {
+                window.Show();
+                Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+                rules.ClearField();
+                Gruppe2_SubwayPainter painter = new Gruppe2_SubwayPainter();
+                painter.PaintGameField(canvas, rules.CurrentField);
+
+                AssertTrue(canvas.Background is SolidColorBrush
+                    && ((SolidColorBrush)canvas.Background).Color == Colors.LightSkyBlue,
+                    "the scene paints a sky background");
+
+                Viewport3D viewport = canvas.Children.OfType<Viewport3D>().FirstOrDefault();
+                AssertTrue(viewport != null && viewport.Camera is PerspectiveCamera,
+                    "the scene uses a perspective 3D camera");
+                AssertTrue(viewport.Children.OfType<ModelVisual3D>()
+                    .Any(visual => visual.Content is Model3DGroup),
+                    "the 3D scene contains rendered world models");
+
+                string[] labels = canvas.Children.OfType<TextBlock>()
+                    .Select(block => block.Text).ToArray();
+                AssertTrue(labels.Any(text => text.StartsWith("TEMPO  ", StringComparison.Ordinal))
+                    && labels.Any(text => text.StartsWith("SCORE  0", StringComparison.Ordinal))
+                    && labels.Any(text => text.Contains("M\u00dcNZEN  0", StringComparison.Ordinal)),
+                    "the HUD displays speed, score, and coins");
+                AssertTrue(labels.Any(text => text.Contains("A/D Spur wechseln", StringComparison.Ordinal))
+                    && labels.Any(text => text == "TRAIN RUN"),
+                    "the HUD displays controls and the game title");
+
+                int paintedChildCount = canvas.Children.Count;
+                painter.TickPaintGameField(canvas, rules.CurrentField);
+                AssertTrue(canvas.Children.Count == paintedChildCount,
+                    "redrawing the scene does not accumulate canvas elements");
             }
             finally
             {
@@ -190,7 +288,9 @@ namespace OOPGames
 
             AssertTrue(field.MutableObstacles.Count > 0,
                 "waves spawn after the configured distance threshold");
-            AssertTrue(field.MutableObstacles.Select(item => item.Lane).Distinct().Count() < 3,
+            AssertTrue(field.MutableObstacles
+                .Where(item => item.Kind != Gruppe2_SubwayObstacleKind.Signal)
+                .Select(item => item.Lane).Distinct().Count() < 3,
                 "spawn logic always leaves at least one lane open");
         }
 

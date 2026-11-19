@@ -52,7 +52,8 @@ internal static class Program
         -Value $runnerSource -Encoding UTF8
 
     Get-Command dotnet -ErrorAction Stop | Out-Null
-    & dotnet run --project (Join-Path $runnerDirectory 'SubwayTestsRunner.csproj')
+    & dotnet run --project (Join-Path $runnerDirectory 'SubwayTestsRunner.csproj') `
+        -p:UseAppHost=false
     if ($LASTEXITCODE -ne 0) {
         $runnerExitCode = $LASTEXITCODE
     }
