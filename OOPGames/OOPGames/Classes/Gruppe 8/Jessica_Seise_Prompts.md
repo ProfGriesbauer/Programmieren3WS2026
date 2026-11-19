@@ -180,3 +180,19 @@ pushe den aktuellen stand
 ```
 
 Ergebnis: Der aktuelle Stand mit dem Hay-Day-Testplan und diesem Prompt-Protokoll wurde für den Push vorbereitet.
+
+### Prompt 23
+
+```text
+pull den aktuellen stand
+```
+
+Ergebnis: `master` wurde per Fast-Forward von `cff2fd0` auf `a2ab5a5` aktualisiert. Der lokale, nicht versionierte Ordner `HouseExample/JessicaSeise_HouseExample` blieb unberührt.
+
+### Prompt 24
+
+```text
+pushe und pulle den aktuellen stand
+```
+
+Ergebnis: `master` wurde zuerst per Fast-Forward auf den aktuellen Remote-Stand `8f6b6e6` aktualisiert. Anschließend wurde dieses Prompt-Protokoll für den Push vorgemerkt.

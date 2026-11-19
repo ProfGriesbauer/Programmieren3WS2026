@@ -5,6 +5,7 @@ namespace OOPGames
 {
     public sealed class Gruppe2_SubwayField : IGruppe2_SubwayField
     {
+        internal const int GuardIntroDurationTicks = 50;
         private readonly List<Gruppe2_SubwayObstacle> _obstacles = new List<Gruppe2_SubwayObstacle>();
         private readonly List<Gruppe2_SubwayReward> _rewards = new List<Gruppe2_SubwayReward>();
         private readonly Dictionary<Gruppe2_SubwayUpgradeKind, int> _activeUpgrades =
@@ -25,11 +26,42 @@ namespace OOPGames
                 return Math.Sin(Math.PI * progress);
             }
         }
+        public double DropHeight
+        {
+            get
+            {
+                if (DropTicks <= 0 || DropDurationTicks <= 0)
+                {
+                    return 0;
+                }
+
+                // Parabola like a real fall: a small hop forward, then down onto the track.
+                const double Hop = 0.6;
+                double progress = 1 - DropTicks / (double)DropDurationTicks;
+                return 1 + Hop * progress - (1 + Hop) * progress * progress;
+            }
+        }
+        public double JetpackHeight
+        {
+            get
+            {
+                if (JetpackTicks <= 0 || JetpackDurationTicks <= 0)
+                {
+                    return 0;
+                }
+
+                // Climb at the start, sink at the end - both with the same smooth arc.
+                int climb = Gruppe2_SubwayTrainLayout.JetpackClimbTicks;
+                int elapsed = JetpackDurationTicks - JetpackTicks;
+                double progress = Math.Min(1.0, Math.Min(elapsed, JetpackTicks) / (double)climb);
+                return progress * progress * (3 - 2 * progress);
+            }
+        }
         public int Score { get; internal set; }
         public int Coins { get; internal set; }
         public double Speed { get; internal set; }
         public double GuardGap { get; internal set; }
-        public bool GuardVisible { get { return GuardGap < 92; } }
+        public bool GuardVisible { get { return GuardIntroTicks > 0 || GuardGap < 92; } }
         public bool GameOver { get; internal set; }
         public string Message { get; internal set; }
         public IReadOnlyList<Gruppe2_SubwayObstacle> Obstacles { get { return _obstacles; } }
@@ -41,9 +73,12 @@ namespace OOPGames
         public double Distance { get; internal set; }
         internal int JumpTicks { get; set; }
         internal int JumpDurationTicks { get; set; }
+        internal int DropTicks { get; set; }
+        internal int DropDurationTicks { get; set; }
         public int RollTicks { get; internal set; }
-        internal int RoofTicks { get; set; }
         internal int JetpackTicks { get; set; }
+        internal int JetpackDurationTicks { get; set; }
+        internal int GuardIntroTicks { get; set; }
         public int MessageTicks { get; internal set; }
 
         public bool CanBePaintedBy(IPaintGame painter)
@@ -72,9 +107,12 @@ namespace OOPGames
             Distance = 0;
             JumpTicks = 0;
             JumpDurationTicks = 0;
+            DropTicks = 0;
+            DropDurationTicks = 0;
             RollTicks = 0;
-            RoofTicks = 0;
             JetpackTicks = 0;
+            JetpackDurationTicks = 0;
+            GuardIntroTicks = GuardIntroDurationTicks;
             MessageTicks = 100;
         }
     }

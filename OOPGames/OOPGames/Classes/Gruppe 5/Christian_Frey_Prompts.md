@@ -48,3 +48,90 @@
 > änder nichts auserhalb der gruppe 5. Wenn du noch Vorgaben brauchst, erstelle einen Abschnitt in der Gebaude datei in Plans, was du brauchst. viele sachen werden noch ergänzt durch die anderen Entwickler welche parallel beispielsweise die Spielumgebung und die Bedienung entwickeln
 
 - **Ergebnisvermerk:** Der Gebaeude-Plan wurde um die fuer die spaetere Integration benoetigten Absprachen mit Spielumgebung und Bedienung erweitert. Die laufende Umsetzung ist auf Gruppe 5 begrenzt; der temporäre Testordner ausserhalb von Gruppe 5 wurde wieder entfernt.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Kannst du mir eine Datei erstellen mit der ich mir das Design der Gebäude anschauen kann
+
+- **Ergebnisvermerk:** Eine eigenständige HTML-Vorschau mit stilisierten Vogelperspektiven für Miner, Schmelze, Konstruktor, Assembler, Lager, Verbrennungsgenerator, Strommast und Laufband wurde unter `Plans/Gebaeude_Designvorschau.html` erstellt. Die MK1-/MK2-/MK3-Ansicht lässt sich im Browser umschalten.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Das sieht momentan mehr nach Symbolen oder Wappen aus. Gestalte das ganze deutlich realistischer. Orientier dich dazu stark an den Bauwerken von Factorio wie hier im Bild oder auf der Webseite unter folgendem Link zu finden.
+> https://wiki.factorio.com/
+> Füge außerdem zur Kategorie der des Laufbands noch Splitter und Merger hinzu, durch diese kann der Gutfluss eines Laufbands auf zwei aufgeteilt (z.B. für zwei Smelter für mehr Durchsatz) und anschließend wieder durch den Merger auf eines zusammengeführt werden.
+> Erstell die Modelle in dem Stil, aber performanceorientiert
+
+- **Ergebnisvermerk:** Die Vorschau wurde mit eigenständigen, detaillierteren Industrie-Vektormodellen überarbeitet. Hinzu kamen Splitter und Merger sowie ein Ablaufbeispiel mit zwei Schmelzen. Der Gebäudeplan hält die Verteilungs-/Zusammenführungsregeln und das verlustfreie Verhalten bei blockierten Bändern fest. Die Modelle verwenden lokale SVGs ohne externe Assets; nur die Beispiel-Fördergüter werden animiert.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Bau den miner mal optisch nach diesem vorbild und vergleiche ihn anshcließend mit dem original. wenn dieser dem original witestgehend entspricht erstell auch die modelle der anderen gebäude nach dem vorbild der Webseite und der Bilder. Wenn du diese nicht gut genug erkennst oder weitere Infos brauchst sag Bescheid, dann helf ich nach
+> Ich meine natürlich nur die Form und Farbgebung des Bilds in einer eigenen Interpretation möglichst genau nachbauen
+> führ es mal aus, dann schau ich es mir in der designvoschau an. Die Farbgebung zur Darstellung der Level finde ich gut, kann fast noch minimal auffälliger sein. aber erstell erstmal die neuen Modelle, danach kannst du nochmal die Levelunterscheidung angehen
+
+- **Ergebnisvermerk:** Der Miner und alle übrigen Gebäudemodelle wurden als eigenständige SVG-Industrieillustrationen mit abgeschrägten Gehäusen, sichtbarer Mechanik und Materialdetails neu gestaltet. Splitter und Merger bleiben enthalten. Die vorhandene MK-Farbunterscheidung wurde in diesem Schritt nicht angepasst.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> probier das ganzenochmal. lass dir ruhig zeit und gleich das ganze lieber mehrmals ab. der miner bspw. ist durch die vielen blöcke die random platztiert sind nicht erkennbar. mach ihn simpel und gut erkennbar durch die Füße den Bohrer (mit Bohrprofil)
+
+- **Ergebnisvermerk:** Der Miner wurde vereinfacht und seine Silhouette neu aufgebaut: zwei Standfüße tragen den Motorrahmen; der große mittige Bohrer hat eine kontrastreiche spiralförmige Schnecke und eine sichtbare Spitze. Andere Gebäude und Level-Farbgebung blieben unverändert.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> mach nur zwei der standfüé, kontrollier außerdem dass die designelemente alle sauber platziert sind. für diese art des design dann auch für die aneren gebäude aus und überprüfe diese. Überleg dir außerdem wie man das ganze gut in die 2D Welt unseres Spiels aus der Vogelperspektive integrieren kann. Berücksichtige auch benötigte AUs- sowie Eingänge.
+
+- **Ergebnisvermerk:** Der Miner hat nun genau zwei Standfüße. Alle Gebäude der Vorschau zeigen funktional getrennte Gegenstands- und Stromanschlüsse; die Gebäudekarten listen Ein- und Ausgänge auf. Eine schematische Rasteransicht zeigt beispielhafte Footprints, 1x1-Bänder und ein separates Stromnetz. Footprint- und Rastermaße sind ausdrücklich vorläufig, bis sie mit der Spielumgebung abgestimmt sind. Die Gebäudeplanung wurde um dieselben Anschlussregeln ergänzt.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> geh auch bei den anderen designs von den strikten Blöcken als designgrundlage weg und überarbeite diese nochmal nach den grundlagen die ich dir für den Miner gegeben habe
+
+- **Ergebnisvermerk:** Schmelze, Konstruktor, Assembler, Lager und Verbrennungsgenerator wurden mit runden Kesseln, geöffneten Drehtischen, mehreren Fertigungsstationen und zylindrischen Silos neu gezeichnet. Strommast, Laufband, Splitter und Merger wurden ebenfalls von blockigen Sockeln bzw. Gehäusen auf rundere, funktionsbetonte Formen umgestellt. Die Anschlusssymbole und Levelumschaltung blieben erhalten.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Teile die von mir erstellte Klasse FabrikGebaede sinnvoll in verschiedene Klassen auf um den Überblick zu behalten (z.B. Gebäudefunktionen, Design, Interaktion, etc.)
+
+- **Ergebnisvermerk:** Die bisherige große Gebäudedatei wurde nach Verantwortlichkeiten aufgeteilt: Datenmodelle, Schnittstellen, Gebäude und Produktion, Transport und Energie sowie Fabriksimulation und Starterrezepte. Namespace, Typnamen und öffentliche Schnittstellen blieben unverändert. Zeichen-/Designlogik liegt weiterhin in der separaten Designvorschau; Spielfeldinteraktion verbleibt in den bereits vorhandenen Gruppe-5-Spielklassen.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Jetzt nochmal zum Design. Eingang Ausgang und die Stromanschlüsse sollen nicht direkt sichtbar sein. Diese müssen nur für die Verbindung im Spiel als Anschlüsse vorbereitet sein. Mach außerdem die Designs noch deutlicher. Mach den Assembler zu einem Roboterarm im industriellen Stil mit Greifzange. Mach die Laufband länglich in Förderrichtung und mach sie standardmäßig waagrecht ausgerichtet. Diese sollen dann später um 90° rotiert werden können. Mach die Laufbänder von Splitter und Merger anschließend genauso breit wie das des Laufbands und mach die Verzweigungen passend dazu. Mach auch die andern Designs deutlicher erkennbar (Verbrennungsgenerator klar als Ofen zum Heizen erkennbar, Schmelze als runder Schmelzofen passt, Lager deutlicher, Konstruktor vereinfacht als Werkbank oder Amboss). Vergleiche deine Designs mit Bildern realer Vorbilder und bau diese realistisch und gut erkennbar nach.
+
+- **Ergebnisvermerk:** Die Anschlusssymbole wurden aus den Gebäudemodellen entfernt; die Rastergrafik kennzeichnet Anschlusspositionen nur noch schematisch als logische Verbindungen. Der Assembler ist als Gelenkroboter mit Greifzange, der Konstruktor als Amboss-Werkbank, das Lager als Siloanlage und der Verbrennungsgenerator als Heizofen dargestellt. Laufband, Splitter und Merger verwenden gleich breite waagrechte Förderstrecken; die Vorschau kann das Laufband um 90 Grad drehen. Formreferenzen zu realer Industrie- und Fördertechnik sind in der Vorschau verlinkt; die Modelle bleiben eigenständige SVG-Interpretationen. Die Dokumentation wurde an die unsichtbaren Anschlüsse und vorläufigen Rasterregeln angepasst.
+
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Mach die Schmelze noch deutlicher als Schmelzkessel. Mach das Laufband wieder schwarz und eckig wie vorher, mit den Bändern als Struktur, übernehm das Design auch für die splitter und merger. Bau diese so auf dass sie di eteile auf unserem Grid als Spielfeld auch wirklich sinnvoll verteilen können (z.B. links und rechts raus, momentan sieht es so aus als bleiben sie auf einem Feld). den Konstruktor als Amboss ohne die eckige Plattform unten
+
+- **Ergebnisvermerk:** Die Schmelze wurde zu einem deutlich höheren Schmelzkessel mit breitem Rand, tiefem Feuerraum und glühender Schmelze umgezeichnet. Das Förderband verwendet wieder ein schwarzes Band mit Querleisten und kantigem Rahmen; Splitter und Merger übernehmen diese Bauweise. Der Splitter hat einen oberen Zulauf und getrennte linke/rechte Ausgänge, der Merger die umgekehrte Anordnung; die Anschlüsse liegen mittig an eigenen Seiten eines vorläufigen 3x3-Kachel-Footprints. Der Konstruktor zeigt jetzt nur noch den Amboss, ohne separate Plattform oder Werkbank.

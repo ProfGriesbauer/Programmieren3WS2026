@@ -1,4 +1,4 @@
-// RunSubwayTests.ps1, run in powershell: 
+# RunSubwayTests.ps1, run in PowerShell.
 $ErrorActionPreference = 'Stop'
 
 $projectPath = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\OOPGames.csproj')).Path
@@ -31,6 +31,7 @@ using OOPGames;
 
 internal static class Program
 {
+    [STAThread]
     private static int Main()
     {
         try
@@ -51,7 +52,8 @@ internal static class Program
         -Value $runnerSource -Encoding UTF8
 
     Get-Command dotnet -ErrorAction Stop | Out-Null
-    & dotnet run --project (Join-Path $runnerDirectory 'SubwayTestsRunner.csproj')
+    & dotnet run --project (Join-Path $runnerDirectory 'SubwayTestsRunner.csproj') `
+        -p:UseAppHost=false "-p:OutDir=$(Join-Path $runnerDirectory 'build')\"
     if ($LASTEXITCODE -ne 0) {
         $runnerExitCode = $LASTEXITCODE
     }

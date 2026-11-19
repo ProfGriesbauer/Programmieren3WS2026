@@ -1,0 +1,130 @@
+[2026-10-29, Uhrzeit nicht verfügbar] kannst du meinen Repository tree wieder cleanen, bzw. mir zeigen wie das geht?
+
+[2026-10-29, Uhrzeit nicht verfügbar] Wieder Fehlermeldung repository tree cleanen
+
+[2026-10-29, Uhrzeit nicht verfügbar] Erstelle also wieder ein 4 gewinnt Spiel das das vorhandene Framework benutzt und die Schnittstellen von Johannes lacher4 gewinnt benutzt
+
+[2026-10-29, Uhrzeit nicht verfügbar] Speichere dieses 4-gewinnt-spiel in den Ornder Gruppe 5
+
+[2026-10-29, Uhrzeit nicht verfügbar] Lass das 4 gewinnt spiel in dem Ornder von Gruppe 10. Ich möchte nur dass du das in den Ordner Gruppe 5 clonst bzw. ein eignes spiel erstellst dass die Schnittstellen von Johannes Lacher 4 gewinnt verwendet
+
+[2026-10-29, Uhrzeit nicht verfügbar] Wenn ich jetzt also pushe, verändert das nicht das 4-gwinnt spiel von grupe 10?Nur dass zusätzlich eine ähnliche Datei jetzt in Gruppe 5 liegt?
+
+[2026-10-29, Uhrzeit nicht verfügbar] jetzt kommt wieder die Fehlermeldung dass ich nicht pullen kann
+
+[2026-10-29, Uhrzeit nicht verfügbar] Also kann ich jetzt pushen ohne an dem Framework oder den Dateien der anderen gruppen etwas zu ändern?
+
+[2026-10-29, Uhrzeit nicht verfügbar] Das Framework an sich soll aber nicht verändert werden.
+
+[2026-10-29, Uhrzeit nicht verfügbar] Damit die Gruppe 5 Datei auf dem Framework auswählbar ist muss also das Framework geändert werden oder wie?
+
+[2026-10-29, Uhrzeit nicht verfügbar] Ok dann führe das durch bitte
+
+[2026-10-29, Uhrzeit nicht verfügbar] Wenn du das änderst können dann alle anderen gruppen das Framework noch genauso benutzen wie davor oder kommt es dann zu Komplikationen?
+
+[2026-10-29, Uhrzeit nicht verfügbar] Dass man die Komponenten verschiedener gruppen miteinander verwendet ist aber das Ziel des Projekts
+
+[2026-10-29, Uhrzeit nicht verfügbar] Ok also kann ich jetzt gefahrlos pshen ohne die Dateien anderer Gruppen durcheinanderzuwerfen?
+
+[2026-10-29, Uhrzeit nicht verfügbar] Es kommt wieder die Anzeige dass zuerst gecleant werden muss, wie mache ich das?
+
+[2026-10-29, Uhrzeit nicht verfügbar] kannst du meinen repository tree cleanen?
+
+[2026-11-05 11:29:40] Bitte erstelle in meinem privaten Branch eine Datei in der du jeden prompt den ich mache in eine Testdatei schreibst
+
+[2026-11-12 09:56:26] Bitte erstelle eine Datei Maxi_Prompts, die im Ordner Gruppe 5 liegen soll und schreibe dort als textformat jeden prompt den ich gemacht habe und auch jeden der noch kommt
+
+[2026-11-12 09:58:39] Nein bitte lösche diesen eben erstellten Ornder wieder und verschiebe die Datei Maxi_Prompts in den schon vorhandenen ordner gruppe 5 wo auch die Dateine von Ti eichert schon drin sind
+
+[2026-11-12 10:01:51] Bitte schreibe alle Prompts die ich dir gegeben habe in diese Datei Maxi_Prompts.
+
+[2026-11-12 10:03:13] Bitte schreibe auch die prompts die ich die letzten Wochen gemacht habe in die Datei
+
+[2026-11-12 10:05:09] Bitte ergänze bei jedem Prompt das Datum und die uhrzeit an dem dieser erstellt wurde
+
+[2026-11-12 10:20:24] Wir wollen in der gruppe ein satisfactory Spiel programmieren, das in das Framework passt in dem auch die 4-gewinnt-Spiele laufen. Bitte programmiere NUR den folgenden Teil: ## Game Logik
+Hand abbauen und craften möglich
+Inventar mit begrenzter Größe
+Missionen wenn nicht geschafft, dann raus --> erstmal nicht(vielleicht mit zwei modi, competitive & cozy)
+
+## Interaktion
+wenn gebäude angeklickt, POP up mit rezept auswahl, feld für resourcen und feld für fertige produkte
+Maussteuerung; Tastenkürzel, übersichtliche Benutzeroberfläche
+Alles Zeitbasiert
+Gebäude verschieben
+Stromnetz quer drüber
+
+[2026-11-12 10:21:48] Rufe den letzten Prompt zurück
+
+[2026-11-12 10:26:44] Wir wollen in der gruppe ein satisfactory Spiel programmieren, das in das Framework passt in dem auch die 4-gewinnt-Spiele laufen. Bitte programmiere NUR den folgenden Teil: ## Game Logik
+Hand abbauen und craften möglich
+Inventar mit begrenzter Größe
+Missionen wenn nicht geschafft, dann raus --> erstmal nicht(vielleicht mit zwei modi, competitive & cozy)
+
+## Interaktion
+wenn gebäude angeklickt, POP up mit rezept auswahl, feld für resourcen und feld für fertige produkte
+Maussteuerung; Tastenkürzel, übersichtliche Benutzeroberfläche
+Alles Zeitbasiert
+Gebäude verschieben
+Stromnetz quer drüber 
+Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von satisfactory. Bitte ändere nichts am bestehenden framework. Programmiere Objektorientiert und in klassen. Erstelle eine neue Datei die in dem bereits vorhandenen Unterordner Satifactory in gruppe 5 liegen soll. Die Datei soll später mit den Dateien Spielfeld und gebäude kompatibel sein. Diese werden von anderen Gruppenmitgliedern programmiert.
+
+[2026-11-12 10:47:51] Bitte erstelle eine zusätzliche Datei, in der eine Art Anleitung steht, wie man z.B. sich bewegt, wie ich gebäude platziere, aufwerte usw., sowie eine generelle Liste in der steht was du jetzt alles programmiert hast sprich was man alles machen kann
+
+[2026-11-12 10:57:40] folgende Fehlermeldung kommt. Kannst du sie beheben?
+
+[2026-11-12 10:59:33] Bitte ändere NIEMLAS etwas am Framework!!
+
+[2026-11-12 11:01:59] Es kommt wieder die gleiche Fehlermeldung. Wie kann ich das korrigieren, bzw. kannst du das korrigieren?
+
+[2026-11-12 11:04:58] Bitte korrigiere den wiederkehrenden NETSDK1005-Fehler, bei dem ein Build mit net6.0-windows statt dem Projektziel net10.0-windows ausgeführt wird.
+
+[2026-11-12 11:12:32] An was kann es sonst noch liegen, dass diese Fehlermedung kommt?
+
+[2026-11-12 11:16:12] Im Problems-Panel wird der NETSDK1005-Fehler weiterhin als Quelle „C# Dev Tools Build“ angezeigt; das Projektziel ist net10.0-windows, aber der Build fordert net6.0-windows an.
+
+[2026-11-12 11:21:43] Der NETSDK1005-Fehler mit net6.0-windows tritt im C# Dev Tools Build erneut auf.
+
+[2026-11-12 11:25:16] Öffne C# Dev Tools Build
+
+[2026-11-12 11:26:35] Hier ist die Ausgabe von C# Dev Tools: Der Build von OOPGames.csproj mit net10.0-windows war erfolgreich (0 Warnungen, 0 Fehler).
+
+[2026-11-18 15:32:24] Bitte passe die Datei "SatisfactoryGameLogic" so an, dass diese mit den Dateien von christian Frey und Tim Eichert im gegebenen Framework kompatibel ist. Ändere bitte weiterhin nichts am Framework
+
+[2026-11-18 15:43:44] Schreibst du meine Prompts auch immer noch mit oder nur deine Antowrten?
+
+[2026-11-18 15:45:41] Nein ob du die anworten in die Datei Prompts Maxi
+
+[2026-11-18 15:46:24] Bitte schreibe alle meine prompts wieder in die Datei Maxi prompts
+
+[2026-11-18 15:48:40] sehr gut dann mache das auch weiterhin
+
+[2026-11-18 15:57:21] Sind die satisfactorygamerules jetzt schon in den Regeln im Framework mit drin? Weil ich finde die Dateien nicht. Bzw. welche Dateien soll ich auswählen als Spieler1, Spieler2, painter und rules?
+
+[2026-11-18 16:59:33] Bitte schreibe ab sofort wieder jeden Prompt von mir in die Datei maxi prompts
+
+[2026-11-18 17:05:10] Passen die GameRules auch zu überarbeiteten Versionen von Spielfeld und gebäuden?
+
+[2026-11-19 08:16:59] Wenn ich jetzt dasim Framework das Spiel starte, ist das noch nicht die aktuelle Version, bzw. die neuen Dateien von Tim Eichert und Christian Frey sind noch nicht im Framework implementiert. Bitte verändere, wenn nötig, die Datei GameLogic so, dass alle Dateien miteinander kompatibel sind
+
+[2026-11-19 08:34:17] Bitte pushe dann meine Datei GameLogics mit einem Commit so, dass die anderen Gruppenmitglieder diese auch sehen, da das aktuell noch nicht der Fall ist. und bitte ändere weiterhin nichts am Framework selbst
+
+[2026-11-19 08:37:57] Bitte arbeite nur im Ordner Gruppe5 und fasse andere Spiele außer Satisfactory nicht an
+
+[2026-11-19 08:38:53] Hast du davor auch in anderen Gruppen außer gruppe5 Dateien geändert? Wenn ja mache diese Änderungen rückgängig
+
+[2026-11-19 08:48:12] Wenn ich jetzt das Spiel starte existiert nur eine ganz simple Version von Satisfactory. Bitte lösche zumindest gamePlayer (Mensch) und GamePayer(du) und stelle sicher dass die Datei SatisfactoryGameLogic nur für die "Rules" zustädnig ist und kein eigenes Satisfactory erstellt. Die Datei SatisfactoryGameRules soll dann über Schnittstellen zusammen mit den Dateien von Tim Eichert und Christian Frey das Satisfactory im Framework implementieren
+
+[2026-11-19 08:57:43] Als Nächstes Pull damit ich die neuesten Änderungen habe und danach push und commit
+
+[2026-11-19 09:23:33] Prüfe ob die neuen Dateien von Christian und Tim immer noch mit meiner Datei, SatisfactoryGameRules kompatibel ist, und wenn nicht sag mir erst einmal die Probleme
+
+[2026-11-19 09:39:55] Erstelle eine Art Startbildschirm die angezeigt wird bevor man das Spielfeld etc. sieht. Dort soll unter anderem die Anleitung aber auch Settings mit verschiedenen Auswahlmöglichkeiten auswählbar sein. Lege diese Datei in den Ordner Satisfactory. Gestalte dieses Fenster, das auftaucht bitte optisch ansprechend und stelle sicher, dass die Datei von den Schnittstellen her kompatibel ist mit den Dateien meiner Gruppenmitglider und mit dem framework
+
+[2026-11-19 09:47:31] Pull commit und push
+
+[2026-11-19 09:57:31] Bitte ändere die Datei Start Screen so, dass kein extra eigenes fenster aufploppt,sondern das Fenster in dem Framework nur aufgeht und man die Wahl zwischen den buttons einstellungen, start game und anleitung hat bevor man das Spielfeld sieht
+
+[2026-11-19 10:08:27] Kannst du diesen "Startbildschirm" auch ohne einen neuen Painter zu erstellen mit Canva designen, wenn ja mache das, wenn nein, lösche trotzdem den zusätzlichen painter "Start & Fabrik"
+
+[2026-11-19 10:11:40] pull push und commit

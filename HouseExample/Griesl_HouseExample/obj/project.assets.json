@@ -8,19 +8,19 @@
     "net7.0": []
   },
   "packageFolders": {
-    "C:\\Users\\gabri\\.nuget\\packages\\": {}
+    "C:\\Users\\stjogabr\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Studium\\3. Semester Mechatronik\\Programmieren 3\\GitHub Repository\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
+      "projectUniqueName": "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
       "projectName": "Griesl_HouseExample",
-      "projectPath": "C:\\Studium\\3. Semester Mechatronik\\Programmieren 3\\GitHub Repository\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
-      "packagesPath": "C:\\Users\\gabri\\.nuget\\packages\\",
-      "outputPath": "C:\\Studium\\3. Semester Mechatronik\\Programmieren 3\\GitHub Repository\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\obj\\",
+      "projectPath": "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
+      "packagesPath": "C:\\Users\\stjogabr\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\stjogabr\\Programmieren 3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\gabri\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\stjogabr\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net7.0"
@@ -85,7 +85,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.402\\RuntimeIdentifierGraph.json"
       }
     }
   }
