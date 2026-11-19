@@ -303,10 +303,7 @@ namespace OOPGames
             HelpTower("Poison Archer", hx(poison.X), hy(poison.Y), null);
             double px = hx(free.X), py = hy(free.Y);
             Color marker = Color.FromRgb(120, 220, 240);
-            DrawCorner(px - 9, py - 8, 1, 1, marker);
-            DrawCorner(px + 8, py - 8, -1, 1, marker);
-            DrawCorner(px - 9, py + 3, 1, -1, marker);
-            DrawCorner(px + 8, py + 3, -1, -1, marker);
+            DrawSelectionFrame(px, py, 0, marker);
             Icon(TowerDefenseIcon.Cursor, px - 6, py - 20, 12);
             Callout(1, px - 20, py - 4);
             Callout(2, hx(ice.X) + 9, hy(ice.Y) - 30);

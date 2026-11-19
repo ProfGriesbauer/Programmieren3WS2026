@@ -67,7 +67,8 @@ namespace OOPGames
         None,
         ResumeRun,
         DeleteSlot,
-        Defeat
+        Defeat,
+        MapComplete
     }
 
     // Implements IB5RoomOwnBackKey: Esc / X open the in-game menu instead of closing the game.
@@ -297,22 +298,78 @@ namespace OOPGames
         {
             if (_Map == null) return;
             bool countsForUnlock = UnlocksNextMap(_Difficulty);
-            bool unlocked = TowerDefenseSaves.CompleteMap(_SlotIndex, _MapIndex, countsForUnlock);
+            _CompletedUnlockedNext = TowerDefenseSaves.CompleteMap(_SlotIndex, _MapIndex, (int)_Difficulty, countsForUnlock);
+            _CompletedMap = _MapIndex;
             _Map = null;
             _Battle = null;
-            bool hasNext = _MapIndex + 1 < TowerDefenseMaps.Maps.Count;
-            bool nextOpen = hasNext && CurrentSlot.IsUnlocked(_MapIndex + 1);
-            // Stay on the beaten map if the next one is still locked (beaten on Easy).
-            _MapSelection = nextOpen ? _MapIndex + 1 : _MapIndex;
-            _MapSelectionMessage = !hasNext ? "ALLE KARTEN GESCHAFFT!"
-                : unlocked ? "NEUE KARTE FREIGESCHALTET!"
-                : !nextOpen ? "GESCHAFFT! NÄCHSTE KARTE AB NORMAL" : "KARTE GESCHAFFT!";
+            // The map selection (showing the new check mark) lies behind the "map completed" menu.
+            _MapSelection = _MapIndex;
+            _MapSelectionMessage = null;
             _Screen = TowerDefenseScreen.MapSelection;
+            _Dialog = TowerDefenseDialog.MapComplete;
+            _DialogSelection = 0;
+        }
+
+        // Map of the last "map completed" menu and whether that win unlocked the next map.
+        int _CompletedMap = -1;
+        bool _CompletedUnlockedNext;
+
+        bool CompletedNextOpen
+        {
+            get { return _CompletedMap + 1 < TowerDefenseMaps.Maps.Count && CurrentSlot.IsUnlocked(_CompletedMap + 1); }
+        }
+
+        // First difficulty not beaten yet on this map (or the last played one when all are done).
+        int SuggestedDifficulty(int mapIndex)
+        {
+            for (int d = 0; d < DifficultyNames.Length; d++)
+                if (!CurrentSlot.HasCompleted(mapIndex, d)) return d;
+            return (int)_Difficulty;
+        }
+
+        // NAECHSTE KARTE: the next map (resume question if it has a saved run, otherwise its difficulty
+        // selection). SCHWIERIGKEIT WAEHLEN: difficulty selection of the same map.
+        void ActivateMapCompleteItem(string item)
+        {
+            if (item == "NÄCHSTE KARTE")
+            {
+                _MapSelection = _CompletedMap + 1;
+                if (CurrentSlot.GetRun(_MapSelection) != null)
+                {
+                    _Dialog = TowerDefenseDialog.ResumeRun;
+                    _DialogSelection = 0;
+                    return;
+                }
+                _DifficultySelection = (int)_Difficulty;
+                _Screen = TowerDefenseScreen.DifficultySelection;
+            }
+            else if (item == "SCHWIERIGKEIT WÄHLEN")
+            {
+                _MapSelection = _CompletedMap;
+                _DifficultySelection = SuggestedDifficulty(_CompletedMap);
+                _Screen = TowerDefenseScreen.DifficultySelection;
+            }
+        }
+
+        // Music for the current situation: menu screens, the map's own song, or the (mini) boss theme
+        // while a (mini) boss is on the field. Esc menu, help and dialogs dim it.
+        void UpdateMusic()
+        {
+            TowerDefenseTrack track = TowerDefenseTrack.Menu;
+            bool onMap = _Screen == TowerDefenseScreen.Map || _Screen == TowerDefenseScreen.TowerPlacement || _Screen == TowerDefenseScreen.TowerUpgrade;
+            if (onMap && _Map != null && _Battle != null)
+            {
+                track = TowerDefenseSongs.ForMap(_MapIndex);
+                if (_Battle.Phase == TowerDefenseBattlePhase.Running && _Battle.Enemies.Exists(e => e.IsBoss))
+                    track = _Battle.CurrentWave.IsMiniBoss ? TowerDefenseTrack.MiniBoss : TowerDefenseTrack.Boss;
+            }
+            TowerDefenseMusic.Update(track, _Paused || _ShowHelp || _Dialog != TowerDefenseDialog.None);
         }
 
         public void Update(IReadOnlyCollection<Key> keys)
         {
             _Tick++;
+            UpdateMusic();
             if (_BannerTicks > 0) _BannerTicks--;
             HandleMouse();
             foreach (Key key in keys)
@@ -559,6 +616,8 @@ namespace OOPGames
         {
             if (_Dialog == TowerDefenseDialog.ResumeRun) return new[] { "WEITERSPIELEN", "NEU BEGINNEN", "ABBRECHEN" };
             if (_Dialog == TowerDefenseDialog.Defeat) return new[] { "WELLE NEU", "KARTENWAHL" };
+            if (_Dialog == TowerDefenseDialog.MapComplete)
+                return CompletedNextOpen ? new[] { "NÄCHSTE KARTE", "SCHWIERIGKEIT WÄHLEN" } : new[] { "SCHWIERIGKEIT WÄHLEN", "KARTENAUSWAHL" };
             return new[] { "NEIN", "JA, LÖSCHEN" };
         }
 
@@ -582,8 +641,13 @@ namespace OOPGames
         void ActivateDialogItem(int index)
         {
             TowerDefenseDialog dialog = _Dialog;
+            string item = DialogItems()[index];
             _Dialog = TowerDefenseDialog.None;
-            if (dialog == TowerDefenseDialog.ResumeRun)
+            if (dialog == TowerDefenseDialog.MapComplete)
+            {
+                ActivateMapCompleteItem(item);
+            }
+            else if (dialog == TowerDefenseDialog.ResumeRun)
             {
                 if (index == 0) ResumeMap(_MapSelection);
                 else if (index == 1) _Screen = TowerDefenseScreen.DifficultySelection;
@@ -610,9 +674,27 @@ namespace OOPGames
         {
             _ClickAreas.Clear();
             string[] items = DialogItems();
-            string title, info;
+            string title, info, highlight = null;
             TowerDefenseIcon[] icons;
-            if (_Dialog == TowerDefenseDialog.ResumeRun)
+            if (_Dialog == TowerDefenseDialog.MapComplete)
+            {
+                title = "KARTE ABGESCHLOSSEN";
+                info = TowerDefenseMaps.Maps[_CompletedMap].Name.ToUpperInvariant() + " AUF " +
+                    DifficultyNames[(int)_Difficulty].ToUpperInvariant() + " GESCHAFFT";
+                bool hasNext = _CompletedMap + 1 < TowerDefenseMaps.Maps.Count;
+                if (_CompletedUnlockedNext)
+                    highlight = "NEUE KARTE FREIGESCHALTET: " + TowerDefenseMaps.Maps[_CompletedMap + 1].Name.ToUpperInvariant();
+                else if (!hasNext)
+                    highlight = CurrentSlot.HasCompletedAll(_CompletedMap) ? "ALLE KARTEN UND SCHWIERIGKEITEN GESCHAFFT!" : "ALLE KARTEN GESCHAFFT!";
+                else if (!CompletedNextOpen)
+                    highlight = "NÄCHSTE KARTE AB NORMAL";
+                else if (CurrentSlot.HasCompletedAll(_CompletedMap))
+                    highlight = "ALLE SCHWIERIGKEITEN GESCHAFFT!";
+                icons = CompletedNextOpen
+                    ? new[] { TowerDefenseIcon.Star, TowerDefenseIcon.Skull }
+                    : new[] { TowerDefenseIcon.Skull, TowerDefenseIcon.Wave };
+            }
+            else if (_Dialog == TowerDefenseDialog.ResumeRun)
             {
                 TowerDefenseRunState run = CurrentSlot.GetRun(_MapSelection);
                 int towers = 0;
@@ -636,16 +718,18 @@ namespace OOPGames
             }
 
             Surface.Rect(0, 0, DesignWidth, DesignHeight, Color.FromArgb(150, 0, 0, 0));
-            double height = 52 + items.Length * 21;
+            double extra = highlight != null ? 9 : 0;
+            double height = 52 + extra + items.Length * 21;
             double top = 88 - height / 2;
             DrawPanel(54, top, 212, height);
             AddClickArea(54, top, 212, height, null, null);
             DrawTitle(title, top + 7);
             ShadowText(info, 160 - info.Length * 1.65, top + 30, 5, TextLight);
+            if (highlight != null) ShadowText(highlight, 160 - highlight.Length * 1.65, top + 39, 5, TitleGold);
             for (int i = 0; i < items.Length; i++)
             {
                 int index = i;
-                DrawMenuEntry(items[i], icons[i], _DialogSelection == i, top + 42 + i * 21,
+                DrawMenuEntry(items[i], icons[i], _DialogSelection == i, top + 42 + extra + i * 21,
                     () => _DialogSelection = index, () => ActivateDialogItem(index));
             }
         }
@@ -1096,6 +1180,12 @@ namespace OOPGames
                 for (int skull = 0; skull <= i; skull++)
                     Icon(TowerDefenseIcon.Skull, 160 + skull * 10, y + 3, 8);
                 ShadowText(GetMultiplierText((TowerDefenseDifficulty)i), 210, y + 3, 7, TextGold);
+                if (CurrentSlot.HasCompleted(_MapSelection, i))
+                {
+                    Surface.Rect(236, y + 3.5, 8, 8, Outline);
+                    Surface.Rect(236.5, y + 4, 7, 7, Color.FromRgb(30, 70, 34));
+                    DrawCheck(237, y + 4.5, 6, CheckGreen);
+                }
             }
             const string note = "NUR AB NORMAL WIRD DIE NÄCHSTE KARTE FREIGESCHALTET";
             ShadowText(note, 72, 61, 5, TextGold);
@@ -1137,6 +1227,8 @@ namespace OOPGames
                 Surface.Text(saved, previewX + 14, previewY + 3, 5, TitleGold);
             }
 
+            if (unlocked) DrawCompletion(_MapSelection, previewX, previewY, previewWidth, previewHeight);
+
             DrawArrowButton("<", 60, 74, () => MoveSelection(-1));
             DrawArrowButton(">", 244, 74, () => MoveSelection(1));
 
@@ -1156,6 +1248,44 @@ namespace OOPGames
                 Surface.Rect(160 - width / 2 + 1, 101, width - 2, 12, Selection);
                 ShadowText(_MapSelectionMessage, 160 - width / 2 + 6, 102, 8, TitleGold);
             }
+        }
+
+        static readonly Color CheckGreen = Color.FromRgb(96, 214, 96);
+
+        // Band at the bottom of the map preview: the four difficulties with a green check mark when the map
+        // was beaten on them, plus a big star in the top right corner once all four are done.
+        void DrawCompletion(int mapIndex, double x, double y, double width, double height)
+        {
+            const double bandHeight = 10;
+            double bandY = y + height - bandHeight;
+            Surface.Rect(x, bandY, width, bandHeight, Color.FromArgb(200, 20, 18, 16));
+            double cell = width / DifficultyNames.Length;
+            for (int d = 0; d < DifficultyNames.Length; d++)
+            {
+                bool done = CurrentSlot.HasCompleted(mapIndex, d);
+                double cx = x + d * cell + 3;
+                Surface.Rect(cx, bandY + 2, 6, 6, Outline);
+                Surface.Rect(cx + 0.5, bandY + 2.5, 5, 5, done ? Color.FromRgb(30, 70, 34) : PanelInsideDark);
+                if (done) DrawCheck(cx + 0.5, bandY + 2.5, 5, CheckGreen);
+                ShadowText(DifficultyNames[d].ToUpperInvariant(), cx + 8, bandY + 2, 5, done ? TextLight : TextDim);
+            }
+
+            if (!CurrentSlot.HasCompletedAll(mapIndex)) return;
+            double sx = x + width - 17, sy = y + 2;
+            Surface.Rect(sx, sy, 15, 15, Outline);
+            Surface.Rect(sx + 0.5, sy + 0.5, 14, 14, Selection);
+            Icon(TowerDefenseIcon.Star, sx + 1.5, sy + 1.5, 12);
+        }
+
+        // Pixel check mark in a square of the given size.
+        static readonly string[] CheckPixels = { "......#", ".....##", "#...##.", "##.##..", ".###...", "..#...." };
+
+        void DrawCheck(double x, double y, double size, Color color)
+        {
+            double px = size / 7;
+            for (int row = 0; row < CheckPixels.Length; row++)
+                for (int col = 0; col < 7; col++)
+                    if (CheckPixels[row][col] == '#') Surface.Rect(x + col * px, y + 0.5 * px + row * px, px, px, color);
         }
 
         void DrawArrowButton(string arrow, double x, double y, Action click)
@@ -1642,26 +1772,35 @@ namespace OOPGames
             double x = UX(spot.X), y = UY(spot.Y);
             bool occupied = _Towers[_SelectedSpot] != null;
             Color marker = occupied ? SelectionEdge : Color.FromRgb(120, 220, 240);
-            double pulse = (_Tick / 8) % 2;
-            double left = x - 9 - pulse, right = x + 8 + pulse, top = y - 8 - pulse, bottom = y + 3 + pulse;
-            DrawCorner(left, top, 1, 1, marker);
-            DrawCorner(right, top, -1, 1, marker);
-            DrawCorner(left, bottom, 1, -1, marker);
-            DrawCorner(right, bottom, -1, -1, marker);
+            DrawSelectionFrame(x, y, (_Tick / 8) % 2, marker);
 
             double bounce = (_Tick / 6) % 4 < 2 ? 0 : 2;
             double cursorY = (occupied ? y - 38 : y - 20) - bounce;
             Icon(TowerDefenseIcon.Cursor, x - 6, cursorY, 12);
         }
 
+        // Four corners around the pedestal at the foot point (x, y); pulse (0 or 1) widens the frame a little
+        // for the blinking animation.
+        void DrawSelectionFrame(double x, double y, double pulse, Color color)
+        {
+            double left = x - 8 - pulse, right = x + 7 + pulse, top = y - 7 - pulse, bottom = y + 3 + pulse;
+            DrawCorner(left, top, 1, 1, color);
+            DrawCorner(right, top, -1, 1, color);
+            DrawCorner(left, bottom, 1, -1, color);
+            DrawCorner(right, bottom, -1, -1, color);
+        }
+
+        // L-shaped corner of the selection frame. (x, y) is the outer corner cell; both arms are equally long
+        // and point in the direction (dx, dy), so all four corners are exact mirror images.
         void DrawCorner(double x, double y, int dx, int dy, Color color)
         {
-            double hx = dx > 0 ? x : x - 2;
-            double vy = dy > 0 ? y : y - 2;
-            Surface.Rect(hx - 1, y - 1, 6, 3, Outline);
-            Surface.Rect(x - 1, vy - 1, 3, 6, Outline);
-            Surface.Rect(dx > 0 ? x : x - 3, y, 5, 1, color);
-            Surface.Rect(x, dy > 0 ? y : y - 3, 1, 5, color);
+            const double arm = 3;
+            double hx = dx > 0 ? x : x - arm + 1;
+            double vy = dy > 0 ? y : y - arm + 1;
+            Surface.Rect(hx - 1, y - 1, arm + 2, 3, Outline);
+            Surface.Rect(x - 1, vy - 1, 3, arm + 2, Outline);
+            Surface.Rect(hx, y, arm, 1, color);
+            Surface.Rect(x, vy, 1, arm, color);
         }
 
         // ---------------- HUD: values at the top, buttons at the bottom right ----------------
@@ -2039,8 +2178,8 @@ namespace OOPGames
 
         void DrawMenuEntry(string text, TowerDefenseIcon icon, bool selected, double y, Action hover, Action click)
         {
-            AddClickArea(92, y, 136, 17, hover, click);
-            DrawSelectionBar(92, y, 136, 17, selected);
+            AddClickArea(92, y, Math.Max(136, 34 + text.Length * 5.5), 17, hover, click);
+            DrawSelectionBar(92, y, Math.Max(136, 34 + text.Length * 5.5), 17, selected);
             Icon(icon, 98, y, 16);
             ShadowText(text, 120, y + 3, 10, selected ? TitleGold : TextLight);
         }

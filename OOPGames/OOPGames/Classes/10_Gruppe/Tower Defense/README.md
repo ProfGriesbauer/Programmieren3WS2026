@@ -83,7 +83,7 @@ Brueckendeck, dann Tower, Burg und uebrige Gegner nach ihrer Hoehe sortiert. Bei
 kommen die Gegner abwechselnd aus beiden, der Boss immer ueber den laengeren Weg.
 
 | Nr. | Karte | Wege | Gegnerstaerke |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | 1 | Gruenes Tal | 1 Weg, 46 Kacheln, Steinbruecke | x1,05 |
 | 2 | Sumpfwald | 1 Weg, 46 Kacheln, Holzbruecke | x1,29 |
 | 3 | Winterpass | 2 Spawns (32 / 20 Kacheln) | x1,08 |
@@ -101,6 +101,20 @@ Hard oder God besiegt, schaltet die naechste frei. Ein Sieg auf Easy zaehlt nur 
 die Karte gilt als geschafft, die naechste bleibt aber gesperrt (Hinweis in der Kartenauswahl,
 im Schwierigkeitsmenue und in der Anleitung). Der Fortschritt wird pro Spielstand gespeichert
 (siehe Abschnitt Spielstaende).
+
+Nach der 50. Welle erscheint das Menue `KARTE ABGESCHLOSSEN` mit Karte und Schwierigkeit, bei
+einer neu freigeschalteten Karte zusaetzlich `NEUE KARTE FREIGESCHALTET: <Name>`.
+`NAECHSTE KARTE` fuehrt zur Schwierigkeitsauswahl der naechsten Karte (bzw. zur
+Weiterspielen-Frage, falls dort ein Zwischenstand liegt), `SCHWIERIGKEIT WAEHLEN` zur
+Schwierigkeitsauswahl der gleichen Karte; vorausgewaehlt ist die erste noch nicht geschaffte
+Schwierigkeit. Ist die naechste Karte noch gesperrt oder war es die letzte, steht statt
+`NAECHSTE KARTE` der Button `KARTENAUSWAHL`.
+
+Jeder Spielstand merkt sich pro Karte, auf welchen Schwierigkeiten sie geschafft wurde
+(`CompletedDifficulties`, Bitmaske). Die Kartenauswahl zeigt das in einer Leiste unten im
+Vorschaubild (gruener Haken je Schwierigkeit), die Schwierigkeitsauswahl mit einem Haken pro
+Zeile. Sind alle vier geschafft, erscheint oben rechts im Vorschaubild ein Stern. Siege aus
+aelteren Versionen sind dort noch nicht erfasst.
 
 Auf der Karte springen die Pfeiltasten zum naechsten Podest in der gedrueckten Richtung.
 Das HUD sitzt in einer 48-px-Leiste ueber der Karte (Gold, Leben, Welle, Gegnerzaehler mit
@@ -203,7 +217,7 @@ sich auf die Basiswerte des Towers; die Turmstufe erhoeht diese Basiswerte selbs
 Prozent-Upgrades wirken also darauf.
 
 | Upgrade | pro Stufe | Stufen | Kosten der naechsten Stufe |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | Schaden (auch Brand/Gift) | +30 % | 8 | 40 % Baupreis x Stufe |
 | Reichweite | +10 % | 5 | 35 % Baupreis x Stufe |
 | Tempo | +15 % | 6 | 40 % Baupreis x Stufe |
@@ -240,6 +254,42 @@ Schwaechen der Gegner zu achten, Meister-Stufen eingeschlossen). Ergebnis mit de
 | Verfluchtes Oedland | gewonnen | verloren Welle 47 | verloren Welle 36 | verloren Welle 17 |
 
 Wo der Bot verliert, ist gezielter Einsatz der Schadensarten noetig.
+
+## Musik
+
+Jede Karte bekommt einen eigenen Soundtrack im 16-Bit-Retro-Stil, dazu Menue-, Mini-Boss- und
+Boss-Musik. Die Musik wird im Code komponiert und synthetisiert, es gibt keine fremden
+Audiodateien:
+
+- `Kinderzimmer90er/B5_TowerDefenseMusicSynth.cs`: Synthesizer (Pulswellen mit waehlbarer
+  Breite, Dreieck, Sinus, Saegezahn, Orgel, Glocke, Rausch-Schlagzeug, ADSR-Huellkurve, Vibrato,
+  Tiefpass, Echo) und eine kleine Tracker-Notation (`g4:8` = G4 als Halbe, `c4+e4+g4` = Akkord,
+  `r` = Pause). `TowerDefenseChords` erzeugt Arpeggios, Basslinien und Akkordflaechen aus
+  Akkordsymbolen. Toene und Echos, die ueber das Loop-Ende hinausklingen, laufen am Anfang weiter,
+  der Loop hat also keine Naht.
+- `Kinderzimmer90er/B5_TowerDefenseSongs.cs`: die Kompositionen.
+- `Kinderzimmer90er/B5_TowerDefenseMusic.cs`: Wiedergabe. Die Stuecke werden beim ersten Start im
+  Hintergrund gerendert und als WAV nach `%LOCALAPPDATA%\Programmieren3WS2026\Kinderzimmer90er\TowerDefenseMusic`
+  geschrieben. Alle Stuecke werden auf die gleiche Lautheit gebracht. Die Lautstaerke betraegt 25 % des globalen Lautstaerkereglers (Hintergrund), im
+  Esc-Menue, in der Anleitung und in Dialogen noch einmal 45 % davon. Wechsel sind harte Schnitte.
+  Ruft das Spiel kein `Update` mehr auf (Geraet verlassen), pausiert die Musik nach 0,4 s.
+
+Die Stuecke werden von Karte zu Karte epischer (mehr Tempo, mehr Bass, volleres Schlagzeug);
+Mini-Boss und Boss sind die schnellsten und schwersten.
+
+| Stueck | Stimmung | Umsetzung |
+| --- | --- | --- |
+| Menue (Hauptmenue, Kartenauswahl) | einladend, schon leicht heroisch | F-Dur, 90 BPM, 20 Takte (53 s): Floeten-Melodie, gezupfte Begleitung, Streicher, Sub-Bass, leise Trommel
+| Gruenes Tal | froehlich-abenteuerlich | G-Dur, 120 BPM, 32 Takte A A2 B A (64 s): Pulswellen-Melodie, Arpeggio mit Echo, Streicher, Dreieck- und Sub-Bass, Schlagzeug mit Becken
+| Sumpfwald | mystisch mit Puls | D-Dorisch, 88 BPM, 20 Takte (55 s): Chor-Flaeche, Glocken mit Echo, Floete, Tom-Groove, bewegter Bass
+| Winterpass | kalt-glitzernd, treibend | E-Moll mit hellen Dur-Teilen, 104 BPM, 24 Takte (55 s): Glockenspiel-Melodie, Glocken-Arpeggios, Streicher, Achtel-Bass, Schlagzeug
+| Flussschlucht | weit-episch | C-Moll/Es-Dur, 100 BPM, 24 Takte (58 s): Horn-Melodie mit Blech-Verdopplung, Streicher, galoppierender Saege-Bass, Pauken und Snare
+| Verfluchtes Oedland | Finale | A-Moll, 112 BPM, 24 Takte (51 s): Blech-Melodie in zwei Oktaven, Chor und Orgel, Saege- und Sub-Bass in Achteln, volles Marsch-Schlagzeug
+| Mini-Boss | angespannte Schlacht | E-Moll, 144 BPM, 32 Takte (53 s): scharfe Melodie mit Blech-Verdopplung, harter Sechzehntel-Saege-Bass, Streicher-Stoesse, Becken alle 4 Takte
+| Boss (inkl. Skeleton King) | gross und bedrohlich | D-Moll mit phrygischem Es, 138 BPM, 32 Takte (56 s): Fanfare in zwei Oktaven, Orgel und Chor, Doppel-Kick, Pauken, schwerster Bass |
+
+Die Boss-Musik startet, sobald der (Mini-)Boss als letzter Gegner der Welle erscheint, und endet,
+wenn er besiegt ist.
 
 ## Anleitung im Spiel
 

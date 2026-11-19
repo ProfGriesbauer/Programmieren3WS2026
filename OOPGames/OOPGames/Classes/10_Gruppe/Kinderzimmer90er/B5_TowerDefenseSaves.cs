@@ -76,6 +76,21 @@ namespace OOPGames
         public int LastMap { get; set; } = -1;
         // Starts the next wave automatically shortly after a wave has been beaten.
         public bool AutoStart { get; set; }
+        // Key = map index, value = bit mask of the difficulties the map was beaten on (bit 0 = Easy ... bit 3 = God).
+        public Dictionary<int, int> CompletedDifficulties { get; set; } = new Dictionary<int, int>();
+
+        public bool HasCompleted(int mapIndex, int difficulty)
+        {
+            int mask;
+            return CompletedDifficulties != null && CompletedDifficulties.TryGetValue(mapIndex, out mask) && (mask & (1 << difficulty)) != 0;
+        }
+
+        // True when the map was beaten on all four difficulties.
+        public bool HasCompletedAll(int mapIndex)
+        {
+            for (int d = 0; d < 4; d++) if (!HasCompleted(mapIndex, d)) return false;
+            return true;
+        }
 
         [JsonIgnore]
         public bool IsEmpty { get { return LastPlayed == null; } }
@@ -125,13 +140,17 @@ namespace OOPGames
             Save();
         }
 
-        // Unlocks the next map and drops the finished run. Returns true when a new map was unlocked.
-        // Removes the map's run. The next map is only unlocked when unlocksNext is true (beaten on
+        // Records the beaten difficulty and drops the finished run.
+        // The next map is only unlocked when unlocksNext is true (beaten on
         // Normal or harder); returns true if a new map was unlocked.
-        public static bool CompleteMap(int slotIndex, int mapIndex, bool unlocksNext)
+        public static bool CompleteMap(int slotIndex, int mapIndex, int difficulty, bool unlocksNext)
         {
             TowerDefenseSaveSlot slot = Slots[slotIndex];
             slot.Runs.Remove(mapIndex);
+            if (slot.CompletedDifficulties == null) slot.CompletedDifficulties = new Dictionary<int, int>();
+            int mask;
+            slot.CompletedDifficulties.TryGetValue(mapIndex, out mask);
+            slot.CompletedDifficulties[mapIndex] = mask | (1 << difficulty);
             int unlocked = unlocksNext ? Math.Min(TowerDefenseMaps.Maps.Count, mapIndex + 2) : slot.UnlockedMaps;
             bool newMap = unlocked > slot.UnlockedMaps;
             if (newMap) slot.UnlockedMaps = unlocked;

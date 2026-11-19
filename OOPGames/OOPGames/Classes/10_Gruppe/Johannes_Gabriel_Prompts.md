@@ -482,3 +482,52 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 **Datum:** 2026-11-19
 
 > Bitte weitermachen
+
+## Prompt 66
+
+**Datum:** 2026-11-19
+
+> Ich hätte gerne für jede Karte einen eigenen Soundtrack. Lass uns zusammen rausfinden was ich möchte und wie die Soundtracks sich anhören sollten. Stelle mir dafür Fragen, mit denen du rausfinden willst, wie die Soundtracks klingen sollen
+
+## Prompt 67
+
+**Datum:** 2026-11-19
+
+> Das klingt sehr gut
+
+## Prompt 68
+
+**Datum:** 2026-11-19
+
+> Der Soundtrack gefällt mir gut so wie er ist, nur wäre es gut, wenn die Lautstärke etwas leiser wäre. Anonsten kannst du gerne die restlichen Soundtracks komponieren
+
+## Prompt 69
+
+**Datum:** 2026-11-19
+
+> Ich habe bis jetzt die Musik im Menü, 1 und 2 Karte und die von Mini, Boss gehört diese ist eher ruhig. Es dürfen gerne alle Soundtracks etwas epischer werden, vor allem die der MiniBosse und Bosse. Vielleicht etwas mehr Tempo und etwas mehr Bass, damit die Stimmung einer epischen Schlacht aufkommt. Das mit jeder Karte etwas epischer wird
+
+## Prompt 70
+
+**Datum:** 2026-11-19
+
+> Die Musik passt soweit. Jetzt hätte ich noch gerne, dass es nach dem Abschluss einer Karte in ein Menü geht, indem man auf nächste Karte oder Schwierigkeit wählen klicken kann. Dazu steht Karte abgeschlossen dabei und wenn man eine neue Karte freischaltet, dass man diese freigeschalten hat.
+> Der Abschluss einer Karte und der gespielten Schwierigkeit soll bei Auswahl einer Karte angezeigt werden, mit einem grünen Haken bei der Schwierigkeit und ein Stern oben rechts, wenn alle Schwierigkeiten abgeschlossen wurden
+
+## Prompt 71
+
+**Datum:** 2026-11-19
+
+> Die Ecken bei der Turmauswahl sind in 3 Ecken etwas verschoben, passe mir diese an, dass es schöne Ecken sind
+
+## Prompt 72
+
+**Datum:** 2026-11-19
+
+> Die Ecken sehen gut aus, aber mach die ganze Auswahl etwas kleiner
+
+## Prompt 73
+
+**Datum:** 2026-11-19
+
+> Die Arme sollen kürzer sein und der Abstand etwas größer zwischen den Ecken
