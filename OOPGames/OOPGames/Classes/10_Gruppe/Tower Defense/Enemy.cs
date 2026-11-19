@@ -72,7 +72,16 @@ namespace OOPGames
         public bool IsDefeated { get { return CurrentHealth <= 0; } }
         public int BurnDamagePerSecond { get; private set; }
         public int PoisonDamagePerSecond { get; private set; }
-        public double StatusEffectTimeRemaining { get; private set; }
+        public double BurnTimeRemaining { get; private set; }
+        public double PoisonTimeRemaining { get; private set; }
+        public double SlowTimeRemaining { get; private set; }
+        public double ArmorBreakTimeRemaining { get; private set; }
+
+        // Longest running effect; 0 when the enemy has no effect at all.
+        public double StatusEffectTimeRemaining
+        {
+            get { return Math.Max(Math.Max(BurnTimeRemaining, PoisonTimeRemaining), Math.Max(SlowTimeRemaining, ArmorBreakTimeRemaining)); }
+        }
 
         // Armor reduces damage by percent: 150 armor halves it, 450 armor leaves a quarter.
         public const double ArmorConstant = 150;
@@ -117,23 +126,25 @@ namespace OOPGames
                 throw new ArgumentNullException(nameof(tower));
             }
 
+            // Every effect has its own timer. A new hit of the same effect restarts it, so an effect
+            // ends EffectDuration seconds after the last hit of that effect.
             switch (tower.Effect)
             {
                 case TowerEffect.Burn:
                     BurnDamagePerSecond = tower.EffectDamagePerSecond;
-                    StatusEffectTimeRemaining = Math.Max(StatusEffectTimeRemaining, tower.EffectDuration);
+                    BurnTimeRemaining = tower.EffectDuration;
                     break;
                 case TowerEffect.PoisonDamageOverTime:
                     PoisonDamagePerSecond = tower.EffectDamagePerSecond;
-                    StatusEffectTimeRemaining = Math.Max(StatusEffectTimeRemaining, tower.EffectDuration);
+                    PoisonTimeRemaining = tower.EffectDuration;
                     break;
                 case TowerEffect.Slow:
                     CurrentMoveSpeed = MoveSpeed * tower.SlowFactor;
-                    StatusEffectTimeRemaining = Math.Max(StatusEffectTimeRemaining, tower.EffectDuration);
+                    SlowTimeRemaining = tower.EffectDuration;
                     break;
                 case TowerEffect.ArmorBreak:
                     CurrentArmor = Math.Max(0, Armor - tower.EffectStrength);
-                    StatusEffectTimeRemaining = Math.Max(StatusEffectTimeRemaining, tower.EffectDuration);
+                    ArmorBreakTimeRemaining = tower.EffectDuration;
                     break;
             }
         }
@@ -148,24 +159,27 @@ namespace OOPGames
             // Burn counts as fire, poison as poison damage. Both ignore armor; fractions of a point
             // are carried over, so short ticks still add up.
             int appliedDamage = 0;
-            if (!IsDefeated && StatusEffectTimeRemaining > 0)
+            if (!IsDefeated)
             {
-                _EffectDamageCarry += BurnDamagePerSecond * seconds * DamageFactor(DamageType.Fire, false)
-                    + PoisonDamagePerSecond * seconds * DamageFactor(DamageType.Poison, false);
+                double burnSeconds = Math.Min(seconds, BurnTimeRemaining);
+                double poisonSeconds = Math.Min(seconds, PoisonTimeRemaining);
+                _EffectDamageCarry += BurnDamagePerSecond * burnSeconds * DamageFactor(DamageType.Fire, false)
+                    + PoisonDamagePerSecond * poisonSeconds * DamageFactor(DamageType.Poison, false);
                 int whole = (int)Math.Floor(_EffectDamageCarry);
                 _EffectDamageCarry -= whole;
                 appliedDamage = Math.Min(whole, CurrentHealth);
                 CurrentHealth -= appliedDamage;
             }
-            StatusEffectTimeRemaining = Math.Max(0, StatusEffectTimeRemaining - seconds);
 
-            if (StatusEffectTimeRemaining == 0)
-            {
-                BurnDamagePerSecond = 0;
-                PoisonDamagePerSecond = 0;
-                CurrentMoveSpeed = MoveSpeed;
-                CurrentArmor = Armor;
-            }
+            BurnTimeRemaining = Math.Max(0, BurnTimeRemaining - seconds);
+            PoisonTimeRemaining = Math.Max(0, PoisonTimeRemaining - seconds);
+            SlowTimeRemaining = Math.Max(0, SlowTimeRemaining - seconds);
+            ArmorBreakTimeRemaining = Math.Max(0, ArmorBreakTimeRemaining - seconds);
+            if (BurnTimeRemaining == 0) BurnDamagePerSecond = 0;
+            if (PoisonTimeRemaining == 0) PoisonDamagePerSecond = 0;
+            if (SlowTimeRemaining == 0) CurrentMoveSpeed = MoveSpeed;
+            if (ArmorBreakTimeRemaining == 0) CurrentArmor = Armor;
+            if (BurnTimeRemaining == 0 && PoisonTimeRemaining == 0) _EffectDamageCarry = 0;
 
             return appliedDamage;
         }

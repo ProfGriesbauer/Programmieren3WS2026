@@ -103,6 +103,9 @@ namespace OOPGames
             EffectStrength = effectStrength;
         }
 
+        // Burn, poison, slow and armor break end this many seconds after the last hit.
+        public const double StatusEffectDuration = 5;
+
         public string Name { get; private set; }
         public int Damage { get; private set; }
 

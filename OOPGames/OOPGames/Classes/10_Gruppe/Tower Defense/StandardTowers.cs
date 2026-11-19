@@ -14,7 +14,7 @@ namespace OOPGames
     {
         public FireMage()
             : base("Fire Mage", 40, 0.8, DamageType.Fire, 5, AttackMode.SingleTarget, 150,
-                TowerEffect.Burn, 8, 4)
+                TowerEffect.Burn, 8, StatusEffectDuration)
         {
         }
     }
@@ -23,7 +23,7 @@ namespace OOPGames
     {
         public IceMage()
             : base("Ice Mage", 20, 1.0, DamageType.Ice, 5, AttackMode.SingleTarget, 140,
-                TowerEffect.Slow, 0, 3, 0.5)
+                TowerEffect.Slow, 0, StatusEffectDuration, 0.5)
         {
         }
     }
@@ -32,7 +32,7 @@ namespace OOPGames
     {
         public PoisonArcher()
             : base("Poison Archer", 30, 1.2, DamageType.Poison, 6, AttackMode.SingleTarget, 130,
-                TowerEffect.PoisonDamageOverTime, 6, 5)
+                TowerEffect.PoisonDamageOverTime, 6, StatusEffectDuration)
         {
         }
     }
@@ -50,7 +50,7 @@ namespace OOPGames
     {
         public EarthMage()
             : base("Earth Mage", 35, 0.8, DamageType.Earth, 4, AttackMode.SingleTarget, 170,
-                TowerEffect.ArmorBreak, 0, 4, 1, 1, 20)
+                TowerEffect.ArmorBreak, 0, StatusEffectDuration, 1, 1, 20)
         {
         }
     }
@@ -100,7 +100,7 @@ namespace OOPGames
     {
         public Flamethrower()
             : base("Flamethrower", 30, 1.0, DamageType.Fire, 3, AttackMode.AreaDamage, 180,
-                TowerEffect.Burn, 10, 3)
+                TowerEffect.Burn, 10, StatusEffectDuration)
         {
         }
     }
@@ -109,7 +109,7 @@ namespace OOPGames
     {
         public IceAreaTower()
             : base("Ice Area Tower", 25, 0.9, DamageType.Ice, 3, AttackMode.AreaDamage, 190,
-                TowerEffect.Slow, 0, 2, 0.5)
+                TowerEffect.Slow, 0, StatusEffectDuration, 0.5)
         {
         }
     }

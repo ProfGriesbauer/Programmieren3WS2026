@@ -63,33 +63,35 @@ namespace OOPGames
 
     public static class TowerDefenseMaps
     {
-        // Unlock order. The path gets shorter from map to map, so enemies reach the castle sooner.
+        // Unlock order. From map to map the path gets shorter and there are fewer pedestals
+        // (10, 10, 9, 8), so enemies reach the castle sooner and fewer towers can defend it.
+        // Every pedestal reaches the path; must match Maps.All in the sprite generator.
         static readonly IList<TowerDefenseMapDefinition> _Maps = new List<TowerDefenseMapDefinition>
         {
             new TowerDefenseMapDefinition(
                 "Grüne Wiese", "LANGER SCHLANGENWEG",
                 "map_gruene_wiese.png",
                 new Point(286, 70),
-                Points(14, 50, 14, 104, 68, 60, 68, 112, 132, 45, 132, 100, 196, 60, 196, 112, 260, 124, 305, 124),
+                Points(16, 46, 132, 46, 198, 56, 70, 62, 196, 100, 16, 102, 132, 102, 236, 106, 66, 108, 264, 124),
                 Points(-10, 128, 40, 128, 40, 14, 100, 14, 100, 128, 164, 128, 164, 14, 228, 14, 228, 90, 286, 90, 286, 70)),
             new TowerDefenseMapDefinition(
                 "Herbstwald", "MITTELLANGER WALDWEG",
                 "map_herbstwald.png",
                 new Point(280, 60),
-                Points(30, 76, 70, 76, 30, 128, 70, 128, 130, 48, 175, 48, 150, 100, 220, 46, 240, 122, 290, 122),
+                Points(124, 54, 232, 58, 42, 74, 74, 76, 126, 98, 170, 102, 228, 110, 258, 110, 76, 120, 198, 136),
                 Points(-10, 40, 100, 40, 100, 120, 200, 120, 200, 76, 280, 76, 280, 60)),
             new TowerDefenseMapDefinition(
                 "Wüstenpass", "KURZER PASS",
                 "map_wuestenpass.png",
                 new Point(272, 60),
-                Points(20, 60, 55, 60, 90, 60, 20, 130, 60, 130, 100, 130, 160, 124, 210, 124, 260, 124, 170, 40),
+                Points(160, 58, 190, 58, 224, 58, 46, 82, 90, 82, 144, 110, 232, 110, 44, 134, 80, 134),
                 Points(-10, 100, 120, 100, 120, 76, 272, 76, 272, 60)),
             new TowerDefenseMapDefinition(
-                "Frostgipfel", "KURZE SCHLEIFE ZUR BURG",
+                "Frostgipfel", "KURZER BERGPFAD",
                 "map_frostgipfel.png",
-                new Point(160, 90),
-                Points(40, 38, 100, 38, 220, 38, 280, 38, 70, 86, 250, 86, 40, 134, 100, 134, 220, 134, 280, 134),
-                Points(-10, 112, 20, 112, 20, 64, 112, 64, 112, 112, 160, 112, 160, 90))
+                new Point(196, 80),
+                Points(144, 38, 14, 52, 42, 70, 92, 70, 148, 82, 112, 116, 140, 134, 170, 134),
+                Points(-10, 36, 120, 36, 120, 100, 196, 100, 196, 80))
         };
 
         public static IList<TowerDefenseMapDefinition> Maps { get { return _Maps; } }
@@ -795,7 +797,9 @@ namespace OOPGames
             }
         }
 
-        // Jumps to the nearest pedestal in the pressed direction.
+        // Jumps to the pedestal that lies closest to the pressed direction. Only pedestals within
+        // about 72 degrees of that direction count; the angle weighs more than the distance, so a
+        // pedestal in the same row wins over a closer one that lies far to the side.
         void MoveSpot(int dx, int dy)
         {
             Point current = _Map.TowerSpots[_SelectedSpot];
@@ -805,9 +809,11 @@ namespace OOPGames
             {
                 if (i == _SelectedSpot) continue;
                 double vx = _Map.TowerSpots[i].X - current.X, vy = _Map.TowerSpots[i].Y - current.Y;
-                double along = vx * dx + vy * dy;
+                double along = vx * dx + vy * dy, across = Math.Abs(vx * dy - vy * dx);
                 if (along <= 0) continue;
-                double score = along + Math.Abs(vx * dy - vy * dx) * 2;
+                double angle = Math.Atan2(across, along);
+                if (angle > 1.25) continue;
+                double score = Math.Sqrt(vx * vx + vy * vy) * (1 + 2.5 * angle * angle);
                 if (score < bestScore)
                 {
                     bestScore = score;
@@ -1233,7 +1239,7 @@ namespace OOPGames
                     continue;
                 }
                 AddClickArea(x - 16, y - 40, 32, 48, select, open);
-                DrawTowerSprite(_Towers[i], _Upgrades[i], x, y);
+                DrawTowerSprite(_Towers[i], _Upgrades[i], x, y, HidesEnemy(spot) ? TowerSeeThroughOpacity : 1);
             }
             DrawProjectilesAndEffects();
             DrawTowerMarker();
@@ -1441,9 +1447,27 @@ namespace OOPGames
         static readonly Color RangeColor = Color.FromRgb(110, 210, 110);
         static readonly Color SpeedColor = Color.FromRgb(250, 210, 80);
 
-        void DrawTowerSprite(Tower tower, TowerUpgrades upgrades, double x, double y)
+        const double TowerSeeThroughOpacity = 0.4;
+
+        // True when an enemy walks behind the tower on this pedestal, so the tower would hide it.
+        bool HidesEnemy(Point spot)
         {
-            Surface.Sprite(TowerDefenseSprites.Tower(tower.Name), x - 16, y - 43, 32, 48);
+            if (_Battle == null) return false;
+            foreach (TowerDefenseBattleEnemy enemy in _Battle.Enemies)
+            {
+                if (enemy.Y - 1 >= spot.Y) continue;
+                double half = enemy.IsBoss ? 14 : 7, height = enemy.IsBoss ? 28 : 13;
+                bool overlapX = enemy.X + half > spot.X - 13 && enemy.X - half < spot.X + 13;
+                bool overlapY = enemy.Y + 2 > spot.Y - 42 && enemy.Y - height < spot.Y + 2;
+                if (overlapX && overlapY) return true;
+            }
+            return false;
+        }
+
+        void DrawTowerSprite(Tower tower, TowerUpgrades upgrades, double x, double y, double opacity = 1)
+        {
+            if (opacity < 1) Surface.Sprite(TowerDefenseSprites.Tower(tower.Name), x - 16, y - 43, 32, 48, opacity);
+            else Surface.Sprite(TowerDefenseSprites.Tower(tower.Name), x - 16, y - 43, 32, 48);
             if (upgrades.Tier > 1) DrawTierBadge(x + 9, y - 25, upgrades.Tier);
             if (upgrades.TotalLevels == 0) return;
 
@@ -1597,6 +1621,7 @@ namespace OOPGames
                 (TowerDefenseBattle.TowerRange(tower, preview) / TowerDefenseBattle.RangeUnit).ToString("0.0"), 156);
             DrawUpgradeStat(TowerDefenseIcon.Speed, TowerDefenseBattle.TowerAttackSpeed(tower, upgrades).ToString("0.00"),
                 TowerDefenseBattle.TowerAttackSpeed(tower, preview).ToString("0.00"), 226);
+            DrawEffectInfo(tower, upgrades, preview, 26, 134);
 
             string[] labels =
             {
@@ -1651,6 +1676,60 @@ namespace OOPGames
             ShadowText("KLICK / ENTER  KAUFEN    RECHTSKLICK / BACKSPACE  ZURÜCK", 84, 155, 5, TextDim);
         }
 
+        static readonly Color BurnColor = Color.FromRgb(255, 140, 40);
+        static readonly Color PoisonColor = Color.FromRgb(120, 220, 80);
+        static readonly Color SlowColor = Color.FromRgb(150, 220, 255);
+        static readonly Color ArmorBreakColor = Color.FromRgb(200, 150, 90);
+
+        // Small box below the tower picture: the tower effect, its strength and how long it lasts.
+        // Burn and poison grow with the damage upgrade, so the selected upgrade shows its result in green.
+        void DrawEffectInfo(Tower tower, TowerUpgrades upgrades, TowerUpgrades preview, double x, double y)
+        {
+            string name, value, next = null;
+            Color color;
+            bool timed = true;
+            switch (tower.Effect)
+            {
+                case TowerEffect.Burn:
+                case TowerEffect.PoisonDamageOverTime:
+                    bool burn = tower.Effect == TowerEffect.Burn;
+                    name = burn ? "BRAND" : "GIFT";
+                    color = burn ? BurnColor : PoisonColor;
+                    value = TowerDefenseBattle.TowerEffectDamage(tower, upgrades) + "/S";
+                    next = TowerDefenseBattle.TowerEffectDamage(tower, preview) + "/S";
+                    break;
+                case TowerEffect.Slow:
+                    name = "LANGSAM";
+                    color = SlowColor;
+                    value = "-" + (int)Math.Round((1 - tower.SlowFactor) * 100) + "% TEMPO";
+                    break;
+                case TowerEffect.ArmorBreak:
+                    name = "RÜSTUNG";
+                    color = ArmorBreakColor;
+                    value = "-" + tower.EffectStrength;
+                    break;
+                case TowerEffect.ChainLightning:
+                    name = "KETTE";
+                    color = SlowColor;
+                    value = "x" + tower.MaxChainTargets + " ZIELE";
+                    timed = false;
+                    break;
+                default:
+                    return;
+            }
+
+            Surface.Rect(x, y, 48, 18, Outline);
+            Surface.Rect(x + 1, y + 1, 46, 16, PanelInsideDark);
+            ShadowText(name, x + 3, y + 2, 5, color);
+            if (timed)
+            {
+                string duration = Tower.StatusEffectDuration.ToString("0") + "S";
+                ShadowText(duration, x + 45 - duration.Length * 2.75, y + 2, 5, TextDim);
+            }
+            ShadowText(value, x + 3, y + 9, 5, TextLight);
+            if (next != null && next != value) ShadowText(">" + next, x + 5 + value.Length * 2.75, y + 9, 5, RangeColor);
+        }
+
         void DrawUpgradeStat(TowerDefenseIcon icon, string value, string next, double x)
         {
             Icon(icon, x, 66, 8);
@@ -1680,7 +1759,7 @@ namespace OOPGames
             string mode = tower.Effect == TowerEffect.ChainLightning ? "KETTE x" + tower.MaxChainTargets
                 : tower.Effect == TowerEffect.Burn ? "BRAND " + tower.EffectDamagePerSecond + "/S"
                 : tower.Effect == TowerEffect.PoisonDamageOverTime ? "GIFT " + tower.EffectDamagePerSecond + "/S"
-                : tower.Effect == TowerEffect.Slow ? "VERLANGSAMT"
+                : tower.Effect == TowerEffect.Slow ? "LANGSAM -" + (int)Math.Round((1 - tower.SlowFactor) * 100) + "%"
                 : tower.Effect == TowerEffect.ArmorBreak ? "RÜSTUNG -" + tower.EffectStrength
                 : tower.AttackMode == AttackMode.AreaDamage ? "FLÄCHE" : "EINZELZIEL";
             DrawStat(TowerDefenseSprites.Icon(TowerDefenseIcon.Physical), mode, x, y + 56);

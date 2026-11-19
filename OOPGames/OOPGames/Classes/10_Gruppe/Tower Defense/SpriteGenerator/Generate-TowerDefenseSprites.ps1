@@ -1434,6 +1434,7 @@ namespace TowerDefenseSprites
 
     public class Theme
     {
+        public string Name;
         public Color[] Ground;  // replaces GR0..GR4
         public Color[] Dirt;    // replaces D0..D3
         public Color[] Water;   // replaces WA0..WA3
@@ -1446,38 +1447,41 @@ namespace TowerDefenseSprites
     {
         public const int MapW = 320, MapH = 155, RowOffset = 2;
 
-        // Order = unlock order. Paths get shorter (= harder) from map to map.
+        // Order = unlock order. From map to map the path gets shorter and there are fewer
+        // pedestals (10, 10, 9, 8) that cover less of the path, so every map is a bit harder.
+        // Every pedestal reaches at least 60 px of path with range 4 (52 px).
         public static readonly MapDef[] All =
         {
             new MapDef
             {
                 File = "map_gruene_wiese.png", Theme = "meadow", Seed = 11, MainBuilding = new Point(286, 70),
                 Path = new[] { -10, 128, 40, 128, 40, 14, 100, 14, 100, 128, 164, 128, 164, 14, 228, 14, 228, 90, 286, 90, 286, 70 },
-                Spots = new[] { 14, 50, 14, 104, 68, 60, 68, 112, 132, 45, 132, 100, 196, 60, 196, 112, 260, 124, 305, 124 }
+                Spots = new[] { 16, 46, 132, 46, 198, 56, 70, 62, 196, 100, 16, 102, 132, 102, 236, 106, 66, 108, 264, 124 }
             },
             new MapDef
             {
                 File = "map_herbstwald.png", Theme = "autumn", Seed = 22, MainBuilding = new Point(280, 60),
                 Path = new[] { -10, 40, 100, 40, 100, 120, 200, 120, 200, 76, 280, 76, 280, 60 },
-                Spots = new[] { 30, 76, 70, 76, 30, 128, 70, 128, 130, 48, 175, 48, 150, 100, 220, 46, 240, 122, 290, 122 }
+                Spots = new[] { 124, 54, 232, 58, 42, 74, 74, 76, 126, 98, 170, 102, 228, 110, 258, 110, 76, 120, 198, 136 }
             },
             new MapDef
             {
                 File = "map_wuestenpass.png", Theme = "desert", Seed = 33, MainBuilding = new Point(272, 60),
                 Path = new[] { -10, 100, 120, 100, 120, 76, 272, 76, 272, 60 },
-                Spots = new[] { 20, 60, 55, 60, 90, 60, 20, 130, 60, 130, 100, 130, 160, 124, 210, 124, 260, 124, 170, 40 }
+                Spots = new[] { 160, 58, 190, 58, 224, 58, 46, 82, 90, 82, 144, 110, 232, 110, 44, 134, 80, 134 }
             },
             new MapDef
             {
-                File = "map_frostgipfel.png", Theme = "snow", Seed = 44, MainBuilding = new Point(160, 90),
-                Path = new[] { -10, 112, 20, 112, 20, 64, 112, 64, 112, 112, 160, 112, 160, 90 },
-                Spots = new[] { 40, 38, 100, 38, 220, 38, 280, 38, 70, 86, 250, 86, 40, 134, 100, 134, 220, 134, 280, 134 }
+                File = "map_frostgipfel.png", Theme = "snow", Seed = 44, MainBuilding = new Point(196, 80),
+                Path = new[] { -10, 36, 120, 36, 120, 100, 196, 100, 196, 80 },
+                Spots = new[] { 144, 38, 14, 52, 42, 70, 92, 70, 148, 82, 112, 116, 140, 134, 170, 134 }
             }
         };
 
         public static Theme GetTheme(string name)
         {
             Theme t = new Theme();
+            t.Name = name;
             t.Ground = new[] { C.GR0, C.GR1, C.GR2, C.GR3, C.GR4 };
             t.Dirt = new[] { C.D0, C.D1, C.D2, C.D3 };
             t.Water = new[] { C.WA0, C.WA1, C.WA2, C.WA3 };
@@ -1556,35 +1560,15 @@ namespace TowerDefenseSprites
         }
 
         // ---------- composition ----------
-        public static Spr Compose(MapDef def, Theme theme, Dictionary<string, Spr> baseSprites, Dictionary<string, Point> anchors)
+        // Builds a map in twice the game resolution. sprites are the detailed scenery sprites of the
+        // theme (64x64 cells), anchors are given in game pixels.
+        public static Spr Compose(MapDef def, Theme theme, Dictionary<string, Spr> sprites, Dictionary<string, Point> anchors)
         {
             Validate(def);
-            Dictionary<string, Spr> sprites = new Dictionary<string, Spr>();
-            Dictionary<int, Color> spriteColors = TileColors(theme);
-            foreach (KeyValuePair<int, Color> kv in theme.SpriteColors) spriteColors[kv.Key] = kv.Value;
-            foreach (KeyValuePair<string, Spr> kv in baseSprites) sprites[kv.Key] = Recolor(kv.Value, spriteColors);
-
-            List<Spr> tiles = new List<Spr>();
-            foreach (Spr t in World.TerrainTiles()) tiles.Add(Recolor(t, TileColors(theme)));
-
-            Spr m = new Spr(MapW, MapH);
-            int weightSum = 0;
-            foreach (int w in theme.TileWeights) weightSum += w;
-            for (int ty = 0; ty < MapH; ty += 16)
-                for (int tx = 0; tx < MapW; tx += 16)
-                {
-                    int h = Hash(tx / 16 + def.Seed, ty / 16) % weightSum, v = 0;
-                    while (h >= theme.TileWeights[v]) { h -= theme.TileWeights[v]; v++; }
-                    m.Stamp(tiles[v], tx, ty);
-                }
-
+            int k = HiRes.K;
             List<Rectangle> bands = Bands(def.Path);
-            bool[,] path = new bool[MapW, MapH];
-            foreach (Rectangle b in bands)
-                for (int y = Math.Max(0, b.Top); y < Math.Min(MapH, b.Bottom); y++)
-                    for (int x = Math.Max(0, b.Left); x < Math.Min(MapW, b.Right); x++) path[x, y] = true;
 
-            // occupancy for automatic decoration placement
+            // occupancy for automatic decoration placement (game pixels)
             bool[,] blocked = new bool[MapW, MapH];
             foreach (Rectangle b in bands) Block(blocked, Rectangle.Inflate(b, 3, 3));
             for (int i = 0; i < def.Spots.Length; i += 2)
@@ -1602,7 +1586,8 @@ namespace TowerDefenseSprites
             {
                 Spr s = sprites[deco.Key];
                 Point a = anchors[deco.Key];
-                Rectangle bbox = Bounds(s);
+                Rectangle hb = Bounds(s);
+                Rectangle bbox = Rectangle.FromLTRB(hb.Left / k, hb.Top / k, (hb.Right + k - 1) / k, (hb.Bottom + k - 1) / k);
                 int count = 0;
                 for (int attempt = 0; attempt < 3000 && count < deco.Value; attempt++)
                 {
@@ -1616,39 +1601,22 @@ namespace TowerDefenseSprites
                 }
             }
 
+            Spr m = Art.Terrain(theme, bands, def.Seed);
             foreach (KeyValuePair<Point, string> p in placed)
-                if (p.Value == "pond") Stamp(m, sprites, anchors, p.Value, p.Key.X, p.Key.Y);
-
-            Color[] d = theme.Dirt;
-            Func<int, int, bool> inside = (x, y) =>
-            {
-                if (y < 0 || y >= MapH) return y < 0 ? path[Math.Max(0, Math.Min(MapW - 1, x)), 0] : path[Math.Max(0, Math.Min(MapW - 1, x)), MapH - 1];
-                if (x < 0 || x >= MapW) return path[Math.Max(0, Math.Min(MapW - 1, x)), y];
-                return path[x, y];
-            };
-            for (int y = 0; y < MapH; y++)
-                for (int x = 0; x < MapW; x++)
-                {
-                    if (path[x, y])
-                    {
-                        Spr t = tiles[4 + Hash(x / 16 + 7, y / 16 + def.Seed) % 2];
-                        Color c = t.Get(x % 16, y % 16);
-                        if (!inside(x, y - 1)) c = d[0];
-                        else if (!inside(x, y - 2)) c = d[1];
-                        else if (!inside(x - 1, y)) c = d[1];
-                        else if (!inside(x + 1, y) || !inside(x, y + 1)) c = d[3];
-                        m.Set(x, y, c);
-                    }
-                    else if (inside(x - 1, y) || inside(x + 1, y) || inside(x, y - 1) || inside(x, y + 1))
-                        m.Set(x, y, theme.Ground[1]);
-                }
+                if (p.Value == "pond") StampHi(m, sprites, anchors, p.Value, p.Key.X, p.Key.Y);
 
             List<KeyValuePair<Point, string>> sorted = new List<KeyValuePair<Point, string>>();
             foreach (KeyValuePair<Point, string> p in placed) if (p.Value != "pond") sorted.Add(new KeyValuePair<Point, string>(new Point(p.Key.X, p.Key.Y - RowOffset), p.Value));
             for (int i = 0; i < def.Spots.Length; i += 2) sorted.Add(new KeyValuePair<Point, string>(new Point(def.Spots[i], def.Spots[i + 1]), "pedestal"));
             sorted.Sort((a, b) => a.Key.Y.CompareTo(b.Key.Y));
-            foreach (KeyValuePair<Point, string> p in sorted) Stamp(m, sprites, anchors, p.Value, p.Key.X, p.Key.Y + RowOffset);
+            foreach (KeyValuePair<Point, string> p in sorted) StampHi(m, sprites, anchors, p.Value, p.Key.X, p.Key.Y + RowOffset);
             return m;
+        }
+
+        static void StampHi(Spr m, Dictionary<string, Spr> sprites, Dictionary<string, Point> anchors, string name, int x, int imageY)
+        {
+            Point a = anchors[name];
+            m.Stamp(sprites[name], (x - a.X) * HiRes.K, (imageY - a.Y) * HiRes.K);
         }
 
         static Dictionary<int, Color> TileColors(Theme t)
@@ -1726,7 +1694,7 @@ namespace TowerDefenseSprites
         {
             List<string> errors = new List<string>();
             int n = def.Spots.Length / 2;
-            if (n != 10) errors.Add("expected 10 spots, found " + n);
+            if (n < 6 || n > 10) errors.Add("expected 6 to 10 spots, found " + n);
             List<Rectangle> bands = Bands(def.Path);
             int[] p = def.Path;
             if (p[p.Length - 2] != def.MainBuilding.X || p[p.Length - 1] != def.MainBuilding.Y) errors.Add("path must end at the main building gate");
@@ -1766,49 +1734,1404 @@ namespace TowerDefenseSprites
 
 namespace TowerDefenseSprites
 {
+    public delegate bool Mask(int x, int y);
+
+    // Drawing helpers for the detailed sheets (twice the game resolution). Every shape gets a flat
+    // base colour, a shadow band on its right/bottom side and a 1px top highlight; where it overlaps
+    // an earlier shape a dark separation line is drawn. Finish() adds the outer outline.
+    public static class D
+    {
+        public static readonly Color Ink = C.Rgb(36, 28, 34);
+        static readonly Color ShadowTint = C.Rgb(40, 24, 64);
+
+        public static Color Shd(Color c) { return C.Mix(c, ShadowTint, 0.34); }
+        public static Color Deep(Color c) { return C.Mix(c, ShadowTint, 0.58); }
+        public static Color Hl(Color c) { return C.Mix(c, C.Rgb(255, 252, 236), 0.32); }
+
+        static bool Other(Spr s, Mask m, int x, int y)
+        {
+            if (m(x, y)) return false;
+            Color o = s.Get(x, y);
+            return o.A == 255 && o.ToArgb() != Ink.ToArgb();
+        }
+
+        public static void Fill(Spr s, int x0, int y0, int x1, int y1, Mask m, Color c, int shade, bool line)
+        {
+            Color d = Shd(c), l = Hl(c);
+            List<Point> pts = new List<Point>();
+            for (int y = Math.Max(0, y0); y <= Math.Min(s.H - 1, y1); y++)
+                for (int x = Math.Max(0, x0); x <= Math.Min(s.W - 1, x1); x++)
+                    if (m(x, y)) pts.Add(new Point(x, y));
+            List<Point> edge = new List<Point>();
+            if (line)
+                foreach (Point p in pts)
+                    if (Other(s, m, p.X - 1, p.Y) || Other(s, m, p.X + 1, p.Y) || Other(s, m, p.X, p.Y - 1) || Other(s, m, p.X, p.Y + 1)) edge.Add(p);
+            foreach (Point p in pts)
+            {
+                int x = p.X, y = p.Y;
+                Color col = c;
+                if (shade > 0 && (!m(x + shade, y) || !m(x, y + shade))) col = d;
+                else if (shade > 1 && !m(x, y - 1) && m(x, y + 2)) col = l;
+                s.Set(x, y, col);
+            }
+            foreach (Point p in edge) s.Set(p.X, p.Y, Ink);
+        }
+
+        public static void Ell(Spr s, double cx, double cy, double rx, double ry, Color c, int shade = 2, bool line = true)
+        {
+            Fill(s, (int)Math.Floor(cx - rx) - 1, (int)Math.Floor(cy - ry) - 1, (int)Math.Ceiling(cx + rx) + 1, (int)Math.Ceiling(cy + ry) + 1,
+                (x, y) => Spr.InEllipse(x, y, cx, cy, rx, ry), c, shade, line);
+        }
+
+        public static void Box(Spr s, double x, double y, double w, double h, double r, Color c, int shade = 2, bool line = true)
+        {
+            int x0 = (int)Math.Round(x), y0 = (int)Math.Round(y), x1 = (int)Math.Round(x + w) - 1, y1 = (int)Math.Round(y + h) - 1;
+            if (x1 < x0 || y1 < y0) return;
+            Fill(s, x0, y0, x1, y1, (px, py) => InRound(px, py, x0, y0, x1, y1, r), c, shade, line);
+        }
+
+        public static bool InRound(int x, int y, int x0, int y0, int x1, int y1, double r)
+        {
+            if (x < x0 || x > x1 || y < y0 || y > y1) return false;
+            if (r <= 0.5) return true;
+            double cx = Math.Min(Math.Max(x + 0.5, x0 + r), x1 + 1 - r), cy = Math.Min(Math.Max(y + 0.5, y0 + r), y1 + 1 - r);
+            double dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+            return dx * dx + dy * dy <= r * r;
+        }
+
+        public static void Poly(Spr s, double[] p, Color c, int shade = 2, bool line = true)
+        {
+            double minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+            for (int i = 0; i < p.Length; i += 2)
+            {
+                minX = Math.Min(minX, p[i]); maxX = Math.Max(maxX, p[i]);
+                minY = Math.Min(minY, p[i + 1]); maxY = Math.Max(maxY, p[i + 1]);
+            }
+            Fill(s, (int)Math.Floor(minX) - 1, (int)Math.Floor(minY) - 1, (int)Math.Ceiling(maxX) + 1, (int)Math.Ceiling(maxY) + 1,
+                (x, y) => InPoly(p, x + 0.5, y + 0.5), c, shade, line);
+        }
+
+        public static bool InPoly(double[] p, double px, double py)
+        {
+            bool inside = false;
+            int n = p.Length / 2;
+            for (int i = 0, j = n - 1; i < n; j = i++)
+            {
+                double xi = p[i * 2], yi = p[i * 2 + 1], xj = p[j * 2], yj = p[j * 2 + 1];
+                if (((yi > py) != (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside;
+            }
+            return inside;
+        }
+
+        static double SegDist(double px, double py, double x0, double y0, double x1, double y1)
+        {
+            double dx = x1 - x0, dy = y1 - y0, len = dx * dx + dy * dy;
+            double t = len == 0 ? 0 : Math.Max(0, Math.Min(1, ((px - x0) * dx + (py - y0) * dy) / len));
+            double qx = x0 + dx * t - px, qy = y0 + dy * t - py;
+            return Math.Sqrt(qx * qx + qy * qy);
+        }
+
+        // Thick line with round ends.
+        public static void Stick(Spr s, double x0, double y0, double x1, double y1, double w, Color c, int shade = 1, bool line = true)
+        {
+            double r = w / 2.0;
+            Fill(s, (int)Math.Floor(Math.Min(x0, x1) - r) - 1, (int)Math.Floor(Math.Min(y0, y1) - r) - 1, (int)Math.Ceiling(Math.Max(x0, x1) + r) + 1, (int)Math.Ceiling(Math.Max(y0, y1) + r) + 1,
+                (x, y) => SegDist(x + 0.5, y + 0.5, x0, y0, x1, y1) <= r, c, shade, line);
+        }
+
+        public static void Rect(Spr s, double x, double y, double w, double h, Color c)
+        {
+            int x0 = (int)Math.Round(x), y0 = (int)Math.Round(y), x1 = (int)Math.Round(x + w), y1 = (int)Math.Round(y + h);
+            for (int yy = y0; yy < y1; yy++) for (int xx = x0; xx < x1; xx++) s.Set(xx, yy, c);
+        }
+
+        public static void Px(Spr s, double x, double y, Color c) { s.Set((int)Math.Floor(x), (int)Math.Floor(y), c); }
+
+        // Two eyes like in the reference: dark rounded ovals with a small light glint.
+        public static void Eyes(Spr s, double cx, double cy, double gap, double w, double h, Color c, bool glint)
+        {
+            for (int i = -1; i <= 1; i += 2)
+            {
+                double ex = cx + i * gap / 2.0;
+                int x0 = (int)Math.Round(ex - w / 2), y0 = (int)Math.Round(cy - h / 2);
+                int x1 = x0 + (int)Math.Round(w) - 1, y1 = y0 + (int)Math.Round(h) - 1;
+                double r = Math.Min(w, h) * 0.45;
+                Fill(s, x0, y0, x1, y1, (px, py) => InRound(px, py, x0, y0, x1, y1, r), c, 0, false);
+                if (glint)
+                {
+                    int g = Math.Max(1, (int)Math.Round(w / 3.0));
+                    Rect(s, x0 + (w >= 4 ? 1 : 0), y0 + (h >= 5 ? 1 : 0), g, g, C.Rgb(255, 255, 250));
+                }
+            }
+        }
+
+        // Clears pixels (used for broken walls).
+        public static void Erase(Spr s, Mask m)
+        {
+            for (int y = 0; y < s.H; y++) for (int x = 0; x < s.W; x++) if (m(x, y)) s.Clear(x, y);
+        }
+
+        public static void Finish(Spr s, double cx, double ground, double rx, bool flying)
+        {
+            s.Outline(Ink);
+            if (flying) s.EllipseBehind(cx, s.H - 2.5, rx * 0.7, Math.Max(1.5, rx * 0.22), C.ShadowL);
+            else s.EllipseBehind(cx, ground + 1.2, rx, Math.Max(1.5, rx * 0.24), C.Shadow);
+        }
+
+        public static int Hash(int x, int y)
+        {
+            unchecked
+            {
+                int h = x * 374761393 + y * 668265263;
+                h = (h ^ (h >> 13)) * 1274126177;
+                return Math.Abs(h ^ (h >> 16));
+            }
+        }
+    }
+
+    // Front facing chibi figure: big head, small body. All sizes are multiplied with K.
+    public class Chibi
+    {
+        public double K = 1, Cx = 16, Ground = 27;
+        public double HeadW = 14, HeadH = 12, BodyW = 10, BodyH = 7, LegW = 3, LegH = 3, ArmW = 3, ArmL = 6;
+        public bool SquareHead, Robe, ThinLimbs;
+        public Color Skin = C.Rgb(240, 196, 150), Body = C.Rgb(150, 100, 60), Legs = C.Rgb(110, 76, 50), Boots = C.Rgb(76, 54, 42);
+        public Color Sleeve = Color.Empty, Hand = Color.Empty;
+        public int Ears, Eyes, Mouth;
+        public Color EyeColor = D.Ink;
+        public double EyeW = 2, EyeH = 3, EyeGap = 0;
+        public Action<Spr> AfterBody;
+        // filled in by Art.DrawChibi
+        public double HeadCx, HeadCy, HeadTop, BodyTop, BodyBottom, BodyX0, BodyX1, RHandX, RHandY, LHandX, LHandY;
+    }
+
+    public static class Art
+    {
+        public static readonly Color White = C.Rgb(250, 248, 240);
+        public static readonly Color Metal = C.Rgb(178, 186, 198), MetalD = C.Rgb(116, 122, 138);
+        public static readonly Color Wood = C.Rgb(150, 98, 56), WoodD = C.Rgb(112, 72, 44);
+        public static readonly Color Gold = C.Rgb(244, 192, 60), Bone = C.Rgb(238, 234, 220);
+        public static readonly Color GoblinSkin = C.Rgb(124, 182, 76), OrcSkin = C.Rgb(104, 150, 78);
+        public static readonly Color Leather = C.Rgb(146, 96, 60), Boot = C.Rgb(86, 60, 46);
+        public static readonly Color Red = C.Rgb(204, 62, 54), Purple = C.Rgb(136, 64, 150), Blue = C.Rgb(66, 100, 180);
+        public static readonly Color FireA = C.Rgb(232, 96, 40), FireB = C.Rgb(252, 160, 52), FireC = C.Rgb(255, 228, 120);
+        public static readonly Color IceA = C.Rgb(96, 170, 230), IceB = C.Rgb(176, 226, 250), PoisonA = C.Rgb(112, 196, 72);
+        public static readonly Color StormA = C.Rgb(130, 120, 190), Bolt = C.Rgb(255, 224, 80);
+
+        // ---------------- figure ----------------
+        // Body measures for frame f (also needed before drawing, e.g. for a cape behind the figure).
+        public static void Layout(Chibi c, int f)
+        {
+            double k = c.K;
+            double legTop = c.Ground + 1 - c.LegH * k - (f == 1 ? k : 0);
+            c.BodyTop = legTop - c.BodyH * k + k; c.BodyBottom = legTop + k;
+            c.BodyX0 = c.Cx - c.BodyW * k / 2; c.BodyX1 = c.Cx + c.BodyW * k / 2;
+        }
+
+        public static void DrawChibi(Spr s, Chibi c, int f)
+        {
+            double k = c.K, cx = c.Cx, g = c.Ground;
+            double bob = f == 1 ? k : 0;
+            Color sleeve = c.Sleeve == Color.Empty ? c.Body : c.Sleeve;
+            Layout(c, f);
+            double legTop = g + 1 - c.LegH * k - bob;
+            double bodyTop = c.BodyTop;
+            double bw = c.BodyW * k;
+
+            double lw = c.LegW * k, gap = (c.ThinLimbs ? 1.5 : 0.5) * k, lift = f == 1 ? k : 0;
+            if (!c.Robe)
+            {
+                D.Box(s, cx - gap - lw, legTop, lw, g + 1 - legTop - lift, 0, c.Legs, 1, true);
+                D.Box(s, cx + gap, legTop, lw, g + 1 - legTop, 0, c.Legs, 1, true);
+                D.Box(s, cx - gap - lw - 0.5 * k, g + 1 - 2 * k - lift, lw + k, 2 * k, 0.8 * k, c.Boots, 1, true);
+                D.Box(s, cx + gap - 0.5 * k, g + 1 - 2 * k, lw + k, 2 * k, 0.8 * k, c.Boots, 1, true);
+                D.Box(s, c.BodyX0, bodyTop, bw, c.BodyH * k, 2 * k, c.Body, 2, true);
+            }
+            else
+            {
+                double hem = g + 1 - lift * 0.5;
+                D.Poly(s, new[] { c.BodyX0 + k, bodyTop, c.BodyX1 - k, bodyTop, c.BodyX1 + 1.5 * k, hem, c.BodyX0 - 1.5 * k, hem }, c.Body, 2, true);
+                D.Box(s, cx - 3 * k, hem - k, 2.5 * k, k + 0.4, 0, c.Boots, 0, false);
+                D.Box(s, cx + 0.5 * k, hem - k, 2.5 * k, k + 0.4, 0, c.Boots, 0, false);
+            }
+            if (c.AfterBody != null) c.AfterBody(s);
+
+            double swing = f == 1 ? k : 0;
+            double aw = c.ArmW * k, al = c.ArmL * k;
+            double lax = c.BodyX0 - aw + k, rax = c.BodyX1 - k;
+            D.Box(s, lax, bodyTop + k + swing, aw, al, aw / 2, sleeve, 1, true);
+            D.Box(s, rax, bodyTop + k - swing, aw, al, aw / 2, sleeve, 1, true);
+            c.LHandX = lax + aw / 2; c.LHandY = bodyTop + k + swing + al - 0.5 * k;
+            c.RHandX = rax + aw / 2; c.RHandY = bodyTop + k - swing + al - 0.5 * k;
+            Hand(s, c, false); Hand(s, c, true);
+
+            double hw = c.HeadW * k, hh = c.HeadH * k;
+            double hcy = bodyTop - hh / 2 + 2 * k;
+            c.HeadCx = cx; c.HeadCy = hcy; c.HeadTop = hcy - hh / 2;
+            if (c.Ears > 0)
+            {
+                double len = (c.Ears == 2 ? 5 : 3) * k, up = (c.Ears == 2 ? 3 : 3.5) * k;
+                D.Poly(s, new[] { cx - hw / 2 + 1.5 * k, hcy - 1.5 * k, cx - hw / 2 - len, hcy - up, cx - hw / 2 + 1.5 * k, hcy + 2 * k }, c.Skin, 1, true);
+                D.Poly(s, new[] { cx + hw / 2 - 1.5 * k, hcy - 1.5 * k, cx + hw / 2 + len, hcy - up, cx + hw / 2 - 1.5 * k, hcy + 2 * k }, c.Skin, 1, true);
+            }
+            if (c.SquareHead) D.Box(s, cx - hw / 2, hcy - hh / 2, hw, hh, 3 * k, c.Skin, 2, true);
+            else D.Ell(s, cx, hcy, hw / 2, hh / 2, c.Skin, 2, true);
+            Face(s, c);
+        }
+
+        public static void Hand(Spr s, Chibi c, bool right)
+        {
+            double k = c.K, r = c.ArmW * k * 0.62;
+            Color hand = c.Hand == Color.Empty ? c.Skin : c.Hand;
+            if (right) D.Ell(s, c.RHandX, c.RHandY, r, r, hand, 1, true);
+            else D.Ell(s, c.LHandX, c.LHandY, r, r, hand, 1, true);
+        }
+
+        static void Face(Spr s, Chibi c)
+        {
+            double k = c.K, cx = c.HeadCx, cy = c.HeadCy + 0.5 * k;
+            double gap = c.EyeGap > 0 ? c.EyeGap * k : c.HeadW * k * 0.38;
+            if (c.Eyes == 1) D.Eyes(s, cx, cy, gap * 1.05, 3.4 * k, 3.6 * k, D.Ink, false);
+            else if (c.Eyes == 2) D.Eyes(s, cx, cy, gap, c.EyeW * k, c.EyeH * k, c.EyeColor, false);
+            else D.Eyes(s, cx, cy, gap, c.EyeW * k, c.EyeH * k, c.EyeColor, c.EyeColor.ToArgb() == D.Ink.ToArgb());
+            if (c.Eyes == 3)
+            {
+                D.Stick(s, cx - gap / 2 - 1.8 * k, cy - 2.6 * k, cx - gap / 2 + 1.2 * k, cy - 1.8 * k, 0.9 * k + 0.3, D.Ink, 0, false);
+                D.Stick(s, cx + gap / 2 + 1.8 * k, cy - 2.6 * k, cx + gap / 2 - 1.2 * k, cy - 1.8 * k, 0.9 * k + 0.3, D.Ink, 0, false);
+            }
+            double my = cy + 3 * k;
+            switch (c.Mouth)
+            {
+                case 1: D.Rect(s, cx - 1.5 * k, my, 3 * k, Math.Max(1, k), D.Ink); break;
+                case 2:
+                    D.Rect(s, cx - 2.5 * k, my, 5 * k, Math.Max(1, k), D.Ink);
+                    D.Rect(s, cx - 2.5 * k, my - 1.5 * k, Math.Max(1, k), 1.5 * k, White);
+                    D.Rect(s, cx + 1.5 * k, my - 1.5 * k, Math.Max(1, k), 1.5 * k, White);
+                    break;
+                case 3:
+                    D.Rect(s, cx - 2 * k, my, 4 * k, Math.Max(1, k), D.Ink);
+                    D.Rect(s, cx - 1.5 * k, my + k, Math.Max(1, k), k, White);
+                    D.Rect(s, cx + 0.5 * k, my + k, Math.Max(1, k), k, White);
+                    break;
+                case 4:
+                    D.Rect(s, cx - 3 * k, my - 0.5 * k, 6 * k, 2 * k, D.Ink);
+                    for (double x = cx - 2.5 * k; x < cx + 2.5 * k; x += 2 * k) D.Rect(s, x, my - 0.5 * k, Math.Max(1, k), 2 * k, Bone);
+                    D.Rect(s, cx - 0.5 * k, cy + 1.2 * k, Math.Max(1, k), Math.Max(1, k), D.Ink);
+                    break;
+                case 5:
+                    D.Box(s, cx - 2 * k, my - 0.5 * k, 4 * k, 2.5 * k, k, D.Ink, 0, false);
+                    D.Rect(s, cx - k, my + k, 2 * k, Math.Max(1, k), C.Rgb(220, 90, 100));
+                    break;
+            }
+        }
+
+        // ---------------- equipment ----------------
+        static void Dagger(Spr s, Chibi c)
+        {
+            double k = c.K, x = c.RHandX, y = c.RHandY;
+            D.Poly(s, new[] { x - k, y - k, x + k, y - k, x + 1.5 * k, y - 7 * k, x, y - 8 * k }, Metal, 1, true);
+            D.Box(s, x - 2 * k, y - 1.8 * k, 4.5 * k, 1.6 * k, 0, Gold, 0, true);
+            Hand(s, c, true);
+        }
+
+        static void Sword(Spr s, Chibi c, double len, bool left)
+        {
+            double k = c.K, x = left ? c.LHandX : c.RHandX, y = left ? c.LHandY : c.RHandY;
+            D.Box(s, x - k, y - len * k, 2.2 * k, len * k - k, 0.8 * k, Metal, 1, true);
+            D.Box(s, x - 3 * k, y - 2.3 * k, 6.2 * k, 1.8 * k, 0.6 * k, Gold, 0, true);
+            D.Box(s, x - 0.6 * k, y + 0.5 * k, 1.4 * k, 2.5 * k, 0, WoodD, 0, true);
+            Hand(s, c, !left);
+        }
+
+        static void Axe(Spr s, Chibi c, double size, bool left)
+        {
+            double k = c.K * size, x = left ? c.LHandX : c.RHandX, y = left ? c.LHandY : c.RHandY;
+            double dir = left ? -1 : 1;
+            D.Stick(s, x, y + 2 * k, x, y - 10 * k, 1.8 * k, Wood, 1, true);
+            D.Poly(s, new[] { x, y - 10 * k, x + dir * 5 * k, y - 12 * k, x + dir * 6.5 * k, y - 7.5 * k, x + dir * 5 * k, y - 3.5 * k, x, y - 5.5 * k }, Metal, 2, true);
+            D.Rect(s, Math.Min(x + dir * 5.5 * k, x + dir * 6.3 * k), y - 10 * k, Math.Max(1, k * 0.8), 5 * k, C.Rgb(230, 236, 244));
+            Hand(s, c, !left);
+        }
+
+        static void Club(Spr s, Chibi c, Color col, double size)
+        {
+            double k = c.K * size, x = c.RHandX, y = c.RHandY;
+            D.Stick(s, x, y + 2 * k, x + 2 * k, y - 7 * k, 2.2 * k, col, 1, true);
+            D.Ell(s, x + 2.5 * k, y - 8.5 * k, 3 * k, 3.6 * k, col, 2, true);
+            Hand(s, c, true);
+        }
+
+        static void BoneClub(Spr s, Chibi c)
+        {
+            double k = c.K, x = c.RHandX, y = c.RHandY;
+            D.Stick(s, x - 4 * k, y + 1 * k, x + 5 * k, y - 1 * k, 1.8 * k, Bone, 1, true);
+            D.Ell(s, x + 5.5 * k, y - 2 * k, 1.6 * k, 1.6 * k, Bone, 1, true);
+            D.Ell(s, x + 6 * k, y + 0.2 * k, 1.6 * k, 1.6 * k, Bone, 1, true);
+            Hand(s, c, true);
+        }
+
+        static void Bow(Spr s, Chibi c, Color arrowTip)
+        {
+            double k = c.K, x = c.RHandX + 1.5 * k, y = c.RHandY - 1 * k;
+            double[] px = { -1.5, 1, 2.5, 2.5, 1, -1.5 }, py = { -8, -6, -2.5, 2.5, 6, 8 };
+            for (int i = 0; i + 1 < px.Length; i++) D.Stick(s, x + px[i] * k, y + py[i] * k, x + px[i + 1] * k, y + py[i + 1] * k, 1.6 * k, Wood, 0, true);
+            D.Stick(s, x - 1.5 * k, y - 8 * k, x - 1.5 * k, y + 8 * k, Math.Max(1, 0.6 * k), C.Rgb(230, 226, 210), 0, false);
+            D.Stick(s, x - 6 * k, y, x + 5 * k, y, Math.Max(1, 0.8 * k), WoodD, 0, false);
+            D.Poly(s, new[] { x + 4.5 * k, y - 1.5 * k, x + 7 * k, y, x + 4.5 * k, y + 1.5 * k }, arrowTip, 0, true);
+            Hand(s, c, true);
+        }
+
+        static void Staff(Spr s, Chibi c, double len, Color orb)
+        {
+            double k = c.K, x = c.RHandX, y = c.RHandY;
+            D.Stick(s, x, y + 3 * k, x, y - len * k, 1.8 * k, Wood, 1, true);
+            D.Ell(s, x, y - len * k - 2 * k, 2.8 * k, 2.8 * k, orb, 2, true);
+            D.Rect(s, x - 1.5 * k, y - len * k - 3.5 * k, Math.Max(1, k), Math.Max(1, k), White);
+            Hand(s, c, true);
+        }
+
+        static void Shield(Spr s, Chibi c, Color col)
+        {
+            double k = c.K, x = c.LHandX, y = c.LHandY - 2 * k;
+            D.Box(s, x - 4 * k, y - 4.5 * k, 8 * k, 9.5 * k, 3.5 * k, col, 2, true);
+            D.Box(s, x - 1.5 * k, y - 2 * k, 3 * k, 4 * k, 1.5 * k, Gold, 0, true);
+        }
+
+        static void Hood(Spr s, Chibi c, Color col)
+        {
+            double k = c.K, hw = c.HeadW * k, hh = c.HeadH * k, cx = c.HeadCx, cy = c.HeadCy;
+            double rx = hw / 2 + 1.5 * k, ry = hh / 2 + 1.3 * k, ocy = cy - k;
+            double frx = hw / 2 - 1.2 * k, fry = hh / 2 - 1.2 * k, fcy = cy + 2.8 * k;
+            Mask m = (x, y) => Spr.InEllipse(x, y, cx, ocy, rx, ry) && !Spr.InEllipse(x, y, cx, fcy, frx, fry);
+            D.Fill(s, (int)(cx - rx - 2), (int)(ocy - ry - 2), (int)(cx + rx + 2), (int)(ocy + ry + 2), m, col, 2, true);
+            D.Poly(s, new[] { cx - 2 * k, ocy - ry + 1.5 * k, cx + 3 * k, ocy - ry + 0.5 * k, cx - 3 * k, ocy - ry - 2.5 * k }, col, 1, true);
+        }
+
+        static void WizardHat(Spr s, Chibi c, Color col, Color band, double tilt)
+        {
+            double k = c.K, hw = c.HeadW * k, cx = c.HeadCx, by = c.HeadTop + 3 * k;
+            D.Poly(s, new[] { cx - hw * 0.34, by, cx + hw * 0.36, by, cx + tilt * k, by - 14 * k }, col, 2, true);
+            D.Box(s, cx - hw * 0.34, by - 3 * k, hw * 0.7, 2 * k, 0, band, 0, true);
+            D.Ell(s, cx + 0.5 * k, by, hw / 2 + 2.5 * k, 1.8 * k, col, 1, true);
+        }
+
+        static void Helmet(Spr s, Chibi c, Color col, bool horns)
+        {
+            double k = c.K, hw = c.HeadW * k, hh = c.HeadH * k, cx = c.HeadCx, cy = c.HeadCy;
+            if (horns)
+            {
+                D.Poly(s, new[] { cx - hw / 2 + 1 * k, cy - 2.5 * k, cx - hw / 2 - 3 * k, cy - 6 * k, cx - hw / 2 - 2 * k, cy - 10 * k, cx - hw / 2 + 2.5 * k, cy - 4.5 * k }, Bone, 1, true);
+                D.Poly(s, new[] { cx + hw / 2 - 1 * k, cy - 2.5 * k, cx + hw / 2 + 3 * k, cy - 6 * k, cx + hw / 2 + 2 * k, cy - 10 * k, cx + hw / 2 - 2.5 * k, cy - 4.5 * k }, Bone, 1, true);
+            }
+            Mask m = (x, y) => Spr.InEllipse(x, y, cx, cy, hw / 2 + 0.8 * k, hh / 2 + 0.8 * k) && y < cy - 3 * k;
+            D.Fill(s, (int)(cx - hw), (int)(cy - hh), (int)(cx + hw), (int)cy, m, col, 2, true);
+            D.Box(s, cx - hw / 2 - 0.5 * k, cy - 4.2 * k, hw + k, 1.8 * k, k, col, 1, true);
+            D.Box(s, cx - 0.7 * k, cy - 3 * k, 1.4 * k, 2.5 * k, 0, col, 1, true);
+        }
+
+        static void Crown(Spr s, double cx, double y, double w, double k)
+        {
+            D.Poly(s, new[] { cx - w / 2, y, cx - w / 2, y - 4 * k, cx - w / 4, y - 1.8 * k, cx, y - 5 * k, cx + w / 4, y - 1.8 * k, cx + w / 2, y - 4 * k, cx + w / 2, y }, Gold, 1, true);
+            D.Box(s, cx - w / 2, y - k, w, 2.2 * k, 0, Gold, 1, true);
+            D.Rect(s, cx - 0.8 * k, y - 0.6 * k, 1.6 * k, 1.4 * k, Red);
+        }
+
+        static void Hair(Spr s, Chibi c, Color col, bool longHair)
+        {
+            double k = c.K, hw = c.HeadW * k, hh = c.HeadH * k, cx = c.HeadCx, cy = c.HeadCy;
+            if (longHair)
+            {
+                D.Box(s, cx - hw / 2 - 0.8 * k, cy - 2 * k, 3 * k, hh / 2 + 5 * k, k, col, 1, true);
+                D.Box(s, cx + hw / 2 - 2.2 * k, cy - 2 * k, 3 * k, hh / 2 + 5 * k, k, col, 1, true);
+            }
+            Mask m = (x, y) => Spr.InEllipse(x, y, cx, cy - 0.5 * k, hw / 2 + 0.8 * k, hh / 2 + 0.8 * k)
+                && (y < cy - 2.5 * k + Math.Abs(x + 0.5 - cx) * 0.25 || (Math.Abs(x + 0.5 - cx) > hw / 2 - 1.5 * k && y < cy));
+            D.Fill(s, (int)(cx - hw), (int)(cy - hh), (int)(cx + hw), (int)(cy + 1), m, col, 2, true);
+        }
+
+        static void Cape(Spr s, Chibi c, Color col, Color lining, int f)
+        {
+            Layout(c, f);
+            double k = c.K, w = f == 1 ? k : 0;
+            D.Poly(s, new[] { c.BodyX0 - 1 * k, c.BodyTop, c.BodyX1 + 1 * k, c.BodyTop, c.BodyX1 + 4 * k + w, c.Ground - k, c.BodyX0 - 4 * k - w, c.Ground - k }, col, 2, true);
+            D.Poly(s, new[] { c.BodyX0, c.BodyTop + 2 * k, c.BodyX1, c.BodyTop + 2 * k, c.BodyX1 + 2.5 * k, c.Ground - 2 * k, c.BodyX0 - 2.5 * k, c.Ground - 2 * k }, lining, 1, false);
+        }
+
+        static Action<Spr> Belt(Chibi c, Color col, double height)
+        {
+            return s => D.Box(s, c.BodyX0, c.BodyBottom - height * c.K - c.K, c.BodyW * c.K, height * c.K, 0, col, 1, true);
+        }
+
+        // ---------------- creature bases ----------------
+        static Chibi Goblin(double k, double cx, double g)
+        {
+            Chibi c = new Chibi { K = k, Cx = cx, Ground = g, HeadW = 14, HeadH = 11, BodyW = 9, BodyH = 6, LegH = 3, ArmL = 5 };
+            c.Skin = GoblinSkin; c.Body = GoblinSkin; c.Legs = GoblinSkin; c.Boots = Boot; c.Ears = 2; c.Mouth = 1;
+            c.AfterBody = Belt(c, Leather, 3);
+            return c;
+        }
+
+        static Chibi Orc(double k, double cx, double g)
+        {
+            Chibi c = new Chibi { K = k, Cx = cx, Ground = g, HeadW = 14, HeadH = 11, BodyW = 12, BodyH = 8, LegW = 3.5, LegH = 3, ArmW = 3.5, ArmL = 7 };
+            c.Skin = OrcSkin; c.Body = Leather; c.Legs = C.Rgb(92, 76, 64); c.Boots = Boot; c.Sleeve = OrcSkin; c.Ears = 1; c.Eyes = 3; c.Mouth = 2;
+            return c;
+        }
+
+        static Chibi Skeleton(double k, double cx, double g)
+        {
+            Chibi c = new Chibi { K = k, Cx = cx, Ground = g, HeadW = 14, HeadH = 12, BodyW = 8, BodyH = 7, LegW = 2, LegH = 4, ArmW = 2.2, ArmL = 7, ThinLimbs = true };
+            c.Skin = Bone; c.Body = Bone; c.Legs = Bone; c.Boots = Bone; c.SquareHead = true; c.Eyes = 1; c.Mouth = 4;
+            c.AfterBody = s =>
+            {
+                double kk = c.K;
+                for (double y = c.BodyTop + 2 * kk; y < c.BodyBottom - kk; y += 2 * kk) D.Rect(s, c.BodyX0 + kk, y, c.BodyW * kk - 2 * kk, Math.Max(1, kk * 0.8), D.Ink);
+                D.Rect(s, c.Cx - 0.5 * kk, c.BodyTop + kk, Math.Max(1, kk), c.BodyH * kk - 2 * kk, Bone);
+            };
+            return c;
+        }
+
+        static Chibi Golem(double k, double cx, double g, Color stone)
+        {
+            Chibi c = new Chibi { K = k, Cx = cx, Ground = g, HeadW = 10, HeadH = 8, BodyW = 15, BodyH = 9, LegW = 4.5, LegH = 4, ArmW = 5, ArmL = 9 };
+            c.Skin = stone; c.Body = stone; c.Legs = stone; c.Boots = D.Shd(stone); c.SquareHead = true; c.Eyes = 2; c.EyeW = 2.6; c.EyeH = 2; c.EyeGap = 4.5;
+            return c;
+        }
+
+        static Chibi Elf(double k, double cx, double g)
+        {
+            Chibi c = new Chibi { K = k, Cx = cx, Ground = g, HeadW = 13, HeadH = 12, BodyW = 9, BodyH = 7, LegW = 2.5, LegH = 4, ArmW = 2.6, ArmL = 6.5 };
+            c.Skin = C.Rgb(156, 136, 200); c.Body = C.Rgb(70, 52, 96); c.Legs = C.Rgb(56, 44, 78); c.Boots = C.Rgb(40, 32, 52); c.Ears = 1;
+            c.EyeColor = C.Rgb(230, 60, 60); c.Eyes = 2; c.EyeH = 2; c.EyeW = 2.4; c.Mouth = 1;
+            return c;
+        }
+
+        static Chibi Vampire(double k, double cx, double g)
+        {
+            Chibi c = new Chibi { K = k, Cx = cx, Ground = g, HeadW = 13, HeadH = 12, BodyW = 9, BodyH = 8, LegW = 2.6, LegH = 4, ArmW = 2.6, ArmL = 6.5 };
+            c.Skin = C.Rgb(232, 224, 226); c.Body = C.Rgb(48, 40, 56); c.Legs = C.Rgb(40, 34, 48); c.Boots = C.Rgb(30, 24, 34);
+            c.EyeColor = C.Rgb(210, 40, 50); c.Eyes = 2; c.EyeH = 2; c.EyeW = 2.4; c.Mouth = 3;
+            c.AfterBody = s => { double kk = c.K; D.Poly(s, new[] { c.Cx - 2.5 * kk, c.BodyTop, c.Cx + 2.5 * kk, c.BodyTop, c.Cx, c.BodyTop + 4 * kk }, White, 0, true); D.Rect(s, c.Cx - 0.5 * kk, c.BodyTop + kk, Math.Max(1, kk), 1.5 * kk, Red); };
+            return c;
+        }
+
+        static void Flame(Spr s, int f, double k, double cx, double cy)
+        {
+            double t = f == 1 ? k : 0;
+            D.Poly(s, new[] { cx - 7 * k, cy, cx - 6 * k, cy - 7 * k + t, cx - 3 * k, cy - 4 * k, cx - 1 * k, cy - 12 * k - t, cx + 2.5 * k, cy - 5 * k, cx + 5 * k, cy - 9 * k + t, cx + 7 * k, cy }, FireA, 2, true);
+            D.Ell(s, cx, cy + 0.5 * k, 7 * k, 6.5 * k, FireA, 2, false);
+            D.Poly(s, new[] { cx - 4 * k, cy + 2 * k, cx - 3 * k, cy - 3 * k, cx - 0.5 * k, cy - 7 * k - t, cx + 2 * k, cy - 2 * k, cx + 4 * k, cy + 2 * k }, FireB, 0, false);
+            D.Ell(s, cx, cy + 2.5 * k, 4.5 * k, 3.5 * k, FireB, 0, false);
+            D.Ell(s, cx, cy + 3.5 * k, 2.5 * k, 2 * k, FireC, 0, false);
+            D.Eyes(s, cx, cy, 5 * k, 2 * k, 3 * k, D.Ink, true);
+            D.Rect(s, cx - k, cy + 3 * k, 2 * k, Math.Max(1, k), D.Ink);
+        }
+
+        static void Crystal(Spr s, int f, double k, double cx, double cy)
+        {
+            double b = f == 1 ? -k : 0;
+            D.Poly(s, new[] { cx - 9 * k, cy + 2 * k - b, cx - 6 * k, cy - 1 * k - b, cx - 5 * k, cy + 6 * k - b }, IceA, 1, true);
+            D.Poly(s, new[] { cx + 9 * k, cy + 2 * k - b, cx + 6 * k, cy - 1 * k - b, cx + 5 * k, cy + 6 * k - b }, IceA, 1, true);
+            D.Poly(s, new[] { cx, cy - 12 * k + b, cx + 6 * k, cy + b, cx, cy + 12 * k + b, cx - 6 * k, cy + b }, IceB, 3, true);
+            D.Stick(s, cx, cy - 10 * k + b, cx, cy + 10 * k + b, Math.Max(1, 0.7 * k), C.Rgb(150, 210, 245), 0, false);
+            D.Eyes(s, cx, cy + b, 6 * k, 2 * k, 3 * k, C.Rgb(30, 60, 120), true);
+        }
+
+        static void Cloud(Spr s, int f, double k, double cx, double cy)
+        {
+            int bx = f == 0 ? -1 : 2;
+            D.Poly(s, new[] { cx + (bx - 1) * k, cy + 5 * k, cx + (bx + 3) * k, cy + 5 * k, cx + (bx + 1) * k, cy + 9 * k, cx + (bx + 3) * k, cy + 9 * k, cx + (bx - 1) * k, cy + 15 * k, cx + bx * k, cy + 10 * k, cx + (bx - 2) * k, cy + 10 * k }, Bolt, 1, true);
+            D.Ell(s, cx - 5 * k, cy + 1 * k, 5 * k, 4.5 * k, StormA, 2, true);
+            D.Ell(s, cx + 5 * k, cy + 1 * k, 5 * k, 4.5 * k, StormA, 2, true);
+            D.Ell(s, cx, cy - 2 * k, 6.5 * k, 6 * k, StormA, 2, true);
+            D.Ell(s, cx - 1 * k, cy - 4 * k, 3.5 * k, 2.5 * k, D.Hl(StormA), 0, false);
+            D.Eyes(s, cx, cy + 0.5 * k, 5 * k, 2 * k, 3 * k, D.Ink, true);
+        }
+
+        static void Mound(Spr s, int f, double k, double cx, double g)
+        {
+            Color rock = C.Rgb(150, 112, 78), stone = C.Rgb(160, 156, 148), moss = C.Rgb(104, 170, 70);
+            double st = f == 1 ? k : 0;
+            D.Box(s, cx - 6 * k - st, g - 4 * k, 4 * k, 5 * k, k, D.Shd(rock), 1, true);
+            D.Box(s, cx + 2 * k + st, g - 4 * k, 4 * k, 5 * k, k, rock, 1, true);
+            D.Ell(s, cx, g - 9 * k, 10 * k, 7.5 * k, rock, 3, true);
+            D.Ell(s, cx - 5 * k, g - 15 * k, 4 * k, 3 * k, stone, 2, true);
+            D.Ell(s, cx + 4 * k, g - 16 * k, 3.5 * k, 3 * k, stone, 2, true);
+            D.Ell(s, cx - 1 * k, g - 15.5 * k, 3 * k, 1.6 * k, moss, 0, true);
+            D.Eyes(s, cx, g - 9 * k, 6 * k, 2.4 * k, 2 * k, Gold, false);
+            D.Rect(s, cx - 2 * k, g - 5.5 * k, 4 * k, Math.Max(1, k), D.Ink);
+        }
+
+        // Side view, facing right; k = 1 for a 32 px cell.
+        static void Dragon(Spr s, int f, double k, Color body, Color belly, Color wing, bool horns, bool fire)
+        {
+            Func<double[], double[]> S =p => { double[] o = new double[p.Length]; for (int i = 0; i < p.Length; i++) o[i] = p[i] * k; return o; };
+            if (f == 0) D.Poly(s, S(new double[] { 12, 14, 18, 14, 17, 3, 12, 4, 8, 7 }), D.Shd(wing), 1, true);
+            else D.Poly(s, S(new double[] { 12, 16, 18, 16, 16, 26, 11, 24 }), D.Shd(wing), 1, true);
+            D.Poly(s, S(new double[] { 9, 16, 11, 21, 3, 22, 1, 20, 3, 19 }), body, 1, true);
+            D.Poly(s, S(new double[] { 1, 20, 3, 18, 3, 23, 0, 23 }), wing, 0, true);
+            D.Box(s, 10 * k, 20 * k, 3 * k, 6 * k + 0.4, k, D.Shd(body), 1, true);
+            D.Box(s, 16 * k, 20 * k, 3 * k, 6 * k + 0.4, k, D.Shd(body), 1, true);
+            D.Ell(s, 14.5 * k, 17.5 * k, 7.5 * k, 5 * k, body, 3, true);
+            D.Ell(s, 14.5 * k, 20.5 * k, 5 * k, 2 * k, belly, 0, true);
+            D.Poly(s, S(new double[] { 17, 15, 22, 8, 26, 10, 21, 18 }), body, 2, true);
+            if (horns) D.Poly(s, S(new double[] { 22, 6, 18, 2, 24, 6.5 }), Bone, 0, true);
+            D.Ell(s, 24.5 * k, 9 * k, 4.5 * k, 3.6 * k, body, 2, true);
+            D.Box(s, 25 * k, 8.5 * k, 6 * k, 4 * k, 1.5 * k, body, 2, true);
+            D.Rect(s, 26 * k, 11.2 * k, 5 * k, Math.Max(1, k), belly);
+            D.Eyes(s, 24 * k, 8 * k, 0, 2 * k, 2.4 * k, D.Ink, true);
+            D.Rect(s, 29.5 * k, 9.5 * k, Math.Max(1, k), Math.Max(1, k), D.Ink);
+            if (fire)
+            {
+                D.Poly(s, S(new double[] { 31, 10, 34, 8.5, 35, 11, 34, 13.5 }), FireA, 0, true);
+                D.Ell(s, 32.5 * k, 11 * k, 1.5 * k, 1.3 * k, FireC, 0, false);
+            }
+            if (f == 0) D.Poly(s, S(new double[] { 12, 15, 18, 15, 20, 5, 16, 3, 10, 7 }), wing, 2, true);
+            else D.Poly(s, S(new double[] { 12, 16, 18, 16, 17, 26, 13, 25, 9, 22 }), wing, 2, true);
+            if (f == 0) { D.Stick(s, 17 * k, 14 * k, 18 * k, 4 * k, Math.Max(1, 0.7 * k), D.Shd(wing), 0, false); D.Stick(s, 14 * k, 14 * k, 12 * k, 5 * k, Math.Max(1, 0.7 * k), D.Shd(wing), 0, false); }
+            else { D.Stick(s, 16 * k, 17 * k, 16 * k, 27 * k, Math.Max(1, 0.7 * k), D.Shd(wing), 0, false); D.Stick(s, 13 * k, 17 * k, 11 * k, 25 * k, Math.Max(1, 0.7 * k), D.Shd(wing), 0, false); }
+            for (int i = 0; i < 3; i++) D.Poly(s, S(new double[] { 10 + i * 3, 13, 11.5 + i * 3, 10.5, 13 + i * 3, 13 }), D.Hl(body), 0, true);
+        }
+
+        // ---------------- enemies (32x32 art pixels = 16x16 game pixels, 2 frames) ----------------
+        public static Spr Enemy(int i, int f)
+        {
+            Spr s = new Spr(32, 32);
+            double k = 1, cx = 16, g = 27, rx = 7;
+            bool fly = false;
+            Chibi c;
+            switch (i)
+            {
+                case 0: // Goblin
+                    c = Goblin(k, cx, g); DrawChibi(s, c, f); Dagger(s, c); break;
+                case 1: // Goblin Archer
+                    c = Goblin(k, cx, g); c.Body = C.Rgb(86, 130, 60); c.AfterBody = Belt(c, Leather, 2);
+                    DrawChibi(s, c, f); Hood(s, c, C.Rgb(70, 118, 56)); Bow(s, c, Metal); break;
+                case 2: // Goblin Shaman
+                    c = Goblin(k, cx, g); c.Robe = true; c.Body = Purple; c.Sleeve = Purple; c.AfterBody = null;
+                    DrawChibi(s, c, f);
+                    D.Stick(s, cx - 3, c.HeadTop + 1, cx - 5, c.HeadTop - 4, 1.5, Red, 0, true);
+                    D.Stick(s, cx, c.HeadTop, cx, c.HeadTop - 5, 1.5, Gold, 0, true);
+                    D.Stick(s, cx + 3, c.HeadTop + 1, cx + 5, c.HeadTop - 4, 1.5, IceA, 0, true);
+                    Staff(s, c, 11, PoisonA); break;
+                case 3: // Orc
+                    c = Orc(k, cx, g); c.AfterBody = Belt(c, Boot, 2); DrawChibi(s, c, f);
+                    D.Box(s, c.BodyX1 - 3, c.BodyTop - 0.5, 5, 3, 1.5, Metal, 1, true);
+                    Axe(s, c, 1, false); break;
+                case 4: // Orc Berserker
+                    c = Orc(k, cx, g); c.Body = OrcSkin; c.AfterBody = Belt(c, Leather, 2); DrawChibi(s, c, f);
+                    D.Box(s, cx - 7, c.HeadCy - 4, 14, 2, 0, Red, 0, true);
+                    D.Rect(s, cx - 6, c.HeadCy + 1, 2, 1, Red); D.Rect(s, cx + 4, c.HeadCy + 1, 2, 1, Red);
+                    Axe(s, c, 0.85, false); Axe(s, c, 0.85, true); break;
+                case 5: // Orc Warlord
+                    c = Orc(k, cx, g); c.Body = Metal; c.Legs = MetalD; c.AfterBody = Belt(c, Red, 2);
+                    Cape(s, c, Red, C.Rgb(150, 40, 40), f);
+                    DrawChibi(s, c, f); Helmet(s, c, MetalD, true); Sword(s, c, 11, false); break;
+                case 6: // Skeleton
+                    c = Skeleton(k, cx, g); DrawChibi(s, c, f); BoneClub(s, c); break;
+                case 7: // Skeleton Knight
+                    c = Skeleton(k, cx, g); DrawChibi(s, c, f); Helmet(s, c, MetalD, false); Shield(s, c, Blue); Sword(s, c, 9, false); break;
+                case 8: // Troll
+                    c = new Chibi { K = k, Cx = cx, Ground = g, HeadW = 12, HeadH = 10, BodyW = 15, BodyH = 9, LegW = 4.5, LegH = 4, ArmW = 4.5, ArmL = 9 };
+                    c.Skin = C.Rgb(140, 160, 126); c.Body = c.Skin; c.Legs = c.Skin; c.Boots = D.Shd(c.Skin); c.Ears = 1; c.Mouth = 2; c.EyeGap = 4;
+                    c.AfterBody = Belt(c, Leather, 3);
+                    DrawChibi(s, c, f); Club(s, c, Wood, 1); rx = 8; break;
+                case 9: // Stone Golem
+                    c = Golem(k, cx, g, C.Rgb(158, 154, 146)); c.EyeColor = C.Rgb(110, 236, 250); DrawChibi(s, c, f);
+                    D.Ell(s, c.BodyX0, c.BodyTop + 1, 2.5, 1.5, C.Rgb(104, 170, 70), 0, true);
+                    D.Ell(s, c.BodyX1, c.BodyTop + 1, 2, 1.3, C.Rgb(104, 170, 70), 0, true);
+                    D.Stick(s, cx - 2, c.BodyTop + 2, cx, c.BodyTop + 6, 1, D.Ink, 0, false); rx = 9; break;
+                case 10: Flame(s, f, k, cx, 16); fly = true; break;
+                case 11: Crystal(s, f, k, cx, 14); fly = true; break;
+                case 12: Cloud(s, f, k, cx, 11); fly = true; break;
+                case 13: Mound(s, f, k, cx, g); rx = 9; break;
+                case 14: // Dark Elf
+                    c = Elf(k, cx, g); DrawChibi(s, c, f); Hair(s, c, C.Rgb(236, 236, 244), true); Dagger(s, c); break;
+                case 15: // Vampire
+                    c = Vampire(k, cx, g); Cape(s, c, C.Rgb(40, 32, 48), C.Rgb(170, 40, 50), f);
+                    DrawChibi(s, c, f); Hair(s, c, C.Rgb(34, 28, 40), false); break;
+                case 16: Dragon(s, f, 1, C.Rgb(76, 150, 104), C.Rgb(200, 220, 150), C.Rgb(60, 120, 96), false, false); fly = true; cx = 15; break;
+                case 17: // Fire Golem
+                    c = Golem(k, cx, g, C.Rgb(96, 76, 70)); c.EyeColor = FireC; DrawChibi(s, c, f);
+                    D.Stick(s, cx - 3, c.BodyTop + 2, cx + 1, c.BodyTop + 6, 1.4, FireB, 0, false);
+                    D.Stick(s, cx + 3, c.BodyTop + 1, cx + 2, c.BodyTop + 4, 1.2, FireB, 0, false);
+                    D.Poly(s, new double[] { cx - 3, c.HeadTop + 1, cx - 1, c.HeadTop - 4 - f, cx + 1, c.HeadTop - 1, cx + 3, c.HeadTop - 3 + f, cx + 4, c.HeadTop + 1 }, FireA, 0, true);
+                    rx = 9; break;
+                case 18: Dragon(s, f, 1, C.Rgb(200, 62, 52), C.Rgb(244, 196, 110), C.Rgb(150, 40, 40), true, false); fly = true; cx = 15; break;
+                default: // Arcane Titan
+                    c = Golem(k, cx, g, C.Rgb(82, 100, 186)); c.SquareHead = true; c.EyeColor = C.Rgb(130, 244, 252); c.Body = C.Rgb(70, 86, 168);
+                    c.AfterBody = Belt(c, Gold, 2);
+                    DrawChibi(s, c, f);
+                    D.Box(s, c.BodyX0 - 1, c.BodyTop - 1, 4, 3, 1, Gold, 1, true); D.Box(s, c.BodyX1 - 3, c.BodyTop - 1, 4, 3, 1, Gold, 1, true);
+                    D.Rect(s, cx - 1, c.BodyTop + 2, 2, 2, C.Rgb(130, 244, 252)); D.Rect(s, cx - 3, c.BodyTop + 5, 6, 1, C.Rgb(130, 244, 252));
+                    rx = 9; break;
+            }
+            D.Finish(s, cx, g, rx, fly);
+            return s;
+        }
+
+        // ---------------- bosses (64x64 art pixels = 32x32 game pixels, 2 frames) ----------------
+        public static Spr Boss(int i, int f)
+        {
+            Spr s = new Spr(64, 64);
+            double k = 2, cx = 32, g = 57, rx = 14;
+            bool fly = false;
+            Chibi c;
+            switch (i)
+            {
+                case 0: // Skeleton King
+                    c = Skeleton(k, cx, g); Cape(s, c, Purple, C.Rgb(96, 40, 110), f);
+                    DrawChibi(s, c, f); c.Eyes = 2; c.EyeColor = C.Rgb(120, 236, 250);
+                    D.Eyes(s, c.HeadCx, c.HeadCy + k, 5.5 * k, 1.6 * k, 1.6 * k, c.EyeColor, false);
+                    Crown(s, cx, c.HeadTop + 2 * k, 10 * k, k); Sword(s, c, 13, false); break;
+                case 1: // Orc Lord
+                    c = Orc(k, cx, g); c.Body = Metal; c.Legs = MetalD; c.AfterBody = Belt(c, Gold, 2);
+                    Cape(s, c, Red, C.Rgb(150, 40, 40), f);
+                    DrawChibi(s, c, f);
+                    D.Box(s, c.BodyX0 - 2 * k, c.BodyTop - k, 5 * k, 3.5 * k, 1.5 * k, MetalD, 1, true); D.Box(s, c.BodyX1 - 3 * k, c.BodyTop - k, 5 * k, 3.5 * k, 1.5 * k, MetalD, 1, true);
+                    Helmet(s, c, MetalD, true); Axe(s, c, 1.25, false); break;
+                case 2: // Elemental God
+                    {
+                        double b = f == 1 ? -k : 0;
+                        c = new Chibi { K = k, Cx = cx, Ground = g - 4 + b, HeadW = 12, HeadH = 12, BodyW = 11, BodyH = 9, ArmW = 3, ArmL = 7 };
+                        c.Robe = true; c.Body = C.Rgb(240, 236, 220); c.Skin = C.Rgb(252, 226, 186); c.Boots = c.Body; c.Mouth = 1;
+                        c.EyeColor = C.Rgb(90, 200, 240); c.Eyes = 2; c.EyeH = 2.4;
+                        c.AfterBody = Belt(c, Gold, 2);
+                        DrawChibi(s, c, f); Crown(s, cx, c.HeadTop + 2 * k, 9 * k, k);
+                        double[] ox = { 8, 56, 6, 58 }, oy = { 18, 18, 42, 42 };
+                        Color[] oc = { FireA, IceA, StormA, C.Rgb(150, 112, 70) };
+                        for (int o = 0; o < 4; o++) { double yy = oy[o] + ((o + f) % 2 == 0 ? -2 : 2); D.Ell(s, ox[o], yy, 5, 5, oc[o], 2, true); D.Rect(s, ox[o] - 2, yy - 3, 2, 2, White); }
+                        fly = true;
+                    }
+                    break;
+                case 3: // Vampire Lord
+                    c = Vampire(k, cx, g);
+                    {
+                        double w = f == 1 ? 2 : 0;
+                        D.Poly(s, new double[] { cx - 6, 22, cx - 30 + w, 12, cx - 26 + w, 30, cx - 30 + w, 48, cx - 8, 52 }, C.Rgb(40, 32, 48), 2, true);
+                        D.Poly(s, new double[] { cx + 6, 22, cx + 30 - w, 12, cx + 26 - w, 30, cx + 30 - w, 48, cx + 8, 52 }, C.Rgb(40, 32, 48), 2, true);
+                        D.Poly(s, new double[] { cx - 8, 26, cx - 25 + w, 18, cx - 22 + w, 46, cx - 8, 48 }, C.Rgb(170, 40, 50), 1, false);
+                        D.Poly(s, new double[] { cx + 8, 26, cx + 25 - w, 18, cx + 22 - w, 46, cx + 8, 48 }, C.Rgb(170, 40, 50), 1, false);
+                    }
+                    DrawChibi(s, c, f); Hair(s, c, C.Rgb(34, 28, 40), false); Crown(s, cx, c.HeadTop + 2 * k, 8 * k, k); break;
+                case 4: Dragon(s, f, 1.8, C.Rgb(110, 76, 150), C.Rgb(214, 190, 140), C.Rgb(80, 56, 112), true, false); fly = true; cx = 28; rx = 16; break;
+                case 5: Dragon(s, f, 1.8, C.Rgb(236, 110, 44), FireC, C.Rgb(190, 60, 36), true, true); fly = true; cx = 28; rx = 16; break;
+                case 6: // Skeleton Mage (hooded like the reference)
+                    c = Skeleton(k, cx, g); c.Robe = true; c.Body = C.Rgb(60, 70, 140); c.Sleeve = c.Body; c.AfterBody = null;
+                    DrawChibi(s, c, f);
+                    D.Eyes(s, c.HeadCx, c.HeadCy + k, 5.5 * k, 1.6 * k, 1.6 * k, PoisonA, false);
+                    Hood(s, c, C.Rgb(60, 70, 140)); Staff(s, c, 16, PoisonA); break;
+                case 7: // Dark Elf King
+                    c = Elf(k, cx, g); Cape(s, c, C.Rgb(56, 40, 80), Purple, f); DrawChibi(s, c, f);
+                    Hair(s, c, C.Rgb(236, 236, 244), true); Crown(s, cx, c.HeadTop + 2 * k, 9 * k, k);
+                    Sword(s, c, 10, false); Sword(s, c, 10, true); break;
+                case 8: // All Elements Golem
+                    c = Golem(k, cx, g, C.Rgb(160, 156, 148)); c.EyeColor = White; DrawChibi(s, c, f);
+                    {
+                        double x0 = c.BodyX0 + 2 * k, y0 = c.BodyTop + 2 * k, w = 5 * k, h = 3 * k;
+                        D.Box(s, x0, y0, w, h, k, FireA, 1, true); D.Box(s, x0 + w + 1 * k, y0, w, h, k, IceA, 1, true);
+                        D.Box(s, x0, y0 + h + k, w, h, k, StormA, 1, true); D.Box(s, x0 + w + 1 * k, y0 + h + k, w, h, k, C.Rgb(130, 170, 70), 1, true);
+                        D.Ell(s, c.LHandX, c.LHandY, 2 * k, 2 * k, IceA, 1, true); D.Ell(s, c.RHandX, c.RHandY, 2 * k, 2 * k, FireA, 1, true);
+                    }
+                    rx = 18; break;
+                default: // Goblin Lord
+                    c = Goblin(k, cx, g); c.Body = C.Rgb(150, 100, 60); c.Eyes = 3; c.Mouth = 2; DrawChibi(s, c, f);
+                    D.Box(s, c.BodyX0 - 2 * k, c.BodyTop - 1.5 * k, c.BodyW * k + 4 * k, 3 * k, 1.5 * k, C.Rgb(214, 196, 160), 1, true);
+                    Crown(s, cx, c.HeadTop + 2 * k, 9 * k, k); Club(s, c, Wood, 1);
+                    for (int sp = 0; sp < 3; sp++) D.Rect(s, c.RHandX + (1 + sp * 2.5) * k, c.RHandY - (11 + (sp % 2) * 3) * k, 1.5 * k, 1.5 * k, Metal);
+                    break;
+            }
+            D.Finish(s, cx, g, rx, fly);
+            return s;
+        }
+
+        // ---------------- towers (64x96 art pixels, spot at (32, 86)) ----------------
+        public static Spr Tower(int i)
+        {
+            Spr s = new Spr(64, 96);
+            Color[] stones = { C.Rgb(170, 166, 158), C.Rgb(150, 168, 140), C.Rgb(184, 146, 128), C.Rgb(152, 174, 198), C.Rgb(186, 166, 130), C.Rgb(160, 150, 184), C.Rgb(130, 126, 126), C.Rgb(200, 224, 240) };
+            Color[] accents = { Leather, PoisonA, FireA, IceA, C.Rgb(122, 154, 70), Bolt, FireA, IceA };
+            Color stone = stones[i], acc = accents[i], mortar = D.Shd(stone);
+            // body
+            D.Box(s, 15, 44, 34, 43, 2, stone, 3, true);
+            for (int row = 0; row < 6; row++)
+            {
+                int y = 50 + row * 6;
+                D.Rect(s, 16, y, 31, 1, mortar);
+                for (int x = 19 + (row % 2) * 5; x < 46; x += 10) D.Rect(s, x, y + 1, 1, 5, mortar);
+            }
+            D.Box(s, 15, 58, 34, 4, 0, acc, 1, true);
+            D.Box(s, 26, 70, 12, 17, 6, C.Rgb(104, 70, 46), 1, true);
+            D.Rect(s, 31, 72, 1, 15, C.Rgb(80, 54, 38));
+            D.Rect(s, 34, 79, 1, 1, Gold);
+            D.Box(s, 30, 47, 4, 8, 2, C.Rgb(44, 36, 46), 0, true);
+            // platform floor behind the figure
+            D.Ell(s, 32, 40, 22, 4.5, D.Hl(stone), 0, true);
+
+            Chibi c, archer = null;
+            double k = 1.15, g = 42;
+            switch (i)
+            {
+                case 0:
+                case 1:
+                    c = new Chibi { K = k, Cx = 30, Ground = g, HeadW = 13, HeadH = 11 };
+                    c.Body = i == 0 ? C.Rgb(84, 140, 70) : C.Rgb(110, 76, 140); c.Legs = Leather;
+                    DrawChibi(s, c, 0); Hood(s, c, i == 0 ? C.Rgb(70, 124, 60) : C.Rgb(96, 62, 126));
+                    archer = c;
+                    break;
+                case 6: // Flamethrower
+                    D.Ell(s, 24, 30, 7, 7, Red, 2, true);
+                    D.Rect(s, 20, 27, 8, 1, D.Hl(Red));
+                    D.Box(s, 26, 26, 24, 7, 3, C.Rgb(96, 96, 104), 2, true);
+                    D.Box(s, 46, 24, 6, 11, 2, C.Rgb(70, 70, 78), 1, true);
+                    D.Poly(s, new double[] { 52, 26, 60, 22, 58, 29.5, 62, 33, 52, 33 }, FireA, 1, true);
+                    D.Ell(s, 55, 29.5, 2.5, 2, FireC, 0, false);
+                    break;
+                case 7: // Ice Area Tower
+                    D.Poly(s, new double[] { 32, 4, 41, 20, 32, 36, 23, 20 }, IceB, 3, true);
+                    D.Stick(s, 32, 7, 32, 33, 1, C.Rgb(150, 210, 245), 0, false);
+                    D.Poly(s, new double[] { 17, 22, 21, 16, 22, 28 }, IceA, 1, true);
+                    D.Poly(s, new double[] { 47, 22, 43, 16, 42, 28 }, IceA, 1, true);
+                    D.Rect(s, 12, 10, 2, 2, IceB); D.Rect(s, 50, 8, 2, 2, IceB); D.Rect(s, 54, 18, 1, 1, White); D.Rect(s, 9, 18, 1, 1, White);
+                    break;
+                default: // mages
+                    Color[] robes = { Red, C.Rgb(70, 120, 200), C.Rgb(130, 104, 70), Purple };
+                    Color[] orbs = { FireB, IceB, C.Rgb(150, 120, 80), Bolt };
+                    int m = i - 2;
+                    c = new Chibi { K = k, Cx = 30, Ground = g, HeadW = 13, HeadH = 11 };
+                    c.Robe = true; c.Body = robes[m];
+                    DrawChibi(s, c, 0); WizardHat(s, c, robes[m], Gold, m % 2 == 0 ? -2 : 2);
+                    Staff(s, c, 14, orbs[m]);
+                    break;
+            }
+            // parapet in front of the figure
+            D.Box(s, 9, 38, 46, 9, 2, stone, 2, true);
+            D.Rect(s, 10, 43, 44, 1, mortar);
+            for (int x = 0; x < 4; x++)
+            {
+                double mx = x < 2 ? 9 + x * 8 : 40 + (x - 2) * 8;
+                D.Box(s, mx, 33, 7, 6, 1, stone, 2, true);
+            }
+            // the archers hold their bow over the parapet
+            if (archer != null)
+            {
+                archer.RHandY = 36;
+                Bow(s, archer, i == 0 ? Metal : PoisonA);
+                if (i == 1) D.Ell(s, archer.LHandX + 1, 38, 2, 2.6, PoisonA, 1, true);
+            }
+            D.Finish(s, 32, 86, 17, false);
+            return s;
+        }
+
+        // ---------------- castle (128x96 art pixels, gate threshold at (64, 88)) ----------------
+        public static Spr Castle(int stage)
+        {
+            Spr s = new Spr(128, 96);
+            Color st = C.Rgb(176, 172, 164), mortar = D.Shd(st), roof = C.Rgb(206, 74, 58);
+            Random r = new Random(5 + stage);
+            D.Box(s, 18, 36, 92, 52, 0, st, 3, true);
+            for (int x = 20; x < 108; x += 10) D.Box(s, x, 30, 6, 7, 1, st, 2, true);
+            foreach (int tx in new[] { 2, 96 })
+            {
+                D.Box(s, tx, 24, 30, 64, 2, st, 3, true);
+                for (int m = 0; m < 3; m++) D.Box(s, tx + m * 11, 18, 8, 7, 1, st, 2, true);
+            }
+            for (int row = 0; row < 10; row++)
+            {
+                int y = 40 + row * 5;
+                foreach (int[] seg in new[] { new[] { 4, 30 }, new[] { 20, 94 }, new[] { 98, 124 } })
+                {
+                    if (y + 5 > 86) continue;
+                    D.Rect(s, seg[0], y, seg[1] - seg[0], 1, mortar);
+                    for (int x = seg[0] + 3 + (row % 2) * 4; x < seg[1]; x += 8) D.Rect(s, x, y + 1, 1, 4, mortar);
+                }
+            }
+            if (stage < 2)
+            {
+                D.Poly(s, new double[] { -1, 20, 35, 20, 17, -2 }, roof, 3, true);
+                D.Poly(s, new double[] { 93, 20, 129, 20, 111, -2 }, roof, 3, true);
+                for (int y = 6; y < 20; y += 5) { D.Rect(s, 17 - (y + 2) * 0.8, y, (y + 2) * 1.6, 1, D.Shd(roof)); D.Rect(s, 111 - (y + 2) * 0.8, y, (y + 2) * 1.6, 1, D.Shd(roof)); }
+            }
+            foreach (int[] w in new[] { new[] { 13, 36 }, new[] { 13, 58 }, new[] { 107, 36 }, new[] { 107, 58 }, new[] { 34, 46 }, new[] { 88, 46 } })
+            {
+                D.Box(s, w[0] - 3, w[1], 6, 9, 3, C.Rgb(44, 36, 46), 0, true);
+                if (stage < 2) D.Rect(s, w[0] - 1, w[1] + 3, 2, 5, C.Rgb(250, 206, 96));
+            }
+            if (stage < 2)
+            {
+                foreach (int bx in new[] { 44, 78 })
+                {
+                    D.Box(s, bx, 38, 7, 15, 0, Red, 1, true);
+                    D.Poly(s, new double[] { bx, 52, bx + 7, 52, bx + 3.5, 56 }, Red, 0, true);
+                    D.Ell(s, bx + 3.5, 44, 1.8, 1.8, Gold, 0, false);
+                }
+                D.Stick(s, 17, -1, 17, 8, 1, WoodD, 0, false);
+            }
+            D.Box(s, 48, 58, 32, 30, 15, stage < 2 ? C.Rgb(122, 80, 48) : C.Rgb(76, 52, 36), 2, true);
+            for (int x = 52; x < 78; x += 6) D.Rect(s, x, 62, 1, 26, C.Rgb(90, 58, 38));
+            D.Rect(s, 49, 70, 30, 2, C.Rgb(64, 60, 66)); D.Rect(s, 49, 80, 30, 2, C.Rgb(64, 60, 66));
+            D.Box(s, 44, 86, 40, 3, 1, D.Shd(st), 0, true);
+            if (stage == 0)
+            {
+                D.Poly(s, new double[] { 18, 0, 30, 3, 18, 7 }, Red, 0, true);
+            }
+            if (stage >= 1)
+            {
+                D.Stick(s, 26, 40, 22, 48, 1, D.Ink, 0, false); D.Stick(s, 22, 48, 27, 55, 1, D.Ink, 0, false);
+                D.Stick(s, 100, 66, 104, 74, 1, D.Ink, 0, false); D.Stick(s, 104, 74, 99, 80, 1, D.Ink, 0, false);
+                D.Box(s, 60, 40, 6, 4, 1, D.Deep(st), 0, true);
+            }
+            if (stage == 1)
+            {
+                D.Erase(s, (x, y) => y < 16 && x > 100 && y < (x - 100) * 1.2);
+                Fire(s, 108, 16, 1); Fire(s, 30, 34, 0.8);
+            }
+            if (stage == 2)
+            {
+                D.Erase(s, (x, y) => y < 34 + (D.Hash(x / 5, 3) % 9) || (x > 20 && x < 106 && y < 42 + (D.Hash(x / 4, 7) % 10) && (x < 46 || x > 82)));
+                for (int i = 0; i < 9; i++)
+                {
+                    int x = 6 + r.Next(116), y = 86 + r.Next(5);
+                    if (x > 44 && x < 84) continue;
+                    D.Ell(s, x, y, 3 + r.Next(3), 2 + r.Next(2), st, 1, true);
+                }
+                Fire(s, 22, 46, 1); Fire(s, 98, 48, 1.1); Fire(s, 60, 46, 0.8);
+            }
+            s.Outline(D.Ink);
+            if (stage >= 1)
+            {
+                Smoke(s, stage == 1 ? 110 : 24, stage == 1 ? 6 : 34);
+                if (stage == 2) Smoke(s, 100, 34);
+            }
+            s.EllipseBehind(64, 89, 62, 4, C.Shadow);
+            return s;
+        }
+
+        static void Fire(Spr s, double x, double y, double k)
+        {
+            D.Poly(s, new[] { x - 4 * k, y, x - 3 * k, y - 5 * k, x - 1 * k, y - 3 * k, x, y - 9 * k, x + 2 * k, y - 4 * k, x + 4 * k, y - 6 * k, x + 4 * k, y }, FireA, 1, true);
+            D.Poly(s, new[] { x - 2 * k, y, x - 1 * k, y - 3 * k, x, y - 6 * k, x + 2 * k, y - 2 * k, x + 2 * k, y }, FireB, 0, false);
+            D.Ell(s, x, y - 1 * k, 1.3 * k, 1.2 * k, FireC, 0, false);
+        }
+
+        static void Smoke(Spr s, double x, double y)
+        {
+            Color a = C.Argb(170, 120, 116, 120), b = C.Argb(140, 150, 146, 150);
+            s.Ellipse(x, y - 3, 4, 3.5, a); s.Ellipse(x + 3, y - 8, 3.5, 3, b); s.Ellipse(x + 1, y - 13, 3, 2.5, b);
+        }
+
+        // ---------------- scenery (64x64, ground at row 56; pedestal spot (32, 48); pond 128x64) ----------------
+        public static Dictionary<string, Spr> Scenery(Theme t)
+        {
+            bool snow = t.Name == "snow", autumn = t.Name == "autumn", desert = t.Name == "desert";
+            Color leaf = autumn ? C.Rgb(222, 126, 48) : desert ? C.Rgb(150, 150, 76) : C.Rgb(92, 168, 70);
+            Color pine = C.Rgb(56, 128, 88);
+            Dictionary<string, Spr> d = new Dictionary<string, Spr>();
+            d["oak"] = Oak(leaf, snow);
+            d["pine"] = Pine(pine, snow);
+            d["bush"] = Bush(leaf, !autumn && !desert && !snow, snow);
+            d["rock"] = Rock(snow);
+            d["pebbles"] = Pebbles();
+            d["flowers"] = Flowers();
+            d["house_red"] = House(C.Rgb(204, 72, 58), snow);
+            d["house_brown"] = House(C.Rgb(150, 96, 60), snow);
+            d["pedestal"] = Pedestal();
+            d["fence"] = Fence(snow);
+            d["barrel"] = Barrel();
+            d["crate"] = Crate();
+            d["cactus"] = Cactus();
+            d["mushrooms"] = Mushrooms();
+            d["pond"] = Pond(t, snow);
+            return d;
+        }
+
+        static Spr Done(Spr s, double rx)
+        {
+            s.Outline(D.Ink);
+            s.EllipseBehind(32, 56.5, rx, Math.Max(2, rx * 0.22), C.Shadow);
+            return s;
+        }
+
+        static Spr Oak(Color leaf, bool snow)
+        {
+            Spr s = new Spr(64, 64);
+            D.Box(s, 28, 36, 8, 21, 2, Wood, 2, true);
+            D.Ell(s, 22, 30, 11, 10, leaf, 3, true);
+            D.Ell(s, 42, 30, 11, 10, leaf, 3, true);
+            D.Ell(s, 32, 20, 14, 12, leaf, 3, true);
+            D.Ell(s, 27, 15, 5, 3, D.Hl(leaf), 0, false);
+            if (snow) D.Ell(s, 32, 11, 10, 3, White, 0, false);
+            return Done(s, 14);
+        }
+
+        static Spr Pine(Color leaf, bool snow)
+        {
+            Spr s = new Spr(64, 64);
+            D.Box(s, 29, 46, 6, 11, 1, Wood, 1, true);
+            double[] w = { 20, 16, 11 };
+            for (int i = 0; i < 3; i++)
+            {
+                double top = 6 + i * 10, bottom = 30 + i * 9;
+                D.Poly(s, new[] { 32, top, 32 + w[2 - i], bottom, 32 - w[2 - i], bottom }, leaf, 3, true);
+                if (snow) D.Poly(s, new[] { 32, top + 1, 32 + w[2 - i] * 0.45, top + 9, 32, top + 7, 32 - w[2 - i] * 0.45, top + 9 }, White, 0, false);
+            }
+            return Done(s, 14);
+        }
+
+        static Spr Bush(Color leaf, bool berries, bool snow)
+        {
+            Spr s = new Spr(64, 64);
+            D.Ell(s, 24, 48, 9, 8, leaf, 2, true);
+            D.Ell(s, 40, 48, 9, 8, leaf, 2, true);
+            D.Ell(s, 32, 43, 11, 9, leaf, 3, true);
+            if (berries) foreach (int[] b in new[] { new[] { 27, 42 }, new[] { 36, 46 }, new[] { 41, 41 }, new[] { 23, 49 } }) D.Box(s, b[0], b[1], 3, 3, 1, Red, 0, true);
+            if (snow) D.Ell(s, 32, 36, 8, 2.5, White, 0, false);
+            return Done(s, 15);
+        }
+
+        static Spr Rock(bool snow)
+        {
+            Spr s = new Spr(64, 64);
+            Color c = C.Rgb(150, 148, 146);
+            D.Ell(s, 32, 47, 15, 10, c, 3, true);
+            D.Ell(s, 42, 51, 7, 5, c, 2, true);
+            D.Stick(s, 26, 43, 30, 48, 1, D.Ink, 0, false);
+            if (snow) D.Ell(s, 30, 39, 10, 3, White, 0, false);
+            return Done(s, 16);
+        }
+
+        static Spr Pebbles()
+        {
+            Spr s = new Spr(64, 64);
+            D.Ell(s, 26, 52, 6, 4, C.Rgb(156, 152, 148), 1, true);
+            D.Ell(s, 37, 53, 4, 3, C.Rgb(140, 136, 132), 1, true);
+            return Done(s, 11);
+        }
+
+        static Spr Flowers()
+        {
+            Spr s = new Spr(64, 64);
+            Color[] cols = { C.Rgb(236, 90, 120), Gold, C.Rgb(150, 120, 230), White, C.Rgb(244, 140, 60) };
+            int[,] p = { { 20, 46 }, { 28, 42 }, { 36, 47 }, { 44, 43 }, { 31, 51 } };
+            for (int i = 0; i < 5; i++)
+            {
+                D.Stick(s, p[i, 0], p[i, 1], p[i, 0], 56, 1, C.Rgb(70, 140, 60), 0, false);
+                D.Ell(s, p[i, 0] + 0.5, p[i, 1], 2.6, 2.6, cols[i], 0, true);
+                D.Rect(s, p[i, 0], p[i, 1] - 0.5, 1, 1, Gold);
+            }
+            return Done(s, 13);
+        }
+
+        static Spr House(Color roof, bool snow)
+        {
+            Spr s = new Spr(64, 64);
+            Color wall = C.Rgb(240, 226, 196);
+            D.Box(s, 44, 18, 6, 12, 0, C.Rgb(150, 140, 136), 1, true);
+            D.Box(s, 12, 34, 40, 23, 0, wall, 3, true);
+            D.Poly(s, new double[] { 6, 36, 58, 36, 46, 16, 18, 16 }, roof, 3, true);
+            for (int y = 21; y < 36; y += 5) D.Rect(s, 10, y, 44, 1, D.Shd(roof));
+            if (snow) D.Poly(s, new double[] { 18, 16, 46, 16, 49, 22, 15, 22 }, White, 0, false);
+            D.Box(s, 28, 44, 9, 13, 4, Wood, 1, true);
+            D.Box(s, 16, 41, 8, 7, 1, C.Rgb(120, 180, 220), 0, true);
+            D.Box(s, 41, 41, 8, 7, 1, C.Rgb(120, 180, 220), 0, true);
+            D.Rect(s, 19, 41, 1, 7, D.Ink); D.Rect(s, 44, 41, 1, 7, D.Ink);
+            return Done(s, 24);
+        }
+
+        public static Spr Pedestal()
+        {
+            Spr s = new Spr(64, 64);
+            Color st = C.Rgb(170, 166, 158);
+            D.Ell(s, 32, 51, 27, 10, D.Shd(st), 1, true);
+            D.Box(s, 5, 46, 54, 6, 0, D.Shd(st), 1, false);
+            D.Ell(s, 32, 46, 27, 9, st, 0, true);
+            D.Ell(s, 32, 46, 21, 6, D.Hl(st), 0, true);
+            foreach (int x in new[] { 12, 22, 32, 42, 52 }) D.Rect(s, x, 52, 1, 6, D.Ink);
+            s.Outline(D.Ink);
+            s.EllipseBehind(33, 59, 28, 4, C.Shadow);
+            return s;
+        }
+
+        static Spr Fence(bool snow)
+        {
+            Spr s = new Spr(64, 64);
+            D.Box(s, 6, 42, 52, 4, 1, Wood, 1, true);
+            D.Box(s, 6, 49, 52, 4, 1, Wood, 1, true);
+            foreach (int x in new[] { 8, 30, 52 }) D.Box(s, x - 2, 36, 5, 21, 1, Wood, 1, true);
+            if (snow) D.Rect(s, 7, 41, 50, 1, White);
+            return Done(s, 24);
+        }
+
+        static Spr Barrel()
+        {
+            Spr s = new Spr(64, 64);
+            D.Box(s, 22, 36, 20, 21, 5, Wood, 3, true);
+            D.Rect(s, 22, 41, 20, 2, MetalD); D.Rect(s, 22, 51, 20, 2, MetalD);
+            D.Ell(s, 32, 37, 9, 2.5, D.Hl(Wood), 0, true);
+            return Done(s, 11);
+        }
+
+        static Spr Crate()
+        {
+            Spr s = new Spr(64, 64);
+            D.Box(s, 20, 36, 24, 21, 1, C.Rgb(186, 136, 82), 3, true);
+            D.Stick(s, 22, 38, 42, 55, 2, C.Rgb(150, 104, 62), 0, true);
+            D.Rect(s, 20, 36, 24, 2, C.Rgb(150, 104, 62));
+            return Done(s, 13);
+        }
+
+        static Spr Cactus()
+        {
+            Spr s = new Spr(64, 64);
+            Color g = C.Rgb(78, 160, 84);
+            D.Box(s, 15, 26, 6, 14, 3, g, 1, true);
+            D.Box(s, 15, 36, 14, 6, 3, g, 1, true);
+            D.Box(s, 43, 22, 6, 16, 3, g, 1, true);
+            D.Box(s, 36, 33, 13, 6, 3, g, 1, true);
+            D.Box(s, 27, 14, 10, 43, 5, g, 2, true);
+            for (int y = 20; y < 54; y += 6) { D.Rect(s, 30, y, 1, 1, White); D.Rect(s, 34, y + 3, 1, 1, White); }
+            D.Ell(s, 32, 13, 3, 2.5, C.Rgb(240, 120, 170), 0, true);
+            return Done(s, 12);
+        }
+
+        static Spr Mushrooms()
+        {
+            Spr s = new Spr(64, 64);
+            int[,] m = { { 24, 52, 7 }, { 37, 54, 5 }, { 44, 49, 4 } };
+            for (int i = 0; i < 3; i++)
+            {
+                int x = m[i, 0], y = m[i, 1], r = m[i, 2];
+                D.Box(s, x - r * 0.35, y - r, r * 0.7, r + 3, 1, C.Rgb(240, 230, 214), 1, true);
+                D.Ell(s, x, y - r, r + 1, r * 0.75, Red, 2, true);
+                D.Rect(s, x - r * 0.5, y - r - 1, 2, 2, White); D.Rect(s, x + r * 0.35, y - r, 1, 1, White);
+            }
+            return Done(s, 13);
+        }
+
+        static Spr Pond(Theme t, bool snow)
+        {
+            Spr s = new Spr(128, 64);
+            Color bank = snow ? C.Rgb(196, 210, 226) : C.Rgb(214, 196, 150);
+            Color water = snow ? C.Rgb(176, 214, 238) : C.Rgb(84, 156, 214);
+            D.Ell(s, 64, 33, 58, 25, bank, 2, true);
+            D.Ell(s, 64, 33, 53, 21, water, 0, true);
+            D.Ell(s, 64, 37, 50, 17, snow ? C.Rgb(160, 202, 230) : C.Rgb(70, 138, 200), 0, false);
+            for (int i = 0; i < 6; i++) D.Rect(s, 32 + i * 11 + (i % 2) * 4, 26 + (i % 3) * 6, 6, 1, snow ? White : C.Rgb(170, 216, 240));
+            if (!snow)
+            {
+                D.Ell(s, 44, 40, 4, 2.5, C.Rgb(90, 170, 72), 1, true); D.Ell(s, 84, 30, 3.5, 2, C.Rgb(90, 170, 72), 1, true);
+                D.Rect(s, 44, 38, 2, 2, C.Rgb(240, 150, 190));
+                foreach (int x in new[] { 14, 18, 110, 114 }) { D.Stick(s, x, 34, x, 22, 1.4, C.Rgb(80, 140, 60), 0, true); D.Box(s, x - 1, 20, 3, 5, 1, Wood, 0, true); }
+            }
+            else
+            {
+                D.Stick(s, 50, 30, 58, 36, 1, C.Rgb(130, 170, 210), 0, false); D.Stick(s, 58, 36, 72, 33, 1, C.Rgb(130, 170, 210), 0, false);
+            }
+            s.Outline(D.Ink);
+            return s;
+        }
+
+        // ---------------- map ground (twice the map resolution) ----------------
+        public static Spr Terrain(Theme t, List<Rectangle> bands, int seed)
+        {
+            int w = Maps.MapW * 2, h = Maps.MapH * 2;
+            Spr m = new Spr(w, h);
+            bool[,] path = new bool[w, h];
+            foreach (Rectangle b in bands)
+                for (int y = Math.Max(0, b.Top * 2); y < Math.Min(h, b.Bottom * 2); y++)
+                    for (int x = Math.Max(0, b.Left * 2); x < Math.Min(w, b.Right * 2); x++) path[x, y] = true;
+            Func<int, int, bool> P = (x, y) => path[Math.Max(0, Math.Min(w - 1, x)), Math.Max(0, Math.Min(h - 1, y))];
+            Color g0 = t.Ground[0], g1 = t.Ground[1], g2 = t.Ground[2], g3 = t.Ground[3];
+            Color d0 = t.Dirt[0], d1 = t.Dirt[1], d2 = t.Dirt[2], d3 = t.Dirt[3];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    if (path[x, y])
+                    {
+                        int dist = 4;
+                        for (int dd = 1; dd <= 3 && dist == 4; dd++)
+                            if (!P(x - dd, y) || !P(x + dd, y) || !P(x, y - dd) || !P(x, y + dd)) dist = dd;
+                        bool top = !P(x, y - 1) || !P(x, y - 2) || !P(x, y - 3);
+                        m.Set(x, y, dist == 1 ? D.Ink : dist == 2 ? d0 : (dist == 3 || top) ? d1 : d2);
+                    }
+                    else m.Set(x, y, g2);
+                }
+            // grass tufts and light specks, pebbles on the path
+            for (int cy = 0; cy < h; cy += 9)
+                for (int cx = 0; cx < w; cx += 11)
+                {
+                    int hh = D.Hash(cx + seed * 31, cy);
+                    int x = cx + hh % 9, y = cy + (hh / 9) % 7;
+                    if (x + 5 >= w || y + 3 >= h) continue;
+                    bool onPath = path[x, y] && path[x + 4, y + 2];
+                    bool nearPath = P(x, y) || P(x + 4, y) || P(x, y + 2) || P(x + 4, y + 2) || P(x - 2, y) || P(x + 6, y + 2);
+                    if (onPath)
+                    {
+                        bool inner = P(x - 4, y) && P(x + 8, y) && P(x, y - 4) && P(x, y + 6);
+                        if (inner && hh % 3 == 0) { D.Box(m, x, y, 4, 3, 1.4, d3, 0, false); D.Rect(m, x + 1, y + 3, 3, 1, d1); }
+                    }
+                    else if (!nearPath)
+                    {
+                        int kind = hh % 5;
+                        if (kind < 2) { m.Set(x, y + 2, g1); m.Set(x + 1, y + 1, g1); m.Set(x + 2, y + 2, g1); m.Set(x + 3, y, g1); m.Set(x + 4, y + 2, g1); m.Set(x + 1, y + 2, g1); m.Set(x + 3, y + 2, g1); m.Set(x + 3, y + 1, g1); }
+                        else if (kind == 2) { m.Set(x, y, g3); m.Set(x + 1, y, g3); }
+                        else if (kind == 3 && hh % 7 == 0) { D.Rect(m, x, y, 3, 2, g0); D.Rect(m, x, y, 2, 1, g1); }
+                    }
+                }
+            return m;
+        }
+    }
+
+    public enum Mat { None, Brick, Rock, Wood, Metal, Leaf }
+
+    // Turns a 1x sprite into a sprite with twice the resolution (1 game pixel = 2 art pixels):
+    // Scale2x smooths the diagonals, the outline is drawn again with half the width, edges get a
+    // light rim (top/left) and a shadow rim (bottom/right) and known palette colors get a material texture.
+    public static class HiRes
+    {
+        public const int K = 2;
+
+        static Dictionary<int, Mat> Set(Dictionary<int, Mat> d, Mat m, params Color[] colors)
+        {
+            foreach (Color c in colors) d[c.ToArgb()] = m;
+            return d;
+        }
+
+        public static Dictionary<int, Mat> Building()
+        {
+            Dictionary<int, Mat> d = new Dictionary<int, Mat>();
+            Set(d, Mat.Brick, C.S0, C.S1, C.S2, C.S3, C.S4);
+            Set(d, Mat.Wood, C.W0, C.W1, C.W2, C.W3);
+            Set(d, Mat.Metal, C.M0, C.M1, C.M2);
+            Set(d, Mat.Leaf, C.TG0, C.TG1, C.TG2, C.TG3, C.GR0, C.GR1, C.GR2, C.GR3, C.GR4);
+            return d;
+        }
+
+        public static Dictionary<int, Mat> Creature()
+        {
+            Dictionary<int, Mat> d = new Dictionary<int, Mat>();
+            Set(d, Mat.Rock, C.S0, C.S1, C.S2, C.S3, C.S4);
+            Set(d, Mat.Wood, C.W0, C.W1, C.W2, C.W3);
+            Set(d, Mat.Metal, C.M0, C.M1, C.M2);
+            Set(d, Mat.Leaf, C.TG0, C.TG1, C.TG2, C.TG3);
+            return d;
+        }
+
+        public static Dictionary<int, Mat> Scenery()
+        {
+            Dictionary<int, Mat> d = new Dictionary<int, Mat>();
+            Set(d, Mat.Rock, C.S0, C.S1, C.S2, C.S3, C.S4);
+            Set(d, Mat.Wood, C.W0, C.W1, C.W2, C.W3);
+            Set(d, Mat.Metal, C.M0, C.M1, C.M2);
+            Set(d, Mat.Leaf, C.TG0, C.TG1, C.TG2, C.TG3, C.GR0, C.GR1, C.GR2, C.GR3, C.GR4);
+            return d;
+        }
+
+        // Material map after a theme recolor: recolored palette entries keep their material.
+        public static Dictionary<int, Mat> Recolored(Dictionary<int, Mat> mats, Dictionary<int, Color> recolor)
+        {
+            Dictionary<int, Mat> d = new Dictionary<int, Mat>(mats);
+            foreach (KeyValuePair<int, Color> kv in recolor)
+            {
+                Mat m;
+                if (mats.TryGetValue(kv.Key, out m)) d[kv.Value.ToArgb()] = m;
+            }
+            return d;
+        }
+
+        public static Spr Scale2x(Spr s)
+        {
+            Spr o = new Spr(s.W * 2, s.H * 2);
+            for (int y = 0; y < s.H; y++)
+                for (int x = 0; x < s.W; x++)
+                {
+                    Color p = s.Get(x, y);
+                    int a = s.Get(x, y - 1).ToArgb(), b = s.Get(x + 1, y).ToArgb(), c = s.Get(x - 1, y).ToArgb(), d = s.Get(x, y + 1).ToArgb();
+                    Color e0 = p, e1 = p, e2 = p, e3 = p;
+                    if (c == a && c != d && a != b) e0 = s.Get(x, y - 1);
+                    if (a == b && a != c && b != d) e1 = s.Get(x + 1, y);
+                    if (d == c && d != b && c != a) e2 = s.Get(x - 1, y);
+                    if (b == d && b != a && d != c) e3 = s.Get(x + 1, y);
+                    o.Set(x * 2, y * 2, e0); o.Set(x * 2 + 1, y * 2, e1);
+                    o.Set(x * 2, y * 2 + 1, e2); o.Set(x * 2 + 1, y * 2 + 1, e3);
+                }
+            return o;
+        }
+
+        public static Spr Nearest2x(Spr s)
+        {
+            Spr o = new Spr(s.W * 2, s.H * 2);
+            for (int y = 0; y < o.H; y++) for (int x = 0; x < o.W; x++) o.Set(x, y, s.Get(x / 2, y / 2));
+            return o;
+        }
+
+        static bool IsOut(Color c) { return c.A == 255 && c.ToArgb() == C.Out.ToArgb(); }
+
+        public static Spr Refine(Spr src, Dictionary<int, Mat> mats)
+        {
+            // 1. split into body (opaque) and soft shadow (semi transparent); drop the outer outline
+            Spr body = new Spr(src.W, src.H), shadow = new Spr(src.W, src.H);
+            for (int y = 0; y < src.H; y++)
+                for (int x = 0; x < src.W; x++)
+                {
+                    Color c = src.Get(x, y);
+                    if (c.A == 0) continue;
+                    if (c.A < 255) { shadow.Set(x, y, c); continue; }
+                    bool outer = IsOut(c) && (src.Get(x - 1, y).A < 255 || src.Get(x + 1, y).A < 255 || src.Get(x, y - 1).A < 255 || src.Get(x, y + 1).A < 255);
+                    if (!outer) body.Set(x, y, c);
+                }
+
+            // 2. upscale; remember the 1x colour of every pixel for the material lookup
+            Spr hi = Scale2x(body);
+            Spr baseColors = hi.Clone();
+
+            // 3. texture by material, then light/shadow rims at the silhouette
+            for (int y = 0; y < hi.H; y++)
+                for (int x = 0; x < hi.W; x++)
+                {
+                    Color c = hi.Get(x, y);
+                    if (c.A < 255 || IsOut(c)) continue;
+                    Mat m;
+                    if (mats != null && mats.TryGetValue(c.ToArgb(), out m)) hi.Set(x, y, Texture(m, c, x, y));
+                }
+            for (int y = 0; y < hi.H; y++)
+                for (int x = 0; x < hi.W; x++)
+                {
+                    Color c = hi.Get(x, y);
+                    if (c.A < 255 || IsOut(c)) continue;
+                    bool lit = Edge(baseColors, x, y - 1) || Edge(baseColors, x - 1, y);
+                    bool dark = Edge(baseColors, x, y + 1) || Edge(baseColors, x + 1, y);
+                    if (lit && !dark) hi.Set(x, y, C.Light(c, 0.16));
+                    else if (dark && !lit) hi.Set(x, y, C.Dark(c, 0.16));
+                }
+
+            // 4. thin outline around the new silhouette, soft shadow behind everything
+            hi.Outline(C.Out);
+            Spr sh = Nearest2x(shadow);
+            for (int y = 0; y < hi.H; y++) for (int x = 0; x < hi.W; x++) hi.Behind(x, y, sh.Get(x, y));
+            return hi;
+        }
+
+        static bool Edge(Spr s, int x, int y) { Color c = s.Get(x, y); return c.A < 255 || IsOut(c); }
+
+        static int Hash(int x, int y)
+        {
+            unchecked
+            {
+                int h = x * 73856093 ^ y * 19349663;
+                h = (h ^ (h >> 13)) * 1274126177;
+                return Math.Abs(h ^ (h >> 16));
+            }
+        }
+
+        public static Color Texture(Mat m, Color c, int x, int y)
+        {
+            int h = Hash(x, y);
+            switch (m)
+            {
+                case Mat.Brick:
+                {
+                    int row = y / 4, off = (row % 2) * 5;
+                    if (y % 4 == 3 || (x + off) % 10 == 9) return C.Dark(c, 0.17);
+                    if (y % 4 == 0) return C.Light(c, 0.09);
+                    return h % 11 == 0 ? C.Dark(c, 0.07) : c;
+                }
+                case Mat.Rock:
+                    return h % 9 == 0 ? C.Light(c, 0.12) : h % 9 == 1 ? C.Dark(c, 0.14) : c;
+                case Mat.Wood:
+                    return (y + Hash(x / 3, 7) % 3) % 3 == 0 ? C.Dark(c, 0.11) : h % 13 == 0 ? C.Light(c, 0.1) : c;
+                case Mat.Metal:
+                    return (x + y) % 7 == 0 ? C.Light(c, 0.1) : c;
+                case Mat.Leaf:
+                    return h % 5 == 0 ? C.Light(c, 0.14) : h % 5 == 1 ? C.Dark(c, 0.15) : c;
+            }
+            return c;
+        }
+
+        // Fine grass, dirt and water detail for the upscaled map ground.
+        public static void GroundDetail(Spr hi, Theme t, Spr mask)
+        {
+            Dictionary<int, int> ground = new Dictionary<int, int>(), dirt = new Dictionary<int, int>(), water = new Dictionary<int, int>();
+            for (int i = 0; i < t.Ground.Length; i++) ground[t.Ground[i].ToArgb()] = i;
+            for (int i = 0; i < t.Dirt.Length; i++) dirt[t.Dirt[i].ToArgb()] = i;
+            for (int i = 0; i < t.Water.Length; i++) water[t.Water[i].ToArgb()] = i;
+            for (int y = 0; y < hi.H; y++)
+                for (int x = 0; x < hi.W; x++)
+                {
+                    if (mask != null && mask.Get(x, y).A > 0) continue;
+                    Color c = hi.Get(x, y);
+                    int k = c.ToArgb(), h = Hash(x + 1000, y);
+                    if (ground.ContainsKey(k))
+                    {
+                        if (h % 17 == 0 && y > 0) { hi.Set(x, y, C.Light(c, 0.16)); hi.Set(x, y + 1, C.Dark(c, 0.1)); }
+                        else if (h % 17 == 1) hi.Set(x, y, C.Dark(c, 0.1));
+                    }
+                    else if (dirt.ContainsKey(k) && dirt[k] >= 2)
+                    {
+                        if (h % 29 == 0) { hi.Set(x, y, C.Light(c, 0.22)); hi.Set(x, y + 1, C.Dark(c, 0.2)); }
+                        else if (h % 29 == 1) hi.Set(x, y, C.Dark(c, 0.08));
+                    }
+                    else if (water.ContainsKey(k))
+                    {
+                        if ((x / 3 + y * 5) % 23 == 0) hi.Set(x, y, C.Light(c, 0.3));
+                    }
+                }
+        }
+    }
+
     public static class Program
     {
         public static void Run(string assetDir, string previewDir)
         {
+            // 1x sheets (icons, terrain tiles) keep 4 image pixels per art pixel. The detailed sheets
+            // have twice the art resolution and are saved with 2 image pixels per art pixel, so every
+            // sheet still has 4 image pixels per game pixel and the game code needs no change.
             const int scale = 4;
+            const int hiScale = scale / HiRes.K;
+            const int k = HiRes.K;
             Directory.CreateDirectory(assetDir);
 
             List<Spr> tiles = World.TerrainTiles();
             SheetWriter.SaveRow(System.IO.Path.Combine(assetDir, "terrain_tiles.png"), tiles, 16, 16, tiles.Count, scale);
 
-            // scenery sheet: row 0 = 8 cells of 32x32, row 1 = pond (64x32) + 6 cells
-            Dictionary<string, Spr> sc = new Dictionary<string, Spr>();
+            // scenery sheet: row 0 = 8 cells of 32x32, row 1 = pond (64x32) + 6 cells (game pixels)
             Dictionary<string, Point> anchor = new Dictionary<string, Point>();
             string[] names = { "oak", "pine", "bush", "rock", "pebbles", "flowers", "house_red", "house_brown", "pedestal", "fence", "barrel", "crate", "cactus", "mushrooms" };
-            Spr[] sprs = { World.Oak(), World.Pine(), World.Bush(), World.Rock(), World.Pebbles(), World.Flowers(), World.HouseRed(), World.HouseBrown(), World.Pedestal(), World.Fence(), World.Barrel(), World.Crate(), Maps.Cactus(), Maps.Mushrooms() };
-            for (int i = 0; i < names.Length; i++) { sc[names[i]] = sprs[i]; anchor[names[i]] = new Point(16, 28); }
+            for (int i = 0; i < names.Length; i++) anchor[names[i]] = new Point(16, 28);
             anchor["pedestal"] = new Point(16, 24);
-            sc["pond"] = World.Pond(); anchor["pond"] = new Point(32, 16);
+            anchor["pond"] = new Point(32, 16);
+            Dictionary<string, Spr> sc = Art.Scenery(Maps.GetTheme("meadow"));
             List<KeyValuePair<Point, Spr>> parts = new List<KeyValuePair<Point, Spr>>();
-            for (int i = 0; i < 8; i++) parts.Add(new KeyValuePair<Point, Spr>(new Point(i * 32, 0), sprs[i]));
-            parts.Add(new KeyValuePair<Point, Spr>(new Point(0, 32), sc["pond"]));
-            for (int i = 8; i < sprs.Length; i++) parts.Add(new KeyValuePair<Point, Spr>(new Point(64 + (i - 8) * 32, 32), sprs[i]));
-            SheetWriter.Save(System.IO.Path.Combine(assetDir, "scenery_sprites.png"), 256, 64, parts, scale);
+            for (int i = 0; i < 8; i++) parts.Add(new KeyValuePair<Point, Spr>(new Point(i * 32 * k, 0), sc[names[i]]));
+            parts.Add(new KeyValuePair<Point, Spr>(new Point(0, 32 * k), sc["pond"]));
+            for (int i = 8; i < names.Length; i++) parts.Add(new KeyValuePair<Point, Spr>(new Point((64 + (i - 8) * 32) * k, 32 * k), sc[names[i]]));
+            SheetWriter.Save(System.IO.Path.Combine(assetDir, "scenery_sprites.png"), 256 * k, 64 * k, parts, hiScale);
 
             List<Spr> maps = new List<Spr>();
             foreach (MapDef def in Maps.All)
             {
-                Spr map = Maps.Compose(def, Maps.GetTheme(def.Theme), sc, anchor);
+                Theme theme = Maps.GetTheme(def.Theme);
+                Spr map = Maps.Compose(def, theme, Art.Scenery(theme), anchor);
                 maps.Add(map);
-                SheetWriter.Save(System.IO.Path.Combine(assetDir, def.File), Maps.MapW, Maps.MapH,
-                    new List<KeyValuePair<Point, Spr>> { new KeyValuePair<Point, Spr>(new Point(0, 0), map) }, scale);
+                SheetWriter.Save(System.IO.Path.Combine(assetDir, def.File), Maps.MapW * k, Maps.MapH * k,
+                    new List<KeyValuePair<Point, Spr>> { new KeyValuePair<Point, Spr>(new Point(0, 0), map) }, hiScale);
             }
 
-            List<Spr> castle = new List<Spr> { World.Castle(0), World.Castle(1), World.Castle(2) };
-            SheetWriter.SaveRow(System.IO.Path.Combine(assetDir, "main_building.png"), castle, 64, 48, 3, scale);
+            List<Spr> castle = new List<Spr>();
+            for (int i = 0; i < 3; i++) castle.Add(Art.Castle(i));
+            SheetWriter.SaveRow(System.IO.Path.Combine(assetDir, "main_building.png"), castle, 64 * k, 48 * k, 3, hiScale);
 
             List<Spr> enemies = new List<Spr>();
-            for (int f = 0; f < 2; f++) for (int i = 0; i < Creatures.EnemyNames.Length; i++) enemies.Add(Creatures.Enemy(i, f));
-            SheetWriter.SaveRow(System.IO.Path.Combine(assetDir, "enemy_spritesheet.png"), enemies, 16, 16, Creatures.EnemyNames.Length, scale);
+            for (int f = 0; f < 2; f++) for (int i = 0; i < Creatures.EnemyNames.Length; i++) enemies.Add(Art.Enemy(i, f));
+            SheetWriter.SaveRow(System.IO.Path.Combine(assetDir, "enemy_spritesheet.png"), enemies, 16 * k, 16 * k, Creatures.EnemyNames.Length, hiScale);
 
             List<Spr> bosses = new List<Spr>();
-            for (int f = 0; f < 2; f++) for (int i = 0; i < Creatures.BossNames.Length; i++) bosses.Add(Creatures.Boss(i, f));
-            SheetWriter.SaveRow(System.IO.Path.Combine(assetDir, "boss_spritesheet.png"), bosses, 32, 32, Creatures.BossNames.Length, scale);
+            for (int f = 0; f < 2; f++) for (int i = 0; i < Creatures.BossNames.Length; i++) bosses.Add(Art.Boss(i, f));
+            SheetWriter.SaveRow(System.IO.Path.Combine(assetDir, "boss_spritesheet.png"), bosses, 32 * k, 32 * k, Creatures.BossNames.Length, hiScale);
+
+            List<Spr> towers = new List<Spr>();
+            for (int i = 0; i < 8; i++) towers.Add(Art.Tower(i));
+            SheetWriter.SaveRow(System.IO.Path.Combine(assetDir, "tower_spritesheet.png"), towers, 32 * k, 48 * k, 8, hiScale);
 
             List<Spr> icons = new List<Spr>();
             for (int i = 0; i < Creatures.IconNames.Length; i++) icons.Add(Creatures.Icon(i));
@@ -1816,28 +3139,26 @@ namespace TowerDefenseSprites
 
             if (string.IsNullOrEmpty(previewDir)) return;
             Directory.CreateDirectory(previewDir);
-            string towerPath = System.IO.Path.Combine(assetDir, "tower_spritesheet.png");
-            Spr towers = File.Exists(towerPath) ? SheetWriter.Load(towerPath, 4) : null;
             for (int m = 0; m < Maps.All.Length; m++)
             {
                 MapDef def = Maps.All[m];
-                Spr scene = new Spr(320, 180);
-                scene.Rect(0, 0, 320, 25, C.Rgb(29, 47, 57));
-                scene.Stamp(maps[m], 0, 25);
+                Spr scene = new Spr(320 * k, 180 * k);
+                scene.Rect(0, 0, 320 * k, 25 * k, C.Rgb(29, 47, 57));
+                scene.Stamp(maps[m], 0, 25 * k);
                 List<int> order = new List<int>();
                 for (int i = 0; i < def.Spots.Length / 2; i++) order.Add(i);
                 order.Sort((a, b) => def.Spots[a * 2 + 1].CompareTo(def.Spots[b * 2 + 1]));
-                scene.Stamp(castle[0], def.MainBuilding.X - 32, def.MainBuilding.Y + 27 - 44);
-                if (towers != null)
-                    foreach (int i in order)
-                        scene.Stamp(SheetWriter.Crop(towers, (i % 8) * 32, 0, 32, 48), def.Spots[i * 2] - 16, def.Spots[i * 2 + 1] + 27 - 43);
-                SheetWriter.Save(System.IO.Path.Combine(previewDir, "preview_" + System.IO.Path.GetFileNameWithoutExtension(def.File) + ".png"), 320, 180,
-                    new List<KeyValuePair<Point, Spr>> { new KeyValuePair<Point, Spr>(new Point(0, 0), scene) }, 3);
+                scene.Stamp(castle[0], (def.MainBuilding.X - 32) * k, (def.MainBuilding.Y + 27 - 44) * k);
+                foreach (int i in order)
+                    scene.Stamp(towers[i % 8], (def.Spots[i * 2] - 16) * k, (def.Spots[i * 2 + 1] + 27 - 43) * k);
+                SheetWriter.Save(System.IO.Path.Combine(previewDir, "preview_" + System.IO.Path.GetFileNameWithoutExtension(def.File) + ".png"), 320 * k, 180 * k,
+                    new List<KeyValuePair<Point, Spr>> { new KeyValuePair<Point, Spr>(new Point(0, 0), scene) }, 2);
             }
-            SheetWriter.SaveRow(System.IO.Path.Combine(previewDir, "preview_enemies.png"), enemies, 16, 16, 10, 8);
-            SheetWriter.SaveRow(System.IO.Path.Combine(previewDir, "preview_bosses.png"), bosses, 32, 32, 5, 5);
+            SheetWriter.SaveRow(System.IO.Path.Combine(previewDir, "preview_enemies.png"), enemies, 16 * k, 16 * k, 10, 4);
+            SheetWriter.SaveRow(System.IO.Path.Combine(previewDir, "preview_bosses.png"), bosses, 32 * k, 32 * k, 5, 3);
             SheetWriter.SaveRow(System.IO.Path.Combine(previewDir, "preview_icons.png"), icons, 16, 16, 9, 8);
-            SheetWriter.SaveRow(System.IO.Path.Combine(previewDir, "preview_castle.png"), castle, 64, 48, 3, 5);
+            SheetWriter.SaveRow(System.IO.Path.Combine(previewDir, "preview_castle.png"), castle, 64 * k, 48 * k, 3, 3);
+            SheetWriter.SaveRow(System.IO.Path.Combine(previewDir, "preview_towers.png"), towers, 32 * k, 48 * k, 8, 3);
         }
     }
 }
