@@ -379,3 +379,110 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 > Ich committe die Änderungen aus den Prompts 20–23 (Subway-Surfer-Dateien, Gruppen-Interface und diese Prompt-Datei). Die fremden obj-Dateien in `HouseExample/` kommen nicht in den Commit. Danach folgen `git pull --rebase` und `git push`. Damit geht auch der noch nicht gepushte Commit aus Prompt 19 mit auf den Server.
 
 **Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt. Beim Pull gab es einen Konflikt in `Gruppe2_SubwayTests.cs`: Lani hatte denselben Ampel-Fehler im Spawn-Test gleich behoben. Ich habe die Version mit erklärendem Kommentar behalten. Lanis neue Tests und meine laufen jetzt zusammen; Build und Tests waren vor dem Push 3-mal grün.
+
+## 24. Unbenutzten Painter (Backup-Branch) löschen
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> der painter wird doc hnicht benutzt, oder? wennn er nicht benutzt wird kannst du ihn auch löschen, solang keine Konflikte mit dem restlichen code entsteht
+
+**Antwort:**
+
+> Richtig, meine erste Painter-Version (eigene 2D-Projektion aus Prompt 18) wird nicht benutzt. Im Spiel läuft Stefanies 3D-Painter mit meinen Anpassungen. Die alte Version lag nur im lokalen Branch `backup/elena-subway-projection`. Er war nie auf dem Server, und kein Code verweist darauf. Ich habe ihn mit `git branch -D` gelöscht. Am Code im Repository ändert sich dadurch nichts, Konflikte sind ausgeschlossen.
+
+**Ergebnisvermerk:** Lokaler Backup-Branch gelöscht. Die Prompt-Datei ist ergänzt, aber noch nicht committet.
+
+## 25. Häuser weg vom Gleis, Aufspringen auf Züge nur mit Hüpfstab
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Die linke Gleisseite ist zu nah an den Häusern und wird dadurch immer abgeschnitten, zudem kann ich jetzt auch auf Züge und Wagons springen bei dennen keine Rampe dabei ist, das bitte noch ändern dass das nur mit einem hüpfstab passieren dürfte
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Häuser:** Die innersten Hauswände lagen bei etwa ±2,1 Welteinheiten, das Gleisbett reicht aber bis ±2,3 und die Schwellen bis ±2,45. Die Häuser ragten also in die äußeren Gleise. Das betraf beide Seiten, links war es nur stärker zu sehen. Alle Häuser stehen jetzt um `CityTrackClearance` weiter außen. Zwischen Gleis und Häusern liegt ein sichtbarer Streifen Boden.
+> 2. **Aufspringen nur mit Hüpfstab:** Bisher reichte ein normaler Sprung, um an einer Zugfront vorbeizukommen und danach auf dem Dach zu landen. Jetzt gilt an jeder Zug- oder Wagenfront (`ReachCarFront`):
+>    - Auf dem Dach läuft man weiter. Mit Jetpack fliegt man darüber hinweg.
+>    - Springt man mit Hüpfstab, landet man auf dem Dach.
+>    - Ohne Rampe, Hüpfstab oder Jetpack ist das Spiel vorbei.
+>    - Ein seitlicher Spurwechsel in der Luft auf einen Zug ist ohne Hüpfstab ebenfalls gesperrt.
+> 3. **Darstellung:** Mit Hüpfstab springt der Läufer sichtbar höher als das Zugdach, ein normaler Sprung bleibt darunter.
+> 4. **Tests:** Für Lok und Güterwagen jeweils geprüft: Ein normaler Sprung endet tödlich, mit Hüpfstab landet man auf dem Dach.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 5-mal hintereinander bestanden. Gerendertes Bild kontrolliert: Die Häuser schneiden die Gleise nicht mehr ab.
+
+**Ergebnisvermerk:** Häuser mit Abstand zu den Gleisen, Aufspringen auf Züge ohne Rampe nur mit Hüpfstab. Noch nicht committet.
+
+## 26. Schmalere Züge, Tempo ohne Grenze, Kamera folgt dem Spurwechsel
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du die Züge und Wagons ein bischen schmäller machen, so das sie sich nicht berühren, wenn sie nebeneinander stehen. Die Geschwindigkeitsänderung hat bei 2,1 aufgehört die sollte aber kontinuierlich weiter laufen. Die kamera sol den Gleiswechsel auch machen, heist ich seh immer den Hinterkopf der Läuferin
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Schmalere Züge:** Die Züge waren 1,84 Einheiten breit, die Spuren liegen aber nur 1,55 auseinander. Nebeneinander haben sie sich deshalb überlappt. `CarWorldWidth` ist jetzt 1,34. Damit bleibt zwischen zwei Zügen eine Lücke, und die Schienen sind weiterhin bedeckt. Das gilt für Lok, Güterwagen und Rampe.
+> 2. **Tempo:** Die Grenze `Math.Min(2.1, …)` in den Rules ist entfernt. Das Tempo steigt jetzt mit dem Score ohne Obergrenze weiter (`1 + Score / 1500`). Ein neuer Test prüft, dass es über 2,1 hinaus weiter steigt.
+> 3. **Kamera beim Spurwechsel:** Der Painter merkt sich die x-Position der Läuferin (`_runnerX`) und bewegt sie pro Bild um 35 % des restlichen Wegs zur neuen Spur. Die Kamera steht immer genau hinter dieser Position. Die Läuferin gleitet also auf die neue Spur, die Kamera fährt mit, und man sieht sie immer von hinten. Die Kollisionslogik in den Rules bleibt unverändert.
+> 4. **Hinterkopf:** Der Kopf war eine hautfarbene Kugel mit Haaren nur oben drauf und wirkte von hinten wie ein Gesicht. Das Modell hat jetzt auch Haare am Hinterkopf (zur Kamera hin).
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests mehrfach hintereinander bestanden. Gerenderte Bilder kontrolliert: Züge nebeneinander mit Lücke, Bildfolge des Spurwechsels mit mitfahrender Kamera, Hinterkopf sichtbar.
+
+**Ergebnisvermerk:** Züge schmaler, Tempo ohne Obergrenze, Kamera folgt dem Spurwechsel. Noch nicht committet.
+
+## 27. Hochwertigeres Design und Schatten (Sonne von rechts oben)
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Kannst du das Design noch anpassen , so das es nicht auschaut als ob es ein 5 jahriges Kind gezeichnet hat zudem kannst du noch Schatten implementieren, als wenn die Sonne von rechts oben scheinen würde
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> **Hauptursache für den flachen Look:** In WPF 3D wirken Lichter immer auf die ganze Szene. Stadt, Güterwagen, Busch und Ampel hatten jeweils eigene Umgebungslichter, die sich aufsummierten. Die Szene war dadurch so überbelichtet, dass alles einfarbig und ohne Schattierung aussah.
+>
+> 1. **Licht** (neue Datei `Elena_Stempfle_SubwaySceneLighting.cs`): Die Lichter in den Modellen sind entfernt. Es gibt jetzt eine einzige Beleuchtung: ein kühles Umgebungslicht, eine warme Sonne von rechts oben und ein schwaches Aufhelllicht von links. Dadurch haben Häuser, Züge und Figuren helle und schattige Seiten.
+> 2. **Schatten:** WPF 3D kann keine Schatten berechnen. Jedes Objekt (Züge, Rampen, Hindernisse, Münzen, Läuferin, Bahnwärter) bekommt deshalb eine halbtransparente Schattenfläche: seine Umrissbox, entlang der Sonnenrichtung auf den Boden projiziert. Die Schatten fallen nach links und leicht nach hinten. Steht die Läuferin auf Rampe oder Zugdach, liegt ihr Schatten dort. Die Schatten werden nach allen Objekten gezeichnet, damit die Transparenz korrekt wirkt.
+> 3. **Himmel:** Ein Farbverlauf von Tiefblau zu Dunst am Horizont statt einfarbig Hellblau.
+> 4. **Läuferin:** Neues Modell mit Rucksack (von hinten gut sichtbar), Pferdeschwanz, Schuhen mit Sohle und Hals. Beine und Arme schwingen jetzt nach vorne und hinten statt seitlich. Der Bahnwärter trägt eine Schirmmütze.
+> 5. **HUD:** Abgerundete, halbtransparente Anzeigen. Links Tempo und Upgrades, rechts Punkte und Münzen mit Münzsymbol, Titel ohne Kasten. Steuerung und Meldungen stehen zentriert in schmalen Leisten, der „Spiel vorbei“-Bildschirm ist abgedunkelt.
+> 6. **Test angepasst:** Lanis Test `TestThreeDimensionalSceneAndHud` prüfte das alte Design wortwörtlich (einfarbig hellblauer Himmel, Texte wie „SCORE  0“). Er prüft jetzt dasselbe am neuen Design: Himmelsverlauf, 3D-Kamera, Tempo, Punkte, Münzen, Steuerung, Titel und dass sich beim Neuzeichnen nichts aufstaut.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests bestanden. Gerenderte Szenen kontrolliert: Schattierung, Schatten nach links, neue Läuferin und neues HUD sind sichtbar.
+
+**Ergebnisvermerk:** Neue Beleuchtung, Schatten von der Sonne rechts oben, überarbeitete Läuferin, Himmel und HUD. Noch nicht committet.
+
+## 28. Commit, Pull und Push
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du die änderungen comitten und dann die Änderungen alle pullen und dann pushen
+
+**Antwort:**
+
+> Ich committe die Änderungen aus den Prompts 24–28 (Subway-Surfer-Dateien, neue Licht-/Schatten-Datei und diese Prompt-Datei). Die fremden obj-Dateien in `HouseExample/` kommen nicht in den Commit. Danach folgen `git pull --rebase`, ein Build mit Tests und `git push`.
+
+**Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt.
+
+**Konflikt beim Pull:** Lani hatte parallel eine eigene Läuferin gebaut (auf Skateboard, von der Kamera abgewandt). Rückfrage, welches Figurenmodell bleiben soll; Entscheidung: „Lanis Skateboard-Figur (Empfohlen)“. Umsetzung:
+>
+> - Lanis Figurenmodell und ihre Fahrbewegung sind übernommen, meine Lauf-Figur (Rucksack, Pferdeschwanz) ist verworfen.
+> - Von mir bleiben Licht, Schatten, HUD, Himmel, Tempo, Hüpfstab-Regel und der höhere Hüpfstab-Sprung, auch für Lanis Figur.
+> - Die Schatten werden jetzt vor der Läuferin in die Szene eingefügt statt ganz am Ende. Lanis Tests erwarten die Läuferin als letztes Objekt, und für die Transparenz ist die Reihenfolge gleichwertig.
+> - Die Läuferin gleitet beim Spurwechsel nicht mehr über mehrere Bilder (das war nur meine Zugabe), sondern springt mit der Kamera sofort auf die neue Spur, wie es Lanis Test erwartet. Die Kamera folgt also weiterhin der Spur.
+> - Build: 0 Warnungen, 0 Fehler. Alle Tests (auch Lanis neue) 4-mal hintereinander bestanden. Zusammengeführte Szene gerendert und kontrolliert.
