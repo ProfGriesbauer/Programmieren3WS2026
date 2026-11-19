@@ -27,6 +27,7 @@ namespace OOPGames
                 Brushes.Crimson, CombatTeam.Enemies)
         {
             EquippedWeapon = WeaponCatalog.EnemyClaws;
+            CanBePushed = true;
             ChooseWanderDirection();
         }
 

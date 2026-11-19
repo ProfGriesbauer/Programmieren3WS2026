@@ -36,6 +36,8 @@ internal static class Program
             TestEquipmentMenuSelection();
             TestProgressionAndKeyBindingMenus();
             TestRangeKnockbackStatsAndGodMode();
+            TestPushableEntityMovement();
+            TestTimedEnemySpawningAndLimit();
 
             Console.WriteLine("OK: " + _assertions + " arena assertions passed.");
             return 0;
@@ -93,7 +95,10 @@ internal static class Program
         {
             EquippedWeapon = WeaponCatalog.Sword
         };
-        TestEntity enemy = new TestEntity(150, 100, 30, 10, CombatTeam.Enemies);
+        TestEntity enemy = new TestEntity(150, 100, 30, 10, CombatTeam.Enemies)
+        {
+            CanBePushed = true
+        };
         TestEntity ally = new TestEntity(150, 300, 30, 10, CombatTeam.Player);
         TestEntity outsideCone = new TestEntity(130, 205, 30, 10, CombatTeam.Enemies);
         ArenaCombatSystem combat = new ArenaCombatSystem();
@@ -560,6 +565,10 @@ internal static class Program
         field.StartNewGame();
         for (int kill = 0; kill < ArenaProgression.KillsPerUniversalPoint; kill++)
         {
+            if (field.Enemies.Count == 0)
+            {
+                field.SpawnEnemy();
+            }
             PursuerEnemy enemy = field.Enemies[0];
             enemy.PositionX = field.Player.PositionX + 50;
             enemy.PositionY = field.Player.PositionY;
@@ -575,7 +584,8 @@ internal static class Program
                 }
                 attacks++;
             }
-            Assert(!enemy.IsAlive, "repeated wand attacks defeat the enemy");
+            Assert(!enemy.IsAlive && field.Enemies.Count == 0,
+                "defeated enemies are not replaced immediately");
         }
 
         Assert(field.Score == 5 && field.Progression.TotalKills == 5,
@@ -822,6 +832,76 @@ internal static class Program
         field.Player.UpdateStatusEffects(0.18);
         Assert(field.Player.DamageFlashIntensity == 0,
             "the damage flash ends after a short interval");
+    }
+
+    private static void TestPushableEntityMovement()
+    {
+        ArenaField pushableField = new ArenaField();
+        pushableField.StartNewGame();
+        pushableField.Player.PositionX = 650;
+        pushableField.Player.PositionY = 600;
+        PursuerEnemy pusher = pushableField.Enemies[0];
+        pusher.PositionX = 500;
+        pusher.PositionY = 600;
+        pushableField.SpawnEnemy();
+        PursuerEnemy pushable = pushableField.Enemies[1];
+        pushable.PositionX = 540;
+        pushable.PositionY = 600;
+        pushable.CanBePushed = true;
+
+        pushableField.UpdateEnemyPositions();
+
+        Assert(pushable.PositionX > 551
+            && pushable.PositionX - pusher.PositionX >= pusher.Size,
+            "moving entities push marked entities out of their way");
+
+        ArenaField fixedField = new ArenaField();
+        fixedField.StartNewGame();
+        fixedField.Player.PositionX = 650;
+        fixedField.Player.PositionY = 600;
+        PursuerEnemy blockedMover = fixedField.Enemies[0];
+        blockedMover.PositionX = 500;
+        blockedMover.PositionY = 600;
+        fixedField.SpawnEnemy();
+        PursuerEnemy fixedEntity = fixedField.Enemies[1];
+        fixedEntity.PositionX = 540;
+        fixedEntity.PositionY = 600;
+        fixedEntity.CanBePushed = false;
+
+        fixedField.UpdateEnemyPositions();
+
+        Assert(Math.Abs(blockedMover.PositionX - 500) < 0.001
+            && fixedEntity.PositionX > 540,
+            "unmarked entities remain solid and block other entity movement");
+    }
+
+    private static void TestTimedEnemySpawningAndLimit()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        Assert(field.Enemies.Count == 1,
+            "a run starts with one enemy");
+
+        int ticksPerSpawnInterval = (int)(
+            ArenaField.EnemySpawnIntervalSeconds / 0.04);
+        for (int tick = 0; tick < ticksPerSpawnInterval - 1; tick++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        Assert(field.Enemies.Count == 1,
+            "the spawn timer does not add an enemy before seven seconds");
+
+        field.UpdateEnemyPositions();
+        Assert(field.Enemies.Count == 2,
+            "the spawn timer adds an enemy after seven seconds");
+
+        while (field.Enemies.Count < ArenaField.MaximumEnemyCount)
+        {
+            field.SpawnEnemy();
+        }
+        field.SpawnEnemy();
+        Assert(field.Enemies.Count == ArenaField.MaximumEnemyCount,
+            "manual and timed spawning never exceed the enemy limit");
     }
 
     private static Button FindMenuButton(Canvas canvas, string content)

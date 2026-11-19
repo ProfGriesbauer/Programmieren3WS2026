@@ -15,6 +15,7 @@ namespace OOPGames
                 Brushes.DodgerBlue, CombatTeam.Player)
         {
             EquippedWeapon = WeaponCatalog.Sword;
+            CanBePushed = true;
         }
 
         public PlayerFacing AttackFacing { get; private set; } = PlayerFacing.Front;

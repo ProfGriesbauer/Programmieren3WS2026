@@ -102,6 +102,7 @@ namespace OOPGames
         public double Size { get; }
         public Brush Color { get; }
         public bool IsAlive { get; private set; } = true;
+        public bool CanBePushed { get; set; }
         public bool IsInvulnerable { get; set; }
         public double DamageFlashIntensity
         {
@@ -196,9 +197,23 @@ namespace OOPGames
                 ? movementBounds.Top + movementBounds.Height / 2
                 : Math.Max(minimumY, Math.Min(maximumY, PositionY + directionY * speed));
 
-            IsMoving = nextX != PositionX || nextY != PositionY;
-            PositionX = nextX;
-            PositionY = nextY;
+            SetPosition(nextX, nextY);
+        }
+
+        internal void SetPosition(double positionX, double positionY)
+        {
+            IsMoving = IsAlive
+                && (positionX != PositionX || positionY != PositionY);
+            PositionX = positionX;
+            PositionY = positionY;
+        }
+
+        internal void RestorePosition(
+            double positionX, double positionY, bool isMoving)
+        {
+            PositionX = positionX;
+            PositionY = positionY;
+            IsMoving = IsAlive && isMoving;
         }
 
         public void CheckAndKill()

@@ -16,6 +16,9 @@ namespace OOPGames
         public const double MinimumZoom = 0.5;
         public const double MaximumZoom = 2.0;
         private const double ZoomStep = 0.1;
+        public const int MaximumEnemyCount = 15;
+        public const double EnemySpawnIntervalSeconds = 7;
+        private const double GameTickDurationSeconds = 0.04;
         public const double PlayerAttackRange = 80;
         public const double PlayerAttackHalfAngleRadians = Math.PI / 6;
         public const int PlayerAttackDamage = 10;
@@ -23,6 +26,7 @@ namespace OOPGames
         private const double EnemySpawnVisibilityMargin = 50;
         private const int EnemySpawnPositionAttemptLimit = 10000;
         private readonly List<PursuerEnemy> _enemies = new List<PursuerEnemy>();
+        private double _enemySpawnElapsedSeconds;
         private readonly ArenaCombatSystem _combatSystem = new ArenaCombatSystem();
         private Weapon _selectedPlayerWeapon = WeaponCatalog.Sword;
         private readonly ArenaProgression _progression = new ArenaProgression();
@@ -92,6 +96,7 @@ namespace OOPGames
             Player.EquippedWeapon = _selectedPlayerWeapon;
             Player.IsInvulnerable = IsGodMode;
             _enemies.Clear();
+            _enemySpawnElapsedSeconds = 0;
             Point spawnPosition = GetRandomEnemySpawnPosition(Player);
             _enemies.Add(new PursuerEnemy(
                 spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
@@ -338,6 +343,9 @@ namespace OOPGames
                 return;
             }
 
+            IReadOnlyList<Entity> entities = GetCombatEntities();
+            List<EntityPositionSnapshot> previousPositions =
+                CaptureEntityPositions(entities);
             double previousX = Player.PositionX;
             double previousY = Player.PositionY;
             double directionX = 0;
@@ -355,11 +363,13 @@ namespace OOPGames
                     : 1;
             Player.Move(directionX, directionY, movementBounds,
                 speedScale * sprintScale);
-            if (OverlapsAnotherEntity(Player))
+            if (!TryResolveEntityOverlaps(
+                Player, entities, movementBounds,
+                Player.PositionX - previousX,
+                Player.PositionY - previousY,
+                new HashSet<Entity>()))
             {
-                Player.PositionX = previousX;
-                Player.PositionY = previousY;
-                Player.Move(0, 0, movementBounds);
+                RestoreEntityPositions(previousPositions, Player);
             }
         }
 
@@ -378,19 +388,27 @@ namespace OOPGames
                     continue;
                 }
 
+                IReadOnlyList<Entity> entities = GetCombatEntities();
+                List<EntityPositionSnapshot> previousPositions =
+                    CaptureEntityPositions(entities);
                 double previousX = enemy.PositionX;
                 double previousY = enemy.PositionY;
                 enemy.UpdateBehavior(this, speedScale);
-                if (OverlapsAnotherEntity(enemy))
+                if (!TryResolveEntityOverlaps(
+                    enemy, entities, movementBounds,
+                    enemy.PositionX - previousX, enemy.PositionY - previousY,
+                    new HashSet<Entity>()))
                 {
-                    enemy.PositionX = previousX;
-                    enemy.PositionY = previousY;
-                    enemy.Move(0, 0, movementBounds);
+                    RestoreEntityPositions(previousPositions, enemy);
                 }
                 enemy.TryAttackPlayerInRange(Player, _combatSystem);
             }
 
-            if (!Player.IsAlive)
+            if (Player.IsAlive)
+            {
+                UpdateEnemySpawning(GameTickDurationSeconds * speedScale);
+            }
+            else
             {
                 IsWeaponWheelOpen = false;
                 IsGameStarted = false;
@@ -415,7 +433,8 @@ namespace OOPGames
 
         public void SpawnEnemy()
         {
-            if (!IsGameStarted || !Player.IsAlive)
+            if (!IsGameStarted || !Player.IsAlive
+                || GetLivingEnemyCount() >= MaximumEnemyCount)
             {
                 return;
             }
@@ -423,6 +442,34 @@ namespace OOPGames
             Point spawnPosition = GetRandomEnemySpawnPosition(Player);
             _enemies.Add(new PursuerEnemy(
                 spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
+        }
+
+        private void UpdateEnemySpawning(double deltaSeconds)
+        {
+            _enemySpawnElapsedSeconds += deltaSeconds;
+            if (_enemySpawnElapsedSeconds < EnemySpawnIntervalSeconds)
+            {
+                return;
+            }
+
+            _enemySpawnElapsedSeconds %= EnemySpawnIntervalSeconds;
+            if (GetLivingEnemyCount() < MaximumEnemyCount)
+            {
+                SpawnEnemy();
+            }
+        }
+
+        private int GetLivingEnemyCount()
+        {
+            int count = 0;
+            foreach (PursuerEnemy enemy in _enemies)
+            {
+                if (enemy.IsAlive)
+                {
+                    count++;
+                }
+            }
+            return count;
         }
 
         private void OnEntityDefeated(Entity source, Entity target, Weapon weapon)
@@ -440,10 +487,6 @@ namespace OOPGames
                         progressionWeapon = Player.EquippedWeapon;
                     }
                     _progression.AwardKill(progressionWeapon);
-                }
-                if (IsGameStarted && Player.IsAlive)
-                {
-                    SpawnEnemy();
                 }
             }
         }
@@ -477,26 +520,115 @@ namespace OOPGames
                 "Could not find a free enemy spawn position without overlapping another entity.");
         }
 
-        private bool OverlapsAnotherEntity(Entity entity)
+        private static List<EntityPositionSnapshot> CaptureEntityPositions(
+            IReadOnlyList<Entity> entities)
         {
-            if (!ReferenceEquals(entity, Player) && Player.IsAlive
-                && HitboxesOverlap(entity.PositionX, entity.PositionY, entity.Size,
-                    Player.PositionX, Player.PositionY, Player.Size))
+            List<EntityPositionSnapshot> snapshots =
+                new List<EntityPositionSnapshot>(entities.Count);
+            foreach (Entity entity in entities)
             {
+                snapshots.Add(new EntityPositionSnapshot(
+                    entity, entity.PositionX, entity.PositionY, entity.IsMoving));
+            }
+            return snapshots;
+        }
+
+        private static void RestoreEntityPositions(
+            IReadOnlyList<EntityPositionSnapshot> snapshots, Entity blockedMover)
+        {
+            foreach (EntityPositionSnapshot snapshot in snapshots)
+            {
+                snapshot.Entity.RestorePosition(
+                    snapshot.PositionX, snapshot.PositionY,
+                    !ReferenceEquals(snapshot.Entity, blockedMover)
+                        && snapshot.IsMoving);
+            }
+        }
+
+        private static bool TryResolveEntityOverlaps(
+            Entity entity, IReadOnlyList<Entity> entities,
+            Rect movementBounds, double movementX, double movementY,
+            HashSet<Entity> resolving)
+        {
+            if (!resolving.Add(entity))
+            {
+                return false;
+            }
+
+            try
+            {
+                foreach (Entity other in entities)
+                {
+                    if (ReferenceEquals(entity, other) || !other.IsAlive
+                        || !HitboxesOverlap(
+                            entity.PositionX, entity.PositionY, entity.Size,
+                            other.PositionX, other.PositionY, other.Size))
+                    {
+                        continue;
+                    }
+                    if (!other.CanBePushed)
+                    {
+                        return false;
+                    }
+
+                    double directionX = other.PositionX - entity.PositionX;
+                    double directionY = other.PositionY - entity.PositionY;
+                    double distance = Math.Sqrt(
+                        directionX * directionX + directionY * directionY);
+                    if (distance == 0)
+                    {
+                        directionX = movementX;
+                        directionY = movementY;
+                        distance = Math.Sqrt(
+                            directionX * directionX + directionY * directionY);
+                    }
+                    if (distance == 0)
+                    {
+                        return false;
+                    }
+
+                    directionX /= distance;
+                    directionY /= distance;
+                    double separation = (entity.Size + other.Size) / 2
+                        - Math.Sqrt(
+                            Math.Pow(other.PositionX - entity.PositionX, 2)
+                            + Math.Pow(other.PositionY - entity.PositionY, 2))
+                        + 0.01;
+                    double pushedX = other.PositionX + directionX * separation;
+                    double pushedY = other.PositionY + directionY * separation;
+                    if (!IsWithinMovementBounds(other, pushedX, pushedY, movementBounds))
+                    {
+                        return false;
+                    }
+
+                    other.SetPosition(pushedX, pushedY);
+                    if (!TryResolveEntityOverlaps(
+                            other, entities, movementBounds,
+                            directionX, directionY, resolving)
+                        || HitboxesOverlap(
+                            entity.PositionX, entity.PositionY, entity.Size,
+                            other.PositionX, other.PositionY, other.Size))
+                    {
+                        return false;
+                    }
+                }
+
                 return true;
             }
-
-            foreach (PursuerEnemy otherEnemy in _enemies)
+            finally
             {
-                if (!ReferenceEquals(entity, otherEnemy) && otherEnemy.IsAlive
-                    && HitboxesOverlap(entity.PositionX, entity.PositionY, entity.Size,
-                        otherEnemy.PositionX, otherEnemy.PositionY, otherEnemy.Size))
-                {
-                    return true;
-                }
+                resolving.Remove(entity);
             }
+        }
 
-            return false;
+        private static bool IsWithinMovementBounds(
+            Entity entity, double positionX, double positionY, Rect bounds)
+        {
+            double radius = entity.Size / 2;
+            return positionX - radius >= bounds.Left
+                && positionX + radius <= bounds.Right
+                && positionY - radius >= bounds.Top
+                && positionY + radius <= bounds.Bottom;
         }
 
         private bool OverlapsAnyEnemy(double positionX, double positionY, double size)
@@ -546,6 +678,23 @@ namespace OOPGames
             double offsetY = firstY - secondY;
             return offsetX * offsetX + offsetY * offsetY
                 < minimumDistance * minimumDistance;
+        }
+
+        private sealed class EntityPositionSnapshot
+        {
+            public EntityPositionSnapshot(
+                Entity entity, double positionX, double positionY, bool isMoving)
+            {
+                Entity = entity;
+                PositionX = positionX;
+                PositionY = positionY;
+                IsMoving = isMoving;
+            }
+
+            public Entity Entity { get; }
+            public double PositionX { get; }
+            public double PositionY { get; }
+            public bool IsMoving { get; }
         }
 
         public void AttackWithPlayer(double aimX, double aimY)

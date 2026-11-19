@@ -332,7 +332,7 @@ namespace OOPGames
             Entity source, Entity target, double distance,
             IReadOnlyList<Entity> entities, Rect? movementBounds)
         {
-            if (distance <= 0)
+            if (distance <= 0 || !target.CanBePushed)
             {
                 return;
             }
