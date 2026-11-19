@@ -55,6 +55,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new G1_VierGewinntPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe3DragRacePainter());
             OOPGamesManager.Singleton.RegisterPainter(new HayDayPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new G1C_CasinoPainter());
             //Rules
             OOPGamesManager.Singleton.RegisterRules(new X_TicTacToeRules());
             OOPGamesManager.Singleton.RegisterRules(new G10_VierGewinntRules());
@@ -69,6 +70,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe3DragRaceRules());
             OOPGamesManager.Singleton.RegisterRules(new HayDayRules());
+            OOPGamesManager.Singleton.RegisterRules(new G1C_CasinoRules());
             //Players
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeComputerPlayer());
@@ -93,6 +95,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe3DragRaceHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe3DragRaceComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new HayDayHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new G1C_CasinoHumanPlayer());
 
             InitializeComponent();
             PaintList.ItemsSource = OOPGamesManager.Singleton.Painters;
