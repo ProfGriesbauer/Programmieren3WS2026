@@ -253,9 +253,7 @@ namespace OOPGames
             }
 
             canvas.Children.Add(worldCanvas);
-            _hudRenderer.PaintPlayerHud(canvas, field.Player, field.Score,
-                field.GetAttackCooldownRemaining(field.Player),
-                field.Progression, field.KeyBindings);
+            _hudRenderer.PaintPlayerHud(canvas, field, sprite);
             _debugRenderer.PaintPanels(canvas, field, width, height);
             if (field.IsWeaponWheelOpen)
             {
@@ -618,7 +616,7 @@ namespace OOPGames
         }
 
         // Locate project assets both when launched from the project and from its build output.
-        private static string FindAssetPath(params string[] relativePath)
+        internal static string FindAssetPath(params string[] relativePath)
         {
             HashSet<string> visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             string[] startingDirectories =
