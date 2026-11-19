@@ -479,7 +479,7 @@ namespace OOPGames
         }
     }
 
-    internal sealed class SatisfactoryFieldView : IG5_FabrikSpielInfo
+    internal sealed class SatisfactoryFieldView : IG5_FabrikSpielInfo, IG5_KartenansichtSteuerung
     {
         private readonly G5_FabrikSpielfeld _field;
         private readonly SatisfactoryStartScreen _startScreen;
@@ -534,6 +534,21 @@ namespace OOPGames
         bool IG5_WeltSpielfeld.TryRasterZuBildschirm(int x, int y, out Point position)
         {
             return ((IG5_WeltSpielfeld)_field).TryRasterZuBildschirm(x, y, out position);
+        }
+
+        void IG5_KartenansichtSteuerung.Verschieben(double deltaX, double deltaY)
+        {
+            ((IG5_KartenansichtSteuerung)_field).Verschieben(deltaX, deltaY);
+        }
+
+        void IG5_KartenansichtSteuerung.Zoomieren(double faktor, double fokusX, double fokusY)
+        {
+            ((IG5_KartenansichtSteuerung)_field).Zoomieren(faktor, fokusX, fokusY);
+        }
+
+        void IG5_KartenansichtSteuerung.SetzeAnsicht(double zoom, double verschiebungX, double verschiebungY)
+        {
+            ((IG5_KartenansichtSteuerung)_field).SetzeAnsicht(zoom, verschiebungX, verschiebungY);
         }
 
         public bool CanBePaintedBy(IPaintGame painter)

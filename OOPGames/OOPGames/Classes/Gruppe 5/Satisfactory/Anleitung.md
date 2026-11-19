@@ -27,6 +27,17 @@ alterniert weiterhin zwischen den beiden Spieler-Slots.
 | Schmelze auswählen | `S`, danach eine freie Fläche anklicken |
 | Bauwerkzeug abwählen | `Esc` |
 
+Im Vollbildmodus wird die gesamte Karte an den verfügbaren Bereich angepasst.
+Die oberen zwei Zeilen zeigen Steuerung, aktives Werkzeug, Hub-Bestand und Status.
+Im normalen Fenstermodus bleibt die Karte bei ihrer Standardgröße; der sichtbare
+Ausschnitt beginnt oben links unterhalb der Steuerungszeilen und wird am
+Spielfeldbereich begrenzt.
+
+Die Karte verwendet den Wiesenhintergrund mit Grasstruktur, Raster und Felsen.
+Dieser statische Hintergrund bleibt während der Simulation erhalten; Rohstoffe,
+Gebäude und HUD werden separat aktualisiert. Bei einem neuen Spielfeld oder
+einer geänderten Ansichtsgröße wird die Hintergrundebene neu aufgebaut.
+
 Förderer bauen auf Rohstoffvorkommen und liefern Erz automatisch zum Hub.
 Schmelzen beziehen passende Erze automatisch aus dem Hub und liefern Barren
 wieder dorthin. Förderer, Schmelzen und Darstellung verwenden die gemeinsamen Gebäudemodelle und

@@ -233,3 +233,21 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > setzte bitte alle um schau aber das man noch nicht alles im spiel verwenden kann
 
 - **Ergebnisvermerk:** Alle zehn Designs aus Chris' HTML-Vorschau wurden als native WPF-Vektorzeichnungen im Fabrik-Painter umgesetzt. Vorhandene Gebäude werden auf ihre passenden Designs abgebildet; die Stufen 1–3 erhalten optische Akzente. Splitter und Merger sind nur als Zeichnungen vorbereitet, da ihnen Gebäudemodelle und Spielregeln fehlen. Bauwerkzeuge, Regeln und `MainWindow.xaml.cs` wurden nicht geändert; dadurch sind noch nicht verfügbare Gebäude weiterhin nicht platzierbar.
+
+### 2026-11-19, 10:00 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Bitte ändere im vollbild modus unsere anzeige so, dass das spielfeld gut draufpasst und oben zwei reihen frei sind wo die steuerung erklärt wird. Im nicht vollbild modus wird das spiel aktuell sehr komisch angezeigt, da es die anzeige für die spielauswahl teils überschreibt, ass darf nicht sein. In diesem modus ist es ok wenn nur der obere linke ausschnitt des spielfeld zusehen ist
+
+- **Ergebnisvermerk:** Der Fabrik-Painter passt die Karte im breiten Vollbild-Viewport an, reserviert oben zwei HUD-Zeilen für Steuerung, Werkzeug, Hub-Bestand und Status und beschneidet die Zeichnung auf das Spielfeld-Canvas. Im normalen Fenstermodus bleibt der sichtbare Kartenausschnitt oben links unter der Steuerungsanzeige bei Standardgröße, sodass die restliche Karte abgeschnitten statt über die Spielauswahl gezeichnet wird. Die Steuerungszeilen fangen keine Spielaktionen ab. Die Anleitung wurde ergänzt.
+
+### 2026-11-19, 10:28 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Ich habe ein neues design für den hintergrund erstellt. Kannst du wie wiese Hintergrund bitte implementieren. Außerdem habe ich gemerkt, bei jeden Tick das komplette spielfeld neu erstellt wird. Kannst du das bitte umsetzten, dass das nur beim spiel start geschieht und dann der hintergrund bleibt und nurdie gebäude und so neu geladen werden?
+
+- **Ergebnisvermerk:** `G5_WieseHintergrund` wurde in den Fabrik-Painter eingebunden. Die Gras-/Raster-/Felsgrafik wird als statische Bitmap-Ebene pro Spielfeld und Ansichtsgröße vorgehalten; im Simulationstick werden nur die dynamische Ebene mit Rohstoffanzeigen, Gebäuden und HUD neu aufgebaut. Bei einem Spielfeldwechsel oder Größenwechsel wird die Hintergrundebene neu erstellt.

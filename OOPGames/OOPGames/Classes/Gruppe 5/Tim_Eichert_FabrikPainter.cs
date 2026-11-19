@@ -9,7 +9,17 @@ namespace OOPGames
     public sealed class G5_FabrikPainter : IG5_FabrikPainter
     {
         private const double StandardKachelGroesse = 32.0;
-        private const double HudHoehe = 36.0;
+        private const double HudZeilenHoehe = 28.0;
+        private const double HudHoehe = HudZeilenHoehe * 2;
+        private const double VollbildSeitenverhaeltnis = 1.3;
+
+        private readonly G5_WieseHintergrund _wieseHintergrund = new G5_WieseHintergrund();
+        private IG5_WeltSpielfeld _hintergrundWelt;
+        private Canvas _hintergrundEbene;
+        private Canvas _dynamischeEbene;
+        private Canvas _zielCanvas;
+        private double _hintergrundViewportBreite = -1;
+        private double _hintergrundViewportHoehe = -1;
 
         public string Name => "G5 Fabrik-Welt";
 
@@ -52,30 +62,82 @@ namespace OOPGames
                 throw new ArgumentException("Das Spielfeld stellt keine Fabrik-Anzeigedaten bereit.", nameof(currentField));
             }
 
-            canvas.Children.Clear();
             canvas.Background = Brushes.DimGray;
+            canvas.ClipToBounds = true;
+            PasseAnsichtAn(canvas, currentField);
+            StelleHintergrundSicher(canvas, currentField);
+            _dynamischeEbene.Children.Clear();
 
-            for (int y = 0; y < currentField.Hoehe; y++)
-            {
-                for (int x = 0; x < currentField.Breite; x++)
-                {
-                    if (!currentField.TryGetKachelInfo(x, y, out IG5_KachelInfo kachel) ||
-                        !currentField.TryRasterZuBildschirm(x, y, out Point position) ||
-                        !TryGetKachelGroesse(currentField, x, y, out double breite, out double hoehe))
-                    {
-                        continue;
-                    }
-
-                    ZeichneKachel(canvas, position, breite, hoehe, kachel);
-                }
-            }
+            ZeichneVorkommen(_dynamischeEbene, currentField);
 
             foreach (IG5_GebaeudeInfo gebaeude in fabrikInfo.Gebaeude)
             {
-                ZeichneGebaeude(canvas, currentField, gebaeude);
+                ZeichneGebaeude(_dynamischeEbene, currentField, gebaeude);
             }
 
-            ZeichneHud(canvas, fabrikInfo);
+            ZeichneHud(_dynamischeEbene, canvas.ActualWidth, fabrikInfo);
+        }
+
+        private void StelleHintergrundSicher(Canvas canvas, IG5_WeltSpielfeld welt)
+        {
+            bool weltGewechselt = !ReferenceEquals(_hintergrundWelt, welt);
+            if (weltGewechselt)
+            {
+                _wieseHintergrund.Zuruecksetzen();
+                _hintergrundWelt = welt;
+            }
+
+            bool ansichtGewechselt =
+                !ReferenceEquals(_zielCanvas, canvas) ||
+                _hintergrundViewportBreite != canvas.ActualWidth ||
+                _hintergrundViewportHoehe != canvas.ActualHeight ||
+                _hintergrundEbene == null ||
+                _dynamischeEbene == null ||
+                !canvas.Children.Contains(_hintergrundEbene) ||
+                !canvas.Children.Contains(_dynamischeEbene);
+            if (!weltGewechselt && !ansichtGewechselt)
+            {
+                return;
+            }
+
+            canvas.Children.Clear();
+            _zielCanvas = canvas;
+            _hintergrundViewportBreite = canvas.ActualWidth;
+            _hintergrundViewportHoehe = canvas.ActualHeight;
+
+            _hintergrundEbene = ErzeugeEbene(canvas);
+            _dynamischeEbene = ErzeugeEbene(canvas);
+            canvas.Children.Add(_hintergrundEbene);
+            canvas.Children.Add(_dynamischeEbene);
+
+            if (!welt.TryRasterZuBildschirm(0, 0, out Point ursprung) ||
+                !TryGetKachelGroesse(welt, 0, 0, out double kachelBreite, out double kachelHoehe))
+            {
+                return;
+            }
+
+            Image wiese = new Image
+            {
+                Source = _wieseHintergrund.HoleHintergrund(welt),
+                Width = welt.Breite * kachelBreite,
+                Height = welt.Hoehe * kachelHoehe,
+                Stretch = Stretch.Fill,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(wiese, ursprung.X);
+            Canvas.SetTop(wiese, ursprung.Y);
+            _hintergrundEbene.Children.Add(wiese);
+        }
+
+        private static Canvas ErzeugeEbene(Canvas parent)
+        {
+            return new Canvas
+            {
+                Width = parent.ActualWidth,
+                Height = parent.ActualHeight,
+                ClipToBounds = true,
+                IsHitTestVisible = false
+            };
         }
 
         private static bool TryGetKachelGroesse(
@@ -117,61 +179,56 @@ namespace OOPGames
             return breite > 0 && hoehe > 0;
         }
 
-        private static void ZeichneKachel(
-            Canvas canvas,
-            Point position,
-            double breite,
-            double hoehe,
-            IG5_KachelInfo kachel)
+        private static void PasseAnsichtAn(Canvas canvas, IG5_WeltSpielfeld welt)
         {
-            Brush hintergrund = kachel.Gelaende == G5_Gelaendeart.Hindernis
-                ? Brushes.SlateGray
-                : kachel.Rohstoff == G5_Rohstofftyp.Keiner
-                    ? Brushes.DarkOliveGreen
-                    : Brushes.SaddleBrown;
-
-            Rectangle rechteck = new Rectangle
+            if (!(welt is IG5_KartenansichtSteuerung steuerung) ||
+                canvas.ActualWidth <= 0 ||
+                canvas.ActualHeight <= HudHoehe)
             {
-                Width = breite,
-                Height = hoehe,
-                Fill = hintergrund,
-                Stroke = Brushes.Black,
-                StrokeThickness = 1
-            };
-            Canvas.SetLeft(rechteck, position.X);
-            Canvas.SetTop(rechteck, position.Y);
-            canvas.Children.Add(rechteck);
-
-            string text = kachel.Gelaende == G5_Gelaendeart.Hindernis
-                ? "Fels"
-                : RessourcenText(kachel);
-            if (!string.IsNullOrEmpty(text))
-            {
-                TextBlock beschriftung = new TextBlock
-                {
-                    Text = text,
-                    Foreground = Brushes.White,
-                    FontSize = Math.Max(8, Math.Min(12, hoehe * 0.3)),
-                    TextAlignment = TextAlignment.Center,
-                    Width = breite
-                };
-                Canvas.SetLeft(beschriftung, position.X);
-                Canvas.SetTop(beschriftung, position.Y + hoehe * 0.32);
-                canvas.Children.Add(beschriftung);
+                return;
             }
+
+            if (canvas.ActualWidth / canvas.ActualHeight < VollbildSeitenverhaeltnis)
+            {
+                steuerung.SetzeAnsicht(1, 0, HudHoehe);
+                return;
+            }
+
+            double verfuegbareBreite = Math.Max(1, canvas.ActualWidth - 16);
+            double verfuegbareHoehe = Math.Max(1, canvas.ActualHeight - HudHoehe - 16);
+            double zoom = Math.Min(
+                verfuegbareBreite / (welt.Breite * StandardKachelGroesse),
+                verfuegbareHoehe / (welt.Hoehe * StandardKachelGroesse));
+            zoom = Math.Max(0.25, Math.Min(4, zoom));
+
+            double kachelGroesse = StandardKachelGroesse * zoom;
+            double mapBreite = welt.Breite * kachelGroesse;
+            double mapHoehe = welt.Hoehe * kachelGroesse;
+            double offsetX = (canvas.ActualWidth - mapBreite) / 2;
+            double offsetY = HudHoehe + (canvas.ActualHeight - HudHoehe - mapHoehe) / 2;
+            steuerung.SetzeAnsicht(zoom, offsetX, offsetY);
         }
 
-        private static string RessourcenText(IG5_KachelInfo kachel)
+        private void ZeichneVorkommen(Canvas canvas, IG5_WeltSpielfeld welt)
         {
-            if (kachel.Rohstoff == G5_Rohstofftyp.Keiner)
+            for (int y = 0; y < welt.Hoehe; y++)
             {
-                return string.Empty;
-            }
+                for (int x = 0; x < welt.Breite; x++)
+                {
+                    if (!welt.TryGetKachelInfo(x, y, out IG5_KachelInfo kachel) ||
+                        kachel.Rohstoff == G5_Rohstofftyp.Keiner ||
+                        !welt.TryRasterZuBildschirm(x, y, out Point position) ||
+                        !TryGetKachelGroesse(welt, x, y, out double breite, out double hoehe))
+                    {
+                        continue;
+                    }
 
-            string symbol = kachel.Rohstoff == G5_Rohstofftyp.Eisen
-                ? "Fe"
-                : kachel.Rohstoff.ToString();
-            return symbol + " " + kachel.RohstoffMenge;
+                    UIElement vorkommen = _wieseHintergrund.ErzeugeVorkommen(kachel, x, y, breite, hoehe);
+                    Canvas.SetLeft(vorkommen, position.X);
+                    Canvas.SetTop(vorkommen, position.Y);
+                    canvas.Children.Add(vorkommen);
+                }
+            }
         }
 
         private static void ZeichneGebaeude(
@@ -306,28 +363,51 @@ namespace OOPGames
             }
         }
 
-        private static void ZeichneHud(Canvas canvas, IG5_FabrikSpielInfo info)
+        private static void ZeichneHud(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)
         {
             string werkzeug = info.AktuellesWerkzeug == G5_Bauwerkzeug.Keines
                 ? "Keines"
                 : info.AktuellesWerkzeug.ToString();
-            string text =
-                "F: Förderer   S: Schmelze   Esc: Abbrechen   |   " +
-                "Bauwerkzeug: " + werkzeug + "   |   HUB: Eisenerz " +
-                info.HubMenge(G5_Item.Eisenerz) + "   Eisenbarren " +
-                info.HubMenge(G5_Item.Eisenbarren);
-
-            TextBlock hud = new TextBlock
+            Rectangle hintergrund = new Rectangle
             {
-                Text = text + Environment.NewLine + info.StatusMeldung,
-                Foreground = Brushes.White,
-                Background = Brushes.Black,
-                Padding = new Thickness(5),
-                FontSize = 13
+                Width = Math.Max(0, viewportBreite),
+                Height = HudHoehe,
+                Fill = new SolidColorBrush(Color.FromArgb(235, 16, 20, 18))
             };
-            Canvas.SetLeft(hud, 4);
-            Canvas.SetTop(hud, 2);
-            canvas.Children.Add(hud);
+            Canvas.SetLeft(hintergrund, 0);
+            Canvas.SetTop(hintergrund, 0);
+            canvas.Children.Add(hintergrund);
+
+            ZeichneHudZeile(
+                canvas,
+                viewportBreite,
+                "F: Förderer platzieren    S: Schmelze platzieren    Esc: Werkzeug abwählen    Mausklick: Gebäude platzieren",
+                0);
+            ZeichneHudZeile(
+                canvas,
+                viewportBreite,
+                "Werkzeug: " + werkzeug + "    |    HUB: Eisenerz " +
+                info.HubMenge(G5_Item.Eisenerz) + "    Eisenbarren " +
+                info.HubMenge(G5_Item.Eisenbarren) + "    |    " + info.StatusMeldung,
+                HudZeilenHoehe);
+        }
+
+        private static void ZeichneHudZeile(Canvas canvas, double viewportBreite, string text, double y)
+        {
+            TextBlock zeile = new TextBlock
+            {
+                Text = text,
+                Foreground = Brushes.White,
+                Background = Brushes.Transparent,
+                Padding = new Thickness(8, 4, 8, 2),
+                FontSize = 13,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Width = Math.Max(0, viewportBreite),
+                Height = HudZeilenHoehe
+            };
+            Canvas.SetLeft(zeile, 0);
+            Canvas.SetTop(zeile, y);
+            canvas.Children.Add(zeile);
         }
     }
 }

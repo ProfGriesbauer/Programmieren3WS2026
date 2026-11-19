@@ -47,5 +47,6 @@ namespace OOPGames
     {
         void Verschieben(double deltaX, double deltaY);
         void Zoomieren(double faktor, double fokusX, double fokusY);
+        void SetzeAnsicht(double zoom, double verschiebungX, double verschiebungY);
     }
 }
