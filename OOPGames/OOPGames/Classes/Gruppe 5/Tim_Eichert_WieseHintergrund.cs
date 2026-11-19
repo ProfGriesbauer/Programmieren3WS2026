@@ -144,23 +144,6 @@ namespace OOPGames
             };
             vorkommen.Children.Add(bild);
 
-            Border label = new Border
-            {
-                Background = LabelHintergrund,
-                Padding = new Thickness(breite * 0.08, 0, breite * 0.08, 0),
-                Child = new TextBlock
-                {
-                    Text = Kurzzeichen(kachel.Rohstoff) + " " + kachel.RohstoffMenge,
-                    Foreground = Brushes.White,
-                    FontWeight = FontWeights.SemiBold,
-                    FontSize = Math.Max(6, hoehe * 0.24)
-                }
-            };
-            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            Canvas.SetLeft(label, (breite - label.DesiredSize.Width) / 2);
-            Canvas.SetTop(label, hoehe - label.DesiredSize.Height - hoehe * 0.04);
-            vorkommen.Children.Add(label);
-
             return vorkommen;
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -157,9 +158,9 @@ namespace OOPGames
                 TextAlignment.Center);
             AddText(canvas, "SATISFACTORY", Brushes.White, left + 54, top + 1, 260, 20, 16,
                 FontWeights.Bold);
-            AddText(canvas, "GRUPPE 5  /  FABRIK-SIMULATION", MutedBrush, left + 54, top + 23,
-                300, 16, 10, FontWeights.SemiBold);
-            AddText(canvas, "DEINE FABRIK BEGINNT HIER", AccentBrush,
+            AddText(canvas, "BAUEN  /  ERWEITERN  /  AUTOMATISIEREN", MutedBrush, left + 54, top + 23,
+                340, 16, 10, FontWeights.SemiBold);
+            AddText(canvas, "DEINE WELT. DEINE FABRIK.", AccentBrush,
                 left + width - 260, top + 11, 260, 18, 10, FontWeights.Bold,
                 TextAlignment.Right);
         }
@@ -179,15 +180,16 @@ namespace OOPGames
             AddText(canvas, "Rohstoffe rein.\nProduktion an.", Brushes.White,
                 left + 26, top + 70, width - 52, 100, 35, FontWeights.Bold);
             AddText(canvas,
-                "Baue deine Fabrik auf der gemeinsamen Gruppe-5-Welt auf. Förderer, Schmelzen und Rezepte verwenden die Modelle deiner Gruppenmitglieder.",
-                MutedBrush, left + 28, top + 185, width - 56, 68, 13);
+                "Baue Förderer und Schmelzen, verbinde sie mit Förderbändern und beobachte den Rohstofftransport.",
+                MutedBrush, left + 28, top + 185, width - 206, 68, 13);
+            DrawFactoryArt(canvas, left + width - 166, top + 170);
 
             DrawStep(canvas, left + 28, top + 280, "01", "Förderer",
                 "F drücken und auf ein Erzvorkommen klicken.");
-            DrawStep(canvas, left + 28, top + 350, "02", "Schmelze",
-                "S drücken und auf freies Gelände klicken.");
-            DrawStep(canvas, left + 28, top + 420, "03", "Automatische Produktion",
-                "Erz und Barren werden über das Hub transportiert.");
+            DrawStep(canvas, left + 28, top + 350, "02", "Förderband",
+                "B drücken und eine Verbindung zur Schmelze bauen.");
+            DrawStep(canvas, left + 28, top + 420, "03", "Transport & Umbau",
+                "Rohstoffe bewegen sich sichtbar; mit M versetzt du Gebäude.");
         }
 
         private void DrawControlPanel(
@@ -238,6 +240,8 @@ namespace OOPGames
                 ResourceLabel() + "  ·  " + SpeedLabel(),
                 Brushes.White, left + 42, top + height - 80, width - 84, 22, 13,
                 FontWeights.SemiBold);
+            AddText(canvas, "Nach dem Start begleitet dich ein Mentor durch die verpflichtende Einführung.",
+                MutedBrush, left + 30, top + 340, width - 60, 38, 11);
         }
 
         private void DrawSettings(Canvas canvas, double left, double top, double width, double height)
@@ -268,19 +272,21 @@ namespace OOPGames
             DrawBackButton(canvas, left + 28, top + 26);
             AddText(canvas, "Anleitung", Brushes.White,
                 left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
-            AddText(canvas, "So bringst du deine Fabrik in Gang:",
+            AddText(canvas, "Diese Einführung ist verpflichtend und nicht überspringbar:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
-            DrawStep(canvas, left + 30, top + 170, "01", "Förderer auswählen",
-                "Drücke F und klicke direkt auf ein Eisen- oder Kupfervorkommen.");
-            DrawStep(canvas, left + 30, top + 250, "02", "Schmelze platzieren",
-                "Drücke S und klicke auf eine freie Fläche.");
-            DrawStep(canvas, left + 30, top + 330, "03", "Produktion beobachten",
-                "Förderer bringen Erz zum Hub. Passende Schmelzen erhalten Erz und lagern Barren im Hub.");
-            DrawStep(canvas, left + 30, top + 425, "04", "Werkzeug wechseln",
-                "Esc hebt das Bauwerkzeug auf. Mit F oder S wählst du ein neues.");
+            DrawStep(canvas, left + 30, top + 155, "01", "Förderer bauen",
+                "Drücke F und platziere ihn auf dem markierten Eisenerzvorkommen.");
+            DrawStep(canvas, left + 30, top + 225, "02", "Schmelze bauen",
+                "Drücke S und platziere sie auf dem markierten freien Feld.");
+            DrawStep(canvas, left + 30, top + 295, "03", "Gebäude versetzen",
+                "Drücke M, klicke das Gebäude und danach das Ziel.");
+            DrawStep(canvas, left + 30, top + 365, "04", "Förderbänder",
+                "Drücke B und verbinde Förderer und Schmelze über freie Nachbarfelder.");
+            AddText(canvas, "Der Mentor zeigt dir alle Schritte. Bei aktivem Transport siehst du die Rohstoffe auf dem Band.",
+                MutedBrush, left + 30, top + 440, width - 60, 40, 10);
 
-            DrawButton(canvas, left + 28, top + height - 78, width - 56, 48,
+            DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
                 "SPIEL STARTEN", " ", AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
         }
 
@@ -349,9 +355,26 @@ namespace OOPGames
             AddText(canvas, detail, MutedBrush, left + 50, top + 24, 390, 40, 11);
         }
 
+        private static void DrawFactoryArt(Canvas canvas, double left, double top)
+        {
+            AddRoundedRectangle(canvas, BrushFromRgb(48, 96, 84), left, top + 38, 146, 78, 20);
+            AddRoundedRectangle(canvas, BrushFromRgb(71, 130, 102), left + 14, top + 50, 56, 66, 8);
+            AddRoundedRectangle(canvas, BrushFromRgb(208, 126, 62), left + 76, top + 30, 55, 86, 8);
+            AddRoundedRectangle(canvas, BrushFromRgb(87, 107, 111), left + 89, top + 10, 14, 30, 4);
+            AddRoundedRectangle(canvas, BrushFromRgb(87, 107, 111), left + 115, top + 18, 12, 24, 4);
+            AddCircle(canvas, BrushFromRgb(183, 199, 183), left + 82, top - 8, 24, 0.6);
+            AddCircle(canvas, BrushFromRgb(183, 199, 183), left + 99, top - 15, 30, 0.48);
+            AddCircle(canvas, BrushFromRgb(183, 199, 183), left + 119, top - 5, 23, 0.4);
+            AddRoundedRectangle(canvas, BrushFromRgb(226, 181, 73), left + 23, top + 72, 15, 18, 3);
+            AddRoundedRectangle(canvas, BrushFromRgb(226, 181, 73), left + 46, top + 72, 15, 18, 3);
+            AddRoundedRectangle(canvas, BrushFromRgb(242, 197, 91), left + 87, top + 52, 14, 18, 3);
+            AddRoundedRectangle(canvas, BrushFromRgb(242, 197, 91), left + 107, top + 52, 14, 18, 3);
+            AddRoundedRectangle(canvas, BrushFromRgb(50, 78, 63), left - 4, top + 112, 156, 9, 5);
+        }
+
         private void DrawFooter(Canvas canvas, double left, double top, double width)
         {
-            AddText(canvas, "BEDIENUNG IM SPIEL:  F Förderer   ·   S Schmelze   ·   Esc Werkzeug abwählen",
+            AddText(canvas, "BEDIENUNG IM SPIEL:  F Förderer   ·   S Schmelze   ·   B Förderband   ·   M Gebäude versetzen",
                 MutedBrush, left, top, width, 16, 10, FontWeights.Normal, TextAlignment.Center);
         }
 
@@ -483,19 +506,48 @@ namespace OOPGames
     {
         private readonly G5_FabrikSpielfeld _field;
         private readonly SatisfactoryStartScreen _startScreen;
+        private readonly SatisfactoryGameMentor _mentor;
 
         internal SatisfactoryFieldView(
             G5_FabrikSpielfeld field,
             SatisfactoryStartScreen startScreen,
+            SatisfactoryGameMentor mentor,
             bool isGameStarted)
         {
             _field = field ?? throw new ArgumentNullException(nameof(field));
             _startScreen = startScreen ?? throw new ArgumentNullException(nameof(startScreen));
+            _mentor = mentor ?? throw new ArgumentNullException(nameof(mentor));
+            MentorOverlay = new Canvas { IsHitTestVisible = false };
             IsGameStarted = isGameStarted;
         }
 
         internal bool IsGameStarted { get; set; }
         internal SatisfactoryStartScreen StartScreen { get { return _startScreen; } }
+        internal SatisfactoryGameMentor Mentor { get { return _mentor; } }
+        internal Canvas MentorOverlay { get; }
+        internal long SimulationTickNumber { get { return _field.Simulation.TickNumber; } }
+
+        internal bool TryGetConveyorFlow(int x, int y, out bool isVertical, out bool isReversed)
+        {
+            foreach (G5_Conveyor conveyor in _field.InterneGebaeude.OfType<G5_Conveyor>())
+            {
+                if (conveyor.Position.X != x || conveyor.Position.Y != y ||
+                    !(conveyor.Destination is G5_Building destination))
+                {
+                    continue;
+                }
+
+                int deltaX = destination.Position.X - conveyor.Position.X;
+                int deltaY = destination.Position.Y - conveyor.Position.Y;
+                isVertical = Math.Abs(deltaY) > Math.Abs(deltaX);
+                isReversed = isVertical ? deltaY < 0 : deltaX < 0;
+                return true;
+            }
+
+            isVertical = false;
+            isReversed = false;
+            return false;
+        }
 
         int IG5_WeltSpielfeld.Breite => ((IG5_WeltSpielfeld)_field).Breite;
         int IG5_WeltSpielfeld.Hoehe => ((IG5_WeltSpielfeld)_field).Hoehe;

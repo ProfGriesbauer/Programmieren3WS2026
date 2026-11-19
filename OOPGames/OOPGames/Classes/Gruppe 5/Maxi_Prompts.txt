@@ -128,3 +128,11 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-19 10:08:27] Kannst du diesen "Startbildschirm" auch ohne einen neuen Painter zu erstellen mit Canva designen, wenn ja mache das, wenn nein, lösche trotzdem den zusätzlichen painter "Start & Fabrik"
 
 [2026-11-19 10:11:40] pull push und commit
+
+[2026-11-19 11:47:34] Bitte erstelle eine neue Datei, ind der ein Mentor erstellt wird, der neue Spieler an die hand nimmt und ihnen mit learning by doing zeigt wie satisfactory funktioniert. Es soll anfangs nicht möglich seind diese Anleitung zu überspringen. Der Mentor zeigt auf verschiedene gebäude auf die der spieler klicken soll und erklärt währenddessen was der Spieler dadurch macht, also bspw. Gebäude bauen, verschieben, Rohstoffe abbauen etc. Das soll das immer vom Mentor erklärt werden, also: "Klicke hier um ein Gebäude zu platzieren"/"Platziere hier einen Förderer um Rohstoffe abzubauen. Außerdem ändere den text unter dem Startbildschirm wo in etwa steht spiele das Spiel der Mitglieder der grupe 5, da auch andere Gruppen satisfactory spielen werden. Außerdem wäre optisch ein mehr Spielbasiertes Anfangsfenster im Clash of Clans Stil ansprechender
+
+[2026-11-19 12:08:54] Bitte ändere in unserer Gruppe das Design der gebäude in der entsprechenden Datei, sodass die Namen der gebäude nicht mehr klein und unvollständig darunter stehen, sondern durch hovern mit der Maus erst angezeigt werden, dann aber auch größer und in schöner Schrift
+
+[2026-11-19 12:09:02] Ändere den Mentor so, dass dieser wirklich mit schönen pfeilen auf die gebäude un d
+
+[2026-11-19 12:09:14] Mach die Anleitung noch Länger sodass man auch gezeigt bekommt wie die Förderbänderplatziert werden. Gebäude sollen zudem auch verschoben werden können und visualisiere auch den Transport der Rohstoffe auf den Förderbändern

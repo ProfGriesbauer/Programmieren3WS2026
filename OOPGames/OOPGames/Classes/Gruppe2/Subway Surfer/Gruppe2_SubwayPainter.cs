@@ -23,7 +23,7 @@ namespace OOPGames
         private static readonly Material RunnerOutfitMaterial = Material(Color.FromRgb(231, 49, 135));
         private static readonly Material SkinMaterial = Material(Color.FromRgb(245, 194, 157));
         private static readonly Material GuardHairMaterial = Material(Color.FromRgb(105, 67, 38));
-        private static readonly Material RunnerHairMaterial = Material(Color.FromRgb(111, 0, 110));
+        private static readonly Material RunnerHairMaterial = Material(Color.FromRgb(104, 64, 36));
         private static readonly Material PantsMaterial = Material(Color.FromRgb(35, 37, 41));
         private static readonly Material RunnerAccentMaterial = Material(Color.FromRgb(39, 193, 194));
         private static readonly Material RunnerEyeMaterial = Material(Color.FromRgb(45, 37, 52));
@@ -34,13 +34,29 @@ namespace OOPGames
         private static readonly Model3DGroup SkateboardModel = CreateSkateboardModel();
         private static readonly Model3DGroup JetpackModel = CreateJetpackModel();
         private static readonly Model3DGroup JetpackFlameModel = CreateJetpackFlameModel();
+        private static readonly Model3DGroup JumpStickModel = CreateJumpStickModel();
+
+        private enum JumpStickPose
+        {
+            None,
+            Carried,
+            Jumping
+        }
         private static readonly Model3DGroup CargoWagonModel = CreateCargoWagonModel();
         private static readonly Model3DGroup TrainModel = CreateTrainModel();
         private static readonly Model3DGroup CargoRampModel = CreateCargoRampModel();
         private static readonly Model3DGroup CoinModel = CreateCoinModel(
             Color.FromRgb(255, 203, 32), Color.FromRgb(179, 126, 16), glow: true);
-        private static readonly Model3DGroup UpgradeCoinModel = CreateCoinModel(
-            Color.FromRgb(255, 72, 170), Color.FromRgb(160, 18, 92));
+        // Every upgrade has its own coin colour, so it can be recognised from far away.
+        private static readonly Dictionary<Gruppe2_SubwayUpgradeKind, Model3DGroup> UpgradeCoinModels =
+            new Dictionary<Gruppe2_SubwayUpgradeKind, Model3DGroup>
+            {
+                { Gruppe2_SubwayUpgradeKind.Magnet, CreateUpgradeCoinModel(Color.FromRgb(222, 44, 44)) },
+                { Gruppe2_SubwayUpgradeKind.DoubleCoins, CreateUpgradeCoinModel(Color.FromRgb(255, 140, 16)) },
+                { Gruppe2_SubwayUpgradeKind.Surfboard, CreateUpgradeCoinModel(Color.FromRgb(255, 72, 170)) },
+                { Gruppe2_SubwayUpgradeKind.JumpStick, CreateUpgradeCoinModel(Color.FromRgb(58, 190, 82)) },
+                { Gruppe2_SubwayUpgradeKind.Jetpack, CreateUpgradeCoinModel(Color.FromRgb(42, 120, 232)) }
+            };
         private static readonly Model3DGroup TrackModel = CreateTrackModel();
         private static readonly Model3DGroup SleeperModel = CreateSleeperModel();
         private static readonly Dictionary<Gruppe2_SubwayObstacleKind, Model3DGroup> ObstacleModels =
@@ -61,6 +77,7 @@ namespace OOPGames
         private const double CameraWorldZ = 7;
         private const double GuardChaseZ = 2.5;
         private const double GuardIntroEndZ = CameraWorldZ + 0.25;
+        private const double GuardIntroFollowTicks = Gruppe2_SubwayField.GuardIntroFollowDurationTicks;
         private const double WorldUnitsPerDistance = 0.1;
         // Narrower than the lane spacing (1.55), so cars in neighbouring lanes never touch.
         private const double CarWorldWidth = 1.34;
@@ -169,6 +186,8 @@ namespace OOPGames
 
             // Everything added from here on casts a shadow.
             int firstShadowCaster = viewport.Children.Count;
+            Gruppe2_SubwayField animationField = field as Gruppe2_SubwayField;
+            int animationTicks = animationField == null ? 0 : animationField.AnimationTicks;
             foreach (Gruppe2_SubwayObstacle obstacle in field.Obstacles)
             {
                 AddThreeDimensionalObstacle(viewport, obstacle);
@@ -178,11 +197,11 @@ namespace OOPGames
             {
                 if (reward.Kind == Gruppe2_SubwayRewardKind.Coin)
                 {
-                    AddThreeDimensionalCoin(viewport, reward, field, laneChange.X);
+                    AddThreeDimensionalCoin(viewport, reward, field, laneChange.X, animationTicks);
                 }
                 else
                 {
-                    AddThreeDimensionalUpgradeCoin(viewport, reward, field.Distance);
+                    AddThreeDimensionalUpgradeCoin(viewport, reward);
                 }
             }
 
@@ -344,12 +363,16 @@ namespace OOPGames
         }
 
         private static void AddThreeDimensionalCoin(
-            Viewport3D viewport, Gruppe2_SubwayReward reward, IGruppe2_SubwayField field, double runnerX)
+            Viewport3D viewport,
+            Gruppe2_SubwayReward reward,
+            IGruppe2_SubwayField field,
+            double runnerX,
+            int animationTicks)
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(0.34, 0.34, 0.10));
             transform.Children.Add(new RotateTransform3D(
-                new AxisAngleRotation3D(new Vector3D(0, 1, 0), field.Distance * 11)));
+                new AxisAngleRotation3D(new Vector3D(0, 1, 0), animationTicks * 11)));
             // Coins of the jetpack trail float at flight level, just above the flying runner.
             double x = LaneWorldX(reward.Lane);
             double y = reward.Elevated
@@ -374,17 +397,15 @@ namespace OOPGames
         }
 
         private static void AddThreeDimensionalUpgradeCoin(
-            Viewport3D viewport, Gruppe2_SubwayReward reward, double distance)
+            Viewport3D viewport, Gruppe2_SubwayReward reward)
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(0.62, 0.62, 0.16));
-            transform.Children.Add(new RotateTransform3D(
-                new AxisAngleRotation3D(new Vector3D(0, 1, 0), distance * 11)));
             transform.Children.Add(new TranslateTransform3D(
                 LaneWorldX(reward.Lane), 0.82, WorldZ(reward.Distance)));
             viewport.Children.Add(new ModelVisual3D
             {
-                Content = UpgradeCoinModel,
+                Content = UpgradeCoinModels[reward.Upgrade],
                 Transform = transform
             });
         }
@@ -419,9 +440,11 @@ namespace OOPGames
             double introElapsedTicks = guardIntro
                 ? Gruppe2_SubwayField.GuardIntroDurationTicks - guardIntroTicks
                 : 0;
-            double introProgress = introElapsedTicks / Gruppe2_SubwayField.GuardIntroDurationTicks;
-            double introRemaining = 1 - introProgress;
-            double retreatProgress = 1 - introRemaining * introRemaining;
+            double exitElapsedTicks = Math.Max(0, introElapsedTicks - GuardIntroFollowTicks);
+            double exitProgress = Math.Min(1, exitElapsedTicks
+                / (Gruppe2_SubwayField.GuardIntroDurationTicks - GuardIntroFollowTicks));
+            double exitRemaining = 1 - exitProgress;
+            double retreatProgress = 1 - exitRemaining * exitRemaining;
             double z = guardIntro
                 ? GuardChaseZ + (GuardIntroEndZ - GuardChaseZ) * retreatProgress
                 : guard ? GuardChaseZ : RunnerWorldZ;
@@ -434,19 +457,29 @@ namespace OOPGames
             bool hasSkateboard = !guard
                 && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Surfboard);
             bool skating = hasSkateboard && field.Level != Gruppe2_SubwayLevel.Air && field.JumpHeight == 0;
-            double introRunPhase = introElapsedTicks * (1 - introProgress * 0.5);
+            double introRunPhase = introElapsedTicks + 1 - exitElapsedTicks * exitProgress * 0.5;
             double run = guardIntro
-                ? Math.Sin(introRunPhase * 0.48) * introRemaining
+                ? Math.Sin(introRunPhase * 0.48) * exitRemaining
                 : Math.Sin(field.Distance * 0.48);
             double movement = skating
                 ? Math.Sin(field.Distance * 0.32)
                 : run;
             double sideToSide = skating ? movement * 0.08 : 0;
-            double animation = guard || !hasSkateboard ? run : skating ? movement : 0;
+            // In the air (jump, roof jump, drop, jetpack) the legs and arms stay still, like on the
+            // skateboard; the running animation continues once the runner is back on the ground.
+            bool inAir = !guard && (field.Level == Gruppe2_SubwayLevel.Air || field.JumpHeight > 0);
+            double animation = inAir ? 0
+                : guard || !hasSkateboard ? run
+                : skating ? movement : 0;
             bool wearsJetpack = !guard && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Jetpack);
             double flight = guard ? 0 : field.JetpackHeight;
+            // The jump stick is carried in the hand and only put under the feet while jumping.
+            bool hasJumpStick = !guard && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.JumpStick);
+            JumpStickPose jumpStick = !hasJumpStick ? JumpStickPose.None
+                : field.JumpHeight > 0 ? JumpStickPose.Jumping
+                : JumpStickPose.Carried;
             Model3DGroup runnerModel = CreateRunnerModel(guard, animation, hasSkateboard,
-                wearsJetpack, flight > 0);
+                wearsJetpack, flight > 0, jumpStick);
             double heightScale = RunnerHeightScale * (!guard && field.RollTicks > 0 ? 0.55 : 1);
             double footOffset = !guard && !hasSkateboard ? -0.17 * heightScale : 0;
             Transform3DGroup transform = new Transform3DGroup();
@@ -699,6 +732,13 @@ namespace OOPGames
             return material;
         }
 
+        /// <summary>Upgrade coin: face in the upgrade colour, edge in a darker shade of it.</summary>
+        private static Model3DGroup CreateUpgradeCoinModel(Color color)
+        {
+            Color edge = Color.FromRgb((byte)(color.R * 0.62), (byte)(color.G * 0.62), (byte)(color.B * 0.62));
+            return CreateCoinModel(color, edge);
+        }
+
         private static Model3DGroup CreateCoinModel(Color faceColor, Color edgeColor, bool glow = false)
         {
             Model3DGroup coin = new Model3DGroup();
@@ -731,7 +771,7 @@ namespace OOPGames
         }
 
         private static Model3DGroup CreateRunnerModel(
-            bool guard, double run, bool hasSkateboard, bool jetpack, bool flying)
+            bool guard, double run, bool hasSkateboard, bool jetpack, bool flying, JumpStickPose jumpStick)
         {
             Model3DGroup runner = new Model3DGroup();
             Model3DGroup rider = new Model3DGroup();
@@ -753,9 +793,23 @@ namespace OOPGames
                     runner.Children.Add(JetpackFlameModel);
                 }
             }
+
+            if (jumpStick != JumpStickPose.None)
+            {
+                runner.Children.Add(PlaceJumpStick(jumpStick, run));
+            }
             AddBox(rider, -0.34, 0.91, -0.18, 0.34, 1.70, 0.18, outfit);
             AddScaledSphere(rider, 0, 1.98, 0, 0.25, 0.31, 0.24, SkinMaterial);
-            AddScaledSphere(rider, 0, 2.20, 0, 0.30, 0.12, 0.29, hair);
+            if (guard)
+            {
+                // The guard's flat, wide top reads as a uniform cap.
+                AddScaledSphere(rider, 0, 2.20, 0, 0.30, 0.12, 0.29, hair);
+            }
+            else
+            {
+                // The runner's hair lies close to the head (no brim, so it does not look like a hat).
+                AddScaledSphere(rider, 0, 2.06, -0.05, 0.262, 0.27, 0.24, hair);
+            }
 
             AddScaledSphere(rider, -0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
             AddScaledSphere(rider, 0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
@@ -778,14 +832,10 @@ namespace OOPGames
 
             if (guard)
             {
-                AddRunnerLimb(rider, -0.22, 1.57, -0.01, -0.55, 1.01, 0.03,
-                    0.17 * run, outfit);
-                AddRunnerLimb(rider, 0.22, 1.57, -0.01, 0.55, 1.01, 0.03,
-                    -0.17 * run, outfit);
-                AddRunnerLimb(rider, -0.16, 0.97, 0, -0.20, 0.08, 0.06,
-                    -0.24 * run, PantsMaterial);
-                AddRunnerLimb(rider, 0.16, 0.97, 0, 0.20, 0.08, 0.06,
-                    0.24 * run, PantsMaterial);
+                AddRunningArm(rider, -1, -run, outfit);
+                AddRunningArm(rider, 1, run, outfit);
+                AddRunningLeg(rider, -0.16, run, RunnerShoeMaterial);
+                AddRunningLeg(rider, 0.16, -run, RunnerShoeMaterial);
             }
             else
             {
@@ -824,10 +874,10 @@ namespace OOPGames
                 }
                 else
                 {
-                    AddRunningArm(rider, -1, -run);
-                    AddRunningArm(rider, 1, run);
-                    AddRunningLeg(rider, -0.16, run);
-                    AddRunningLeg(rider, 0.16, -run);
+                    AddRunningArm(rider, -1, -run, outfit);
+                    AddRunningArm(rider, 1, run, outfit);
+                    AddRunningLeg(rider, -0.16, run, RunnerShoeMaterial);
+                    AddRunningLeg(rider, 0.16, -run, RunnerShoeMaterial);
                 }
             }
 
@@ -856,6 +906,56 @@ namespace OOPGames
 
             jetpack.Freeze();
             return jetpack;
+        }
+
+        /// <summary>
+        /// Pogo-style jump stick, standing on its rubber tip at y = 0:
+        /// spring, foot pegs at <see cref="JumpStickPegHeight"/>, shaft and handlebar on top.
+        /// </summary>
+        private static Model3DGroup CreateJumpStickModel()
+        {
+            Model3DGroup stick = new Model3DGroup();
+            Material rubber = Material(Color.FromRgb(34, 34, 38));
+            Material spring = Material(Color.FromRgb(150, 156, 164));
+            Material tube = Material(Color.FromRgb(196, 202, 210));
+            Material grip = Material(Color.FromRgb(204, 48, 40));
+
+            AddBox(stick, -0.05, 0, -0.05, 0.05, 0.08, 0.05, rubber);
+            for (int coil = 0; coil < 6; coil++)
+            {
+                double y = 0.10 + coil * 0.06;
+                AddBox(stick, -0.07, y, -0.07, 0.07, y + 0.03, 0.07, spring);
+            }
+
+            AddBox(stick, -0.025, 0.08, -0.025, 0.025, 0.46, 0.025, spring);
+            AddBox(stick, -0.05, 0.46, -0.05, 0.05, JumpStickPegHeight, 0.05, tube);
+            AddBox(stick, -0.20, JumpStickPegHeight - 0.03, -0.04, 0.20, JumpStickPegHeight + 0.01, 0.04, rubber);
+            AddBox(stick, -0.03, JumpStickPegHeight, -0.03, 0.03, 1.78, 0.03, tube);
+            AddBox(stick, -0.24, 1.76, -0.035, 0.24, 1.83, 0.035, grip);
+            stick.Freeze();
+            return stick;
+        }
+
+        private const double JumpStickPegHeight = 0.72;
+
+        /// <summary>
+        /// Carried: upright in the right hand, swinging with the arm.
+        /// Jumping: in front of the runner (model front is +z), feet on the pegs,
+        /// handlebar at hand height and the tip reaching below the feet.
+        /// </summary>
+        private static Model3DGroup PlaceJumpStick(JumpStickPose pose, double run)
+        {
+            Transform3D transform = pose == JumpStickPose.Jumping
+                ? new TranslateTransform3D(0, 0.20 - JumpStickPegHeight, 0.30)
+                : (Transform3D)new Transform3DGroup
+                {
+                    Children = new Transform3DCollection
+                    {
+                        new ScaleTransform3D(0.75, 0.75, 0.75),
+                        new TranslateTransform3D(0.47, 0.25, -run * 0.18)
+                    }
+                };
+            return new Model3DGroup { Children = { JumpStickModel }, Transform = transform };
         }
 
         /// <summary>Glowing exhaust flames below the two jetpack nozzles.</summary>
@@ -914,19 +1014,21 @@ namespace OOPGames
             runner.Children.Add(limb);
         }
 
-        private static void AddRunningArm(Model3DGroup rider, int side, double stride)
+        private static void AddRunningArm(
+            Model3DGroup rider, int side, double stride, Material outfit)
         {
             double shoulderX = side * 0.22;
             Point3D elbow = new Point3D(side * 0.35, 1.30, stride * 0.13);
             Point3D hand = new Point3D(side * 0.43, 1.14, -stride * 0.18);
             AddRunnerLimb(rider, shoulderX, 1.57, -0.01,
-                elbow.X, elbow.Y, elbow.Z, 0, RunnerOutfitMaterial);
+                elbow.X, elbow.Y, elbow.Z, 0, outfit);
             AddRunnerLimb(rider, elbow.X, elbow.Y, elbow.Z,
-                hand.X, hand.Y, hand.Z, 0, RunnerOutfitMaterial);
+                hand.X, hand.Y, hand.Z, 0, outfit);
             AddScaledSphere(rider, hand.X, hand.Y, hand.Z, 0.06, 0.06, 0.06, SkinMaterial);
         }
 
-        private static void AddRunningLeg(Model3DGroup rider, double hipX, double stride)
+        private static void AddRunningLeg(
+            Model3DGroup rider, double hipX, double stride, Material shoeMaterial)
         {
             const double HipHeight = 0.82;
             double footX = hipX * 0.75;
@@ -944,7 +1046,7 @@ namespace OOPGames
             AddBox(foot, footX - 0.11, footY - 0.04, footZ - 0.13,
                 footX + 0.11, footY + 0.02, footZ + 0.13, PantsMaterial);
             AddBox(foot, footX - 0.11, footY, footZ - 0.14,
-                footX + 0.11, footY + 0.09, footZ + 0.14, RunnerShoeMaterial);
+                footX + 0.11, footY + 0.09, footZ + 0.14, shoeMaterial);
             rider.Children.Add(foot);
         }
 

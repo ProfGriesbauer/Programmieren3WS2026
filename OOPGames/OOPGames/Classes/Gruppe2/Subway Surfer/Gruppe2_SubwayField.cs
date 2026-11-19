@@ -5,7 +5,10 @@ namespace OOPGames
 {
     public sealed class Gruppe2_SubwayField : IGruppe2_SubwayField
     {
-        internal const int GuardIntroDurationTicks = 50;
+        internal const int GuardIntroFollowDurationTicks = 25;
+        internal const int GuardIntroFallBehindDurationTicks = 75;
+        internal const int GuardIntroDurationTicks =
+            GuardIntroFollowDurationTicks + GuardIntroFallBehindDurationTicks;
         private readonly List<Gruppe2_SubwayObstacle> _obstacles = new List<Gruppe2_SubwayObstacle>();
         private readonly List<Gruppe2_SubwayReward> _rewards = new List<Gruppe2_SubwayReward>();
         private readonly Dictionary<Gruppe2_SubwayUpgradeKind, int> _activeUpgrades =
@@ -71,6 +74,7 @@ namespace OOPGames
         internal List<Gruppe2_SubwayReward> MutableRewards { get { return _rewards; } }
         internal Dictionary<Gruppe2_SubwayUpgradeKind, int> MutableUpgrades { get { return _activeUpgrades; } }
         public double Distance { get; internal set; }
+        internal int AnimationTicks { get; set; }
         internal int JumpTicks { get; set; }
         internal int JumpDurationTicks { get; set; }
         internal int DropTicks { get; set; }
@@ -105,6 +109,7 @@ namespace OOPGames
             GameOver = false;
             Message = "Steuerung: A/D wechseln, W springen, S rollen";
             Distance = 0;
+            AnimationTicks = 0;
             JumpTicks = 0;
             JumpDurationTicks = 0;
             DropTicks = 0;

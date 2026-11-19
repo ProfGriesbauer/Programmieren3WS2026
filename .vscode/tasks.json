@@ -9,7 +9,9 @@
                 "build",
                 "${workspaceFolder}/OOPGames/OOPGames/OOPGames.csproj",
                 "-c",
-                "Debug"
+                "Debug",
+                "-f",
+                "net10.0-windows"
             ],
             "problemMatcher": "$msCompile"
         },

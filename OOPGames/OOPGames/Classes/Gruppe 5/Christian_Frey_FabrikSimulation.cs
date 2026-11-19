@@ -52,6 +52,29 @@ namespace OOPGames
             }
         }
 
+        public void MoveBuilding(G5_Building building, G5_GridPosition destination)
+        {
+            if (building == null)
+            {
+                throw new ArgumentNullException(nameof(building));
+            }
+
+            if (!_buildings.Contains(building))
+            {
+                throw new InvalidOperationException("The building is not part of this factory.");
+            }
+
+            if (_buildings.Any(existing =>
+                !ReferenceEquals(existing, building) &&
+                Overlaps(existing.Position, existing.Width, existing.Height,
+                    destination, building.Width, building.Height)))
+            {
+                throw new InvalidOperationException("Buildings cannot occupy the same grid cells.");
+            }
+
+            building.MoveTo(destination);
+        }
+
         public void Tick()
         {
             PowerGrid.DistributePower();
@@ -78,10 +101,22 @@ namespace OOPGames
 
         private static bool Overlaps(G5_Building first, G5_Building second)
         {
-            return first.Position.X < (long)second.Position.X + second.Width
-                && second.Position.X < (long)first.Position.X + first.Width
-                && first.Position.Y < (long)second.Position.Y + second.Height
-                && second.Position.Y < (long)first.Position.Y + first.Height;
+            return Overlaps(first.Position, first.Width, first.Height,
+                second.Position, second.Width, second.Height);
+        }
+
+        private static bool Overlaps(
+            G5_GridPosition firstPosition,
+            int firstWidth,
+            int firstHeight,
+            G5_GridPosition secondPosition,
+            int secondWidth,
+            int secondHeight)
+        {
+            return firstPosition.X < (long)secondPosition.X + secondWidth
+                && secondPosition.X < (long)firstPosition.X + firstWidth
+                && firstPosition.Y < (long)secondPosition.Y + secondHeight
+                && secondPosition.Y < (long)firstPosition.Y + firstHeight;
         }
     }
     public static class G5_StarterRecipes

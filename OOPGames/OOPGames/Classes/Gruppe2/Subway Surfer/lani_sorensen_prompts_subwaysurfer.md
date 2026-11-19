@@ -494,3 +494,59 @@ User prompt:
 Assistant answer:
 - I resolved the `Gruppe2_SubwayPainter.cs` conflict by preserving the Bahnrichter intro and the existing runner and pink-coin behavior, while integrating the incoming camera-follow, shadows, narrower train cars, and jump-stick rendering.
 - The Subway Surfer test suite passed after the merge.
+
+### Prompt 43
+User prompt:
+> the bahnrichter should have a running animation, also in the firsst seconds of the game state as he appers behind the player
+
+Assistant answer:
+- I offset the guard's intro animation phase so he is already mid-stride in the first frame behind the player, then continues running with his stride slowing throughout the intro.
+- I added a regression check for the first-frame running pose. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
+
+### Prompt 44
+User prompt:
+> the bahnrichter stands still at the beginning of the game where he is visible for a few seconds. please make it that he has a running animation here simiar to that of the player
+
+Assistant answer:
+- I replaced the guard's subtle rotating limb pose with the same articulated arm-and-leg run cycle used by the player, while keeping the guard's outfit and intro slowdown.
+- I strengthened the first-frame animation regression check. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
+
+### Prompt 45
+User prompt:
+> the bahnrichter should follow the player in the first few seconds and then slow down and despaawn with the same behaviour as he has now.
+
+Assistant answer:
+- I kept the intro at two seconds total. The Bahnrichter now follows directly behind the player for the first half, then slows and exits off-screen during the second half.
+- I added regression checks for the follow and exit phases. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
+
+### Prompt 46
+User prompt:
+> the slow down should be slower, maybe over 3 seconds overall?
+
+Assistant answer:
+- I extended the intro from two to three seconds total (75 ticks at 40 ms per tick), giving both the follow and slowdown/despawn phases more time.
+- I updated the timing test descriptions. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
+
+### Prompt 47
+User prompt:
+> thats not what i meant. before you made the bahnrichter follow the player for 1 seconds then fall behind over the course of 1 seconds. i want the "fall behind phase" to be 3 seconds
+
+Assistant answer:
+- I kept the one-second follow phase and changed only the fall-behind/despawn phase to three seconds, for four seconds total.
+- I updated the timing regression checks to use the separate phase durations. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
+
+### Prompt 48
+User prompt:
+> ok great. can you stop the upgrade coins from spinning?
+
+Assistant answer:
+- I removed the rotation from the 3D pink upgrade coins while preserving their size, color, and movement through the scene.
+- I added a regression check that upgrade coin transforms contain no spin rotation. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
+
+### Prompt 49
+User prompt:
+> can you also change the coin behaviour so that they dont increase the spin speed with the speed of the player
+
+Assistant answer:
+- I changed regular coin rotation to use an elapsed game-tick clock instead of player distance, so coins keep a constant spin rate as the player speeds up. The pink upgrade coins remain stationary.
+- I added regression checks for fixed spin per tick and animation clock reset. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.

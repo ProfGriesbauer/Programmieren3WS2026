@@ -35,6 +35,23 @@ namespace OOPGames
 
             if (selection is IKeySelection keySelection)
             {
+                if (field is SatisfactoryFieldView)
+                {
+                    if (keySelection.Key == Key.B)
+                    {
+                        return G5_FabrikAktion.WerkzeugWaehlen(
+                            _playerNumber,
+                            G5_Bauwerkzeug.Foerderband);
+                    }
+
+                    if (keySelection.Key == Key.M)
+                    {
+                        return G5_FabrikAktion.WerkzeugWaehlen(
+                            _playerNumber,
+                            G5_Bauwerkzeug.GebaeudeVerschieben);
+                    }
+                }
+
                 if (keySelection.Key == Key.F)
                 {
                     return G5_FabrikAktion.WerkzeugWaehlen(

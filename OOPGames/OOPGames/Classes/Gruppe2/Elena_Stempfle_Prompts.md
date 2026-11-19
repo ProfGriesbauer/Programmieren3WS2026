@@ -710,3 +710,105 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 > Build: 0 Warnungen, 0 Fehler. Alle Tests (auch Lanis neue) 4-mal hintereinander bestanden. Gerenderte Szene kontrolliert.
 
 **Ergebnisvermerk:** Konflikte zusammengeführt, Rebase abgeschlossen und gepusht.
+
+## 39. Kürzere Sprünge, Hüpfstab/Jetpack/Surfboard schließen sich aus
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Kannst du einstellen dass das hüpfen schneller gehen soll, heis tich habe nicht so eine lange Luftphase und komm schneller auf den Boden zurück. AUßerdem kann ich entweder Hüpfstab, Jetpack oder Surfboard haben. Sobald ich eins von diesen habe kann ich keines der anderen mehr bekommen, bevor es abgelaufen ist. Davon sind Magnet und 2x Münzen ausgeschlossen
+
+**Antwort:**
+
+> Die Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Kürzere Sprünge:** Ein normaler Sprung dauert jetzt 20 statt 30 Ticks, ein Hüpfstab-Sprung 30 statt 42 (`NormalJumpTicks`, `JumpStickJumpTicks`). Die Sprunghöhe bleibt gleich, man ist nur schneller wieder unten. Bei 25 Bildern pro Sekunde sind das etwa 0,8 statt 1,2 Sekunden Luftphase.
+> 2. **Nur eines davon gleichzeitig:** Hüpfstab, Jetpack und Surfboard (`ExclusiveUpgrades`) schließen sich gegenseitig aus. Ist eines aktiv, werden Boxen der beiden anderen nicht eingesammelt, man läuft durch sie hindurch. Eine so verpasste Box bleibt verpasst, auch wenn das aktive Upgrade einen Moment später abläuft. Ohne diese Regel konnte eine schon vorbeigefahrene Box nachträglich eingesammelt werden. Dieselbe Box nochmal (z. B. zweiter Jetpack) verlängert das Upgrade weiterhin. Magnet und doppelte Münzen lassen sich immer dazu einsammeln.
+> 3. **Tests:**
+>    - Neuer Test `TestJumpStickJetpackSurfboardExcludeEachOther`: Mit aktivem Surfboard gibt es weder Hüpfstab noch Jetpack. Magnet und doppelte Münzen gehen trotzdem. Nach Ablauf des Surfboards ist der Hüpfstab wieder einsammelbar.
+>    - Der Hüpfstab-Test erwartet jetzt mehr als 25 statt mehr als 35 Ticks Sprungdauer.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 4-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Kürzere Luftphase, Hüpfstab/Jetpack/Surfboard nur einzeln. Noch nicht committet.
+
+## 40. Hüpfstab in der Hand und beim Sprung unter den Füßen
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Wen man den Hüpfstab einsammelt, bekommt man einen Stab n die Hand mit dem man dann hüfen kann, solange man nicht hüpfen will wird der Stab in der Hand gehalten und erst wenn man w drückt, geht der Hüpfstab vor einen und man hüpft höher
+
+**Antwort:**
+
+> Die Änderungen liegen im Painter (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig. Die Spielregeln des Hüpfstabs bleiben unverändert.
+>
+> 1. **Modell** (`CreateJumpStickModel`): ein Pogo-Stab mit schwarzem Gummifuß, Sprungfeder aus Windungen, silbernem Rohr, schwarzen Fußrasten, dünnem Schaft und rotem Griff.
+> 2. **Gehalten** (`JumpStickPose.Carried`): Solange das Upgrade aktiv ist und man nicht springt, hält die Figur den Stab etwas kleiner und senkrecht in der rechten Hand. Er schwingt mit dem Laufarm mit.
+> 3. **Beim Sprung** (`JumpStickPose.Jumping`): Sobald man W drückt, steht der Stab vor der Figur. Die Füße stehen auf den Fußrasten, der Griff ist auf Handhöhe, Feder und Gummifuß zeigen nach unten. Der Sprung ist wie bisher höher und länger als ohne Stab.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden. Gerenderte Bilder kontrolliert: Stab in der Hand beim Laufen, Stab unter den Füßen beim Sprung.
+
+**Ergebnisvermerk:** Hüpfstab wird in der Hand getragen und beim Sprung unter die Füße genommen. Noch nicht committet.
+
+## 41. Münzen drehen sich gleichmäßig, braune Haare
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Die Münzen wie auch die Upgrademünzen sollen sich mit einer konstanten geschwindigkeit drehen, die nicht von der  Laufgeschwindigkeit abhängt. Zudem ändere die Haarfarbe zu braun von der läuferin
+
+**Antwort:**
+
+> Die Änderungen liegen im Painter (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Gleichmäßige Drehung:** Bisher war der Drehwinkel an die gelaufene Strecke gekoppelt (`Distance * 11`), bei höherem Tempo drehten sich die Münzen also schneller. Jetzt zählt der Painter die gezeichneten Bilder (`_frame`) und dreht Gold- und Upgrade-Münzen um 9° pro Bild (`CoinDegreesPerFrame`). Das Framework zeichnet alle 40 ms, das ergibt eine feste Drehgeschwindigkeit von 225° pro Sekunde, unabhängig vom Tempo.
+> 2. **Haarfarbe:** Die Läuferin hat braune Haare (RGB 104, 64, 36) statt Lila (`RunnerHairMaterial`).
+> 3. **Test:** `TestCoinsSpinIndependentOfSpeed` zeichnet drei Bilder: zweimal mit kleinem Fortschritt (1 Einheit) und einmal mit großem (40 Einheiten). Der Test prüft, dass sich die Münze jedes Mal um denselben Winkel weiterdreht.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden. Gerendertes Bild mit braunen Haaren kontrolliert.
+
+**Ergebnisvermerk:** Münzen drehen sich tempounabhängig, Läuferin hat braune Haare. Noch nicht committet.
+
+## 42. Keine Laufbewegung in der Luft, farbige Upgrade-Münzen, kein „Hut“
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Wenn di eLäuferin in der luft ist, kannst du die Laufbewegung ausstellen und erst wieder einstellen sobald sie auf dem boden wieder ist, ungefähr genauso wie bei dem Surfboard. Außerdem ändere die Farbe von den Upgrade Icons, so das jedes einzelne Upgrade eine andere Icon- Farbe hat. Zudem sieht es so aus als ob die Läuferin einen Hut aufhat kannst du den noc h entfernen
+
+**Antwort:**
+
+> Die Änderungen liegen im Painter (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Keine Laufbewegung in der Luft:** Solange die Läuferin in der Luft ist (Sprung, Sprung vom Zugdach, Fall vom Dach, Jetpack-Flug), stehen Arme und Beine still, ähnlich wie auf dem Surfboard. Sobald sie wieder auf dem Boden oder einem Zugdach steht, läuft die Animation weiter. Auch der Hüpfstab in der Hand schwingt in der Luft nicht mit.
+> 2. **Upgrade-Münzen in eigenen Farben** (`UpgradeCoinModels`): Magnet rot, doppelte Münzen orange, Surfboard rosa (wie bisher, darauf baut Lanis Test auf), Hüpfstab grün, Jetpack blau. Der Rand ist jeweils ein dunklerer Ton derselben Farbe.
+> 3. **Kein „Hut“ mehr:** Die Haarkappe der Läuferin war eine flache, breite Scheibe, breiter als der Kopf, und wirkte dadurch wie eine Hutkrempe. Jetzt liegen die Haare eng am Kopf und lassen das Gesicht frei. Der Bahnwärter behält seine flache Kappe, die passt zu seiner Uniform.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests mehrfach hintereinander bestanden. Gerenderte Bilder kontrolliert: Haare ohne Krempe, ruhige Beine beim Sprung.
+
+**Ergebnisvermerk:** Animation in der Luft pausiert, jedes Upgrade hat eine eigene Münzfarbe, Hutform entfernt. Noch nicht committet.
+
+## 43. Commit, Pull und Push
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst dua das alles committen und dann pullen und pushen
+
+**Antwort:**
+
+> Ich committe die Änderungen aus den Prompts 39–43 (Subway-Surfer-Dateien und diese Prompt-Datei). Die fremden obj-Dateien in `HouseExample/` kommen nicht in den Commit. Danach folgen `git pull --rebase`, Build und Tests und dann `git push`.
+
+**Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt.
+
+**Konflikt beim Pull:** Lani hatte parallel das Münzverhalten geändert („change coin behaviour“): Goldmünzen drehen sich über einen Tick-Zähler im Field (`AnimationTicks`), also ebenfalls tempounabhängig, und Upgrade-Münzen drehen sich auf ihren Wunsch gar nicht (mit Test „upgrade coins do not spin“). Das widersprach Prompt 41, nach dem sich auch die Upgrade-Münzen drehen sollten. Rückfrage; Entscheidung: „Lanis Variante: stehen still“. Umsetzung:
+>
+> - Lanis Drehung über `AnimationTicks` ist übernommen. Meine Drehung pro gezeichnetem Bild (`CoinDegreesPerFrame`, `_frame`) und mein Test `TestCoinsSpinIndependentOfSpeed` sind entfernt, weil Lanis Test dasselbe abdeckt.
+> - Upgrade-Münzen stehen still. Die eigenen Farben pro Upgrade aus Prompt 42 bleiben erhalten.
+> - Lanis Tests sind unverändert. Build: 0 Warnungen, 0 Fehler. Alle Tests 4-mal hintereinander bestanden.

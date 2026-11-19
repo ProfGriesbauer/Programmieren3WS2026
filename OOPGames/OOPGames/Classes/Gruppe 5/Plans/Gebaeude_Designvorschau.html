@@ -114,8 +114,15 @@
     .machine.belt { width: 235px; height: 150px; }
     .machine.belt.rotate-90 { transform: rotate(90deg); }
     .scene.belt-rotated { min-height: 250px; }
-    body[data-level="2"] .machine { filter: sepia(.12) hue-rotate(142deg) saturate(.78); }
-    body[data-level="3"] .machine { filter: sepia(.32) hue-rotate(326deg) saturate(.86); }
+    body[data-level="2"] .machine > use:first-of-type { filter: sepia(.12) hue-rotate(142deg) saturate(.78); }
+    body[data-level="3"] .machine > use:first-of-type { filter: sepia(.32) hue-rotate(326deg) saturate(1); }
+    body[data-level="2"] .machine.storage > use:first-of-type { filter: sepia(.45) hue-rotate(150deg) saturate(1.4); }
+    body[data-level="3"] .machine.storage > use:first-of-type { filter: sepia(.65) hue-rotate(327deg) saturate(1.65); }
+    body[data-level="2"] .machine.belt > use:first-of-type { filter: none; --track-outline-color: #4c9fbd; }
+    body[data-level="3"] .machine.belt > use:first-of-type { filter: none; --track-outline-color: #d04432; }
+    .level-outline { display: none; }
+    body[data-level="2"] .level-outline.mk2,
+    body[data-level="3"] .level-outline.mk3 { display: inline; }
     .scene::before {
       position: absolute;
       z-index: 2;
@@ -275,6 +282,10 @@
         <g class="mk2" style="display:none"><path d="M49 32V18l8-4v16M108 28V12l10-4v18" fill="#488e9b" stroke="#283331" stroke-width="2"/></g>
         <g class="mk3" style="display:none"><path d="M45 31V12l10-4v20M103 27V7l13-5v21" fill="#a84e33" stroke="#292d2a" stroke-width="2"/></g>
       </g>
+      <g id="machine-smelter-lava">
+        <ellipse cx="81" cy="49" rx="25" ry="11" fill="#d55b24"/>
+        <ellipse cx="81" cy="48" rx="16" ry="7" fill="url(#hot-metal)"/>
+      </g>
       <g id="machine-assembler">
         <ellipse cx="83" cy="111" rx="53" ry="18" fill="#171b1a" opacity=".62"/>
         <path d="M45 83c0-8 17-15 38-15s38 7 38 15v17c0 7-17 13-38 13s-38-6-38-13z" fill="#303835" stroke="#1b2220" stroke-width="3"/>
@@ -298,17 +309,49 @@
         <g class="mk2" style="display:none"><path d="M59 100c14 11 36 14 55 5" fill="none" stroke="#4aa5c5" stroke-width="4"/></g>
         <g class="mk3" style="display:none"><path d="M51 104c18 15 46 18 68 8" fill="none" stroke="#bf5940" stroke-width="5"/></g>
       </g>
-      <g id="machine-constructor">
-        <ellipse cx="81" cy="116" rx="52" ry="14" fill="#171b1a" opacity=".62"/>
-        <path d="m32 71 25-8 13-11h34l15 9 18 5v10l-18 5-12 10-3 11H68l-5-11-14-6-17-4z" fill="#414a45" stroke="#202725" stroke-width="4" stroke-linejoin="round"/>
-        <path d="m32 71 25-8 13-11h34l15 9 18 5-21 5-14-4H75l-15 8z" fill="#a9afa4" stroke="#303835" stroke-width="2.5" stroke-linejoin="round"/>
-        <path d="m60 72 15-8h27l13 4 21-2" fill="none" stroke="#e0e0d3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="m60 72 9 7 14 5 4 9 10 1 3-9 9-5 13-3" fill="none" stroke="#7f8981" stroke-width="3" stroke-linejoin="round"/>
-        <path d="m66 100 35 1 9 7-53-1z" fill="#303835" stroke="#202725" stroke-width="3" stroke-linejoin="round"/>
-        <g class="mk2" style="display:none"><path d="M43 82 81 68l37 14" fill="none" stroke="#4aa5c5" stroke-width="4"/></g>
-        <g class="mk3" style="display:none"><path d="M37 84 81 67l44 17" fill="none" stroke="#bf5940" stroke-width="5"/></g>
+      <g id="machine-constructor" transform="translate(5.5 15.1) scale(.933 .874)">
+        <ellipse cx="80" cy="123" rx="59" ry="11" fill="#171b1a" opacity=".66"/>
+        <path d="M32 88 45 91v32l-5 4h-8l-3-4V94zM115 89l13-3v37l-4 4h-9l-4-4V94z" fill="#513b29" stroke="#252b29" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M44 100h72v11H44z" fill="#513b29" stroke="#252b29" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M47 103h66M49 107h62" fill="none" stroke="#9a744d" stroke-width="2" stroke-linecap="round"/>
+        <path d="M22 75 35 53q2-4 7-4h69q5 0 8 4l19 20q3 3 0 6l-14 8q-3 2-7 2H39q-4 0-7-2l-9-5q-3-2-1-7z" fill="#765536" stroke="#202624" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M22 77 38 83h85l15-8v13l-15 9H37l-15-9z" fill="#513b29" stroke="#202624" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M27 75 39 80h83l12-6M37 57q18 5 35 4h39m-77 9q20 5 39 4h47" fill="none" stroke="#9a744d" stroke-width="2" stroke-linecap="round"/>
+        <path d="m23 78 15 5v18l-5 3-10-4-3-5V83zM123 82l15-7v13l-3 8-10 5-5-3z" fill="#626b66" stroke="#202624" stroke-width="2.8" stroke-linejoin="round"/>
+        <path d="M23 79 38 85v10l-14-5M123 85l14-6v10l-13 6" fill="none" stroke="#89918a" stroke-width="2"/>
+        <circle cx="28" cy="85" r="1.1" fill="#d7a747" stroke="#404945" stroke-width=".7"/>
+        <circle cx="34" cy="95" r="1.1" fill="#d7a747" stroke="#404945" stroke-width=".7"/>
+        <circle cx="133" cy="84" r="1.1" fill="#d7a747" stroke="#404945" stroke-width=".7"/>
+        <circle cx="127" cy="95" r="1.1" fill="#d7a747" stroke="#404945" stroke-width=".7"/>
+        <path d="M106 57 132 68" fill="none" stroke="#252b29" stroke-width="7" stroke-linecap="round"/>
+        <path d="M107 57 131 67" fill="none" stroke="#9a744d" stroke-width="4" stroke-linecap="round"/>
+        <path d="M111 59 128 66" fill="none" stroke="#d0a860" stroke-width="1.2" stroke-linecap="round"/>
+        <circle cx="132" cy="68" r="2.6" fill="#ab8038" stroke="#513b29" stroke-width="1.2"/>
+        <path d="M94 52 99 48q2-2 5-1l5 1q4 1 5 5l1 5q-1 4-5 5l-10-1q-5-1-6-5z" fill="#626b66" stroke="#202624" stroke-width="2.8" stroke-linejoin="round"/>
+        <path d="m95 52 5-4q2-2 4-1l5 1q3 1 4 4l-12 4z" fill="#a5aaa1" stroke="#404945" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="m100 56 13-4 1 5q-1 4-5 5l-9-1z" fill="#89918a" stroke="#404945" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="m96 52 4-3m-2 13 7 1" fill="none" stroke="#d9ddd7" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M103 75 134 74M103 79 136 82M103 75C99 72 95 69 92 70q-5 1-5 5 1 4 6 4 5 0 10-4M103 79q-5 4-10 4-5 0-6-4 0-4 5-5 4-1 11 5" fill="none" stroke="#252b29" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M104 75 133 74M104 79 135 82M103 75C99 72 95 69 92 70q-5 1-5 5 1 4 6 4 5 0 10-4M103 79q-5 4-10 4-5 0-6-4 0-4 5-5 4-1 11 5" fill="none" stroke="#89918a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="103" cy="77" r="2.4" fill="#626b66" stroke="#252b29" stroke-width="1.2"/>
+        <circle cx="103" cy="77" r=".8" fill="#d7a747"/>
+        <path d="M26 36q-2-2 2-4l20-2 3-4q1-2 5-2l32-3q4 0 7 3l4 5q2 3-2 5l-10 5q-6 3-7 9-1 5 4 9l8 7q3 3 1 7-1 3-5 4l-32 5q-4 1-7-2l-5-5q-3-3 0-6l6-6q3-3 0-7l-6-5L26 39q-2-1 0-3z" fill="#404945" stroke="#202624" stroke-width="3.2" stroke-linejoin="round"/>
+        <path d="M49 32 53 27q2-3 6-3l27-2q5 0 8 4l4 4q2 3-2 5l-40 7z" fill="#a5aaa1" stroke="#252b29" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M27 34 47 30q4 0 6 3l5 5-6 4q-3 2-7 0L28 38q-4-1-4-3t3-1z" fill="#a5aaa1" stroke="#252b29" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="m29 34 18-3m10 3 5-6q2-3 6-3l20-2" fill="none" stroke="#d9ddd7" stroke-width="2" stroke-linecap="round"/>
+        <path d="M47 70q6-5 10-8l5 5q2 3-1 6l-7 6 29-5q4-1 6-4" fill="none" stroke="#626b66" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="m49 72 6 4q2 2 5 1l26-4q3-1 4-3l-3-3q-2-2-5-1l-27 4q-4 1-6 2z" fill="#404945" stroke="#252b29" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="m56 74 27-4" fill="none" stroke="#626b66" stroke-width="1" stroke-linecap="round"/>
+        <circle cx="58" cy="75" r=".8" fill="#ab8038" stroke="#404945" stroke-width=".5"/>
+        <circle cx="82" cy="71" r=".8" fill="#ab8038" stroke="#404945" stroke-width=".5"/>
+      </g>
+      <g id="machine-constructor-hammer-handle" transform="translate(5.5 15.1) scale(.933 .874)">
+        <path d="M106 57 132 68" fill="none" stroke="#252b29" stroke-width="7" stroke-linecap="round"/>
+        <path d="M107 57 131 67" fill="none" stroke="#9a744d" stroke-width="4" stroke-linecap="round"/>
+        <path d="M111 59 128 66" fill="none" stroke="#d0a860" stroke-width="1.2" stroke-linecap="round"/>
       </g>
       <g id="machine-storage">
+        <g id="machine-storage-frame">
         <ellipse cx="81" cy="111" rx="57" ry="18" fill="#171b1a" opacity=".6"/>
         <path d="M36 50c0-14 19-25 43-25s43 11 43 25v37c0 12-19 22-43 22S36 99 36 87z" fill="#71634a" stroke="#302a21" stroke-width="3"/>
         <ellipse cx="79" cy="49" rx="43" ry="25" fill="#b39a67" stroke="#453d2f" stroke-width="3"/>
@@ -323,8 +366,7 @@
         <ellipse cx="127" cy="67" rx="19" ry="13" fill="#b39a67" stroke="#5d5036" stroke-width="2"/>
         <path d="M112 81c5 4 10 6 15 6s10-2 15-6" fill="none" stroke="#d0b779" stroke-width="2"/>
         <path d="M118 57v34M127 55v38M136 58v33" stroke="#806a43" stroke-width="2"/>
-        <g class="mk2" style="display:none"><path d="M48 37 47 25l13-6 1 13M98 32l-1-12 13 6 1 12" fill="#4a91a1" stroke="#293230" stroke-width="2"/></g>
-        <g class="mk3" style="display:none"><path d="M45 36V17l17-8v22M96 31V12l18 8v17" fill="#a54e37" stroke="#292f2c" stroke-width="2"/></g>
+        </g>
       </g>
       <g id="machine-generator">
         <ellipse cx="78" cy="111" rx="54" ry="17" fill="#171b1a" opacity=".62"/>
@@ -343,51 +385,75 @@
         <g class="mk2" style="display:none"><path d="M46 32V14l11-5v19M101 29V9l12-5v21" fill="#4b8e9a" stroke="#29312e" stroke-width="2"/></g>
         <g class="mk3" style="display:none"><path d="M43 31V7l14-6v26M98 28V3l16-7v27" fill="#a95034" stroke="#292f2c" stroke-width="2"/></g>
       </g>
+      <g id="machine-generator-flame">
+        <path d="M62 83c-5-7 4-10 7-16 5 5 5 10 10 12 1-6 7-8 10-2 3 6-4 15-14 15-7 0-11-3-13-9z" fill="url(#hot-metal)"/>
+      </g>
       <g id="machine-pole">
         <ellipse cx="81" cy="111" rx="47" ry="17" fill="#151a19" opacity=".55"/>
-        <ellipse cx="81" cy="99" rx="37" ry="14" fill="#353c39" stroke="#171d1c" stroke-width="3"/>
-        <ellipse cx="81" cy="95" rx="27" ry="9" fill="#788078" stroke="#343b37" stroke-width="2"/>
-        <path d="M77 91 79 48c0-7 4-11 7-11s6 4 6 11l-2 44z" fill="#858b80" stroke="#303735" stroke-width="2"/>
-        <path d="m79 84 11-5 5 3-11 6z" fill="#a8aaa0"/>
-        <path d="M83 82V36M83 47 54 33M83 47l29-14M83 60 60 49M83 60l23-11" fill="none" stroke="#707970" stroke-width="4" stroke-linecap="round"/>
-        <path d="M51 31c0-3 3-5 7-5s7 2 7 5v4c0 3-3 5-7 5s-7-2-7-5zM105 31c0-3 3-5 7-5s7 2 7 5v4c0 3-3 5-7 5s-7-2-7-5zM56 47c0-3 2-4 5-4s5 1 5 4v4c0 3-2 4-5 4s-5-1-5-4zM100 47c0-3 2-4 5-4s5 1 5 4v4c0 3-2 4-5 4s-5-1-5-4z" fill="#b99b51" stroke="#343a37" stroke-width="2"/>
-        <path d="M81 37 77 48h8z" fill="#c5a650"/>
-        <circle cx="55" cy="33" r="2" fill="#d8c878"/><circle cx="112" cy="33" r="2" fill="#d8c878"/>
+        <ellipse cx="81" cy="101" rx="37" ry="14" fill="#303835" stroke="#171d1c" stroke-width="3"/>
+        <ellipse cx="81" cy="97" rx="29" ry="9" fill="#788078" stroke="#343b37" stroke-width="2"/>
+        <ellipse cx="81" cy="95" rx="17" ry="5" fill="#626b66" stroke="#303735" stroke-width="1.5"/>
+        <path d="M44 40h78v6H44zM54 56h58v6H54z" fill="#626b66" stroke="#202624" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M48 42h70M58 58h50" fill="none" stroke="#a5aaa1" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="m58 46 20 12m48-12L91 58" fill="none" stroke="#303835" stroke-width="4" stroke-linecap="round"/>
+        <path d="m59 46 18 11m48-11L92 57" fill="none" stroke="#89918a" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M76 95 79 37q0-6 5-6t6 6l4 58q-9 4-18 0z" fill="#626b66" stroke="#202624" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="m81 38-3 54m7-54 1 54" fill="none" stroke="#c3c2b2" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M77 48h12v4H77zM78 63h13v4H78zM77 78h14v4H77z" fill="#404945" stroke="#252b29" stroke-width="1.5"/>
+        <path d="M80 32 84 22l6 10z" fill="#d7a747" stroke="#252b29" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M49 31q0-5 5-5h4q5 0 5 5v9q0 3-4 3h-6q-4 0-4-3zM106 31q0-5 5-5h4q5 0 5 5v9q0 3-4 3h-6q-4 0-4-3zM56 48q0-4 4-4h3q4 0 4 4v7q0 3-4 3h-4q-3 0-3-3zM99 48q0-4 4-4h3q4 0 4 4v7q0 3-4 3h-4q-3 0-3-3z" fill="#ab8038" stroke="#252b29" stroke-width="2"/>
+        <ellipse cx="56" cy="30" rx="7" ry="3" fill="#d7a747" stroke="#404945" stroke-width="1.4"/>
+        <ellipse cx="113" cy="30" rx="7" ry="3" fill="#d7a747" stroke="#404945" stroke-width="1.4"/>
+        <ellipse cx="61.5" cy="47" rx="5.5" ry="2.5" fill="#d7a747" stroke="#404945" stroke-width="1.2"/>
+        <ellipse cx="104.5" cy="47" rx="5.5" ry="2.5" fill="#d7a747" stroke="#404945" stroke-width="1.2"/>
+        <path d="M50 35h12m-12 4h12m45-4h12m-12 4h12m-55 13h10m33 0h10" fill="none" stroke="#f1d27e" stroke-width="1.2" stroke-linecap="round"/>
+        <circle cx="78" cy="43" r="1.4" fill="#d7a747" stroke="#252b29" stroke-width=".7"/>
+        <circle cx="88" cy="43" r="1.4" fill="#d7a747" stroke="#252b29" stroke-width=".7"/>
+        <circle cx="79" cy="59" r="1.2" fill="#d7a747" stroke="#252b29" stroke-width=".6"/>
+        <circle cx="89" cy="59" r="1.2" fill="#d7a747" stroke="#252b29" stroke-width=".6"/>
         <g class="mk2" style="display:none"><path d="M44 23c18-15 55-15 74 0" fill="none" stroke="#4aa5c5" stroke-width="2" stroke-dasharray="4 3"/></g>
         <g class="mk3" style="display:none"><path d="M36 21c22-21 70-21 91 0M44 63c20 17 54 17 75 0" fill="none" stroke="#bf5940" stroke-width="3" stroke-dasharray="5 3"/></g>
       </g>
       <g id="machine-belt">
         <ellipse cx="80" cy="99" rx="70" ry="11" fill="#111514" opacity=".66"/>
         <path d="M18 65H142" fill="none" stroke="#111615" stroke-width="42" stroke-linecap="square"/>
-        <path d="M19 65H141" fill="none" stroke="#46504b" stroke-width="34" stroke-linecap="square"/>
+        <path d="M19 65H141" fill="none" stroke="var(--track-outline-color, #46504b)" stroke-width="34" stroke-linecap="square" stroke-opacity=".72"/>
         <path d="M20 65H140" fill="none" stroke="#080c0b" stroke-width="26" stroke-linecap="square"/>
         <path d="M27 52V78M43 52V78M59 52V78M75 52V78M91 52V78M107 52V78M123 52V78M139 52V78" fill="none" stroke="#303935" stroke-width="3"/>
         <path d="M22 48V82M138 48V82" fill="none" stroke="#6b746c" stroke-width="4"/>
         <path d="M38 87v8M80 87v8M122 87v8M31 96H129" fill="none" stroke="#454e49" stroke-width="5" stroke-linecap="square"/>
-        <g class="mk2" style="display:none"><path d="M22 48V82M138 48V82" fill="none" stroke="#4c9fbd" stroke-width="4"/></g>
-        <g class="mk3" style="display:none"><path d="M22 48V82M138 48V82" fill="none" stroke="#c15b43" stroke-width="4"/></g>
       </g>
       <g id="machine-splitter">
         <ellipse cx="80" cy="108" rx="62" ry="12" fill="#111514" opacity=".66"/>
         <path d="M80 0V65H0M80 65H160" fill="none" stroke="#111615" stroke-width="42" stroke-linecap="square" stroke-linejoin="miter"/>
-        <path d="M80 0V65H0M80 65H160" fill="none" stroke="#46504b" stroke-width="34" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M80 0V65H0M80 65H160" fill="none" stroke="var(--track-outline-color, #46504b)" stroke-width="34" stroke-linecap="square" stroke-linejoin="miter" stroke-opacity=".72"/>
         <path d="M80 0V65H0M80 65H160" fill="none" stroke="#080c0b" stroke-width="26" stroke-linecap="square" stroke-linejoin="miter"/>
         <path d="M67 18H93M67 36H93M67 53H93M20 52V78M40 52V78M120 52V78M140 52V78" fill="none" stroke="#303935" stroke-width="3"/>
         <path d="M58 48h44v34H58z" fill="#252c2a" stroke="#657069" stroke-width="3"/>
-        <path d="m80 53 15 22H85l-5-7-5 7H65z" fill="#b68e40" stroke="#111615" stroke-width="3" stroke-linejoin="miter"/>
-        <g class="mk2" style="display:none"><path d="M58 48h44v34H58z" fill="none" stroke="#4c9fbd" stroke-width="3"/></g>
-        <g class="mk3" style="display:none"><path d="M58 48h44v34H58z" fill="none" stroke="#c15b43" stroke-width="3"/></g>
+        <path d="M80 56V64M80 64 70 74M80 64 90 74" fill="none" stroke="#d7a747" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M80 17V43m-6-7 6 7 6-7M51 65H20m7-6-7 6 7 6M109 65h31m-7-6 7 6-7 6" fill="none" stroke="#d7a747" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g id="machine-splitter-outline-mk2">
+        <path d="M58 48h44v34H58z" fill="none" stroke="#4c9fbd" stroke-width="3" stroke-opacity=".72"/>
+      </g>
+      <g id="machine-splitter-outline-mk3">
+        <path d="M58 48h44v34H58z" fill="none" stroke="#d04432" stroke-width="3" stroke-opacity=".72"/>
       </g>
       <g id="machine-merger">
         <ellipse cx="80" cy="108" rx="62" ry="12" fill="#111514" opacity=".66"/>
         <path d="M0 65H80V0M160 65H80" fill="none" stroke="#111615" stroke-width="42" stroke-linecap="square" stroke-linejoin="miter"/>
-        <path d="M0 65H80V0M160 65H80" fill="none" stroke="#46504b" stroke-width="34" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M0 65H80V0M160 65H80" fill="none" stroke="var(--track-outline-color, #46504b)" stroke-width="34" stroke-linecap="square" stroke-linejoin="miter" stroke-opacity=".72"/>
         <path d="M0 65H80V0M160 65H80" fill="none" stroke="#080c0b" stroke-width="26" stroke-linecap="square" stroke-linejoin="miter"/>
         <path d="M20 52V78M40 52V78M120 52V78M140 52V78M67 53H93M67 35H93M67 17H93" fill="none" stroke="#303935" stroke-width="3"/>
         <path d="M58 48h44v34H58z" fill="#252c2a" stroke="#657069" stroke-width="3"/>
         <path d="m65 73 15-21 15 21H85l-5-8-5 8z" fill="#9ba49a" stroke="#111615" stroke-width="3" stroke-linejoin="miter"/>
-        <g class="mk2" style="display:none"><path d="M58 48h44v34H58z" fill="none" stroke="#4c9fbd" stroke-width="3"/></g>
-        <g class="mk3" style="display:none"><path d="M58 48h44v34H58z" fill="none" stroke="#c15b43" stroke-width="3"/></g>
+        <path d="M20 65H50m-7-6 7 6-7 6M140 65H110m7-6-7 6 7 6M80 44V13m-6 6 6-6 6 6" fill="none" stroke="#d9ddd7" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g id="machine-merger-outline-mk2">
+        <path d="M58 48h44v34H58z" fill="none" stroke="#4c9fbd" stroke-width="3" stroke-opacity=".72"/>
+      </g>
+      <g id="machine-merger-outline-mk3">
+        <path d="M58 48h44v34H58z" fill="none" stroke="#d04432" stroke-width="3" stroke-opacity=".72"/>
       </g>
     </defs>
   </svg>
@@ -395,7 +461,7 @@
   <header>
     <div class="eyebrow">Gruppe 5 · visueller Prototyp</div>
     <h1>Industrie aus der Vogelperspektive</h1>
-    <p>Eigenständiger Stil mit gerundeten, funktional lesbaren Maschinenformen, sichtbarer Mechanik und klaren Förderwegen statt dekorativer Blockaufbauten. Die Zeichnungen sind als leichte SVG-Vektoren umgesetzt.</p>
+    <p>Eigenständiger Stil mit gerundeten, funktional lesbaren Maschinenformen, sichtbarer Mechanik und klaren Förderwegen statt dekorativer Blockaufbauten. Alle Gebäudemodelle sind als eigenständige SVG-Vektoren umgesetzt.</p>
   </header>
 
   <main>
@@ -415,13 +481,13 @@
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Schmelzkessel mit hohem Metallmantel, breitem Rand und glühender Schmelze"><use href="#machine-smelter"/></svg></div>
+        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Schmelzkessel mit hohem Metallmantel, breitem Rand und glühender Schmelze"><use href="#machine-smelter"/><use href="#machine-smelter-lava"/></svg></div>
         <div class="copy"><div class="title-row"><h2>Schmelze</h2><span class="kind">Verarbeitung</span></div><p>Ein massiver, runder Schmelzkessel mit tiefem Feuerraum, breitem Metallrand und glühender Schmelze im Inneren.</p><p class="detail">Erz wird im Kessel zu Barren · der geschlossene Generatorofen bleibt klar unterscheidbar</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Freistehender Amboss mit spitzem Horn, breiter Bahn, Hals und Ambossfuß"><use href="#machine-constructor"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Konstruktor</h2><span class="kind">Bauteile</span></div><p>Ein einzelner Amboss ohne Werkbank oder Plattform; Horn, Bahn, Hals und Fuß bilden seine Silhouette.</p><p class="detail">Einfache Rezepte: Barren zu Platten, Stangen oder Draht</p></div>
+        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Schmiedewerkbank mit großem Amboss, Hammer und Schmiedezange"><use href="#machine-constructor"/><use href="#machine-constructor-hammer-handle"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Konstruktor</h2><span class="kind">Bauteile</span></div><p>Massive Holzwerkbank mit großem, klar erkennbarem Amboss und griffbereitem Schmiedehammer sowie Schmiedezange.</p><p class="detail">Einfache Rezepte: Barren zu Platten, Stangen oder Draht</p></div>
       </article>
 
       <article class="card">
@@ -430,18 +496,18 @@
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Lager aus zylindrischen Silos mit gewölbten Deckeln und Füllringen"><use href="#machine-storage"/></svg></div>
+        <div class="scene"><svg class="machine storage" viewBox="0 0 160 150" role="img" aria-label="Lager aus zylindrischen Silos mit gewölbten Deckeln und Füllringen"><use href="#machine-storage"/></svg></div>
         <div class="copy"><div class="title-row"><h2>Lager</h2><span class="kind">Puffer</span></div><p>Ein großer, gerippter Hauptsilo mit gewölbtem Dach und konischem Auslauf sowie ein kleiner Nebensilo.</p><p class="detail">Die Silhouette bleibt auch aus der Vogelperspektive als Materiallager lesbar</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Heizofen mit verglühendem Feuerraum, Brennstofftür und hohem Rauchrohr"><use href="#machine-generator"/></svg></div>
+        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Heizofen mit verglühendem Feuerraum, Brennstofftür und hohem Rauchrohr"><use href="#machine-generator"/><use href="#machine-generator-flame"/></svg></div>
         <div class="copy"><div class="title-row"><h2>Verbrennungsgenerator</h2><span class="kind">Energie</span></div><p>Ein geschlossener Heizofen mit glühendem Feuerraum, Brennstofftür, Rauchrohr und Standfüßen erzeugt Wärme.</p><p class="detail">Brennstoffverbrennung treibt den Generator an</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Strommast mit Auslegern und sichtbarer Netzreichweite"><use href="#machine-pole"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Strommast</h2><span class="kind">Netz</span></div><p>Metallmast mit Querträgern und Isolatoren; gestrichelte Bögen zeigen die Reichweite.</p><p class="detail">Leitungen werden später in der Spielwelt verbunden dargestellt</p></div>
+        <div class="scene"><svg class="machine" viewBox="0 0 160 150" role="img" aria-label="Strommast mit zwei verstärkten Querträgern, vier Isolatoren und verschraubtem Rundsockel"><use href="#machine-pole"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Strommast</h2><span class="kind">Netz</span></div><p>Verjüngter Stahlmast mit verstärkten Querträgern, gestapelten Isolatoren und sichtbaren Befestigungen.</p><p class="detail">Leitungen werden später in der Spielwelt verbunden dargestellt</p></div>
       </article>
 
       <article class="card">
@@ -450,13 +516,13 @@
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Kantiger T-Splitter mit Zulauf von oben und getrennten Ausgängen links und rechts"><use href="#machine-splitter"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Splitter</h2><span class="kind">1 → 2</span></div><p>Ein oberer Zulauf teilt sich im mittleren Rasterfeld auf getrennte linke und rechte Abgänge auf.</p><p class="detail">Drei mal drei Kacheln; die Abgänge enden mittig an eigenen Seiten und schließen an je ein Nachbarband an.</p></div>
+        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Kantiger T-Splitter mit Zulauf von oben und getrennten Ausgängen links und rechts"><use href="#machine-splitter"/><use class="level-outline mk2" href="#machine-splitter-outline-mk2"/><use class="level-outline mk3" href="#machine-splitter-outline-mk3"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Splitter</h2><span class="kind">1 → 2</span></div><p>Ein oberer Eingang teilt sich im mittleren Rasterfeld auf getrennte linke und rechte Ausgänge auf.</p><p class="detail">Pfeile: oben hinein, links und rechts hinaus.</p></div>
       </article>
 
       <article class="card">
-        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Kantiger T-Merger mit seitlichen Zuläufen links und rechts und Ausgang nach oben"><use href="#machine-merger"/></svg></div>
-        <div class="copy"><div class="title-row"><h2>Merger</h2><span class="kind">2 → 1</span></div><p>Linker und rechter Zulauf werden im mittleren Rasterfeld auf einen oberen Ausgang zusammengeführt.</p><p class="detail">Drei mal drei Kacheln; jeder Anschluss liegt mittig an einer eigenen Seite und trifft auf ein Nachbarband.</p></div>
+        <div class="scene"><svg class="machine belt" viewBox="0 0 160 130" role="img" aria-label="Kantiger T-Merger mit seitlichen Zuläufen links und rechts und Ausgang nach oben"><use href="#machine-merger"/><use class="level-outline mk2" href="#machine-merger-outline-mk2"/><use class="level-outline mk3" href="#machine-merger-outline-mk3"/></svg></div>
+        <div class="copy"><div class="title-row"><h2>Merger</h2><span class="kind">2 → 1</span></div><p>Linker und rechter Eingang werden im mittleren Rasterfeld zu einem oberen Ausgang zusammengeführt.</p><p class="detail">Pfeile: links und rechts hinein, oben hinaus.</p></div>
       </article>
     </section>
 
@@ -621,7 +687,7 @@
     </section>
 
     <aside class="note">
-      <strong>Formvergleich:</strong> Die Silhouetten orientieren sich an realen Funktionsformen: Bohrschnecke und Traggestell beim Miner, gelenkige Segmente und Greifer beim Assembler, Horn und Bahn des Ambosses beim Konstruktor, zylindrische Silos beim Lager sowie Feuerraum und Rauchrohr beim Heizofen. Die Förderstrecken verwenden gleich breite, tragende Bänder mit Rollen; Splitter und Merger führen diese in passenden Kurven weiter.
+      <strong>Formvergleich:</strong> Die Silhouetten orientieren sich an realen Funktionsformen: Bohrschnecke und Traggestell beim Miner, gelenkige Segmente und Greifer beim Assembler, eine verstärkte Holzschmiedewerkbank mit großem Amboss und Handwerkzeugen beim Konstruktor, zylindrische Silos beim Lager sowie Feuerraum und Rauchrohr beim Heizofen. Die Förderstrecken verwenden gleich breite, tragende Bänder mit Rollen; Splitter und Merger führen diese in passenden Kurven weiter.
       <p class="reference-links">Bild- und Formreferenzen:
         <a href="https://en.wikipedia.org/wiki/Auger">Bohrschnecke</a>,
         <a href="https://en.wikipedia.org/wiki/Industrial_robot">Industrieroboter</a>,

@@ -6,7 +6,9 @@ namespace OOPGames
     {
         Keines,
         Foerderer,
-        Schmelze
+        Schmelze,
+        Foerderband,
+        GebaeudeVerschieben
     }
 
     public enum G5_FabrikGebaeudeTyp

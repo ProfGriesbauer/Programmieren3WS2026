@@ -251,3 +251,66 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > Ich habe ein neues design für den hintergrund erstellt. Kannst du wie wiese Hintergrund bitte implementieren. Außerdem habe ich gemerkt, bei jeden Tick das komplette spielfeld neu erstellt wird. Kannst du das bitte umsetzten, dass das nur beim spiel start geschieht und dann der hintergrund bleibt und nurdie gebäude und so neu geladen werden?
 
 - **Ergebnisvermerk:** `G5_WieseHintergrund` wurde in den Fabrik-Painter eingebunden. Die Gras-/Raster-/Felsgrafik wird als statische Bitmap-Ebene pro Spielfeld und Ansichtsgröße vorgehalten; im Simulationstick werden nur die dynamische Ebene mit Rohstoffanzeigen, Gebäuden und HUD neu aufgebaut. Bei einem Spielfeldwechsel oder Größenwechsel wird die Hintergrundebene neu erstellt.
+
+### 2026-11-19, 10:51 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Pushe bitte die änderungen und schau die letzten änderungen von den andern auf die nun gemeinsamen klassen verwenden oder ob die noch die einzelnen klassen verwenden.
+
+- **Ergebnisvermerk:** Die Wiesenhintergrund-Änderungen wurden auf `origin/master` gepusht. Die geprüften letzten Änderungen verwenden weiterhin die gemeinsamen `G5_*`-Modelle statt separater Item- oder Gebäudeklassen.
+
+### 2026-11-19, 11:02 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Kannst du bitte ändern, dass nicht direkt zu beginn schmelzen platziert sind. Kannst du außerdem ändern, dann man über die einstellungen sich die gebäude aktivieren kann. Das heißt wenn man im spiel constructors haben möchte, dass man das in den einstellungen aktiviert und dann kann man die auch im spielfeld platzieren.
+
+- **Ergebnisvermerk:** Die Start-Schmelzen wurden entfernt. Schmelzen und Konstruktoren lassen sich einzeln in den Einstellungen aktivieren und danach mit `S`/`K` beziehungsweise `C` platzieren. Der Build war erfolgreich; `MainWindow.xaml.cs` blieb unverändert.
+
+### 2026-11-19, 11:18 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Kannst du bitte ebenlls die förderbänder hinzufügen und so, dass wenn die in den einstellungen deaktiviert sind, dann soll das spiel die items weiterhin automatisch weiter geben und wenn die förderbänder aktiviert ind muss ich diese selbst verbinden. Dafür soll am Ausgang eines gebäudes eine rote loinie sein von der ich das förderband zum eingang des neuen gebäudes ziehe die eingänge sollen mit einer blauen linie erkennbar sein
+
+- **Ergebnisvermerk:** Die Förderbandoption schaltet zwischen automatischer Materialübergabe und manuellem Transport über verbundene Bänder um. Rote Ausgänge und blaue Eingänge markieren die Gebäudeanschlüsse. Da die Framework-Eingabe einzelne Klicks liefert, wurde die Verbindung als Ausgangs- und anschließender Eingangsklick umgesetzt, nicht als Ziehbewegung. Der Build war erfolgreich.
+
+### 2026-11-19, 12:02 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Um die Förderbänder zu platzieren kannst du bitte ebenfalls ein key hinzufügen, wo man dann den anfang und ende anklichen muss. Für die anfänge und ende bei den gebäuden machen die blaue und rote linie bei dem gebäude selbst hinzu und nicht neben dran
+
+- **Ergebnisvermerk:** `B` aktiviert den Förderbandmodus; erst der rote Ausgang und dann der blaue Eingang werden angeklickt. Die Anschlusslinien sind direkt auf den Gebäuden platziert. `Esc` beendet den Modus. Der Build war erfolgreich und `MainWindow.xaml.cs` blieb unverändert.
+
+### 2026-11-19, 12:19 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> bitte füge ein interaktionsmenü für die gebäude auf. Wo man sehen kann welche stufe das gebäude hat und wo man das rezept auswählen kann und wo man auch sieht was man an den eingängen gerade erhält
+
+- **Ergebnisvermerk:** Das Gebäudefenster zeigt Stufe, verfügbare und aktive Rezepte sowie den aktuellen Eingangsinhalts- beziehungsweise Lagerbestand. Rezepte lassen sich im Fenster auswählen; Schließen geht über `X`, `Esc` oder einen Klick außerhalb des Fensters. Build und `git diff --check` waren erfolgreich.
+
+### 2026-11-19, 12:34 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> pushe das projekt
+
+- **Ergebnisvermerk:** Die Fabrikspiel-Änderungen wurden nach Integration der zwischenzeitlichen Teamänderungen auf `origin/master` gepusht (Commit `921fb4e`). Der Build war erfolgreich; Cache- und temporäre Projektdateien wurden nicht mit aufgenommen.
+
+### 2026-11-19, 12:40 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> füge in miene prompt markdow datei alle weiteren prompts hinzu
+
+- **Ergebnisvermerk:** Die seit dem letzten dokumentierten Spieleintrag fehlenden Prompts aus dem Gesprächsverlauf wurden mit Uhrzeit und Ergebnisvermerk ergänzt.

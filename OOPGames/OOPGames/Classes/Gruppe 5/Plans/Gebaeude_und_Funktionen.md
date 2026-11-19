@@ -150,31 +150,31 @@ Eine interaktive Konzeptansicht mit eigenständigen SVG-Maschinenmodellen liegt 
 - Gebäude erhalten aus der Vogelperspektive unterscheidbare Silhouetten und klar erkennbare Grundfarben.
 - Der Miner hat eine reduzierte, eindeutige Silhouette: genau zwei deutlich getrennte Standfüße, einen kompakten Motorrahmen und einen großen zentralen Bohrer mit sichtbarer spiralförmiger Bohrschnecke und Spitze.
 - Andere Modelle vermeiden strenge quaderförmige Blockaufbauten und folgen denselben Gestaltungsprinzipien wie der Miner: klare Silhouette, wenige gut platzierte Bauteile und sichtbare, funktionsgerechte Mechanik.
-- Die Schmelze ist ein massiver, runder Schmelzkessel mit tiefem Feuerraum und breitem Rand. Der Konstruktor ist als einzelner Amboss ohne Werkbank oder Plattform gezeichnet; der Assembler als gelenkiger Industrieroboter mit Greifzange.
-- Das Lager verwendet zylindrische Silos mit gewölbten Deckeln und konischen Ausläufen. Der Verbrennungsgenerator ist als Heizofen mit Feuerraum, Brennstofftür und Rauchrohr gestaltet. Strommast und Transportteile setzen ebenfalls auf klare Funktionsformen statt dekorativer Blockfundamente.
+- Die Schmelze ist ein runder Ofenkörper mit glühender Öffnung und gebogenen Abzügen; der Konstruktor eine massive Schmiedewerkbank aus dunklem Eichenholz mit Stahlwinkeln, Querstrebe, großem Amboss, Hammer und Schmiedezange; der Assembler kombiniert mehrere runde Fertigungstische um einen zentralen Antrieb.
+- Das Lager verwendet zylindrische Silos mit gewölbten Deckeln, der Generator einen runden Kessel mit Brennkammer und gebogenen Abzügen. Der Strommast zeigt einen verjüngten Stahlmast mit verstärkten Querträgern, Isolatoren und verschraubtem Sockel.
 - Die Form bleibt der Funktion untergeordnet: Förderstrecken dürfen für Richtungswechsel abknicken, während Maschinenkörper organische Rundungen und erkennbare Arbeitsmechanik zeigen.
 - Der Assembler wirkt groesser und komplexer als der Konstruktor.
 - Lager zeigen ihre Groesse oder Stufe durch zusätzliche Container oder Regale.
-- Laufbandstufen koennen unterschiedliche, gut unterscheidbare Farben erhalten.
-- Laufbänder sind standardmäßig waagrecht und länglich ausgerichtet; das schwarze Gummiband mit Querleisten liegt in einem kantigen Stahlrahmen. Die Förderrichtung folgt der Längsachse und kann in der Spielwelt um 90 Grad gedreht werden. Splitter und Merger verwenden dieselbe Bandbreite und denselben kantigen Aufbau.
-- Modelle orientieren sich an den erkennbaren Funktionsformen realer Bohr-, Schmiede-, Roboter-, Ofen-, Silo- und Fördertechnik, bleiben aber eigenständige Vektorinterpretationen statt Kopien konkreter Spielgrafiken.
+- Der Hammergriff bleibt bei Upgrades in seiner Holzfarbe. Das Lager wird vollständig in der jeweiligen Levelfarbe eingefärbt. Die grauen Umrandungen von Laufband, Splitter und Merger wechseln zurückhaltend zu den Level-Farben.
+- Laufbandstufen koennen unterschiedliche, gut unterscheidbare Farben erhalten; MK3 ist kräftig rostrot.
+- Splitter und Merger zeigen ihre Ein- und Ausgänge durch klar sichtbare, abgewinkelte Bandführungen und Pfeile: Splitter ein Eingang, zwei Ausgänge; Merger zwei Eingänge, ein Ausgang.
 - Animationen wie Bohrbewegung, Ofenglow oder bewegte Gegenstände sollen den Betriebszustand unterstützen, nicht nur dekorativ sein.
 - Einblendungen oder Symbole machen "arbeitet", "wartet" und "blockiert" auch ohne geoeffnetes Menü erkennbar.
-- Ein- und Ausgänge sowie Stromanschlüsse sind keine sichtbaren Bauteile der Gebäudegrafik. Sie existieren als logische Anschlusspositionen für die Welt- und Transportlogik; schematische Diagramme dürfen solche Positionen zur Erklärung separat markieren.
+- Gegenstands- und Stromanschlüsse sind im Prototyp farblich getrennt markiert: Eingänge grün, Ausgänge gelb, Strom blau. Die Symbole zeigen die Funktion, legen aber noch keine endgültigen Weltkoordinaten fest.
 
 ### Vorläufige Draufsicht, Raster und Anschlüsse
 
-Die Designvorschau enthält ein schematisches Rasterbeispiel, in dem Gebäude-Footprints, logische Anschlusspositionen und einzelne Laufbandfelder als 1x1-Kacheln gezeigt werden. Anschlussmarkierungen gehören nur zum Diagramm und nicht zur sichtbaren Gebäudegrafik. Es ist eine Layout-Idee und noch keine verbindliche Platzierungsregel. Die Vorschau verwendet 32-Pixel-Kacheln als vorläufige Referenz, angelehnt an die vorhandene Kartenansicht; Rastermaß, Footprints und Drehung müssen mit der Spielumgebung abgestimmt werden.
+Die Designvorschau enthält ein schematisches Rasterbeispiel, in dem Gebäude-Footprints, Seitenanschlüsse und einzelne Laufbandfelder als 1x1-Kacheln gezeigt werden. Es ist eine Layout-Idee und noch keine verbindliche Platzierungsregel. Die Vorschau verwendet 32-Pixel-Kacheln als vorläufige Referenz, angelehnt an die vorhandene Kartenansicht; Rastermaß, Footprints und Drehung müssen mit der Spielumgebung abgestimmt werden.
 
 - Gebäude behalten einen rechteckigen, kollisionsfreien Footprint; Details der Illustration dürfen nicht als zusätzliche belegte Felder interpretiert werden.
-- Logische Gegenstandsanschlüsse liegen an Footprint-Seiten und sollen direkt an angrenzende Laufbandkacheln anschließen. Richtung und erlaubte Drehung sind pro Gebäude in der Weltlogik festzulegen; am Gebäude-Sprite werden keine Anschlussmarker gezeichnet.
+- Anschlüsse liegen an einer der vier Footprint-Seiten und sollen direkt an eine angrenzende Laufbandkachel anschließen. Richtung und erlaubte Drehung sind pro Gebäude in der Weltlogik festzulegen.
 - Miner: Rohstoffvorkommen unter dem Footprint, ein Gegenstandsausgang und ein separater Stromanschluss.
 - Schmelze und Konstruktor: je mindestens ein Gegenstandseingang, ein Ausgang und Stromanschluss. Mehrere Zutaten können beim Konstruktor je nach Rezept zusätzliche Eingänge erfordern.
 - Assembler: mehrere getrennte Gegenstandseingänge, ein Ausgang und Stromanschluss.
 - Lager: Gegenstandsein- und -ausgang; die konkrete Transferlogik muss Überschreiben bei vollem Lager verhindern.
 - Verbrennungsgenerator: Brennstoffeingang und Stromabgabe. Strommast: Anschluss ans Stromnetz; kein Gegenstandstransport.
-- Laufband: ein Eingangs- und ein Ausgangsanschluss. Der Splitter belegt vorläufig ein 3x3-Kachel-Footprint: Zulauf mittig an der oberen Seite, Ausgänge mittig an der linken und rechten Seite. Der Merger ist die Gegenform: zwei seitliche Eingänge führen zum mittigen oberen Ausgang. Die Module können in 90-Grad-Schritten gedreht werden, damit die seitlichen Bänder auf dem Raster an benachbarte Kacheln anschließen. Dies ist ein Layoutvorschlag und muss mit der Spielumgebung abgestimmt werden.
-- Stromleitungen/Netzverbindungen sind in der Weltlogik und Darstellung von Gegenstandsbändern zu trennen. Diagramm-Symbole sind reine Orientierungshilfen und ersetzen weder eine festgelegte Port-API noch sichtbare Anschlussteile am Gebäude.
+- Laufband: ein Eingangs- und ein Ausgangsanschluss; Splitter: ein Eingang und zwei Ausgänge; Merger: zwei Eingänge und ein Ausgang.
+- Stromleitungen/Netzverbindungen sind visuell von Gegenstandsbändern zu trennen. Symbole in der Vorschau sind Orientierungshilfen und ersetzen keine festgelegte Port-API.
 
 ## Noch gemeinsam festzulegen
 
@@ -198,7 +198,7 @@ Die Gebäudesimulation ist zur besseren Orientierung auf mehrere Dateien verteil
 - [Christian_Frey_FabrikTransportEnergie.cs](../Christian_Frey_FabrikTransportEnergie.cs): Laufband, Stromgenerator, Strommast, Stromnetz und Itemtransfer
 - [Christian_Frey_FabrikSimulation.cs](../Christian_Frey_FabrikSimulation.cs): tickbasierte Fabrikverwaltung und Starterrezepte
 
-Die Dateien bleiben im Namespace `OOPGames`; Typnamen und öffentliche Schnittstellen sind unverändert, damit vorhandene Spielwelt- und UI-Aufrufe weiter funktionieren. Die [Gebaeude_Designvorschau.html](./Gebaeude_Designvorschau.html) dient als Gestaltungsvorlage. Im Spiel zeichnet der [Tim_Eichert_FabrikPainter.cs](../Tim_Eichert_FabrikPainter.cs) die nativen WPF-Vektordarstellungen aus [Tim_Eichert_FabrikGebaeudeZeichner.cs](../Tim_Eichert_FabrikGebaeudeZeichner.cs); die Gebäudemodelle enthalten weiterhin keine WPF-Zeichenlogik.
+Die Dateien bleiben im Namespace `OOPGames`; Typnamen und öffentliche Schnittstellen sind unverändert. Die Gebäudesimulation bleibt von WPF-Zeichenlogik getrennt. Die [Gebaeude_Designvorschau.html](./Gebaeude_Designvorschau.html) dient als Gestaltungsvorlage; im Spiel zeichnet der [Tim_Eichert_FabrikPainter.cs](../Tim_Eichert_FabrikPainter.cs) die nativen WPF-Vektordarstellungen aus [Tim_Eichert_FabrikGebaeudeZeichner.cs](../Tim_Eichert_FabrikGebaeudeZeichner.cs).
 
 Produktionszeiten, Kapazitäten, Foerdermengen, Reichweiten und Stromwerte werden als Konstruktor- oder Upgradeparameter uebergeben, statt im Code als festgelegte Spielbalance vorgegeben zu werden. Die Beispielrezepte fuer Erzschmelze, Konstruktor und Assembler sind ueber `G5_StarterRecipes` verfuegbar.
 
