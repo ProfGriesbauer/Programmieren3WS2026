@@ -30,6 +30,7 @@ namespace OOPGames
         private string _hoverName;
         private Point _letzteMausposition;
         private bool _hatMausposition;
+        private bool _inventarGeoeffnet = true;
         private double _hintergrundViewportBreite = -1;
         private double _hintergrundViewportHoehe = -1;
 
@@ -199,11 +200,13 @@ namespace OOPGames
             {
                 _zielCanvas.MouseMove -= Canvas_MouseMove;
                 _zielCanvas.MouseLeave -= Canvas_MouseLeave;
+                _zielCanvas.MouseDown -= Canvas_MouseDown;
             }
 
             _zielCanvas = canvas;
             _zielCanvas.MouseMove += Canvas_MouseMove;
             _zielCanvas.MouseLeave += Canvas_MouseLeave;
+            _zielCanvas.MouseDown += Canvas_MouseDown;
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -227,6 +230,23 @@ namespace OOPGames
 
             _hatMausposition = false;
             ClearGebaeudeHover();
+        }
+
+        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!ReferenceEquals(sender, _zielCanvas))
+            {
+                return;
+            }
+
+            Point position = e.GetPosition(_zielCanvas);
+            double panelWidth = _inventarGeoeffnet ? 190 : 34;
+            double left = _zielCanvas.ActualWidth - panelWidth - 10;
+            if (position.X >= left && position.X <= left + panelWidth &&
+                position.Y >= HudHoehe + 10 && position.Y <= HudHoehe + 190)
+            {
+                _inventarGeoeffnet = !_inventarGeoeffnet;
+            }
         }
 
         private void AktualisiereGebaeudeHover(Point mausposition)
@@ -253,31 +273,51 @@ namespace OOPGames
                 }
             }
 
-            if (gebaeude == null || string.IsNullOrWhiteSpace(gebaeude.Name))
+            if (gebaeude != null && !string.IsNullOrWhiteSpace(gebaeude.Name))
             {
-                ClearGebaeudeHover();
+                string name = GebaeudeName(gebaeude.Typ);
+                string detail = StatusText(gebaeude.Status) + " · MK " + Math.Max(1, gebaeude.Level);
+                string key = "Gebaeude|" + name + "|" + detail;
+                if (_hoverKarte == null || !string.Equals(_hoverName, key, StringComparison.Ordinal))
+                {
+                    _hoverName = key;
+                    _hoverKarte = ErzeugeHoverKarte("GEBÄUDE", name, detail);
+                    _hoverEbene.Children.Clear();
+                    _hoverEbene.Children.Add(_hoverKarte);
+                }
+
+                PlatziereHoverKarte(mausposition);
                 return;
             }
 
-            string name = GebaeudeName(gebaeude.Typ);
-            if (_hoverKarte == null || !string.Equals(_hoverName, name, StringComparison.Ordinal))
+            if (_hoverWelt.TryGetKachelInfo(x, y, out IG5_KachelInfo kachel) &&
+                kachel.Rohstoff != G5_Rohstofftyp.Keiner)
             {
-                _hoverName = name;
-                _hoverKarte = ErzeugeHoverKarte(_hoverName);
-                _hoverEbene.Children.Clear();
-                _hoverEbene.Children.Add(_hoverKarte);
+                string name = RohstoffName(kachel.Rohstoff);
+                string detail = kachel.RohstoffMenge + " verfügbar";
+                string key = "Rohstoff|" + name + "|" + detail;
+                if (_hoverKarte == null || !string.Equals(_hoverName, key, StringComparison.Ordinal))
+                {
+                    _hoverName = key;
+                    _hoverKarte = ErzeugeHoverKarte("ROHSTOFFFELD", name, detail);
+                    _hoverEbene.Children.Clear();
+                    _hoverEbene.Children.Add(_hoverKarte);
+                }
+
+                PlatziereHoverKarte(mausposition);
+                return;
             }
 
-            PlatziereHoverKarte(mausposition);
+            ClearGebaeudeHover();
         }
 
-        private Border ErzeugeHoverKarte(string name)
+        private Border ErzeugeHoverKarte(string label, string name, string detail)
         {
             double width = Math.Max(140, Math.Min(280, _zielCanvas.ActualWidth - 16));
             StackPanel content = new StackPanel();
             content.Children.Add(new TextBlock
             {
-                Text = "GEBÄUDE",
+                Text = label,
                 Foreground = HoverAccentBrush,
                 FontFamily = new FontFamily("Segoe UI"),
                 FontSize = 10,
@@ -291,6 +331,15 @@ namespace OOPGames
                 FontFamily = new FontFamily("Segoe UI"),
                 FontSize = 20,
                 FontWeight = FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap
+            });
+            content.Children.Add(new TextBlock
+            {
+                Text = detail,
+                Foreground = new SolidColorBrush(Color.FromRgb(205, 215, 211)),
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 11,
+                Margin = new Thickness(0, 5, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             });
 
@@ -490,38 +539,6 @@ namespace OOPGames
                     conveyorReversed);
             }
 
-            string status = gebaeude.Typ == G5_FabrikGebaeudeTyp.Hub
-                ? "Lager"
-                : gebaeude.Typ == G5_FabrikGebaeudeTyp.Laufband &&
-                    gebaeude.Status == G5_BuildingStatus.Working
-                    ? "Transport"
-                    : StatusText(gebaeude.Status);
-            double statusHoehe = Math.Min(15, hoehe * 0.24);
-            Rectangle statusHintergrund = new Rectangle
-            {
-                Width = breite,
-                Height = statusHoehe,
-                Fill = new SolidColorBrush(Color.FromArgb(205, 24, 29, 27)),
-                Stroke = Brushes.Transparent
-            };
-            Canvas.SetLeft(statusHintergrund, position.X);
-            Canvas.SetTop(statusHintergrund, position.Y + hoehe - statusHoehe);
-            canvas.Children.Add(statusHintergrund);
-
-            TextBlock text = new TextBlock
-            {
-                Text = status,
-                Foreground = Brushes.White,
-                FontWeight = FontWeights.Bold,
-                FontSize = Math.Max(6, Math.Min(9, statusHoehe * 0.65)),
-                TextAlignment = TextAlignment.Center,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                Width = breite
-            };
-            Canvas.SetLeft(text, position.X);
-            Canvas.SetTop(text, position.Y + hoehe - statusHoehe);
-            canvas.Children.Add(text);
-
             Brush levelFarbe = gebaeude.Level >= 3
                 ? new SolidColorBrush(Color.FromRgb(191, 89, 64))
                 : gebaeude.Level == 2
@@ -660,7 +677,7 @@ namespace OOPGames
             }
         }
 
-        private static void ZeichneHud(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)
+        private void ZeichneHud(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)
         {
             string werkzeug = WerkzeugName(info.AktuellesWerkzeug);
             Rectangle hintergrund = new Rectangle
@@ -680,10 +697,148 @@ namespace OOPGames
             ZeichneHudZeile(
                 canvas,
                 viewportBreite,
-                "Werkzeug: " + werkzeug + "    |    HUB: Eisenerz " +
-                info.HubMenge(G5_Item.Eisenerz) + "    Eisenbarren " +
-                info.HubMenge(G5_Item.Eisenbarren) + "    |    " + info.StatusMeldung,
+                "Werkzeug: " + werkzeug + "    |    " + info.StatusMeldung,
                 HudZeilenHoehe);
+            ZeichneInventar(canvas, viewportBreite, info);
+        }
+
+        private void ZeichneInventar(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)
+        {
+            double width = _inventarGeoeffnet ? 190 : 34;
+            double left = viewportBreite - width - 10;
+            double top = HudHoehe + 10;
+
+            Border panel = new Border
+            {
+                Width = width,
+                Height = _inventarGeoeffnet ? 196 : 34,
+                Padding = new Thickness(_inventarGeoeffnet ? 8 : 3),
+                Background = new SolidColorBrush(Color.FromArgb(238, 20, 30, 27)),
+                BorderBrush = HoverAccentBrush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(12),
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = Colors.Black,
+                    BlurRadius = 10,
+                    ShadowDepth = 2,
+                    Opacity = 0.38
+                },
+                IsHitTestVisible = false
+            };
+
+            StackPanel content = new StackPanel();
+            Border toggle = new Border
+            {
+                Padding = new Thickness(0),
+                Margin = new Thickness(0, 0, 0, _inventarGeoeffnet ? 5 : 0),
+                Child = new TextBlock
+                {
+                    Text = _inventarGeoeffnet ? "‹ INVENTAR" : "›",
+                    Foreground = HoverAccentBrush,
+                    FontSize = 11,
+                    FontWeight = FontWeights.Bold,
+                    TextAlignment = _inventarGeoeffnet ? TextAlignment.Left : TextAlignment.Center
+                }
+            };
+            content.Children.Add(toggle);
+
+            if (_inventarGeoeffnet)
+            {
+                G5_Item[] items =
+                {
+                    G5_Item.Eisenerz,
+                    G5_Item.Kupfererz,
+                    G5_Item.Eisenbarren,
+                    G5_Item.Kupferbarren,
+                    G5_Item.Eisenplatte,
+                    G5_Item.Eisenstange,
+                    G5_Item.Kupferdraht,
+                    G5_Item.Schraube,
+                    G5_Item.Rotor
+                };
+
+                foreach (G5_Item item in items)
+                {
+                    int amount = info.HubMenge(item);
+                    DockPanel rowContent = new DockPanel();
+                    Border symbol = ErzeugeItemSymbol(item);
+                    DockPanel.SetDock(symbol, Dock.Left);
+                    rowContent.Children.Add(symbol);
+                    TextBlock amountText = new TextBlock
+                    {
+                        Text = amount.ToString(),
+                        Foreground = Brushes.White,
+                        FontSize = 11,
+                        FontWeight = FontWeights.Bold,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    DockPanel.SetDock(amountText, Dock.Right);
+                    rowContent.Children.Add(amountText);
+                    Border row = new Border
+                    {
+                        Margin = new Thickness(0, 1, 0, 1),
+                        Padding = new Thickness(5, 2, 5, 2),
+                        Background = new SolidColorBrush(Color.FromArgb(125, 42, 58, 52)),
+                        CornerRadius = new CornerRadius(6),
+                        Child = rowContent
+                    };
+                    content.Children.Add(row);
+                }
+            }
+
+            panel.Child = content;
+            Canvas.SetLeft(panel, left);
+            Canvas.SetTop(panel, top);
+            canvas.Children.Add(panel);
+        }
+
+        private static Border ErzeugeItemSymbol(G5_Item item)
+        {
+            Brush fill;
+            switch (item)
+            {
+                case G5_Item.Eisenerz:
+                case G5_Item.Eisenbarren:
+                case G5_Item.Eisenplatte:
+                case G5_Item.Eisenstange:
+                case G5_Item.Schraube:
+                case G5_Item.Rotor:
+                    fill = new SolidColorBrush(Color.FromRgb(196, 205, 199));
+                    break;
+                case G5_Item.Kupfererz:
+                case G5_Item.Kupferbarren:
+                case G5_Item.Kupferdraht:
+                    fill = new SolidColorBrush(Color.FromRgb(213, 137, 79));
+                    break;
+                default:
+                    fill = HoverAccentBrush;
+                    break;
+            }
+
+            TextBlock symbol = new TextBlock
+            {
+                Text = ItemKuerzel(item),
+                Foreground = Brushes.Black,
+                FontSize = 8,
+                FontWeight = FontWeights.Bold,
+                TextAlignment = TextAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Ellipse icon = new Ellipse
+            {
+                Width = 18,
+                Height = 18,
+                Fill = fill,
+                Margin = new Thickness(0, 0, 7, 0)
+            };
+            Grid iconGrid = new Grid();
+            iconGrid.Children.Add(icon);
+            iconGrid.Children.Add(symbol);
+            DockPanel.SetDock(iconGrid, Dock.Left);
+            Border wrapper = new Border { Child = iconGrid };
+            DockPanel.SetDock(wrapper, Dock.Left);
+            return wrapper;
         }
 
         private static void ZeichneHudZeile(Canvas canvas, double viewportBreite, string text, double y)
@@ -702,6 +857,42 @@ namespace OOPGames
             Canvas.SetLeft(zeile, 0);
             Canvas.SetTop(zeile, y);
             canvas.Children.Add(zeile);
+        }
+
+        private static string RohstoffName(G5_Rohstofftyp rohstoff)
+        {
+            switch (rohstoff)
+            {
+                case G5_Rohstofftyp.Holz: return "Holz";
+                case G5_Rohstofftyp.Eisen: return "Eisenerz";
+                case G5_Rohstofftyp.Kupfer: return "Kupfererz";
+                case G5_Rohstofftyp.Kohle: return "Kohle";
+                case G5_Rohstofftyp.Kalkstein: return "Kalkstein";
+                case G5_Rohstofftyp.Quarz: return "Quarz";
+                case G5_Rohstofftyp.Schwefel: return "Schwefel";
+                case G5_Rohstofftyp.Uran: return "Uran";
+                case G5_Rohstofftyp.Wasser: return "Wasser";
+                case G5_Rohstofftyp.Gas: return "Gas";
+                case G5_Rohstofftyp.Oel: return "Öl";
+                default: return "Rohstoff";
+            }
+        }
+
+        private static string ItemKuerzel(G5_Item item)
+        {
+            switch (item)
+            {
+                case G5_Item.Eisenerz: return "Fe";
+                case G5_Item.Kupfererz: return "Cu";
+                case G5_Item.Eisenbarren: return "Fe";
+                case G5_Item.Kupferbarren: return "Cu";
+                case G5_Item.Eisenplatte: return "P";
+                case G5_Item.Eisenstange: return "St";
+                case G5_Item.Kupferdraht: return "Dr";
+                case G5_Item.Schraube: return "Sc";
+                case G5_Item.Rotor: return "Ro";
+                default: return "?";
+            }
         }
 
         private static Brush CreateBrush(byte alpha, byte red, byte green, byte blue)
