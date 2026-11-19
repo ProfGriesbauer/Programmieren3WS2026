@@ -166,7 +166,11 @@ namespace OOPGames
                 double x = npc != null ? npc.VisualX : pet != null ? pet.VisualX : o.X;
                 double y = npc != null ? npc.VisualY : pet != null ? pet.VisualY : o.Y;
                 if (!IsEntityVisible(o, x, y, tileSize, mapX, mapY)) continue;
-                drawables.Add(new KeyValuePair<double, System.Action>(y + o.Height,
+                double sortY = y + o.Height;
+                // Änderung durch Patrick Lupierz – 19.11.2026 – Pavillon wird in Dach/Hinterstützen und Vorderstützen getrennt
+                if (o.SpriteId == "building_pavilion_back") sortY = y + 0.5;
+                else if (o.SpriteId == "building_pavilion_front") sortY = y + 4.5;
+                drawables.Add(new KeyValuePair<double, System.Action>(sortY,
                     () => DrawEntity(r, o.SpriteId, x, y, o.Width, o.Height, tileSize, mapX, mapY)));
             }
 

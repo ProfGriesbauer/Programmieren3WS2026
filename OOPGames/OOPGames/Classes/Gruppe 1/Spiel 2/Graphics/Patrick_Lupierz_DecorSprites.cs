@@ -327,6 +327,11 @@ namespace OOPGames
                     c.FillRect(9, 4, 2, 2, Color.FromRgb(0xA8, 0x88, 0x68)); c.Set(6, 7, Color.FromRgb(0x20, 0x20, 0x20)); c.Set(9, 7, Color.FromRgb(0x20, 0x20, 0x20)); break;
                 case "health":
                     c.FillRect(6, 4, 4, 7, Color.FromRgb(0xE0, 0x30, 0x40)); c.FillRect(4, 6, 8, 3, Color.FromRgb(0xE0, 0x30, 0x40)); break;
+                case "hospital_notice":
+                    c.FillRect(2, 2, 12, 10, Color.FromRgb(0xF8, 0xF4, 0xD8));
+                    c.FillRect(5, 4, 6, 1, Color.FromRgb(0x48, 0x98, 0xA0));
+                    c.FillRect(4, 7, 8, 1, Color.FromRgb(0x48, 0x98, 0xA0));
+                    c.FillRect(6, 9, 4, 1, Color.FromRgb(0x48, 0x98, 0xA0)); break;
                 case "sale":
                     c.FillRect(2, 2, 12, 4, Color.FromRgb(0xE8, 0x40, 0x30)); c.FillEllipse(8, 9, 3, 2, Color.FromRgb(0xE8, 0xC0, 0x30)); break;
                 case "fashion":

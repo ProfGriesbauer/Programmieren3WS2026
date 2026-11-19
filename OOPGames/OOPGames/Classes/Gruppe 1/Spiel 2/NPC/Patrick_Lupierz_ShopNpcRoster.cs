@@ -43,7 +43,7 @@ namespace OOPGames
                 "Rechnerisch nie. Beim Roulette verlieren Sie im Schnitt 2,7 % pro Einsatz. Bei uns gewinnen Sie 2 % pro Tag.",
                 "Ich wiederhole mich ungern: nein.")));
             p.Topics.Add(new G1C_DialogueTopic("Was ist mit dem Geldhai draußen?", G1C_DialogueTopic.Cycle(
-                "250 leihen, 300 zurückzahlen: 20 % Aufschlag. Wir nennen so etwas unseriös.",
+                "Er verleiht bis zu 5000 Chips. Offene Schulden wachsen um 50 % pro Tag.",
                 "Wir haben ihn mehrfach gebeten, nicht vor unserer Tür zu stehen. Er steht trotzdem da.")));
             return new G1C_NpcCharacter("Bankberater Karl", KarlSkin, p, 500, 45, 40);
         }

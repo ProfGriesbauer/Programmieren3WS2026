@@ -7,12 +7,18 @@ namespace OOPGames
         public const int LoanAmount = 250;
         public const int LoanRepayment = 300;
         public const int InterestPercentPerDay = 2;
+            public const int LoanMaxAmount = 5000;
+            public const int LoanInterestPercentPerDay = 50;
         private const int MaxStatementLines = 6;
 
         private readonly System.Collections.Generic.List<string> _statement = new System.Collections.Generic.List<string>();
 
         public int Savings { get; private set; }
         public int LoanOwed { get; private set; }
+        public int LoanInterestLastDay { get; private set; } = 1;
+        public int LoanRespectLastDay { get; private set; } = 1;
+        public int LoanSmsLastDay { get; private set; } = 0;
+        public int LoanSmsCount { get; private set; }
 
         /// <summary>Letzter Spieltag, für den bereits Zinsen gutgeschrieben wurden.</summary>
         public int LastInterestDay { get; private set; } = 1;
@@ -41,11 +47,24 @@ namespace OOPGames
 
         public string Borrow(G1C_MoneyManager money)
         {
+            return Borrow(money, LoanAmount, 1);
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Freie Kreditwahl und bestehendes Schuldsystem
+        public string Borrow(G1C_MoneyManager money, int amount, int currentDay)
+        {
             if (LoanOwed > 0) return "Du hast noch " + LoanOwed + " Chips Schulden.";
             if (money == null) return "Der Kredit kann gerade nicht ausgezahlt werden.";
-            money.Deposit(LoanAmount);
-            LoanOwed = LoanRepayment;
-            return "Du erhältst 250 Chips. Zurückzuzahlen sind insgesamt 300 Chips.";
+            amount = System.Math.Max(0, System.Math.Min(LoanMaxAmount, amount));
+            if (amount <= 0) return "Waehle einen gueltigen Kreditbetrag.";
+            money.Deposit(amount);
+            LoanOwed = amount;
+            LoanInterestLastDay = currentDay;
+            LoanRespectLastDay = currentDay;
+            LoanSmsLastDay = 0;
+            LoanSmsCount = 0;
+            Log("Geldhai-Kredit +" + amount);
+            return "Du erhältst " + amount + " Chips. Offene Schuld: " + LoanOwed + " Chips.";
         }
 
         public string Repay(G1C_MoneyManager money, int amount)
@@ -90,6 +109,45 @@ namespace OOPGames
             Savings = System.Math.Max(0, savings);
             LoanOwed = System.Math.Max(0, loanOwed);
             _statement.Clear();
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – 50 Prozent Zinsen einmal pro Spieltag
+        public int ApplyLoanInterest(int currentDay)
+        {
+            if (LoanOwed <= 0) { LoanInterestLastDay = currentDay; return 0; }
+            if (currentDay <= LoanInterestLastDay) return 0;
+            int before = LoanOwed;
+            for (int day = LoanInterestLastDay + 1; day <= currentDay; day++)
+            {
+                // 50 % Zinsen auf ganze Chips; 1000 -> 1500, 1500 -> 2250.
+                LoanOwed = LoanOwed * 3 / 2;
+            }
+            LoanInterestLastDay = currentDay;
+            Log("Geldhai-Zinsen Tag " + currentDay);
+            return LoanOwed - before;
+        }
+
+        public bool ApplyLoanRespectDay(int currentDay)
+        {
+            if (LoanOwed <= 0 || currentDay <= LoanRespectLastDay) return false;
+            LoanRespectLastDay = currentDay;
+            return true;
+        }
+
+        public bool ApplyLoanSmsDay(int currentDay)
+        {
+            if (LoanOwed <= 0 || currentDay <= LoanSmsLastDay) return false;
+            LoanSmsLastDay = currentDay;
+            LoanSmsCount++;
+            return true;
+        }
+
+        public void RestoreLoanState(int interestDay, int respectDay, int smsDay, int smsCount, int currentDay)
+        {
+            LoanInterestLastDay = interestDay > 0 ? System.Math.Min(interestDay, currentDay) : currentDay;
+            LoanRespectLastDay = respectDay > 0 ? System.Math.Min(respectDay, currentDay) : currentDay;
+            LoanSmsLastDay = smsDay > 0 ? System.Math.Min(smsDay, currentDay) : 0;
+            LoanSmsCount = System.Math.Max(0, smsCount);
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026

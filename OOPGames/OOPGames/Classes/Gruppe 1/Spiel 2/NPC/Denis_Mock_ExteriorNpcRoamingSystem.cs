@@ -26,7 +26,7 @@ namespace OOPGames
             for (int i = 0; i < world.TownNpcs.Count; i++)
             {
                 G1C_Npc npc = world.TownNpcs[i];
-                if (npc.Interaction == G1C_InteractionType.LoanShark) continue;
+                if (npc.Interaction == G1C_InteractionType.LoanShark || npc.Name == "Angler Fabian") continue;
                 int[] pause = pauses[i % pauses.Length];
                 AddPatrol(npc, npc.X - 5, npc.Y - 1, npc.X + 5, npc.Y + 3, pause[0], pause[1]);
             }
