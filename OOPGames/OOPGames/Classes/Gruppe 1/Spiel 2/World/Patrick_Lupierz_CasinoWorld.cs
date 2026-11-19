@@ -87,6 +87,10 @@ namespace OOPGames
             {
                 _objects.Add(new G1C_WorldObject("Spielautomat", "obj_slot_machine", x, 8, 1, 1, true, G1C_InteractionType.Slots, slotLines));
             }
+            // Änderung durch: Denis Mock – Datum: 19.11.2026 – Eduard steht dauerhaft bei den Automaten
+            _objects.Add(new G1C_Npc("Eduard", "guest", 6, 8, G1C_Direction.Left, G1C_InteractionType.Talk,
+                "Ich habe gleich den großen Gewinn. Das hier ist meine letzte Runde.",
+                "Früher oder später muss der Automat doch ausbezahlen."));
             // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Der Greifautomat steht jetzt in der Spielhalle
             // (G1C_BuildingInteriorWorld.BuildArcade). Änderung 16.11.2026: Umzugsschild entfernt (SprintPlanning).
 

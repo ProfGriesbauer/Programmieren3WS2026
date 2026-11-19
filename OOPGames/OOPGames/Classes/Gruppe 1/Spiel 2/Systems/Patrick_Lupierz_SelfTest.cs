@@ -108,6 +108,9 @@ namespace OOPGames
             run("Bank", "Zinsen beim Tageswechsel im laufenden Spiel genau einmal", BankInterestInGame);
             run("Geldhai", "5000-Chips-Kredit, 50 % Zinsen pro Tag, Teil- und Vollrückzahlung", LoanSharkDailyRules);
             run("Angler", "Angler-NPC und vorhandene Fischdaten aus Inventory/Fishing verwenden", AnglerFishData);
+            run("Angler", "Fischliste ist dynamisch und enthält alle Angelarten", AnglerFishScrollData);
+            run("Eduard", "Eduard steht bei den Spielautomaten und besitzt spielsüchtige Dialoge", EduardSlotNpc);
+            run("Geldhai", "Haustür-Begegnung wird nur beim Verlassen ausgelöst", LoanHouseExitEncounter);
 
             // ---- Spielzustände
             run("Zustände", "Inventar und Handy öffnen und schließen", StatesMenus);
@@ -715,6 +718,38 @@ namespace OOPGames
                 G1C_Item item = G1C_ItemCatalog.Get(fish.ItemId);
                 Check(item != null && item.Category == G1C_ItemCategory.Fisch, "Fischdaten fehlen fuer " + fish.Name);
             }
+        }
+
+        private static void AnglerFishScrollData()
+        {
+            int count = G1C_FishingGame.Catches.Count(c => c.IsFish);
+            Check(count > 0, "Fischdaten sind leer");
+            G1C_GameManager game = RunningGame();
+            G1C_NpcCharacter angler = game.Npcs.Find("Denis der Angler");
+            Check(angler != null, "Angler-Profil fuer die Scrollliste fehlt");
+            foreach (G1C_CatchInfo fish in G1C_FishingGame.Catches.Where(c => c.IsFish))
+                Check(G1C_ItemCatalog.Get(fish.ItemId) != null, "Fisch fehlt in der dynamischen Quelle: " + fish.Name);
+        }
+
+        private static void EduardSlotNpc()
+        {
+            G1C_GameManager game = RunningGame();
+            G1C_NpcCharacter eduard = game.Npcs.Find("Eduard");
+            Check(eduard != null, "Eduard-Profil fehlt");
+            Check(eduard.Personality.Topics.Count >= 3, "Eduard hat zu wenige Themen");
+            G1C_Npc worldEduard = game.World.Objects.OfType<G1C_Npc>().FirstOrDefault(n => n.Name == "Eduard");
+            Check(worldEduard != null, "Eduard steht nicht im Casino");
+            if (worldEduard != null)
+                Check(worldEduard.X >= 2 && worldEduard.X <= 6 && worldEduard.Y == 8, "Eduard steht nicht bei den Spielautomaten");
+        }
+
+        private static void LoanHouseExitEncounter()
+        {
+            G1C_GameManager game = RunningGame();
+            game.Finance.Borrow(game.Money, 5000, game.Clock.Day);
+            Check(!game.Finance.LoanBonesBroken, "Knochenbruch geschieht sofort beim Kredit");
+            game.Finance.RestoreLoanState(game.Clock.Day, game.Clock.Day, game.Clock.Day - 1, 5, game.Clock.Day);
+            Check(game.CurrentLocation == G1C_WorldLocation.Home, "Test startet nicht zuhause");
         }
 
         // ------------------------------------------------------------------ Zustände

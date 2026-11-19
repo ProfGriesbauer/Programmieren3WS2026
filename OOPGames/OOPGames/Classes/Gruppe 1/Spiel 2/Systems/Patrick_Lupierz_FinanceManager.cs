@@ -199,6 +199,13 @@ namespace OOPGames
             LoanBonesBroken = false;
         }
 
+        // Änderung durch: Denis Mock – Datum: 19.11.2026 – tatsächliche Folge der Haustür-Begegnung
+        public void MarkBonesBroken()
+        {
+            LoanDoorThreat = false;
+            LoanBonesBroken = true;
+        }
+
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026
         // Aufgabe: Zinsstand aus Spielstand/Neuem Spiel setzen. Alte Spielstände ohne Zinstag (0) erhalten
         //          den aktuellen Tag, damit nicht rückwirkend für alle Tage gezahlt wird.

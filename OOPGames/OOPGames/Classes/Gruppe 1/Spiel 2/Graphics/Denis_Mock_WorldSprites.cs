@@ -54,6 +54,7 @@ namespace OOPGames
                 case "building_pavilion": return Pavilion();
                 case "building_pavilion_back": return PavilionBack();
                 case "building_pavilion_front": return PavilionFront();
+                case "building_pavilion_roof": return PavilionRoof();
                 case "building_warehouse": return TownBuilding(Rgb(0x58, 0x68, 0x68), Rgb(0xB8, 0xA8, 0x88), Rgb(0xD0, 0xB8, 0x68));
                 case "building_post": return TownBuilding(Rgb(0x48, 0x68, 0x88), Rgb(0xE0, 0xD0, 0xA0), Rgb(0xD0, 0xB0, 0x48));
                 case "obj_city_tree": return Tree();
@@ -370,6 +371,23 @@ namespace OOPGames
                 canvas.DrawRectBorder(x, 33, 6, 44, outline);
             }
             canvas.AddOutline(outline);
+            return canvas.ToBitmap();
+        }
+
+        // Änderung durch: Denis Mock – Datum: 19.11.2026 – Dach als eigener Vordergrund-Layer
+        private static BitmapSource PavilionRoof()
+        {
+            G1C_PixelCanvas canvas = new G1C_PixelCanvas(64, 80);
+            Color roof = Rgb(0xB0, 0x48, 0x38), roofLight = Rgb(0xD0, 0x68, 0x50), roofDark = Rgb(0x80, 0x30, 0x28);
+            for (int y = 3; y < 30; y++)
+            {
+                int inset = System.Math.Max(0, (15 - y) * 2);
+                Color row = y < 7 ? roofLight : (y % 5 == 0 ? roofDark : roof);
+                canvas.FillRect(1 + inset, y, 62 - 2 * inset, 1, row);
+            }
+            canvas.FillRect(1, 29, 62, 2, Rgb(0xE8, 0xD8, 0xB8));
+            canvas.FillRect(30, 0, 4, 4, Rgb(0xE8, 0xC0, 0x40));
+            canvas.AddOutline(Rgb(0x38, 0x28, 0x28));
             return canvas.ToBitmap();
         }
 

@@ -217,7 +217,8 @@ namespace OOPGames
         {
             foreach (int[] corner in new[] { new[] { x, y }, new[] { x + 3, y }, new[] { x, y + 3 }, new[] { x + 3, y + 3 } })
                 Map.AddSolidFootprint(corner[0], corner[1], 1, 1);
-            _objects.Add(new G1C_WorldObject("Parkpavillon Dach", "building_pavilion_back", x, y, 4, 4, false, G1C_InteractionType.None));
+            _objects.Add(new G1C_WorldObject("Parkpavillon Hinterstützen", "building_pavilion_back", x, y, 4, 4, false, G1C_InteractionType.None));
+            _objects.Add(new G1C_WorldObject("Parkpavillon Dach", "building_pavilion_roof", x, y, 4, 4, false, G1C_InteractionType.None));
             _objects.Add(new G1C_WorldObject("Parkpavillon Vorderseite", "building_pavilion_front", x, y, 4, 4, false, G1C_InteractionType.None));
         }
 

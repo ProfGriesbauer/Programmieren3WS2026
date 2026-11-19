@@ -205,3 +205,503 @@ Werkzeug: Copilot SDK in VS Code
 Modell: Im Chat nicht angezeigt
 
 Ergebnisvermerk: Die Außenwelt wurde auf 180x180 Kacheln (100-fache Kartenfläche) erweitert; sie enthält einen Fluss, Ufer, Brücken, Straßen, Baumgrenze und eine an den Kartenrändern begrenzte Scrollkamera. Krankenhaus und Supermarkt erhielten möblierte Innenräume mit Tür-Rückwegen. Enten, Fische, Katzen und Vögel werden ohne Kollisionen dargestellt und über Framework-Ticks animiert. Stadtbewohner patrouillieren weiterhin in getrennten Bezirken. Die Framework- und Projektdateien blieben unverändert. `dotnet build OOPGames\OOPGames\OOPGames.csproj --no-restore` war erfolgreich (0 Warnungen, 0 Fehler); `git diff --check` war sauber. Ein visueller Laufzeittest wurde nicht durchgeführt.
+## 19-11-2026
+
+### Prompt 7
+
+Werkzeug: Copilot SDK in VS Code
+Modell: Im Chat nicht angezeigt
+
+`	ext
+# Aufgabe
+Implementiere die folgenden Änderungen in unserem bestehenden Casino-Spiel.
+
+**Wichtig:** Arbeite ausschließlich auf Basis der bestehenden Codebasis und erweitere vorhandene Systeme, sofern diese bereits existieren. Erstelle keine parallelen Systeme für Funktionen, die bereits vorhanden sind.
+
+## 0. Gesamten bisherigen Änderungsverlauf prüfen und dokumentieren
+Bevor du Änderungen implementierst, gehe **alle bisherigen Anforderungen und Änderungen dieses Projekts** durch.
+
+Insbesondere müssen auch die vorherigen Anforderungen berücksichtigt werden, darunter:
+
+- Parkpavillon / Stadtpavillon und Layering der Stützen
+- Krankenhaus und Hinweiszettel
+- Angler-NPC
+- Angel-Spiel und Fischarten
+- Handy
+- Speichern über das Handy
+- E-/Enter-Interaktion
+- Geldhai
+- Kreditsystem
+- 50 % Tageszinsen
+- Schulden
+- Respektverlust
+- SMS-System
+- Audioeinstellungen
+- Lautstärkeregelung
+- Mute-Funktion
+- Vollbilddarstellung der Casino-Spiele
+- alle sonstigen bereits im Projekt umgesetzten Anforderungen
+
+### `Denis_mock_Prompt.md`
+Suche im Projekt nach der Datei:
+
+`Denis_mock_Prompt.md`
+
+Falls sie vorhanden ist:
+
+1. Lies die komplette Datei.
+2. Gehe anschließend **alle bisherigen Anforderungen und Änderungen** durch, die in diesem Projekt bisher an das Spiel gestellt wurden.
+3. Vergleiche diese mit dem aktuellen Inhalt von `Denis_mock_Prompt.md`.
+4. Identifiziere fehlende Anforderungen.
+5. Ergänze alle fehlenden Anforderungen vollständig und strukturiert.
+6. Behalte die bereits vorhandenen Inhalte bei.
+7. Erstelle keine Duplikate.
+8. Ergänze auch die neuen Anforderungen dieses Prompts.
+9. Die Datei soll anschließend als vollständige Dokumentation des bisherigen Änderungsverlaufs dienen.
+Falls `Denis_mock_Prompt.md` an einer anderen Stelle im Repository liegt, finde die vorhandene Datei und bearbeite diese.
+
+**Wichtig:** Nicht nur die Anforderungen 15–20 dokumentieren. Der komplette bisherige Änderungsverlauf soll berücksichtigt werden.
+
+---
+
+# 21. Angler-NPC – vollständige Fischarten als Scroll-Menü
+Der Angler-NPC funktioniert grundsätzlich bereits, aktuell werden bei der Übersicht der Fischarten jedoch nur **4 von insgesamt 20 Fischen gleichzeitig angezeigt**.
+
+Das soll verbessert werden.
+
+## Anforderungen
+Erstelle für die Fischarten eine **scrollbare Liste / ein Scroll-Menü**.
+
+Die Anzeige soll:
+
+- alle vorhandenen Fischarten enthalten,
+- aktuell also alle **20 Fischarten** anzeigen,
+- weiterhin innerhalb des bestehenden Dialog-/NPC-UI-Systems funktionieren,
+- nicht mehr auf die momentan sichtbaren 4 Einträge beschränkt sein.
+Der Spieler soll durch die Liste scrollen können.
+
+Beispielsweise:
+
+```
+Fischarten
+────────────────────
+> Forelle
+  Karpfen
+  Hecht
+  ...
+────────────────────
+↑ / ↓ Scrollen
+```
+Die genaue Darstellung soll sich an das vorhandene UI des Spiels anpassen.
+
+### Daten
+Die Fischarten dürfen **nicht doppelt im Code gepflegt werden**.
+
+Verwende die bereits vorhandene Fischdatenquelle.
+
+Wenn zukünftig beispielsweise 21 statt 20 Fischarten existieren, soll die Liste automatisch auch den zusätzlichen Fisch anzeigen.
+
+Für jeden Fisch sollen weiterhin die bereits vorgesehenen Informationen angezeigt werden, beispielsweise:
+
+- Name
+- Seltenheit
+- Wert
+- Verwendung
+- sonstige vorhandene Eigenschaften
+
+### Wichtig
+Keine harte Begrenzung auf 20 Einträge programmieren.
+
+Die Liste soll dynamisch aus den tatsächlich vorhandenen Fischdaten erzeugt werden.
+
+---
+
+# 22. Geldhai – Konsequenz bei Nichtzahlung
+Erweitere das bestehende Geldhai-System.
+
+Der Geldhai soll den Spieler **nicht sofort angreifen**, wenn Schulden bestehen.
+
+Stattdessen soll folgende Sequenz entstehen:
+
+## Ablauf
+Wenn der Spieler seine Schulden beim Geldhai nicht begleicht und die entsprechenden Bedingungen erfüllt sind:
+
+1. Der Spieler befindet sich zunächst weiterhin normal im Haus.
+2. Der Geldhai wartet vor dem Haus.
+3. Der Spieler verlässt das Haus.
+4. Beim Verlassen des Hauses wird die entsprechende Begegnung ausgelöst.
+5. Der Geldhai steht vor der Tür.
+6. Es kommt zu einer kurzen Szene/Interaktion.
+7. Der Geldhai bricht dem Spieler im Rahmen der Spielwelt die Knochen.
+8. Danach wird der Spieler nicht im Haus weitergespielt, sondern ins Krankenhaus gebracht.
+9. Der Spieler wacht im Krankenhaus auf.
+
+## Inszenierung
+Die Szene soll nicht unnötig grafisch oder detailliert dargestellt werden.
+
+Es reicht beispielsweise:
+
+- Geldhai vor der Tür
+- kurzer Dialog
+- Bildschirm-/Soundeffekt oder kurze Szene
+- Übergang zum Krankenhaus
+- Spieler wacht dort auf
+Beispielhafte Dialogrichtung:
+
+> „Ich hab dich lange genug warten lassen.“
+Danach kann die Szene ausgeblendet werden.
+
+### Krankenhaus
+Nach der Begegnung soll der Spieler:
+
+- im Krankenhaus erscheinen,
+- dort wieder die Kontrolle erhalten,
+- entsprechend der bestehenden Spielmechanik weiter spielen können.
+Falls das Spiel bereits eine Krankenhaus-/Teleport-/Respawn-Mechanik besitzt, soll diese wiederverwendet werden.
+
+### Wichtig
+Die Begegnung darf **nur beim tatsächlichen Verlassen des Hauses** ausgelöst werden.
+
+Nicht:
+
+- beim Betreten des Hauses,
+- beim Öffnen des Handys,
+- zufällig irgendwo auf der Karte,
+- sofort beim Überschreiten eines Tageswechsels.
+Der Geldhai soll also gezielt vor dem Haus auf den Spieler warten.
+
+---
+
+# 23. Neuer NPC „Eduard“
+Füge einen neuen NPC namens:
+
+**Eduard**
+
+hinzu.
+
+## Position
+Eduard steht im Casino **in der Nähe der Slotmaschinen**.
+
+Er soll dort dauerhaft als NPC anzutreffen sein.
+
+## Charakter
+Eduard ist:
+
+- stark spielsüchtig,
+- ein typischer Dummschwätzer,
+- unbeliebt,
+- unzuverlässig,
+- ständig am Reden,
+- überzeugt davon, dass er beim nächsten Spiel garantiert gewinnt,
+- offensichtlich nicht besonders kompetent,
+- häufig zu spät.
+Er soll dadurch einen deutlich anderen Charakter als die anderen NPCs bekommen.
+
+## Dialogstil
+Eduard soll nicht wie ein normaler freundlicher Tutorial-NPC sprechen.
+
+Seine Dialoge sollen bewusst etwas nervig, großspurig und unsinnig wirken.
+
+Beispielsweise in dieser Richtung:
+
+> „Also pass auf, ich hab da ein System. Das funktioniert immer. Na ja, fast immer. Außer gestern. Und vorgestern. Aber heute ganz sicher.“
+Oder:
+
+> „Ich wäre ja pünktlich gewesen, aber die Slotmaschine hier hat mich aufgehalten.“
+Oder:
+
+> „Die anderen sagen, ich wäre unbeliebt. Das stimmt überhaupt nicht. Die mögen mich nur nicht.“
+Die konkreten Dialoge sollen zum bestehenden Schreibstil des Spiels passen.
+
+### Spielsucht
+Eduard soll deutlich machen, dass er ständig an den Slotmaschinen spielt und kaum davon loskommt.
+
+Seine Dialoge können sich deshalb regelmäßig auf folgende Themen beziehen:
+
+- nächste Runde
+- Gewinnchancen
+- verlorene Chips
+- angebliche Strategien
+- „Glück“
+- seine angeblich sichere Gewinnmethode
+- verspätetes Erscheinen
+- Ausreden
+Er soll dabei **nicht als kompetenter Ratgeber** dargestellt werden.
+
+---
+
+# 24. Eduard – Unzuverlässigkeit
+Eduard soll zusätzlich als **unzuverlässigster NPC der Spielwelt** charakterisiert werden.
+
+Falls das bestehende NPC-System Zeitpläne, Termine, Tagesabläufe oder NPC-Zeitpunkte unterstützt, soll Eduard dieses System entsprechend nutzen.
+
+Beispiele:
+
+- Er erscheint zu spät.
+- Er hält sich nicht zuverlässig an seine geplanten Zeiten.
+- Er kann bei bestimmten Ereignissen verspätet auftauchen.
+- Andere NPCs können sich über seine Unzuverlässigkeit äußern.
+Falls es noch kein geeignetes NPC-Zeitplansystem gibt, soll nicht unnötig ein komplexes neues System gebaut werden. Die Eigenschaft kann zunächst über seinen Dialog und seine vorhandenen NPC-Mechaniken umgesetzt werden.
+
+---
+
+# 25. Stadt-/Parkpavillon – Dach und NPC-Layering korrigieren
+Die bisherige Änderung am Pavillon hat teilweise funktioniert:
+
+Die beiden hinteren Beine/Stützen befinden sich inzwischen korrekt **hinter dem NPC**.
+
+Dabei wurde jedoch ein neues Problem erzeugt:
+
+Das **Dach befindet sich ebenfalls hinter dem NPC**.
+
+Wenn der Spieler/NPC durch den Pavillon läuft, wird dadurch die NPC-Grafik vor dem Dach dargestellt.
+
+Das soll korrigiert werden.
+
+## Gewünschte Layer-Reihenfolge
+Die Darstellung soll sinngemäß so funktionieren:
+
+```
+Hintergrund
+↓
+hintere Stützen
+↓
+Spieler/NPC
+↓
+Dach / vordere Pavillon-Elemente
+```
+Das Dach soll also weiterhin **vor dem NPC** liegen, während die beiden hinteren Stützen **hinter dem NPC** liegen.
+
+### Wichtig
+Nicht einfach den gesamten Pavillon auf einen einzigen Layer verschieben.
+
+Falls notwendig:
+
+- Dach,
+- hintere Stützen,
+- vordere Stützen,
+- sonstige Pavillon-Bestandteile
+getrennt sortieren.
+
+Verwende das bereits vorhandene Rendering-/Sorting-System des Spiels.
+
+Die Korrektur darf keine anderen Gebäude oder Objekte der Welt beeinflussen.
+
+---
+
+# 26. Vollbildmodus – Casino-Spiele korrekt zentrieren
+Bei den Casino-Spielen gibt es im Vollbildmodus aktuell ein Darstellungsproblem.
+
+Das gesamte Spiel bzw. Spielfeld ist **etwas nach links verschoben**.
+
+Korrigiere die Positionierung so, dass das jeweilige Casino-Spiel im Vollbildmodus **exakt horizontal und vertikal zentriert** dargestellt wird.
+
+## Wichtig
+Nicht nur ein einzelnes Spiel korrigieren.
+
+Kontrolliere **alle vorhandenen Casino-Spiele**.
+
+Für jedes Spiel soll geprüft werden:
+
+- horizontale Zentrierung
+- vertikale Zentrierung
+- Spielfeldgröße
+- UI-Position
+- Kartenposition
+- Buttons
+- Texte
+- Anzeigen
+- Spielbereich
+- Hintergrund
+- sonstige HUD-Elemente
+
+---
+
+# 27. Kartenposition im Vollbild korrigieren
+Bei den Kartenspielen befinden sich die Karten im Vollbildmodus aktuell **zu weit unten**.
+
+Passe die Position der Karten an das tatsächliche Fenster bzw. Spielfeld an.
+
+Die Karten sollen:
+
+- im Vollbild korrekt vertikal positioniert sein,
+- nicht unnötig weit unten liegen,
+- bei unterschiedlichen Auflösungen korrekt positioniert werden,
+- weiterhin im Fenstermodus funktionieren.
+Keine feste Pixelposition verwenden, wenn das bestehende UI-System eine relative Positionierung ermöglicht.
+
+Die Position soll sich an der tatsächlichen verfügbaren Fenster-/Spielfläche orientieren.
+
+---
+
+# 28. Alle Casino-Spiele im Vollbild systematisch überprüfen
+Führe nach der Korrektur einen vollständigen Check aller Casino-Spiele durch.
+
+Nicht nur die aktuell bekannten Fehler beheben.
+
+Für jedes Spiel prüfen:
+
+### Layout
+
+- Ist das Spielfeld horizontal zentriert?
+- Ist es vertikal korrekt positioniert?
+- Wird der verfügbare Platz sinnvoll genutzt?
+- Gibt es unerwartete Abstände?
+
+### UI
+
+- Sind Buttons korrekt positioniert?
+- Sind Texte sichtbar?
+- Sind Anzeigen nicht abgeschnitten?
+- Sind Elemente nicht außerhalb des Bildschirms?
+
+### Spielobjekte
+
+- Karten
+- Chips
+- Spielfiguren
+- Roulette-Elemente
+- Slotmaschinen
+- sonstige spielabhängige Elemente
+Alle müssen im Vollbild korrekt positioniert werden.
+
+### Unterschiedliche Auflösungen
+Das Layout soll nicht ausschließlich für eine einzelne Bildschirmauflösung funktionieren.
+
+Vermeide nach Möglichkeit harte absolute Pixelwerte für das gesamte Spielfeld.
+
+Nutze vorhandene:
+
+- Anchors
+- Container
+- Canvas-Systeme
+- Relative Positionierung
+- Skalierung
+- bestehende UI-Layout-Systeme
+
+---
+
+# 29. Regressionstest der bisherigen Änderungen
+Nach der Implementierung müssen die bisherigen Systeme erneut überprüft werden.
+
+Insbesondere:
+
+### Angler
+
+- Angler existiert weiterhin.
+- Dialog funktioniert.
+- Alle Fischarten werden angezeigt.
+- Fischliste ist scrollbar.
+- Liste wird dynamisch aus den Fischdaten erzeugt.
+
+### Geldhai
+
+- Kredite funktionieren.
+- höhere Kreditsummen funktionieren.
+- 50 % Tageszinsen funktionieren.
+- Zinsen werden pro Tag nur einmal berechnet.
+- Rückzahlung funktioniert.
+- Respektverlust funktioniert.
+- SMS funktionieren.
+- Geldhai wartet bei entsprechender Konsequenz vor dem Haus.
+- Begegnung wird erst beim Verlassen des Hauses ausgelöst.
+- Spieler landet anschließend im Krankenhaus.
+
+### Handy
+
+- Speichern funktioniert.
+- E und Enter verhalten sich weiterhin wie vorgesehen.
+- Spiel wird nicht mehr versehentlich über Enter geschlossen.
+- Audioeinstellungen funktionieren.
+- Mute funktioniert.
+- Einstellungen werden gespeichert.
+
+### Pavillon
+
+- Hintere Stützen liegen hinter dem Spieler.
+- Dach liegt vor dem Spieler/NPC.
+- Keine falsche Layer-Reihenfolge.
+- Keine Nebenwirkungen auf andere Objekte.
+
+### Eduard
+
+- NPC existiert.
+- Position bei den Slotmaschinen stimmt.
+- Dialog funktioniert.
+- Charakter entspricht der beschriebenen Persönlichkeit.
+- Eduard wirkt unzuverlässig.
+- Spielsucht wird durch seine Dialoge/Verhalten erkennbar.
+
+### Vollbild
+
+- Alle Casino-Spiele geprüft.
+- Alle Spiele horizontal zentriert.
+- Alle Spiele vertikal korrekt positioniert.
+- Karten korrekt positioniert.
+- UI vollständig sichtbar.
+- Unterschiedliche Fenstergrößen funktionieren.
+- Fenstermodus funktioniert weiterhin.
+
+---
+
+# 30. Technische Vorgehensweise
+Arbeite in dieser Reihenfolge:
+
+1. Bestehende Projektstruktur analysieren.
+2. `Denis_mock_Prompt.md` suchen und vollständig lesen.
+3. Alle bisherigen Anforderungen aus der Datei und aus dem bisherigen Projektverlauf erfassen.
+4. Fehlende Anforderungen in `Denis_mock_Prompt.md` ergänzen.
+5. Bestehende NPC-, Dialog-, Fisch-, Handy-, Save-, Audio-, Geldhai- und UI-Systeme identifizieren.
+6. Angler-Scrollmenü implementieren.
+7. Geldhai-Begegnung implementieren.
+8. Eduard implementieren.
+9. Pavillon-Layering korrigieren.
+10. Vollbildsystem aller Casino-Spiele analysieren.
+11. Zentrierung und Kartenposition korrigieren.
+12. Alle Casino-Spiele einzeln testen.
+13. Regressionstest der bisherigen Funktionen durchführen.
+14. `Denis_mock_Prompt.md` abschließend erneut mit dem tatsächlichen Implementierungsstand abgleichen.
+15. Fehlende Änderungen in der Datei ergänzen.
+
+---
+
+# 31. Anforderungen an die Codequalität
+
+- Bestehende Architektur verwenden.
+- Keine unnötigen parallelen Systeme erstellen.
+- Keine funktionierenden Systeme ohne Grund neu schreiben.
+- Bestehende Datenquellen wiederverwenden.
+- Neue Funktionen sauber in bestehende Klassen/Strukturen integrieren.
+- Keine hart codierten Fischlisten.
+- Keine hart codierten Vollbildpositionen, wenn relative UI-Positionierung möglich ist.
+- Alte Spielstände müssen weiterhin geladen werden können.
+- Keine Regressionen bei bestehenden Casino-Spielen.
+- Keine Regressionen bei Handy, NPCs, Dialogen oder Save-System.
+
+---
+
+# 32. Abschlussbericht
+Nach Abschluss der Implementierung gib eine kurze Übersicht aus:
+
+### Geänderte Dateien
+Liste aller geänderten Dateien.
+
+### Neue Dateien
+Liste aller neu erstellten Dateien.
+
+### Implementierte Funktionen
+Kurze Beschreibung der umgesetzten Änderungen.
+
+### `Denis_mock_Prompt.md`
+Bestätige, dass die Datei geprüft und um fehlende bisherige Anforderungen ergänzt wurde.
+
+### Tests
+Liste der durchgeführten Tests.
+
+### Offene Probleme
+Falls etwas nicht vollständig umgesetzt werden konnte, genau angeben, was fehlt und warum.
+
+**Wichtig: Nicht nur beschreiben, wie die Änderungen umgesetzt werden könnten. Die Änderungen sollen tatsächlich in der bestehenden Codebasis implementiert werden.**
+```
+
+Ergebnisvermerk: Promptpaket 21 bis 32 wurde vollständig dokumentiert und geprüft. Umgesetzt wurden die dynamische Fischliste, Eduard bei den Spielautomaten, die Haustür-Begegnung beim tatsächlichen Verlassen des Hauses mit Krankenhaus-Respawn sowie separate Pavillon-Dach-/Stützen-Layer und eine mittig zentrierte virtuelle Spielfläche. Das Projekt baut mit 0 Warnungen und 0 Fehlern. Der externe Selbsttest meldete 84 von 85 ausführbaren Prüfungen bestanden; der externe Datei-Existenztest für G1CASINO_SOUNDS war nicht ausführbar. Die tatsächliche UI- und Auflösungsprüfung im Hauptfenster bleibt offen.

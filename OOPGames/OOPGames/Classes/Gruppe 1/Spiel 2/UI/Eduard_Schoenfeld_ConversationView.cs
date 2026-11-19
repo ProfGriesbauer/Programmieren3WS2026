@@ -58,6 +58,27 @@ namespace OOPGames
                        G1C_UiColors.PanelInner, 1);
             r.WrappedText(c.Line, OptionX + 2, panelY + 8, 9, G1C_UiColors.Text, optionWidth - 8);
 
+            if (c.FishScrollMode)
+            {
+                double listY = optionY;
+                int visible = 4;
+                int first = System.Math.Max(0, System.Math.Min(c.FishScrollIndex - visible / 2,
+                    c.FishScroll.Count - visible));
+                for (int i = first; i < c.FishScroll.Count && i < first + visible; i++)
+                {
+                    G1C_CatchInfo fish = c.FishScroll[i];
+                    G1C_Item item = G1C_ItemCatalog.Get(fish.ItemId);
+                    if (item == null) continue;
+                    double y = listY + (i - first) * OptionHeight;
+                    if (i == c.FishScrollIndex)
+                        r.DrawRect(OptionX - 2, y, optionWidth, OptionHeight - 1, SelectedRow, G1C_UiColors.PanelInner, 1);
+                    r.Text("> " + item.Name + "  " + item.SellValue + " Chips", OptionX + 2, y + 2, 8.5,
+                        G1C_UiColors.Text, optionWidth - 6);
+                }
+                r.Text("[W/S] scrollen  [Q] zurück", OptionX, panelY + 122, 8, G1C_UiColors.Disabled);
+                return;
+            }
+
             for (int i = 0; i < c.Options.Count; i++)
             {
                 double y = optionY + i * OptionHeight;

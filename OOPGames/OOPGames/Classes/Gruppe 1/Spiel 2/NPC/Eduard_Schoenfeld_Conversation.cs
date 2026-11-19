@@ -74,6 +74,9 @@ namespace OOPGames
         public int Selected { get; private set; }
         public IReadOnlyList<G1C_ConversationOption> Options { get { return _options; } }
         public IReadOnlyList<G1C_Notice> Notices { get { return _notices; } }
+        private readonly System.Collections.Generic.List<G1C_CatchInfo> _fishScroll = new System.Collections.Generic.List<G1C_CatchInfo>();
+        private int _fishScrollIndex;
+        private bool _fishScrollMode;
 
         private int Tick { get { return _system.Tick; } }
         private G1C_NpcMemory Memory { get { return Npc.Memory; } }
@@ -125,6 +128,27 @@ namespace OOPGames
         public void HandleKey(Key key)
         {
             if (!IsOpen) return;
+
+            if (_fishScrollMode)
+            {
+                if (key == Key.W || key == Key.Up)
+                {
+                    MoveFishSelection(-1);
+                    return;
+                }
+                if (key == Key.S || key == Key.Down)
+                {
+                    MoveFishSelection(1);
+                    return;
+                }
+                if (G1C_InputManager.IsBack(key))
+                {
+                    _fishScrollMode = false;
+                    Say("Zurück zur Frageauswahl.", Npc.MoodExpression);
+                    ShowTopics(0);
+                    return;
+                }
+            }
 
             int number = G1C_InputManager.ToNumber(key);
             if (number >= 1 && number <= _options.Count) { Choose(number - 1); return; }
@@ -366,7 +390,41 @@ namespace OOPGames
             };
             Say(topic.Ask(context), topic.Expression);
             if (firstTime) GrantSocialTrust(1); // neue Themen festigen die Beziehung ein wenig
+            if (Npc.Name == "Denis der Angler" && topic.Question.Contains("Fische"))
+            {
+                OpenFishScroll();
+                return;
+            }
             ShowTopics(page);
+        }
+
+        // Änderung durch: Denis Mock – Datum: 19.11.2026 – dynamisches Scroll-Menü aus G1C_FishingGame.Catches
+        public bool FishScrollMode { get { return _fishScrollMode; } }
+        public int FishScrollIndex { get { return _fishScrollIndex; } }
+        public IReadOnlyList<G1C_CatchInfo> FishScroll { get { return _fishScroll; } }
+
+        private void OpenFishScroll()
+        {
+            _fishScroll.Clear();
+            foreach (G1C_CatchInfo fish in G1C_FishingGame.Catches)
+                if (fish != null && fish.IsFish) _fishScroll.Add(fish);
+            _fishScrollIndex = 0;
+            _fishScrollMode = _fishScroll.Count > 0;
+            if (_fishScrollMode)
+                Say("Fischarten – mit W/S scrollen.", G1C_NpcExpression.Thoughtful);
+        }
+
+        private void MoveFishSelection(int delta)
+        {
+            if (_fishScroll.Count == 0) return;
+            _fishScrollIndex = (_fishScrollIndex + delta + _fishScroll.Count) % _fishScroll.Count;
+            G1C_CatchInfo fish = _fishScroll[_fishScrollIndex];
+            G1C_Item item = G1C_ItemCatalog.Get(fish.ItemId);
+            if (item == null) return;
+            string rarity = fish.Weight <= 2 ? "sehr selten" : fish.Weight <= 4 ? "selten"
+                : fish.Weight <= 7 ? "ungewoehnlich" : "haeufig";
+            Say(item.Name + " | " + rarity + " | " + item.SellValue + " Chips | Verwendung: Verkauf in jedem Laden",
+                G1C_NpcExpression.Thoughtful);
         }
 
         private string GameOptionText()

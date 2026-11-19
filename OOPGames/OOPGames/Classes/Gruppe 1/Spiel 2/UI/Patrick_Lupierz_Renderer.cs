@@ -83,13 +83,17 @@ namespace OOPGames
             }
 
             double scale = Math.Min(cw / BaseScreenWidth, ch / BaseScreenHeight);
-            ScreenWidth = cw / scale;
-            ScreenHeight = ch / scale;
+            // Änderung durch: Denis Mock – Datum: 19.11.2026 – virtuelle Spielfläche bleibt 480x320;
+            // das reale Canvas wird exakt mittig um diesen festen Viewport zentriert.
+            ScreenWidth = BaseScreenWidth;
+            ScreenHeight = BaseScreenHeight;
             Viewport = new G1C_Viewport
             {
                 Scale = scale,
                 VirtualWidth = ScreenWidth,
-                VirtualHeight = ScreenHeight
+                VirtualHeight = ScreenHeight,
+                OffsetX = (cw - BaseScreenWidth * scale) / 2,
+                OffsetY = (ch - BaseScreenHeight * scale) / 2
             };
 
             canvas.Children.Clear();

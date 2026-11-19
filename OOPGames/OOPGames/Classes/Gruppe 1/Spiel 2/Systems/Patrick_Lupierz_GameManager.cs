@@ -327,6 +327,12 @@ namespace OOPGames
 
             if (_sceneTransitions.TryTransition(Player))
             {
+                G1C_WorldLocation leavingFrom = CurrentLocation;
+                if (leavingFrom == G1C_WorldLocation.Home && Finance.LoanBonesBroken)
+                {
+                    TriggerHouseExitDebtEncounter();
+                    return;
+                }
                 _movement.ClearQueue();
                 _movement = CreateMovement();
                 Npcs.Bubbles.Clear();
@@ -1299,6 +1305,34 @@ namespace OOPGames
 
         private int MapDoorX() { return Exterior.Map.DoorX(G1C_WorldLocation.Home); }
         private int MapDoorY() { return Exterior.Map.DoorY(G1C_WorldLocation.Home) + 1; }
+
+        // Änderung durch: Denis Mock – Datum: 19.11.2026 – Begegnung nur beim tatsächlichen Verlassen des Hauses
+        private void TriggerHouseExitDebtEncounter()
+        {
+            G1C_Npc shark = Exterior.TownNpcs.FirstOrDefault(n => n.Interaction == G1C_InteractionType.LoanShark);
+            if (shark != null)
+            {
+                shark.Teleport(MapDoorX(), MapDoorY(), G1C_Direction.Down);
+                Npcs.Bubbles.ShowReaction(shark, "Ich hab dich lange genug warten lassen.", TickCount);
+            }
+            OpenDialogue("Geldhai Viktor", new[]
+            {
+                "Ich hab dich lange genug warten lassen.",
+                "Du hast deine Schulden nicht bezahlt. Keine weiteren Ausreden."
+            }, () =>
+            {
+                Finance.MarkBonesBroken();
+                Player.Humping = true;
+                Player.StepTicks = Math.Max(Player.StepTicks, 9);
+                Bikes.SetBlockedByShark(true);
+                _sceneTransitions.Restore(G1C_WorldLocation.Hospital);
+                Player.Teleport(Hospital.PlayerStartX, Hospital.PlayerStartY, G1C_Direction.Down);
+                _movement.ClearQueue();
+                _movement = CreateMovement();
+                NotifySystemMessage("Du wachst im Krankenhaus auf. Schwester Emma kann dich behandeln.");
+                OpenDialogue("Krankenhaus", new[] { "Du wachst nach der Begegnung mit Viktor auf.\nSchwester Emma kümmert sich um dich." }, null);
+            });
+        }
 
         private void ApplyLoanRepaidConsequences()
         {

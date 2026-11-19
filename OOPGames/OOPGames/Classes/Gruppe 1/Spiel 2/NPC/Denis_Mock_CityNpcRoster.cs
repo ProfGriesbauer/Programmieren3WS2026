@@ -110,17 +110,15 @@ namespace OOPGames
             p.Topics.Add(new G1C_DialogueTopic("Welche Fische gibt es?", context =>
             {
                 System.Text.StringBuilder text = new System.Text.StringBuilder();
-                int shown = 0;
                 foreach (G1C_CatchInfo catchInfo in G1C_FishingGame.Catches)
                 {
                     if (!catchInfo.IsFish) continue;
                     G1C_Item item = G1C_ItemCatalog.Get(catchInfo.ItemId);
                     if (item == null) continue;
                     string rarity = catchInfo.Weight <= 2 ? "sehr selten" : catchInfo.Weight <= 4 ? "selten" : catchInfo.Weight <= 7 ? "ungewoehnlich" : "haeufig";
-                    text.Append(item.Name).Append(": ").Append(rarity).Append(", ").Append(item.SellValue).Append(" Chips\n");
-                    if (++shown >= 5) break;
+                        text.Append(item.Name).Append(": ").Append(rarity).Append(", ").Append(item.SellValue).Append(" Chips\n");
                 }
-                text.Append("Weitere Arten erscheinen beim Angeln.");
+                    text.Append("Alle angezeigten Arten stammen aus den vorhandenen Angeldaten.");
                 return text.ToString();
             }, G1C_NpcExpression.Thoughtful));
             p.Topics.Add(new G1C_DialogueTopic("Wofuer sind die Fische?", context =>

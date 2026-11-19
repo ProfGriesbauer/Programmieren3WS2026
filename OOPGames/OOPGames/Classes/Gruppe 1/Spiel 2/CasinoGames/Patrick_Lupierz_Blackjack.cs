@@ -396,7 +396,9 @@ namespace OOPGames
                     r.Text((i == _activeHand && _phase == Phase.PlayerTurn ? "► " : "") +
                            (i + 1) + ": " + hand.Value + " / " + _playerBets[i] + " " + _playerResults[i],
                            260, y, 8, Colors.White);
-                    G1C_CardView.DrawHand(r, hand.Cards, 386, y - 2, 16);
+                    double cardAreaWidth = G1C_Renderer.ScreenWidth - 260;
+                    double cardX = 260 + System.Math.Max(0, (cardAreaWidth - System.Math.Max(1, hand.Cards.Count) * 16) / 2);
+                    G1C_CardView.DrawHand(r, hand.Cards, cardX, y - 2, 16);
                 }
             }
             else

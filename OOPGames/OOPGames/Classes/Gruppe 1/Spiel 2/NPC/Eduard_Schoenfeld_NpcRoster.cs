@@ -16,7 +16,49 @@ namespace OOPGames
         // Entwickler: Eduard Schoenfeld
         public static List<G1C_NpcCharacter> CreateCasinoNpcs()
         {
-            return new List<G1C_NpcCharacter> { Rosa(), Ben(), Max(), Toni(), Lena() };
+            return new List<G1C_NpcCharacter> { Rosa(), Ben(), Max(), Toni(), Lena(), Eduard() };
+        }
+
+        // Änderung durch: Denis Mock – Datum: 19.11.2026 – unzuverlässiger, spielsüchtiger Automatenspieler
+        private static G1C_NpcCharacter Eduard()
+        {
+            G1C_NpcPersonality p = new G1C_NpcPersonality
+            {
+                Role = "Spielsüchtiger Stammgast",
+                Traits = "großspurig, verspätet, unzuverlässig, nervig",
+                Generosity = 0.1,
+                Pride = 0.9,
+                RiskAppetite = 1.0,
+                BaseMood = G1C_NpcMood.Nervous,
+                FirstMeeting = "Ich bin Eduard. Ich war pünktlich. Die Slotmaschine hat behauptet, vorher sei meine Runde.",
+                GeneralInfo = "Eduard steht an den Spielautomaten, hält sich aber nie zuverlässig an Termine.",
+                PersonalStory = "Ich habe fast immer schon gewonnen. Gestern war eine Ausnahme. Und vorgestern.",
+                GeneralMonologues = new[]
+                {
+                    "Gleich gewinnt garantiert. Außer das Ding spinnt.",
+                    "Ich wäre ja pünktlich gewesen, aber die Walzen waren wichtiger.",
+                    "Ich habe ein System. Das funktioniert immer. Fast immer.",
+                    "Die anderen sagen, ich sei unbeliebt. Das stimmt nicht. Die mögen mich nur nicht."
+                }
+            };
+            p.MoodMonologues[G1C_NpcMood.Happy] = new[] { "Heute zahlt der Automat bestimmt alles zurück!" };
+            p.MoodMonologues[G1C_NpcMood.Nervous] = new[] { "Nur noch eine Runde. Dann wirklich Schluss." };
+            p.MoodMonologues[G1C_NpcMood.Angry] = new[] { "Das war kein Verlust. Das war technisches Pech!" };
+            p.Topics.Add(new G1C_DialogueTopic("Wie läuft dein Gewinnsystem?", G1C_DialogueTopic.Cycle(
+                "Ich setze immer denselben Betrag. Das ist Wissenschaft.",
+                "Gestern hatte ich fast einen Jackpot. Der Automat hat sich nur vertan.",
+                "Heute ganz sicher. Außer jemand hat die Walzen blockiert."),
+                G1C_NpcExpression.Thoughtful));
+            p.Topics.Add(new G1C_DialogueTopic("Warum bist du so spät?", G1C_DialogueTopic.Cycle(
+                "Ich habe den Termin nicht vergessen. Ich habe ihn verschoben.",
+                "Die Slotmaschine wollte noch eine Runde. Ich konnte nicht einfach gehen.",
+                "Pünktlichkeit ist für Leute, die keine angeblich garantierten Gewinnchancen haben."),
+                G1C_NpcExpression.Surprised));
+            p.Topics.Add(new G1C_DialogueTopic("Wie viele Chips hast du verloren?", G1C_DialogueTopic.Cycle(
+                "Das zählt nicht. Ich habe investiert.",
+                "Viele. Sehr viele. Aber der nächste Gewinn gleicht das bestimmt aus."),
+                G1C_NpcExpression.Neutral));
+            return new G1C_NpcCharacter("Eduard", "guest", p, 220, 25, 10);
         }
 
         // Croupier: professionell, zurückhaltend, regelorientiert
