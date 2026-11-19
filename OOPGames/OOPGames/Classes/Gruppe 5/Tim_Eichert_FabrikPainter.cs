@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,9 +16,14 @@ namespace OOPGames
         private const double HudHoehe = HudZeilenHoehe * 2;
         private const double VollbildSeitenverhaeltnis = 1.3;
 
-        private static readonly Brush HoverPanelBrush = CreateBrush(245, 20, 30, 31);
-        private static readonly Brush HoverAccentBrush = CreateBrush(255, 142, 230, 120);
-
+        private static readonly Brush AusgangsAnschlussBrush =
+            new SolidColorBrush(Color.FromRgb(240, 70, 65));
+        private static readonly Brush EingangsAnschlussBrush =
+            new SolidColorBrush(Color.FromRgb(70, 165, 255));
+        private static readonly Brush FoerderbandRandBrush =
+            new SolidColorBrush(Color.FromRgb(25, 32, 29));
+        private static readonly Brush FoerderbandKernBrush =
+            new SolidColorBrush(Color.FromRgb(68, 105, 78));
         private readonly G5_WieseHintergrund _wieseHintergrund = new G5_WieseHintergrund();
         private IG5_WeltSpielfeld _hintergrundWelt;
         private Canvas _hintergrundEbene;
@@ -116,10 +122,15 @@ namespace OOPGames
                 ZeichneGebaeude(_dynamischeEbene, currentField, gebaeude, animationTick);
             }
 
+            ZeichneFoerderbandRouten(_dynamischeEbene, currentField, fabrikInfo);
+            ZeichneAnschluesse(_dynamischeEbene, currentField, fabrikInfo);
             ZeichneHud(_dynamischeEbene, canvas.ActualWidth, fabrikInfo);
-            if (_hatMausposition)
+
+            IG5_GebaeudeInfo ausgewaehltesGebaeude =
+                fabrikInfo.Gebaeude.FirstOrDefault(building => building.IstAusgewaehlt);
+            if (ausgewaehltesGebaeude != null)
             {
-                AktualisiereGebaeudeHover(_letzteMausposition);
+                ZeichneGebaeudeMenue(_dynamischeEbene, ausgewaehltesGebaeude);
             }
         }
 
@@ -553,45 +564,135 @@ namespace OOPGames
             canvas.Children.Add(levelText);
         }
 
-        private static void ZeichneTransportgut(
+        private static void ZeichneAnschluesse(
             Canvas canvas,
-            Point position,
-            double width,
-            double height,
-            long animationTick,
-            bool isVertical,
-            bool isReversed)
+            IG5_WeltSpielfeld welt,
+            IG5_FabrikSpielInfo info)
         {
-            double itemSize = Math.Max(3, Math.Min(8, Math.Min(width, height) * 0.28));
-            double fraction = (animationTick % 8) / 7.0;
-            if (isReversed)
+            if (!info.FoerderbaenderAktiv)
             {
-                fraction = 1 - fraction;
+                return;
             }
 
-            Rectangle item = new Rectangle
+            foreach (IG5_GebaeudeInfo gebaeude in info.Gebaeude)
             {
-                Width = itemSize,
-                Height = itemSize * 0.7,
-                Fill = new SolidColorBrush(Color.FromRgb(255, 205, 76)),
-                Stroke = Brushes.White,
-                StrokeThickness = 0.6,
-                RadiusX = 1.5,
-                RadiusY = 1.5,
-                IsHitTestVisible = false
-            };
-            double itemX = isVertical
-                ? position.X + width * 0.43
-                : position.X + 2 + fraction * Math.Max(0, width - itemSize - 4);
-            double itemY = isVertical
-                ? position.Y + 2 + fraction * Math.Max(0, height - itemSize - 4)
-                : position.Y + height * 0.43;
-            Canvas.SetLeft(item, itemX);
-            Canvas.SetTop(item, itemY);
-            canvas.Children.Add(item);
+                if (gebaeude.HatAusgang)
+                {
+                    ZeichneAnschluss(
+                        canvas,
+                        welt,
+                        gebaeude.AusgangsPosition,
+                        AusgangsAnschlussBrush,
+                        gebaeude.AusgangAusgewaehlt,
+                        istAusgang: true);
+                }
+
+                if (gebaeude.HatEingang)
+                {
+                    ZeichneAnschluss(
+                        canvas,
+                        welt,
+                        gebaeude.EingangsPosition,
+                        EingangsAnschlussBrush,
+                        ausgewaehlt: false,
+                        istAusgang: false);
+                }
+            }
         }
 
-        private static string GebaeudeName(G5_FabrikGebaeudeTyp typ)
+        private static void ZeichneFoerderbandRouten(
+            Canvas canvas,
+            IG5_WeltSpielfeld welt,
+            IG5_FabrikSpielInfo info)
+        {
+            foreach (IReadOnlyList<G5_GridPosition> route in info.FoerderbandRouten)
+            {
+                for (int i = 1; i < route.Count; i++)
+                {
+                    if (!TryGetKachelMitte(welt, route[i - 1], out Point start) ||
+                        !TryGetKachelMitte(welt, route[i], out Point ende) ||
+                        !TryGetKachelGroesse(welt, route[i - 1].X, route[i - 1].Y,
+                            out double breite, out double hoehe))
+                    {
+                        continue;
+                    }
+
+                    double linienBreite = Math.Max(4, Math.Min(12, Math.Min(breite, hoehe) * 0.42));
+                    ZeichneRoutenLinie(canvas, start, ende, FoerderbandRandBrush, linienBreite);
+                    ZeichneRoutenLinie(canvas, start, ende, FoerderbandKernBrush, linienBreite * 0.48);
+                }
+            }
+        }
+
+        private static bool TryGetKachelMitte(
+            IG5_WeltSpielfeld welt,
+            G5_GridPosition position,
+            out Point mitte)
+        {
+            mitte = default;
+            if (!welt.TryRasterZuBildschirm(position.X, position.Y, out Point rasterPosition) ||
+                !TryGetKachelGroesse(welt, position.X, position.Y, out double breite, out double hoehe))
+            {
+                return false;
+            }
+
+            mitte = new Point(rasterPosition.X + breite / 2, rasterPosition.Y + hoehe / 2);
+            return true;
+        }
+
+        private static void ZeichneRoutenLinie(
+            Canvas canvas,
+            Point start,
+            Point ende,
+            Brush farbe,
+            double breite)
+        {
+            canvas.Children.Add(new Line
+            {
+                X1 = start.X,
+                Y1 = start.Y,
+                X2 = ende.X,
+                Y2 = ende.Y,
+                Stroke = farbe,
+                StrokeThickness = breite,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            });
+        }
+
+        private static void ZeichneAnschluss(
+            Canvas canvas,
+            IG5_WeltSpielfeld welt,
+            G5_GridPosition position,
+            Brush farbe,
+            bool ausgewaehlt,
+            bool istAusgang)
+        {
+            if (!welt.TryRasterZuBildschirm(position.X, position.Y, out Point rasterPosition) ||
+                !TryGetKachelGroesse(welt, position.X, position.Y, out double breite, out double hoehe))
+            {
+                return;
+            }
+
+            double linienStart = istAusgang ? 0.44 : 0.04;
+            double linienEnde = istAusgang ? 0.96 : 0.56;
+            Line anschluss = new Line
+            {
+                X1 = rasterPosition.X + breite * linienStart,
+                X2 = rasterPosition.X + breite * linienEnde,
+                Y1 = rasterPosition.Y + hoehe / 2,
+                Y2 = rasterPosition.Y + hoehe / 2,
+                Stroke = farbe,
+                StrokeThickness = ausgewaehlt ? 4 : 2.5,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            };
+            canvas.Children.Add(anschluss);
+        }
+
+        private static string GebaeudeKurzname(G5_FabrikGebaeudeTyp typ)
         {
             switch (typ)
             {
@@ -673,10 +774,15 @@ namespace OOPGames
             Canvas.SetTop(hintergrund, 0);
             canvas.Children.Add(hintergrund);
 
-            string steuerung = info is SatisfactoryFieldView
-                ? "F: Förderer    S: Schmelze    B: Förderband    M: Gebäude verschieben    Esc: Werkzeug abwählen"
-                : "F: Förderer platzieren    S: Schmelze platzieren    Esc: Werkzeug abwählen    Mausklick: Gebäude platzieren";
-            ZeichneHudZeile(canvas, viewportBreite, steuerung, 0);
+            string foerderbandHinweis = info.FoerderbaenderAktiv
+                ? "B: roten Ausgang, dann blauen Eingang anklicken"
+                : "Materialübergabe automatisch";
+            ZeichneHudZeile(
+                canvas,
+                viewportBreite,
+                "F: Förderer    S: Eisen-Schmelze*    K: Kupfer-Schmelze*    C: Konstruktor*    B: Band verbinden*    Esc: abwählen    " +
+                foerderbandHinweis,
+                0);
             ZeichneHudZeile(
                 canvas,
                 viewportBreite,
@@ -704,11 +810,118 @@ namespace OOPGames
             canvas.Children.Add(zeile);
         }
 
-        private static Brush CreateBrush(byte alpha, byte red, byte green, byte blue)
+        private static void ZeichneGebaeudeMenue(Canvas canvas, IG5_GebaeudeInfo gebaeude)
         {
-            SolidColorBrush brush = new SolidColorBrush(Color.FromArgb(alpha, red, green, blue));
-            brush.Freeze();
-            return brush;
+            double left = SatisfactoryBuildingMenuLayout.Left;
+            double top = SatisfactoryBuildingMenuLayout.Top;
+            double width = SatisfactoryBuildingMenuLayout.Width;
+
+            Rectangle panel = new Rectangle
+            {
+                Width = width,
+                Height = SatisfactoryBuildingMenuLayout.Height,
+                Fill = new SolidColorBrush(Color.FromArgb(245, 24, 31, 28)),
+                Stroke = new SolidColorBrush(Color.FromRgb(116, 151, 124)),
+                StrokeThickness = 1.5
+            };
+            Canvas.SetLeft(panel, left);
+            Canvas.SetTop(panel, top);
+            canvas.Children.Add(panel);
+
+            ZeichneMenueText(canvas, gebaeude.Name, left + 12, top + 8, width - 58, 18, true);
+            ZeichneMenueText(canvas, "Stufe: MK" + gebaeude.Level, left + 12, top + 34, width - 24, 16, false);
+
+            Rectangle schliessen = new Rectangle
+            {
+                Width = 22,
+                Height = 22,
+                Fill = new SolidColorBrush(Color.FromRgb(112, 55, 48)),
+                Stroke = Brushes.White,
+                StrokeThickness = 0.6
+            };
+            Canvas.SetLeft(schliessen, left + width - 30);
+            Canvas.SetTop(schliessen, top + 6);
+            canvas.Children.Add(schliessen);
+            ZeichneMenueText(canvas, "X", left + width - 29, top + 8, 20, 16, true, TextAlignment.Center);
+
+            IReadOnlyList<string> rezepte = gebaeude.VerfuegbareRezepte;
+            ZeichneMenueText(canvas, rezepte.Count > 0 ? "Rezept auswählen:" : "Kein Rezept verfügbar",
+                left + 12, top + 66, width - 24, 16, true);
+
+            for (int i = 0; i < rezepte.Count && i < 5; i++)
+            {
+                double recipeTop = SatisfactoryBuildingMenuLayout.RecipeTop + i * SatisfactoryBuildingMenuLayout.RecipeRowHeight;
+                bool selected = string.Equals(
+                    rezepte[i],
+                    gebaeude.AktuellesRezept,
+                    StringComparison.Ordinal);
+                Rectangle recipeButton = new Rectangle
+                {
+                    Width = width - 24,
+                    Height = SatisfactoryBuildingMenuLayout.RecipeRowHeight - 3,
+                    Fill = selected
+                        ? new SolidColorBrush(Color.FromRgb(66, 112, 77))
+                        : new SolidColorBrush(Color.FromRgb(48, 58, 52)),
+                    Stroke = new SolidColorBrush(Color.FromRgb(104, 127, 110)),
+                    StrokeThickness = 0.5
+                };
+                Canvas.SetLeft(recipeButton, left + 12);
+                Canvas.SetTop(recipeButton, recipeTop);
+                canvas.Children.Add(recipeButton);
+                ZeichneMenueText(canvas, rezepte[i], left + 18, recipeTop + 4, width - 36, 16, false);
+            }
+
+            double inputHeaderTop = SatisfactoryBuildingMenuLayout.RecipeTop +
+                Math.Max(1, Math.Min(rezepte.Count, 5)) * SatisfactoryBuildingMenuLayout.RecipeRowHeight + 4;
+            ZeichneMenueText(canvas, "Eingänge / aktueller Bestand:", left + 12, inputHeaderTop, width - 24, 16, true);
+
+            List<KeyValuePair<G5_Item, int>> eingang = gebaeude.EingangsInhalt
+                .OrderBy(item => item.Key)
+                .ToList();
+            if (eingang.Count == 0)
+            {
+                ZeichneMenueText(canvas, "Keine Items vorhanden", left + 12, inputHeaderTop + 21, width - 24, 16, false);
+                return;
+            }
+
+            for (int i = 0; i < eingang.Count && i < 6; i++)
+            {
+                ZeichneMenueText(
+                    canvas,
+                    eingang[i].Key + ": " + eingang[i].Value,
+                    left + 12,
+                    inputHeaderTop + 21 + i * 18,
+                    width - 24,
+                    16,
+                    false);
+            }
+        }
+
+        private static void ZeichneMenueText(
+            Canvas canvas,
+            string text,
+            double left,
+            double top,
+            double width,
+            double height,
+            bool bold,
+            TextAlignment alignment = TextAlignment.Left)
+        {
+            TextBlock label = new TextBlock
+            {
+                Text = text,
+                Foreground = Brushes.White,
+                FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
+                FontSize = 12,
+                TextAlignment = alignment,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Width = width,
+                Height = height,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(label, left);
+            Canvas.SetTop(label, top);
+            canvas.Children.Add(label);
         }
     }
 }

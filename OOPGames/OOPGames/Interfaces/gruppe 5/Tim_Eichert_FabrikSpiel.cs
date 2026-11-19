@@ -7,8 +7,9 @@ namespace OOPGames
         Keines,
         Foerderer,
         Schmelze,
-        Foerderband,
-        GebaeudeVerschieben
+        Konstruktor,
+        Kupferschmelze,
+        Foerderband
     }
 
     public enum G5_FabrikGebaeudeTyp
@@ -42,12 +43,23 @@ namespace OOPGames
         int Level { get; }
         G5_BuildingStatus Status { get; }
         bool IstMitStromVersorgt { get; }
+        bool HatEingang { get; }
+        bool HatAusgang { get; }
+        G5_GridPosition EingangsPosition { get; }
+        G5_GridPosition AusgangsPosition { get; }
+        bool AusgangAusgewaehlt { get; }
+        bool IstAusgewaehlt { get; }
+        IReadOnlyDictionary<G5_Item, int> EingangsInhalt { get; }
+        IReadOnlyList<string> VerfuegbareRezepte { get; }
+        string AktuellesRezept { get; }
     }
 
     public interface IG5_FabrikSpielInfo : IG5_WeltSpielfeld
     {
         G5_Bauwerkzeug AktuellesWerkzeug { get; }
         IReadOnlyList<IG5_GebaeudeInfo> Gebaeude { get; }
+        bool FoerderbaenderAktiv { get; }
+        IReadOnlyList<IReadOnlyList<G5_GridPosition>> FoerderbandRouten { get; }
         int HubMenge(G5_Item item);
         string StatusMeldung { get; }
     }
@@ -62,5 +74,7 @@ namespace OOPGames
         G5_Bauwerkzeug Werkzeug { get; }
         int X { get; }
         int Y { get; }
+        int BildschirmX { get; }
+        int BildschirmY { get; }
     }
 }
