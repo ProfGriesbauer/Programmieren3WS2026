@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -59,6 +60,19 @@ namespace OOPGames
                 && IsCar(obstacle.Kind)
                 && obstacle.Distance <= CollisionDistance
                 && obstacle.Distance + CarSpacing > 0);
+        }
+
+        /// <summary>
+        /// How far the runner has walked up a ramp in the given lane:
+        /// 0 at the foot of the ramp (or no ramp), 1 at its top edge.
+        /// </summary>
+        public static double RampProgressUnderRunner(IEnumerable<Gruppe2_SubwayObstacle> obstacles, int lane)
+        {
+            Gruppe2_SubwayObstacle ramp = obstacles.FirstOrDefault(obstacle => obstacle.Lane == lane
+                && obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoRamp
+                && NearEnd(obstacle) <= 0
+                && obstacle.Distance > CollisionDistance);
+            return ramp == null ? 0 : Math.Min(1, -NearEnd(ramp) / RampLength);
         }
 
         /// <summary>True while any part of a convoy in the given lane has not yet passed the runner.</summary>

@@ -25,6 +25,21 @@ namespace OOPGames
                 return Math.Sin(Math.PI * progress);
             }
         }
+        public double DropHeight
+        {
+            get
+            {
+                if (DropTicks <= 0 || DropDurationTicks <= 0)
+                {
+                    return 0;
+                }
+
+                // Parabola like a real fall: a small hop forward, then down onto the track.
+                const double Hop = 0.6;
+                double progress = 1 - DropTicks / (double)DropDurationTicks;
+                return 1 + Hop * progress - (1 + Hop) * progress * progress;
+            }
+        }
         public int Score { get; internal set; }
         public int Coins { get; internal set; }
         public double Speed { get; internal set; }
@@ -41,6 +56,8 @@ namespace OOPGames
         public double Distance { get; internal set; }
         internal int JumpTicks { get; set; }
         internal int JumpDurationTicks { get; set; }
+        internal int DropTicks { get; set; }
+        internal int DropDurationTicks { get; set; }
         public int RollTicks { get; internal set; }
         internal int JetpackTicks { get; set; }
         public int MessageTicks { get; internal set; }
@@ -71,6 +88,8 @@ namespace OOPGames
             Distance = 0;
             JumpTicks = 0;
             JumpDurationTicks = 0;
+            DropTicks = 0;
+            DropDurationTicks = 0;
             RollTicks = 0;
             JetpackTicks = 0;
             MessageTicks = 100;

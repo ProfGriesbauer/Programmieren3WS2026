@@ -27,6 +27,86 @@ namespace OOPGames
             TestRampIsAlwaysFollowedByWalkableCars();
             TestRunnerStaysOnRoofUntilLastCarPassed();
             TestLaneChangeIntoTrainSideIsBlocked();
+            TestSingleTrainsWithoutRampAreSpawned();
+            TestRampCanBeWalkedUpWithoutJumping();
+            TestBarriersNeedJumpOrRoll();
+        }
+
+        private static void TestRampCanBeWalkedUpWithoutJumping()
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            rules.ClearField();
+            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                Gruppe2_SubwayObstacleKind.CargoRamp, 1, 10));
+            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                Gruppe2_SubwayObstacleKind.CargoWagon, 1, 10));
+
+            double halfway = Gruppe2_SubwayTrainLayout.RampProgressUnderRunner(field.Obstacles, 1);
+            AssertTrue(halfway > 0 && halfway < 1,
+                "the runner is halfway up the ramp before reaching its top");
+
+            for (int tick = 0; tick < 12; tick++)
+            {
+                rules.TickGameCall();
+            }
+
+            AssertTrue(field.Level == Gruppe2_SubwayLevel.TrainRoof && !field.GameOver,
+                "walking up the ramp without jumping leads onto the train roof");
+        }
+
+        private static void TestBarriersNeedJumpOrRoll()
+        {
+            AssertTrue(RunIntoObstacle(Gruppe2_SubwayObstacleKind.SmallBarrier, Key.Up),
+                "jumping clears the small barrier");
+            AssertTrue(!RunIntoObstacle(Gruppe2_SubwayObstacleKind.SmallBarrier, Key.None),
+                "running into the small barrier ends the run");
+            AssertTrue(RunIntoObstacle(Gruppe2_SubwayObstacleKind.LargeBarrier, Key.Down),
+                "rolling passes under the large barrier");
+            AssertTrue(!RunIntoObstacle(Gruppe2_SubwayObstacleKind.LargeBarrier, Key.Up),
+                "jumping does not clear the large barrier");
+        }
+
+        /// <summary>Returns true if the runner survives the obstacle after pressing the key.</summary>
+        private static bool RunIntoObstacle(Gruppe2_SubwayObstacleKind kind, Key key)
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            rules.ClearField();
+            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, 1, 3));
+            if (key != Key.None)
+            {
+                rules.DoMove(new Gruppe2_SubwayMove(key, 1));
+            }
+
+            for (int tick = 0; tick < 5; tick++)
+            {
+                rules.TickGameCall();
+            }
+
+            return !field.GameOver;
+        }
+
+        private static void TestSingleTrainsWithoutRampAreSpawned()
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            bool singleTrainFound = false;
+
+            for (int run = 0; run < 200 && !singleTrainFound; run++)
+            {
+                rules.ClearField();
+                for (int tick = 0; tick < 400 && !field.GameOver && !singleTrainFound; tick++)
+                {
+                    rules.TickGameCall();
+                    singleTrainFound = field.MutableObstacles.Any(train =>
+                        train.Kind == Gruppe2_SubwayObstacleKind.Train
+                        && !field.MutableObstacles.Any(ramp =>
+                            ramp.Kind == Gruppe2_SubwayObstacleKind.CargoRamp && ramp.Lane == train.Lane));
+                }
+            }
+
+            AssertTrue(singleTrainFound, "single trains without a ramp still appear and must be dodged");
         }
 
         private static void TestRampIsAlwaysFollowedByWalkableCars()
@@ -76,16 +156,16 @@ namespace OOPGames
                 Gruppe2_SubwayObstacleKind.CargoRamp, 1, 1));
             field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
                 Gruppe2_SubwayObstacleKind.CargoWagon, 1, 1));
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.Train, 1, 1 + spacing));
+            Gruppe2_SubwayObstacle locomotive = new Gruppe2_SubwayObstacle(
+                Gruppe2_SubwayObstacleKind.Train, 1, 1 + spacing);
+            field.MutableObstacles.Add(locomotive);
 
             rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
             rules.TickGameCall();
             AssertTrue(field.Level == Gruppe2_SubwayLevel.TrainRoof,
                 "jumping onto the ramp puts the runner on the roof");
 
-            while (field.MutableObstacles.Any(item => item.Kind == Gruppe2_SubwayObstacleKind.Train
-                && item.Distance + spacing > 2 * field.Speed))
+            while (locomotive.Distance + spacing > 2 * field.Speed)
             {
                 rules.TickGameCall();
                 AssertTrue(field.Level == Gruppe2_SubwayLevel.TrainRoof && !field.GameOver,
@@ -97,8 +177,24 @@ namespace OOPGames
                 rules.TickGameCall();
             }
 
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Track,
-                "the runner returns to the track after the last car");
+            AssertTrue(field.Level == Gruppe2_SubwayLevel.Air && field.DropHeight > 0.5,
+                "after the last car the runner drops off the roof in an arc");
+
+            double highestPoint = field.DropHeight;
+            int dropTicks = 0;
+            while (field.Level == Gruppe2_SubwayLevel.Air && dropTicks < 40)
+            {
+                rules.TickGameCall();
+                highestPoint = Math.Max(highestPoint, field.DropHeight);
+                dropTicks++;
+            }
+
+            AssertTrue(highestPoint > 1,
+                "the drop starts with a small hop above the roof");
+            AssertTrue(field.Level == Gruppe2_SubwayLevel.Track && field.DropHeight == 0,
+                "the runner lands on the track after the drop");
+            AssertTrue(!field.MutableObstacles.Contains(locomotive),
+                "the left car is gone before the camera is back down on the track");
         }
 
         private static void TestLaneChangeIntoTrainSideIsBlocked()
@@ -378,9 +474,10 @@ namespace OOPGames
 
             AssertTrue(field.MutableObstacles.Count > 0,
                 "waves spawn after the configured distance threshold");
+            // Signals stand between two tracks and block no lane, so they are not counted.
             AssertTrue(field.MutableObstacles
-                .Where(item => item.Kind != Gruppe2_SubwayObstacleKind.Signal)
-                .Select(item => item.Lane).Distinct().Count() < 3,
+                    .Where(item => item.Kind != Gruppe2_SubwayObstacleKind.Signal)
+                    .Select(item => item.Lane).Distinct().Count() < 3,
                 "spawn logic always leaves at least one lane open");
         }
 

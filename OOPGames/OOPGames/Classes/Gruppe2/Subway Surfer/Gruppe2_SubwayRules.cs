@@ -11,6 +11,7 @@ namespace OOPGames
         private readonly Random _random = new Random();
         private static readonly Gruppe2_SubwayObstacleKind[] SpawnableObstacleKinds =
         {
+            Gruppe2_SubwayObstacleKind.SmallBarrier,
             Gruppe2_SubwayObstacleKind.LargeBarrier,
             Gruppe2_SubwayObstacleKind.Bush,
             Gruppe2_SubwayObstacleKind.PlantPot,
@@ -22,6 +23,7 @@ namespace OOPGames
         // Trains appear near the horizon of the 3D scene; the longest convoy ends before 520.
         private const double TrainRampSpawnDistance = 420;
         private const double ObstacleSpawnDistance = 82;
+        private const int MinimumDropTicks = 12;
         private Gruppe2_SubwayField _field = new Gruppe2_SubwayField();
         private readonly HashSet<Gruppe2_SubwayObstacle> _passedTrainParts =
             new HashSet<Gruppe2_SubwayObstacle>();
@@ -78,6 +80,7 @@ namespace OOPGames
                     {
                         _field.JumpTicks = 0;
                         _field.JumpDurationTicks = 0;
+                        _field.DropTicks = 0;
                         Land();
                     }
                     break;
@@ -124,29 +127,15 @@ namespace OOPGames
         {
             DecreaseTimers(_field.MutableUpgrades);
 
-            if (_field.JumpTicks > 0)
-            {
-                _field.JumpTicks--;
-                if (_field.JumpTicks == 0 && _field.JetpackTicks == 0
-                    && _field.Level == Gruppe2_SubwayLevel.Air)
-                {
-                    Land();
-                }
-            }
+            _field.JumpTicks = Math.Max(0, _field.JumpTicks - 1);
+            _field.DropTicks = Math.Max(0, _field.DropTicks - 1);
+            _field.RollTicks = Math.Max(0, _field.RollTicks - 1);
+            _field.JetpackTicks = Math.Max(0, _field.JetpackTicks - 1);
 
-            if (_field.RollTicks > 0)
+            bool stillInAir = _field.JumpTicks > 0 || _field.DropTicks > 0 || _field.JetpackTicks > 0;
+            if (_field.Level == Gruppe2_SubwayLevel.Air && !stillInAir)
             {
-                _field.RollTicks--;
-            }
-
-            if (_field.JetpackTicks > 0)
-            {
-                _field.JetpackTicks--;
-                if (_field.JetpackTicks == 0 && _field.JumpTicks == 0
-                    && _field.Level == Gruppe2_SubwayLevel.Air)
-                {
-                    Land();
-                }
+                Land();
             }
         }
 
@@ -162,7 +151,13 @@ namespace OOPGames
             if (_field.Level == Gruppe2_SubwayLevel.TrainRoof
                 && !Gruppe2_SubwayTrainLayout.IsCarUnderRunner(_field.Obstacles, _field.Lane))
             {
-                _field.Level = Gruppe2_SubwayLevel.Track;
+                // Drop off in a small arc. The fall lasts until the car that was just left
+                // is behind the camera, so the camera never ends up inside it.
+                double dropDistance = -Gruppe2_SubwayTrainLayout.TrainRemoveBehindDistance + 2;
+                _field.DropDurationTicks = Math.Max(MinimumDropTicks,
+                    (int)Math.Ceiling(dropDistance / _field.Speed));
+                _field.DropTicks = _field.DropDurationTicks;
+                _field.Level = Gruppe2_SubwayLevel.Air;
                 SetMessage("Das Zugdach endet - zurueck auf die Gleise!");
             }
         }
@@ -199,15 +194,15 @@ namespace OOPGames
                 {
                     Gruppe2_SubwayObstacleKind kind =
                         SpawnableObstacleKinds[_random.Next(SpawnableObstacleKinds.Length)];
-                    bool startsConvoy = kind == Gruppe2_SubwayObstacleKind.Train
-                        || kind == Gruppe2_SubwayObstacleKind.CargoRamp;
-                    if (startsConvoy)
+                    // A ramp always brings a walkable convoy; a single locomotive or
+                    // wagon without ramp has to be dodged.
+                    if (kind == Gruppe2_SubwayObstacleKind.CargoRamp)
                     {
                         SpawnTrainConvoy(lane);
                     }
                     else
                     {
-                        double spawnDistance = kind == Gruppe2_SubwayObstacleKind.CargoWagon
+                        double spawnDistance = Gruppe2_SubwayTrainLayout.IsCar(kind)
                             ? TrainRampSpawnDistance
                             : ObstacleSpawnDistance;
                         _field.MutableObstacles.Add(
@@ -363,16 +358,19 @@ namespace OOPGames
                         }
                         break;
                     case Gruppe2_SubwayObstacleKind.CargoRamp:
-                        if (_field.JumpTicks > 0)
+                        // The runner walks up the ramp automatically; only a jetpack flies over it.
+                        if (_field.JetpackTicks == 0)
                         {
                             _field.JumpTicks = 0;
                             _field.JumpDurationTicks = 0;
                             _field.Level = Gruppe2_SubwayLevel.TrainRoof;
                             SetMessage("Auf dem Zugdach!");
                         }
-                        else if (!airborne)
+                        break;
+                    case Gruppe2_SubwayObstacleKind.SmallBarrier:
+                        if (!airborne && !onRoof)
                         {
-                            HitOrEnd(false, "Rampe beruehrt - der Bahnbaer kommt naeher!");
+                            HitOrEnd(true, "Kleine Absperrung! Springe darueber.");
                         }
                         break;
                     case Gruppe2_SubwayObstacleKind.CargoWagon:

@@ -298,3 +298,84 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 > - Hinweis: Im Painter stehen noch die alten 2D-Zeichenmethoden von Stefanie (z. B. `DrawTrack`, `DrawWorldObjects`), die nicht mehr aufgerufen werden. Ich habe sie nicht gelöscht, weil es ihr Code ist.
 
 **Ergebnisvermerk:** Zusammengeführte Version committet und gepullt, ohne Push.
+
+## 20. Zugrampen erkennbar, einzelne Züge, kleinerer Läufer
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> die Zugrampen bitte anderst darstellen, so das man erkennt dass das Zugrampen sind, weil bis jetzt sind es nur graue schrägen (vllt. Wände an die Seite und Farbunterschied im Sinne von Streifen) zudem sind jetz keine Züge mehr einzeln und den Mensch/Läufer bitte kleiner und schmäler darstellen, so das er nicht die ganze Schiene verdeckt
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Rampe** (`CreateCargoRampModel`): Die Fahrfläche hat jetzt 8 Streifen abwechselnd in Gelb und Schwarz. Links und rechts stehen rote Seitenwände mit heller Oberkante, die immer über der Fahrfläche bleiben. Vorne gibt es eine Abschlusskante. Die alte Rampe bestand aus doppelt übereinanderliegenden Flächen und wirkte deshalb nur grau.
+> 2. **Einzelne Züge:** „Keine Züge mehr einzeln“ habe ich so verstanden, dass jede Lok nur noch mit Rampe kam. Jetzt erzeugt nur noch der Rampen-Spawn einen Konvoi (Rampe → Wagen → Lok). Einzelne Loks und einzelne Güterwagen ohne Rampe kommen wieder vom Horizont und müssen umgangen werden. Dafür gibt es einen neuen Test.
+> 3. **Läufer und Bahnwärter:** Beide werden kleiner (68 % Höhe) und schmaler (55 % Breite) gezeichnet. Die Schienen links und rechts bleiben sichtbar.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Subway-Surfer-Tests bestanden. Ich habe gerenderte Szenen kontrolliert: Die Rampe ist klar als Rampe zu erkennen, und der Läufer verdeckt die Spur nicht mehr.
+
+**Ergebnisvermerk:** Rampe, einzelne Züge und Läufergröße umgesetzt. Noch nicht committet.
+
+## 21. Rampe hochlaufen, kleine und große Absperrung
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Okay das sieht suoer aus, einige anmerkungen habe ich noch: die rampe kann bisjetzt nur hochgelaufen werden, wenn man zuerst hüpft das bitte ändern, das man automatisch hochlaufen kann. Zudem kann man nicht über die kleine Absperrung hüpfen, da verliert man das spiel. die große absperrung wo man nur durch rollen untendurch kommt, fehlt komplett
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig.
+>
+> **Ursache bei den Absperrungen:** Die „große Absperrung“ (`LargeBarrier`) war im 3D-Modell nur hüfthoch. Sie sah aus wie eine kleine Absperrung, ließ sich laut Rules aber nur unterrollen, deshalb verlor man beim Springen. Die echte kleine Absperrung (`SmallBarrier`) hatte ein Modell, wurde aber nie erzeugt und hatte keine Regel.
+>
+> 1. **Rampe hochlaufen:** Man läuft die Rampe jetzt automatisch hoch, ohne zu springen. Läufer und Kamera steigen dabei gleichmäßig an (`RampProgressUnderRunner` in der gemeinsamen Zug-Geometrie). Oben steht man auf dem Zugdach. Nur mit Jetpack fliegt man darüber hinweg.
+> 2. **Kleine Absperrung:** Sie wird jetzt gespawnt und hat zwei Füße. Wer darüber springt, kommt durch. Wer dagegenläuft, verliert.
+> 3. **Große Absperrung:** Neues Modell als hohes Tor mit zwei Pfosten und einem rot-weißen Schild in Kopfhöhe. Darunter ist eine Lücke, durch die man nur rollend passt. Springen hilft nicht.
+> 4. **Tests:** Neue Tests für das Hochlaufen ohne Sprung und für Springen bzw. Rollen an beiden Absperrungen. Zwei Tests schlugen zufällig fehl und sind korrigiert: Der Spawn-Test zählte Ampeln als blockierte Spur. Der Dach-Test wartete auf irgendeine Lok statt auf die aus dem Testaufbau.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 8-mal hintereinander bestanden. Gerenderte Szenen kontrolliert: Läufer mitten auf der Rampe, kleine Absperrung, hohes Tor.
+
+**Ergebnisvermerk:** Rampe ohne Sprung begehbar, kleine Absperrung überspringbar, große Absperrung als Tor zum Unterrollen. Noch nicht committet.
+
+## 22. Bogen beim Herunterfallen vom Zug, kleine Absperrung rot-weiß
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> okay das haochlaufen ist super, kannst du beim runterhüpfen von dem zug das so implementieren, dass die kamera nicht kurzzeitig im zug ist heist das ich mit einem kleinen Bogen von dem Zug falle und die Kamera mit verfolgt. Die kleine Absperung soll bitte rot, weiß gestreift sein und nicht gelb schwarz
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/` und `Interfaces/Gruppe2/`, eine Framework-Erweiterung war nicht nötig.
+>
+> **Ursache:** Am Ende des Zuges sprang der Läufer sofort von Dachhöhe auf das Gleis, und die Kamera sprang mit ihm nach unten. Der gerade verlassene Wagen stand da noch zwischen Kamera und Läufer, deshalb sah es kurz so aus, als wäre die Kamera im Zug.
+>
+> 1. **Bogen:** Beim Verlassen des Dachs fällt der Läufer in einer Parabel. Er hüpft erst etwas über die Dachhöhe und fällt dann aufs Gleis (`DropHeight` im Field). Die Kamera folgt dieser Höhe. Der Fall dauert so lange, bis der verlassene Wagen hinter der Kamera verschwunden ist; die Dauer passt sich an das Tempo an. Das gilt auch, wenn man seitlich vom Dach auf eine freie Spur wechselt. Mit S (Rollen) kann man den Fall abbrechen.
+> 2. **Interface:** In `IGruppe2_SubwayField` (Stefanies Interfacedatei in `Interfaces/Gruppe2/`) gibt es die neue Eigenschaft `DropHeight`, damit der Painter die Fallhöhe über das Interface abfragen kann.
+> 3. **Kleine Absperrung:** Rote Schranke mit vier weißen Streifen statt Gelb-Schwarz.
+> 4. **Aufräumen:** Die Timer in `TickTimers` sind zusammengefasst. Gelandet wird erst, wenn Sprung, Fall und Jetpack alle vorbei sind.
+> 5. **Test:** Der Dach-Test prüft jetzt den Bogen: Man hebt zuerst etwas ab, landet dann auf dem Gleis, und der verlassene Wagen ist dabei schon verschwunden.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 5-mal hintereinander bestanden. Gerenderte Bildfolge vom Herunterfallen und Bild der rot-weißen Absperrung kontrolliert.
+
+**Ergebnisvermerk:** Fall vom Zugdach im Bogen mit mitfahrender Kamera, kleine Absperrung rot-weiß. Noch nicht committet.
+
+## 23. Commit, Pull und Push
+
+**Datum:** 19.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> commit, pull und push die ganzen änderungen
+
+**Antwort:**
+
+> Ich committe die Änderungen aus den Prompts 20–23 (Subway-Surfer-Dateien, Gruppen-Interface und diese Prompt-Datei). Die fremden obj-Dateien in `HouseExample/` kommen nicht in den Commit. Danach folgen `git pull --rebase` und `git push`. Damit geht auch der noch nicht gepushte Commit aus Prompt 19 mit auf den Server.
+
+**Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt.

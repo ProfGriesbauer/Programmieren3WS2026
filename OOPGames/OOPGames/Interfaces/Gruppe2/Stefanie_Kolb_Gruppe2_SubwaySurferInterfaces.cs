@@ -49,6 +49,11 @@ namespace OOPGames
         int Lane { get; }
         Gruppe2_SubwayLevel Level { get; }
         double JumpHeight { get; }
+        /// <summary>
+        /// Height while dropping off a train roof, as a fraction of the roof height:
+        /// starts at 1, rises slightly (small arc) and ends at 0 on the track.
+        /// </summary>
+        double DropHeight { get; }
         int Score { get; }
         int Coins { get; }
         double Distance { get; }

@@ -37,6 +37,9 @@ namespace OOPGames
         private const double WorldUnitsPerDistance = 0.1;
         private const double CarWorldWidth = 1.84;
         private const double CarRoofHeight = 2.42;
+        // Runner and guard are drawn smaller and slimmer so they do not hide the track.
+        private const double RunnerHeightScale = 0.68;
+        private const double RunnerWidthScale = 0.55;
 
         public string Name { get { return "Gruppe 2 - Subway Surfer Painter"; } }
 
@@ -240,9 +243,19 @@ namespace OOPGames
             return RunnerWorldZ - distance * WorldUnitsPerDistance;
         }
 
+        /// <summary>
+        /// Height the runner stands on: track, rising ramp, train roof or the arc
+        /// when dropping off a roof. The camera follows this height.
+        /// </summary>
         private static double RunnerGroundHeight(IGruppe2_SubwayField field)
         {
-            return field.Level == Gruppe2_SubwayLevel.TrainRoof ? CarRoofHeight : 0;
+            if (field.Level == Gruppe2_SubwayLevel.TrainRoof)
+            {
+                return CarRoofHeight;
+            }
+
+            double rampProgress = Gruppe2_SubwayTrainLayout.RampProgressUnderRunner(field.Obstacles, field.Lane);
+            return CarRoofHeight * Math.Max(rampProgress, field.DropHeight);
         }
 
         private static Dictionary<Gruppe2_SubwayObstacleKind, Model3DGroup> CreateObstacleModels()
@@ -279,15 +292,13 @@ namespace OOPGames
             double x = LaneWorldX(field.Lane) - (guard ? 0.35 : 0);
             double z = guard ? 2.5 : RunnerWorldZ;
             double jump = guard ? 0
-                : field.Level == Gruppe2_SubwayLevel.Air ? 1.15 * field.JumpHeight
-                : RunnerGroundHeight(field);
+                : RunnerGroundHeight(field)
+                    + (field.Level == Gruppe2_SubwayLevel.Air ? 1.15 * field.JumpHeight : 0);
             double run = Math.Sin(field.Distance * 0.48);
             Model3DGroup runner = CreateRunnerModel(guard, run);
+            double heightScale = RunnerHeightScale * (!guard && field.RollTicks > 0 ? 0.55 : 1);
             Transform3DGroup transform = new Transform3DGroup();
-            if (!guard && field.RollTicks > 0)
-            {
-                transform.Children.Add(new ScaleTransform3D(1, 0.55, 1));
-            }
+            transform.Children.Add(new ScaleTransform3D(RunnerWidthScale, heightScale, RunnerWidthScale));
             transform.Children.Add(new TranslateTransform3D(x, jump, z));
             viewport.Children.Add(new ModelVisual3D { Content = runner, Transform = transform });
         }
@@ -389,19 +400,56 @@ namespace OOPGames
             return train;
         }
 
+        /// <summary>
+        /// Cargo ramp in model space: rises from the low end (z = Start) to roof height (z = End).
+        /// Yellow/black warning stripes on the driving surface, red side walls with a light top edge.
+        /// AddTrainPart mirrors it so the low end faces the runner.
+        /// </summary>
         private static Model3DGroup CreateCargoRampModel()
         {
+            const int StripeCount = 8;
+            const double Start = -0.75;
+            const double End = 0.75;
+            const double InnerX = 0.52;
+            const double OuterX = 0.66;
+            const double Top = 1.0;
+            const double WallLip = 0.24;
             Model3DGroup ramp = new Model3DGroup();
-            Material red = Material(Color.FromRgb(207, 57, 45));
-            Material dark = Material(Color.FromRgb(63, 66, 63));
-            AddBox(ramp, -0.66, 0, -0.75, 0.66, 0.18, 0.75, dark);
-            AddTriangle(ramp, new Point3D(-0.66, 0.18, -0.75),
-                new Point3D(0.66, 0.18, -0.75), new Point3D(0.66, 0.85, 0.75), red);
-            AddTriangle(ramp, new Point3D(-0.66, 0.18, -0.75),
-                new Point3D(0.66, 0.85, 0.75), new Point3D(-0.66, 0.85, 0.75), red);
-            AddQuad(ramp, new Point3D(-0.66, 0.18, -0.75),
-                new Point3D(-0.66, 0.85, 0.75), new Point3D(0.66, 0.85, 0.75),
-                new Point3D(0.66, 0.18, -0.75), dark);
+            Material yellow = Material(Color.FromRgb(244, 181, 35));
+            Material black = Material(Color.FromRgb(38, 38, 40));
+            Material wall = Material(Color.FromRgb(196, 48, 40));
+            Material wallEdge = Material(Color.FromRgb(238, 236, 220));
+            Func<double, double> surface = z => Top * (z - Start) / (End - Start);
+
+            for (int stripe = 0; stripe < StripeCount; stripe++)
+            {
+                double z0 = Start + (End - Start) * stripe / StripeCount;
+                double z1 = Start + (End - Start) * (stripe + 1) / StripeCount;
+                AddQuad(ramp,
+                    new Point3D(-InnerX, surface(z0), z0), new Point3D(InnerX, surface(z0), z0),
+                    new Point3D(InnerX, surface(z1), z1), new Point3D(-InnerX, surface(z1), z1),
+                    stripe % 2 == 0 ? yellow : black);
+            }
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                // The wall top runs from WallLip above the low end up to roof height,
+                // so it always stays above the driving surface.
+                foreach (double x in new[] { side * InnerX, side * OuterX })
+                {
+                    AddQuad(ramp,
+                        new Point3D(x, 0, Start), new Point3D(x, 0, End),
+                        new Point3D(x, Top, End), new Point3D(x, WallLip, Start), wall);
+                }
+
+                AddQuad(ramp,
+                    new Point3D(side * InnerX, WallLip, Start), new Point3D(side * OuterX, WallLip, Start),
+                    new Point3D(side * OuterX, Top, End), new Point3D(side * InnerX, Top, End), wallEdge);
+                AddQuad(ramp,
+                    new Point3D(side * InnerX, 0, Start), new Point3D(side * OuterX, 0, Start),
+                    new Point3D(side * OuterX, WallLip, Start), new Point3D(side * InnerX, WallLip, Start), wall);
+            }
+
             ramp.Freeze();
             return ramp;
         }
@@ -413,20 +461,30 @@ namespace OOPGames
             switch (kind)
             {
                 case Gruppe2_SubwayObstacleKind.LargeBarrier:
-                    AddBox(model, -0.78, 0.25, -0.16, 0.78, 0.78, 0.16,
+                    // Tall gate: the sign hangs high, so only a rolling runner fits underneath.
+                    AddBox(model, -0.74, 0, -0.10, -0.62, 2.05, 0.10, dark);
+                    AddBox(model, 0.62, 0, -0.10, 0.74, 2.05, 0.10, dark);
+                    AddBox(model, -0.80, 1.05, -0.14, 0.80, 1.85, 0.14,
                         Material(Color.FromRgb(211, 47, 39)));
-                    AddBox(model, -0.70, 0.33, 0.17, 0.70, 0.57, 0.20,
-                        Material(Color.FromRgb(237, 232, 210)));
-                    AddBox(model, -0.64, 0, -0.10, -0.54, 0.42, 0.10, dark);
-                    AddBox(model, 0.54, 0, -0.10, 0.64, 0.42, 0.10, dark);
+                    for (int stripe = 0; stripe < 4; stripe++)
+                    {
+                        double left = -0.66 + stripe * 0.36;
+                        AddBox(model, left, 1.20, 0.15, left + 0.18, 1.70, 0.18,
+                            Material(Color.FromRgb(237, 232, 210)));
+                    }
                     break;
                 case Gruppe2_SubwayObstacleKind.SmallBarrier:
+                    // Low red/white striped barrier on two feet: jump over it.
+                    AddBox(model, -0.50, 0, -0.08, -0.40, 0.20, 0.08, dark);
+                    AddBox(model, 0.40, 0, -0.08, 0.50, 0.20, 0.08, dark);
                     AddBox(model, -0.55, 0.18, -0.12, 0.55, 0.50, 0.12,
-                        Material(Color.FromRgb(232, 177, 42)));
-                    AddBox(model, -0.49, 0.25, 0.13, -0.18, 0.42, 0.16,
-                        Material(Colors.White));
-                    AddBox(model, 0.18, 0.25, 0.13, 0.49, 0.42, 0.16,
-                        Material(Colors.White));
+                        Material(Color.FromRgb(211, 47, 39)));
+                    for (int stripe = 0; stripe < 4; stripe++)
+                    {
+                        double left = -0.47 + stripe * 0.26;
+                        AddBox(model, left, 0.20, -0.13, left + 0.13, 0.48, 0.13,
+                            Material(Color.FromRgb(240, 238, 230)));
+                    }
                     break;
                 case Gruppe2_SubwayObstacleKind.PlantPot:
                     AddBox(model, -0.32, 0, -0.32, 0.32, 0.42, 0.32,
