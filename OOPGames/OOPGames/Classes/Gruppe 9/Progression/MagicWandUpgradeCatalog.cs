@@ -35,6 +35,8 @@ namespace OOPGames
         public const string Fire = "element-fire";
         public const string Freeze = "element-freeze";
         public const string ElementPower = "element-power";
+        public const string Range = "magic-wand-range";
+        public const string Knockback = "magic-wand-knockback";
         public const string StrikeAbility = "magic-wand-strike";
 
         private static readonly IReadOnlyList<WeaponUpgradeDefinition> _upgrades =
@@ -65,7 +67,15 @@ namespace OOPGames
                     1, 2, ProjectileDamage),
                 new WeaponUpgradeDefinition(
                     ElementPower, "Elementstärke", "Verbessert Stärke und Dauer des Elements.",
-                    5, 2, null)
+                    5, 2, null),
+                new WeaponUpgradeDefinition(
+                    Range, "Reichweite",
+                    "Erhöht die Reichweite der Stabangriffe.",
+                    5, 1, null),
+                new WeaponUpgradeDefinition(
+                    Knockback, "Rückstoß",
+                    "Erhöht den Rückstoß, den Stabangriffe bei Treffern verursachen.",
+                    5, 1, null)
             });
 
         public static IReadOnlyList<WeaponUpgradeDefinition> Upgrades { get { return _upgrades; } }
@@ -131,12 +141,14 @@ namespace OOPGames
 
             int projectileDamage = 10
                 + progression.GetWeaponUpgradeRank(ProjectileDamage) * 3;
+            double range = 520 * GetRangeMultiplier(progression);
             return new Weapon(
                 WeaponCatalog.MagicWand.Id, WeaponCatalog.MagicWand.Name,
                 "Magischer Stab: magisches Projektil mit ausbaubarem Schaden und Elementen.",
-                new ProjectileAttackPattern(520, 540, 7),
+                new ProjectileAttackPattern(range, 540, 7),
                 CreateWandEffect(progression, projectileDamage),
-                0.55, WeaponTargetingMode.Opponents, "magic-projectile");
+                0.55, WeaponTargetingMode.Opponents, "magic-projectile",
+                knockbackDistance: GetKnockbackDistance(progression));
         }
 
         public static Weapon CreateStrikeWeapon(ArenaProgression progression)
@@ -153,12 +165,24 @@ namespace OOPGames
 
             int damage = 8
                 + progression.GetWeaponUpgradeRank(StrikeDamage) * 3;
+            double range = 150 * GetRangeMultiplier(progression);
             return new Weapon(
                 StrikeAbility, "Stabschlag",
                 "Langer, schmaler Hieb in Blickrichtung des Spielers.",
-                new MeleeConeAttackPattern(150, Math.PI / 36, 0.26),
+                new MeleeConeAttackPattern(range, Math.PI / 36, 0.26),
                 CreateWandEffect(progression, damage),
-                0.8, WeaponTargetingMode.Opponents, "magic-wand-strike");
+                0.8, WeaponTargetingMode.Opponents, "magic-wand-strike",
+                knockbackDistance: GetKnockbackDistance(progression));
+        }
+
+        private static double GetRangeMultiplier(ArenaProgression progression)
+        {
+            return 1 + progression.GetWeaponUpgradeRank(Range) * 0.1;
+        }
+
+        private static double GetKnockbackDistance(ArenaProgression progression)
+        {
+            return 8 + progression.GetWeaponUpgradeRank(Knockback) * 5;
         }
 
         private static ICombatEffect CreateWandEffect(

@@ -12,5 +12,10 @@ namespace OOPGames
         }
 
         public abstract void UpdateBehavior(ArenaField field);
+
+        public virtual void UpdateBehavior(ArenaField field, double speedScale)
+        {
+            UpdateBehavior(field);
+        }
     }
 }

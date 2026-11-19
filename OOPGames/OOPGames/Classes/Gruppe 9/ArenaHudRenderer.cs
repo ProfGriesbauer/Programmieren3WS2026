@@ -43,11 +43,24 @@ namespace OOPGames
             PaintPortrait(canvas, portraitSource, scaleX, scaleY);
 
             AddHudText(canvas, "Kills: " + field.Score, 16, 16);
-            AddHudText(canvas, "Waffe: " + player.EquippedWeapon.Name, 16, 44);
+            double cooldownSeconds = field.GetAttackCooldownRemaining(player);
+            AddHudText(canvas,
+                "Waffe: " + player.EquippedWeapon.Name
+                    + (cooldownSeconds > 0
+                        ? "  |  Abklingzeit: " + cooldownSeconds.ToString("0.0") + " s"
+                        : "  |  bereit"),
+                16, 44);
             AddHudText(canvas, "Effekte: " + player.StatusSummary, 16, 72);
-            AddHudText(canvas, "Skillpunkte: " + field.Progression.UniversalPoints
-                + "  |  Waffenpunkte: "
-                + field.Progression.GetWeaponPoints(player.EquippedWeapon.Id), 16, 100);
+            AddHudText(canvas, field.Progression.IsGodMode
+                ? "Skillpunkte: unbegrenzt  |  Waffenpunkte: unbegrenzt"
+                : "Skillpunkte: " + field.Progression.UniversalPoints
+                    + "  |  Waffenpunkte: "
+                    + field.Progression.GetWeaponPoints(player.EquippedWeapon.Id), 16, 100);
+            AddHudText(canvas, "Sprint: Strg halten", 16, 128);
+            if (player.IsInvulnerable)
+            {
+                AddHudText(canvas, "GODMODE AKTIV", 16, 156);
+            }
 
             PaintHealthBar(canvas, player, scaleX, scaleY);
             PaintAbilityIndicators(canvas, field, scaleX, scaleY);

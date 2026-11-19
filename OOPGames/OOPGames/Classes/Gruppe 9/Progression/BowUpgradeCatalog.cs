@@ -12,6 +12,8 @@ namespace OOPGames
         public const string Fire = "bow-element-fire";
         public const string Freeze = "bow-element-freeze";
         public const string ElementPower = "bow-element-power";
+        public const string Range = "bow-range";
+        public const string Knockback = "bow-knockback";
 
         private static readonly IReadOnlyList<WeaponUpgradeDefinition> _upgrades =
             Array.AsReadOnly(new[]
@@ -43,7 +45,15 @@ namespace OOPGames
                 new WeaponUpgradeDefinition(
                     ElementPower, "Elementstärke",
                     "Verbessert Stärke und Dauer des gewählten Pfeileffekts.",
-                    5, 2, ArrowDamage)
+                    5, 2, ArrowDamage),
+                new WeaponUpgradeDefinition(
+                    Range, "Reichweite",
+                    "Erhöht die Flugreichweite der Pfeile.",
+                    5, 1, null),
+                new WeaponUpgradeDefinition(
+                    Knockback, "Rückstoß",
+                    "Erhöht den Rückstoß, den Pfeile bei Treffern verursachen.",
+                    5, 1, null)
             });
 
         public static IReadOnlyList<WeaponUpgradeDefinition> Upgrades
@@ -116,17 +126,29 @@ namespace OOPGames
             }
 
             int autoAimRank = progression.GetWeaponUpgradeRank(AutoAim);
+            double range = 650 * GetRangeMultiplier(progression);
             int damage = 12
                 + progression.GetWeaponUpgradeRank(ArrowDamage) * 3;
             return new Weapon(
                 WeaponCatalog.Bow.Id, WeaponCatalog.Bow.Name,
                 "Bogen: schnelle Projektile mit ausbaubarem Autoaim und Elementen.",
                 new ProjectileAttackPattern(
-                    650, 600, 6,
+                    range, 600, 6,
                     GetAutoAimHalfAngleRadians(autoAimRank),
                     GetHomingTurnRateRadiansPerSecond(autoAimRank)),
                 CreateBowEffect(progression, damage),
-                0.7, WeaponTargetingMode.Opponents, "bow-arrow");
+                0.7, WeaponTargetingMode.Opponents, "bow-arrow",
+                knockbackDistance: GetKnockbackDistance(progression));
+        }
+
+        private static double GetRangeMultiplier(ArenaProgression progression)
+        {
+            return 1 + progression.GetWeaponUpgradeRank(Range) * 0.1;
+        }
+
+        private static double GetKnockbackDistance(ArenaProgression progression)
+        {
+            return 8 + progression.GetWeaponUpgradeRank(Knockback) * 5;
         }
 
         private static string GetSelectedElementUpgrade(WeaponElement element)

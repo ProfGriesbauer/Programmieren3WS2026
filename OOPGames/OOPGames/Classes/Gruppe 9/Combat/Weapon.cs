@@ -15,7 +15,7 @@ namespace OOPGames
             string id, string name, string description, IAttackPattern attackPattern,
             ICombatEffect effect, double cooldownSeconds,
             WeaponTargetingMode targetingMode, string animationPlaceholder,
-            int maximumHitsPerTarget = 1)
+            int maximumHitsPerTarget = 1, double knockbackDistance = 8)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -41,6 +41,10 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(maximumHitsPerTarget));
             }
+            if (knockbackDistance < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(knockbackDistance));
+            }
 
             Id = id;
             Name = name;
@@ -51,6 +55,7 @@ namespace OOPGames
             TargetingMode = targetingMode;
             AnimationPlaceholder = animationPlaceholder ?? string.Empty;
             MaximumHitsPerTarget = maximumHitsPerTarget;
+            KnockbackDistance = knockbackDistance;
         }
 
         public string Id { get; }
@@ -62,5 +67,6 @@ namespace OOPGames
         public WeaponTargetingMode TargetingMode { get; }
         public string AnimationPlaceholder { get; }
         public int MaximumHitsPerTarget { get; }
+        public double KnockbackDistance { get; }
     }
 }

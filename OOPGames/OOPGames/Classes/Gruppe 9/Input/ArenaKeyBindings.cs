@@ -13,6 +13,7 @@ namespace OOPGames
         MoveDown,
         MoveLeft,
         MoveRight,
+        WeaponWheel,
         WeaponAttack,
         WeaponAbility1,
         WeaponAbility2,
@@ -179,6 +180,8 @@ namespace OOPGames
                 }
             }
 
+            MigrateWeaponWheelBindings(bindings);
+
             if (bindings[ArenaAction.WeaponAttack]
                 .MatchesMouseButton(MouseButton.Right))
             {
@@ -316,6 +319,7 @@ namespace OOPGames
                 case ArenaAction.MoveDown: return "Nach unten bewegen";
                 case ArenaAction.MoveLeft: return "Nach links bewegen";
                 case ArenaAction.MoveRight: return "Nach rechts bewegen";
+                case ArenaAction.WeaponWheel: return "Waffenrad (halten)";
                 case ArenaAction.WeaponAttack: return "Waffen-Grundangriff";
                 case ArenaAction.WeaponAbility1: return "Waffenfähigkeit 1";
                 case ArenaAction.WeaponAbility2: return "Waffenfähigkeit 2";
@@ -404,11 +408,12 @@ namespace OOPGames
                 { ArenaAction.MoveDown, ArenaInputBinding.ForKey(Key.S) },
                 { ArenaAction.MoveLeft, ArenaInputBinding.ForKey(Key.A) },
                 { ArenaAction.MoveRight, ArenaInputBinding.ForKey(Key.D) },
+                { ArenaAction.WeaponWheel, ArenaInputBinding.ForKey(Key.D1) },
                 { ArenaAction.WeaponAttack, ArenaInputBinding.ForMouseButton(MouseButton.Left) },
                 { ArenaAction.WeaponAbility1, ArenaInputBinding.ForMouseButton(MouseButton.Right) },
-                { ArenaAction.WeaponAbility2, ArenaInputBinding.ForKey(Key.D1) },
-                { ArenaAction.WeaponAbility3, ArenaInputBinding.ForKey(Key.D2) },
-                { ArenaAction.WeaponAbility4, ArenaInputBinding.ForKey(Key.D3) },
+                { ArenaAction.WeaponAbility2, ArenaInputBinding.ForKey(Key.D2) },
+                { ArenaAction.WeaponAbility3, ArenaInputBinding.ForKey(Key.D3) },
+                { ArenaAction.WeaponAbility4, ArenaInputBinding.ForKey(Key.D4) },
                 { ArenaAction.EntityAbility1, ArenaInputBinding.ForKey(Key.Q) },
                 { ArenaAction.EntityAbility2, ArenaInputBinding.ForKey(Key.E) },
                 { ArenaAction.EntityAbility3, ArenaInputBinding.ForKey(Key.R) },
@@ -420,6 +425,40 @@ namespace OOPGames
                 { ArenaAction.ZoomOut, ArenaInputBinding.ForKey(Key.L) },
                 { ArenaAction.SpawnEnemy, ArenaInputBinding.ForKey(Key.N) }
             };
+        }
+
+        private static void MigrateWeaponWheelBindings(
+            Dictionary<ArenaAction, ArenaInputBinding> bindings)
+        {
+            ArenaInputBinding weaponAbility2 =
+                bindings[ArenaAction.WeaponAbility2];
+            ArenaInputBinding weaponAbility3 =
+                bindings[ArenaAction.WeaponAbility3];
+            ArenaInputBinding weaponAbility4 =
+                bindings[ArenaAction.WeaponAbility4];
+
+            if (!bindings[ArenaAction.WeaponWheel].MatchesKey(Key.D1))
+            {
+                return;
+            }
+
+            if (weaponAbility2.MatchesKey(Key.D1))
+            {
+                bindings[ArenaAction.WeaponAbility2] =
+                    ArenaInputBinding.ForKey(Key.D2);
+            }
+            if (weaponAbility3.MatchesKey(Key.D2)
+                && bindings[ArenaAction.WeaponAbility2].MatchesKey(Key.D2))
+            {
+                bindings[ArenaAction.WeaponAbility3] =
+                    ArenaInputBinding.ForKey(Key.D3);
+            }
+            if (weaponAbility4.MatchesKey(Key.D3)
+                && bindings[ArenaAction.WeaponAbility3].MatchesKey(Key.D3))
+            {
+                bindings[ArenaAction.WeaponAbility4] =
+                    ArenaInputBinding.ForKey(Key.D4);
+            }
         }
 
         private static void ValidateBinding(ArenaInputBinding binding)

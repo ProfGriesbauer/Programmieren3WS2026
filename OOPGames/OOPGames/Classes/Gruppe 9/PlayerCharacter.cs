@@ -7,9 +7,12 @@ namespace OOPGames
     {
         private const double AttackAnimationDurationMilliseconds = 200;
         private long _attackStartTimestamp;
+        public const int BaseMaxHitPoints = 100;
+        public const double BaseMaxSpeed = 15;
 
         public PlayerCharacter(double x, double y)
-            : base(x, y, 100, 15, 34, Brushes.DodgerBlue, CombatTeam.Player)
+            : base(x, y, BaseMaxHitPoints, BaseMaxSpeed, 34,
+                Brushes.DodgerBlue, CombatTeam.Player)
         {
             EquippedWeapon = WeaponCatalog.Sword;
         }

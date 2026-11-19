@@ -13,6 +13,8 @@ namespace OOPGames
         public const string Fire = "sword-element-fire";
         public const string Freeze = "sword-element-freeze";
         public const string ElementPower = "sword-element-power";
+        public const string Range = "sword-range";
+        public const string Knockback = "sword-knockback";
         public const string SpinAbility = "sword-spin-ability";
 
         private static readonly IReadOnlyList<WeaponUpgradeDefinition> _upgrades =
@@ -49,7 +51,15 @@ namespace OOPGames
                 new WeaponUpgradeDefinition(
                     ElementPower, "Elementstärke",
                     "Verbessert Stärke und Dauer des gewählten Klingeneffekts.",
-                    5, 2, StrikeDamage)
+                    5, 2, StrikeDamage),
+                new WeaponUpgradeDefinition(
+                    Range, "Reichweite",
+                    "Erhöht die Reichweite der Schwerthiebe.",
+                    5, 1, null),
+                new WeaponUpgradeDefinition(
+                    Knockback, "Rückstoß",
+                    "Erhöht den Rückstoß, den Schwerthiebe bei Treffern verursachen.",
+                    5, 1, null)
             });
 
         public static IReadOnlyList<WeaponUpgradeDefinition> Upgrades
@@ -118,13 +128,15 @@ namespace OOPGames
 
             int damage = 14
                 + progression.GetWeaponUpgradeRank(StrikeDamage) * 3;
+            double range = 100 * GetRangeMultiplier(progression);
             return new Weapon(
                 WeaponCatalog.Sword.Id, WeaponCatalog.Sword.Name,
                 "Schwert: weiter, schwenkender Hieb mit wählbarem Element.",
                 new SweepingArcAttackPattern(
-                    100, Math.PI * 0.72, Math.PI / 10, 0.58),
+                    range, Math.PI * 0.72, Math.PI / 10, 0.58),
                 CreateSwordEffect(progression, damage, 75),
-                0.65, WeaponTargetingMode.Opponents, "sweeping-slash");
+                0.65, WeaponTargetingMode.Opponents, "sweeping-slash",
+                knockbackDistance: GetKnockbackDistance(progression));
         }
 
         public static Weapon CreateSpinWeapon(ArenaProgression progression)
@@ -141,12 +153,24 @@ namespace OOPGames
 
             int damage = 8
                 + progression.GetWeaponUpgradeRank(SpinDamage) * 3;
+            double range = 115 * GetRangeMultiplier(progression);
             return new Weapon(
                 SpinAbility, "Drehwirbel",
                 "Der Spieler dreht sich dreimal und trifft Gegner bei jedem Umlauf.",
-                new SpinningAttackPattern(115, 3, Math.PI / 8, 0.9),
+                new SpinningAttackPattern(range, 3, Math.PI / 8, 0.9),
                 CreateSwordEffect(progression, damage, 75),
-                4.5, WeaponTargetingMode.Opponents, "sword-spin", 3);
+                4.5, WeaponTargetingMode.Opponents, "sword-spin", 3,
+                GetKnockbackDistance(progression));
+        }
+
+        private static double GetRangeMultiplier(ArenaProgression progression)
+        {
+            return 1 + progression.GetWeaponUpgradeRank(Range) * 0.1;
+        }
+
+        private static double GetKnockbackDistance(ArenaProgression progression)
+        {
+            return 8 + progression.GetWeaponUpgradeRank(Knockback) * 5;
         }
 
         private static ICombatEffect CreateSwordEffect(

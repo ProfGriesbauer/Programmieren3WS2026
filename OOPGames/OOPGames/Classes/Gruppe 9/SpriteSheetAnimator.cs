@@ -16,7 +16,9 @@ namespace OOPGames
         private readonly Dictionary<string, AnimationClip> _clips =
             new Dictionary<string, AnimationClip>(StringComparer.OrdinalIgnoreCase);
         private string _currentClipName;
-        private long _clipStartTimestamp;
+        private double _elapsedMilliseconds;
+        private long _lastTimestamp;
+        private double _lastTimeScale = 1;
 
         // The caller supplies the atlas and Aseprite/LibreSprite JSON paths, so the animator
         // can be reused with any entity's sprite assets and clip names.
@@ -45,9 +47,19 @@ namespace OOPGames
         // Returns the current frame for a named clip, restarting the clip when it changes.
         public BitmapSource GetFrame(string animationName)
         {
+            return GetFrame(animationName, 1);
+        }
+
+        public BitmapSource GetFrame(string animationName, double timeScale)
+        {
             if (String.IsNullOrWhiteSpace(animationName))
             {
                 throw new ArgumentException("An animation name is required.", nameof(animationName));
+            }
+            if (double.IsNaN(timeScale) || double.IsInfinity(timeScale)
+                || timeScale < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeScale));
             }
             if (!_clips.TryGetValue(animationName, out AnimationClip clip))
             {
@@ -66,12 +78,20 @@ namespace OOPGames
             if (!String.Equals(_currentClipName, animationName, StringComparison.OrdinalIgnoreCase))
             {
                 _currentClipName = animationName;
-                _clipStartTimestamp = Stopwatch.GetTimestamp();
+                _elapsedMilliseconds = 0;
+                _lastTimestamp = Stopwatch.GetTimestamp();
+                _lastTimeScale = timeScale;
+            }
+            else
+            {
+                long timestamp = Stopwatch.GetTimestamp();
+                _elapsedMilliseconds += (timestamp - _lastTimestamp)
+                    * 1000.0 / Stopwatch.Frequency * _lastTimeScale;
+                _lastTimestamp = timestamp;
+                _lastTimeScale = timeScale;
             }
 
-            long elapsedMilliseconds = (long)Stopwatch.GetElapsedTime(
-                _clipStartTimestamp).TotalMilliseconds;
-            int frameTime = (int)(elapsedMilliseconds % clip.DurationMilliseconds);
+            int frameTime = (int)(_elapsedMilliseconds % clip.DurationMilliseconds);
             foreach (AnimationFrame frame in clip.Frames)
             {
                 if (frameTime < frame.DurationMilliseconds)

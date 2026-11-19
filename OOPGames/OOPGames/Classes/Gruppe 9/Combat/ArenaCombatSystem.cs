@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Windows;
 
 namespace OOPGames
 {
@@ -117,7 +118,9 @@ namespace OOPGames
             return visuals.AsReadOnly();
         }
 
-        public void Update(double deltaSeconds, IReadOnlyList<Entity> entities)
+        public void Update(
+            double deltaSeconds, IReadOnlyList<Entity> entities,
+            Rect? movementBounds = null)
         {
             if (deltaSeconds < 0)
             {
@@ -193,6 +196,12 @@ namespace OOPGames
                     finally
                     {
                         attack.Source.EffectWeaponContext = null;
+                    }
+                    if (target.IsAlive && !target.IsInvulnerable)
+                    {
+                        ApplyKnockback(
+                            attack.Source, target, attack.Weapon.KnockbackDistance,
+                            entities, movementBounds);
                     }
                     if (wasAlive && !target.IsAlive)
                     {
@@ -317,6 +326,69 @@ namespace OOPGames
                 }
             }
             return targets;
+        }
+
+        private static void ApplyKnockback(
+            Entity source, Entity target, double distance,
+            IReadOnlyList<Entity> entities, Rect? movementBounds)
+        {
+            if (distance <= 0)
+            {
+                return;
+            }
+
+            double offsetX = target.PositionX - source.PositionX;
+            double offsetY = target.PositionY - source.PositionY;
+            double length = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
+            if (length == 0)
+            {
+                return;
+            }
+
+            double directionX = offsetX / length;
+            double directionY = offsetY / length;
+            double step = distance;
+            for (int attempt = 0; attempt < 8 && step > 0.25; attempt++)
+            {
+                double nextX = target.PositionX + directionX * step;
+                double nextY = target.PositionY + directionY * step;
+                if (movementBounds.HasValue)
+                {
+                    Rect bounds = movementBounds.Value;
+                    double radius = target.Size / 2;
+                    nextX = Math.Max(bounds.Left + radius,
+                        Math.Min(bounds.Right - radius, nextX));
+                    nextY = Math.Max(bounds.Top + radius,
+                        Math.Min(bounds.Bottom - radius, nextY));
+                }
+
+                bool overlaps = false;
+                foreach (Entity other in entities)
+                {
+                    if (ReferenceEquals(other, target) || !other.IsAlive)
+                    {
+                        continue;
+                    }
+
+                    double minimumDistance = (target.Size + other.Size) / 2;
+                    double candidateX = nextX - other.PositionX;
+                    double candidateY = nextY - other.PositionY;
+                    if (candidateX * candidateX + candidateY * candidateY
+                        < minimumDistance * minimumDistance)
+                    {
+                        overlaps = true;
+                        break;
+                    }
+                }
+
+                if (!overlaps)
+                {
+                    target.PositionX = nextX;
+                    target.PositionY = nextY;
+                    return;
+                }
+                step /= 2;
+            }
         }
 
         private static void CompleteAttack(RunningAttack attack)

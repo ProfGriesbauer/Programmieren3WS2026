@@ -39,9 +39,10 @@ namespace OOPGames
                 return;
             }
 
-            _field.UpdatePlayerPosition();
-            _field.UpdateEnemyPositions();
-            _field.UpdateCombat(0.04);
+            double timeScale = _field.GameTimeScale;
+            _field.UpdatePlayerPosition(timeScale);
+            _field.UpdateEnemyPositions(timeScale);
+            _field.UpdateCombat(0.04 * timeScale);
         }
     }
 }
