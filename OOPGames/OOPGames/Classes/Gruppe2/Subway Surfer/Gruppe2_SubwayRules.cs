@@ -31,9 +31,21 @@ namespace OOPGames
         private const double ReactionDistanceAfterTrain = 60;
         private bool _trackPrefilled;
         private const int MinimumDropTicks = 12;
+        // Short air time: the runner is back on the ground quickly (25 frames per second).
+        private const int NormalJumpTicks = 20;
+        private const int JumpStickJumpTicks = 30;
+        // Only one of these can be active at a time; magnet and double coins combine freely.
+        private static readonly Gruppe2_SubwayUpgradeKind[] ExclusiveUpgrades =
+        {
+            Gruppe2_SubwayUpgradeKind.JumpStick,
+            Gruppe2_SubwayUpgradeKind.Jetpack,
+            Gruppe2_SubwayUpgradeKind.Surfboard
+        };
         private Gruppe2_SubwayField _field = new Gruppe2_SubwayField();
         private readonly HashSet<Gruppe2_SubwayObstacle> _passedTrainParts =
             new HashSet<Gruppe2_SubwayObstacle>();
+        private readonly HashSet<Gruppe2_SubwayReward> _missedRewards =
+            new HashSet<Gruppe2_SubwayReward>();
         private double _nextWaveAt;
 
         public string Name { get { return "Gruppe 2 - Subway Surfer Regeln"; } }
@@ -48,6 +60,7 @@ namespace OOPGames
         {
             _field.Reset();
             _passedTrainParts.Clear();
+            _missedRewards.Clear();
             _trackPrefilled = false;
             _nextWaveAt = 25;
         }
@@ -76,7 +89,9 @@ namespace OOPGames
                     bool onRoof = _field.Level == Gruppe2_SubwayLevel.TrainRoof;
                     if ((_field.Level == Gruppe2_SubwayLevel.Track || onRoof) && _field.JumpTicks == 0)
                     {
-                        _field.JumpDurationTicks = _field.HasUpgrade(Gruppe2_SubwayUpgradeKind.JumpStick) ? 42 : 30;
+                        _field.JumpDurationTicks = _field.HasUpgrade(Gruppe2_SubwayUpgradeKind.JumpStick)
+                            ? JumpStickJumpTicks
+                            : NormalJumpTicks;
                         _field.JumpTicks = _field.JumpDurationTicks;
                         _field.RollTicks = 0;
                         // A jump on a roof stays a roof jump: the arc starts at roof height and
@@ -395,6 +410,7 @@ namespace OOPGames
             _passedTrainParts.RemoveWhere(Gruppe2_SubwayTrainLayout.IsBehindRunner);
             _field.MutableObstacles.RemoveAll(Gruppe2_SubwayTrainLayout.IsBehindRunner);
             _field.MutableRewards.RemoveAll(reward => reward.Distance < -4);
+            _missedRewards.RemoveWhere(reward => reward.Distance < -4);
         }
 
         private void CollectRewards()
@@ -420,6 +436,13 @@ namespace OOPGames
                     _field.Coins += _field.HasUpgrade(Gruppe2_SubwayUpgradeKind.DoubleCoins) ? 2 : 1;
                     SetMessage("Muenze gesammelt!");
                 }
+                else if (_missedRewards.Contains(reward) || IsBlockedByOtherExclusiveUpgrade(reward.Upgrade))
+                {
+                    // Jump stick, jetpack and surfboard exclude each other: the reward stays
+                    // on the track and is missed - also if the active one runs out a moment later.
+                    _missedRewards.Add(reward);
+                    continue;
+                }
                 else
                 {
                     GrantUpgrade(reward.Upgrade);
@@ -427,6 +450,12 @@ namespace OOPGames
 
                 _field.MutableRewards.Remove(reward);
             }
+        }
+
+        private bool IsBlockedByOtherExclusiveUpgrade(Gruppe2_SubwayUpgradeKind upgrade)
+        {
+            return ExclusiveUpgrades.Contains(upgrade)
+                && ExclusiveUpgrades.Any(active => active != upgrade && _field.HasUpgrade(active));
         }
 
         private void GrantUpgrade(Gruppe2_SubwayUpgradeKind upgrade)

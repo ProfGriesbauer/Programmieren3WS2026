@@ -38,6 +38,40 @@ namespace OOPGames
             TestJumpFromRoofToRoofOverGap();
             TestJetpackFlight();
             TestMagnetCollectsNeighbourLaneCoins();
+            TestJumpStickJetpackSurfboardExcludeEachOther();
+        }
+
+        private static void TestJumpStickJetpackSurfboardExcludeEachOther()
+        {
+            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            rules.ClearField();
+            field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.Surfboard] = 200;
+
+            foreach (Gruppe2_SubwayUpgradeKind upgrade in new[]
+            {
+                Gruppe2_SubwayUpgradeKind.JumpStick, Gruppe2_SubwayUpgradeKind.Jetpack,
+                Gruppe2_SubwayUpgradeKind.Magnet, Gruppe2_SubwayUpgradeKind.DoubleCoins
+            })
+            {
+                field.MutableRewards.Add(new Gruppe2_SubwayReward(
+                    Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5, upgrade));
+                rules.TickGameCall();
+            }
+
+            AssertTrue(!field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.JumpStick)
+                    && !field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Jetpack),
+                "with an active surfboard neither jump stick nor jetpack can be picked up");
+            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Magnet)
+                    && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.DoubleCoins),
+                "magnet and double coins can always be combined");
+
+            field.MutableUpgrades.Remove(Gruppe2_SubwayUpgradeKind.Surfboard);
+            field.MutableRewards.Add(new Gruppe2_SubwayReward(
+                Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5, Gruppe2_SubwayUpgradeKind.JumpStick));
+            rules.TickGameCall();
+            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.JumpStick),
+                "once the surfboard has run out, the jump stick can be picked up again");
         }
 
         private static void TestMagnetCollectsNeighbourLaneCoins()
@@ -209,7 +243,7 @@ namespace OOPGames
                 jumpTicks++;
             }
 
-            AssertTrue(jumpTicks > 35,
+            AssertTrue(jumpTicks > 25,
                 "the next jump with the jump stick is the long, high jump");
         }
 
