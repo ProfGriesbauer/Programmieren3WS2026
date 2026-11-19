@@ -52,6 +52,9 @@ namespace OOPGames
         private const double ObjectTrackDepthRatio = 0.82;
         private const double ObstaclePreviewDistance = 520;
         private const double RunnerWorldZ = 0.55;
+        private const double CameraWorldZ = 7;
+        private const double GuardChaseZ = 2.5;
+        private const double GuardIntroEndZ = CameraWorldZ + 0.25;
         private const double WorldUnitsPerDistance = 0.1;
         private const double CarWorldWidth = 1.84;
         private const double CarRoofHeight = 2.42;
@@ -111,7 +114,7 @@ namespace OOPGames
                 ClipToBounds = true,
                 IsHitTestVisible = false,
                 Camera = new PerspectiveCamera(
-                    new Point3D(0, 2.2 + RunnerGroundHeight(field), 7),
+                    new Point3D(0, 2.2 + RunnerGroundHeight(field), CameraWorldZ),
                     new Vector3D(0, -0.10, -1),
                     new Vector3D(0, 1, 0),
                     55)
@@ -147,10 +150,12 @@ namespace OOPGames
                 }
             }
 
-            AddThreeDimensionalRunner(viewport, field, false);
+            AddThreeDimensionalRunner(viewport, field, false, 0);
             if (field.GuardVisible)
             {
-                AddThreeDimensionalRunner(viewport, field, true);
+                Gruppe2_SubwayField subwayField = field as Gruppe2_SubwayField;
+                int guardIntroTicks = subwayField == null ? 0 : subwayField.GuardIntroTicks;
+                AddThreeDimensionalRunner(viewport, field, true, guardIntroTicks);
             }
 
             canvas.Children.Add(viewport);
@@ -320,17 +325,29 @@ namespace OOPGames
         }
 
         private static void AddThreeDimensionalRunner(
-            Viewport3D viewport, IGruppe2_SubwayField field, bool guard)
+            Viewport3D viewport, IGruppe2_SubwayField field, bool guard, int guardIntroTicks)
         {
             double x = LaneWorldX(field.Lane) - (guard ? 0.35 : 0);
-            double z = guard ? 2.5 : RunnerWorldZ;
+            bool guardIntro = guard && guardIntroTicks > 0;
+            double introElapsedTicks = guardIntro
+                ? Gruppe2_SubwayField.GuardIntroDurationTicks - guardIntroTicks
+                : 0;
+            double introProgress = introElapsedTicks / Gruppe2_SubwayField.GuardIntroDurationTicks;
+            double introRemaining = 1 - introProgress;
+            double retreatProgress = 1 - introRemaining * introRemaining;
+            double z = guard
+                ? guardIntro ? GuardChaseZ + (GuardIntroEndZ - GuardChaseZ) * retreatProgress : GuardChaseZ
+                : RunnerWorldZ;
             double jump = guard ? 0
                 : RunnerGroundHeight(field)
                     + (field.Level == Gruppe2_SubwayLevel.Air ? 1.15 * field.JumpHeight : 0);
             bool hasSkateboard = !guard
                 && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Surfboard);
             bool skating = hasSkateboard && field.Level != Gruppe2_SubwayLevel.Air;
-            double run = Math.Sin(field.Distance * 0.48);
+            double introRunPhase = introElapsedTicks * (1 - introProgress * 0.5);
+            double run = guardIntro
+                ? Math.Sin(introRunPhase * 0.48) * introRemaining
+                : Math.Sin(field.Distance * 0.48);
             double movement = skating
                 ? Math.Sin(field.Distance * 0.32)
                 : run;

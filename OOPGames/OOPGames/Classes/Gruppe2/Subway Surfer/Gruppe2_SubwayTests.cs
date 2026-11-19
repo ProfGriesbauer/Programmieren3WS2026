@@ -549,6 +549,46 @@ namespace OOPGames
                 AssertTrue(guardForward.Z < -0.99,
                     "the Bahnrichter faces away from the camera down the tracks");
                 AssertRearHair(guardModel, false);
+
+                field.GuardGap = 100;
+                field.GuardIntroTicks = Gruppe2_SubwayField.GuardIntroDurationTicks;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                double introStartZ = GetRunnerZ(guardVisual);
+                double introStartScale = GetRunnerScale(guardVisual);
+                AssertTrue(introStartZ > 0.55,
+                    "the Bahnrichter starts behind the player");
+
+                field.GuardIntroTicks = Gruppe2_SubwayField.GuardIntroDurationTicks / 2;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                double introMiddleZ = GetRunnerZ(guardVisual);
+                double introMiddleScale = GetRunnerScale(guardVisual);
+                double introMiddleMovement = GetRunnerAnimationMagnitude(guardVisual);
+                AssertTrue(introMiddleZ > introStartZ
+                    && Math.Abs(introMiddleScale - introStartScale) < 0.001
+                    && introMiddleMovement > 0,
+                    "the Bahnrichter approaches like an obstacle while his stride slows");
+
+                field.GuardIntroTicks = 1;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                int visualsBeforeIntroEnds = viewport.Children.OfType<ModelVisual3D>().Count();
+                AssertTrue(GetRunnerZ(guardVisual) > introMiddleZ
+                    && GetRunnerZ(guardVisual) > 7
+                    && Math.Abs(GetRunnerScale(guardVisual) - introStartScale) < 0.001
+                    && GetRunnerAnimationMagnitude(guardVisual) < introMiddleMovement,
+                    "the Bahnrichter slows and passes the camera like an obstacle");
+
+                field.GuardIntroTicks = 0;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                AssertTrue(viewport.Children.OfType<ModelVisual3D>().Count()
+                    == visualsBeforeIntroEnds - 1,
+                    "the Bahnrichter leaves the scene when the intro ends");
             }
             finally
             {
@@ -671,6 +711,24 @@ namespace OOPGames
         {
             Transform3DGroup transform = GetRunnerTransform(skaterVisual);
             return transform.Children.OfType<ScaleTransform3D>().First().ScaleX;
+        }
+
+        private static double GetRunnerZ(ModelVisual3D skaterVisual)
+        {
+            Transform3DGroup transform = GetRunnerTransform(skaterVisual);
+            return transform.Children.OfType<TranslateTransform3D>().Single().OffsetZ;
+        }
+
+        private static double GetRunnerAnimationMagnitude(ModelVisual3D runnerVisual)
+        {
+            Model3DGroup runner = runnerVisual.Content as Model3DGroup;
+            Model3DGroup rider = runner.Children.OfType<Model3DGroup>().First();
+            return rider.Children.OfType<Model3DGroup>()
+                .Where(part => part.Transform is RotateTransform3D)
+                .Select(part => Math.Abs(((AxisAngleRotation3D)
+                    ((RotateTransform3D)part.Transform).Rotation).Angle))
+                .DefaultIfEmpty(0)
+                .Max();
         }
 
         private static void AssertRunnerFitsTrack(
