@@ -8,7 +8,8 @@ namespace OOPGames
     {
         readonly G10_TetrisSession _Session = new G10_TetrisSession();
         readonly G10_TetrisRenderer _Renderer = new G10_TetrisRenderer();
-        readonly G10_TetrisInputMapper _Input = new G10_TetrisInputMapper(new G10_WpfKeyStateSource());
+        readonly G10_TetrisInputMapper _Input =
+            new G10_TetrisInputMapper(new G10_WpfKeyStateSource());
 
         public string Title { get { return "Tetris"; } }
         public int Width { get { return 160; } }
@@ -23,7 +24,7 @@ namespace OOPGames
 
         public void Update(IReadOnlyCollection<Key> keys)
         {
-            G10_TetrisInput input = _Input.Read();
+            G10_TetrisInput input = _Input.Read(keys);
             _Session.Update(G10_TetrisConfig.FixedDeltaSeconds, input);
         }
 

@@ -293,23 +293,24 @@ namespace OOPGames
         void DrawEnemy(DrawingContext drawing, G10_SolarShooterEnemy enemy, int tick)
         {
             drawing.PushTransform(new TranslateTransform(enemy.X, enemy.Y));
-            bool bulwark = enemy is G10_Bulwark;
-            bool needle = enemy is G10_Needlewing;
-            drawing.DrawEllipse(EnemyGlow, null, new Point(0, 0), bulwark ? 10 : 7, bulwark ? 8 : 6);
-            Geometry hull = EnemyShapes[bulwark ? 2 : needle ? 1 : 0];
-            Brush enemyHull = bulwark ? BulwarkHull : EnemyHull;
+            G10_ShooterEnemyAppearance appearance = enemy.Appearance;
+            drawing.DrawEllipse(EnemyGlow, null, new Point(0, 0),
+                appearance.GlowWidth, appearance.GlowHeight);
+            Geometry hull = EnemyShapes[appearance.ShapeIndex];
+            Brush enemyHull = appearance.UseBulwarkHull ? BulwarkHull : EnemyHull;
             drawing.DrawGeometry(enemyHull, new Pen(Solid(Color.FromRgb(255, 200, 190)), 0.55), hull);
             drawing.DrawGeometry(HullDark, null, Polygon(new Point(-5, 0), new Point(-8, 1), new Point(-5, 2)));
             drawing.DrawGeometry(HullDark, null, Polygon(new Point(5, 0), new Point(8, 1), new Point(5, 2)));
-            drawing.DrawEllipse(Glass, null, new Point(0, -1.3), bulwark ? 1.6 : 1.2, 1.3);
+            drawing.DrawEllipse(Glass, null, new Point(0, -1.3),
+                appearance.UseBulwarkHull ? 1.6 : 1.2, 1.3);
             drawing.DrawEllipse(Amber, null, new Point(-2.4, 3.3), 0.65, 0.5);
             drawing.DrawEllipse(Amber, null, new Point(2.4, 3.3), 0.65, 0.5);
-            if (bulwark)
+            if (appearance.HasArmorLines)
             {
                 drawing.DrawLine(new Pen(Gold, 0.7), new Point(-3.5, -1.5), new Point(-1.8, 1.2));
                 drawing.DrawLine(new Pen(Gold, 0.7), new Point(3.5, -1.5), new Point(1.8, 1.2));
             }
-            if (needle && tick % 16 < 5)
+            if (appearance.HasTrail && tick % 16 < 5)
                 drawing.DrawLine(new Pen(Solid(Color.FromArgb(130, 255, 130, 104)), 0.55),
                     new Point(-4, 5.5), new Point(4, 5.5));
             drawing.Pop();

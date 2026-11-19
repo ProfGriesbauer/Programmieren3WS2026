@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Windows.Input;
 
 namespace OOPGames
@@ -33,24 +35,17 @@ namespace OOPGames
         readonly IG10_KeyStateSource _KeyState;
         readonly G10_KeyAxis _Horizontal =
             new G10_KeyAxis(Key.Left, Key.A, Key.Right, Key.D);
-        readonly G10_RisingEdge _RotateEdge = new G10_RisingEdge();
-        readonly G10_RisingEdge _HardDropEdge = new G10_RisingEdge();
-        readonly G10_RisingEdge _ConfirmEdge = new G10_RisingEdge();
         bool _SuppressUntilRelease;
 
         public G10_TetrisInputMapper(IG10_KeyStateSource keyState)
         {
+            if (keyState == null) throw new ArgumentNullException("keyState");
             _KeyState = keyState;
         }
 
-        public G10_TetrisInput Read()
+        public G10_TetrisInput Read(IReadOnlyCollection<Key> pressedKeys)
         {
-            bool rotateDown = _KeyState.IsDown(Key.Up) || _KeyState.IsDown(Key.Z);
-            bool hardDropDown = _KeyState.IsDown(Key.Space);
-            bool confirmDown = _KeyState.IsDown(Key.Enter);
-            bool rotate = _RotateEdge.Update(rotateDown);
-            bool hardDrop = _HardDropEdge.Update(hardDropDown);
-            bool confirm = _ConfirmEdge.Update(confirmDown);
+            if (pressedKeys == null) throw new ArgumentNullException("pressedKeys");
 
             if (_SuppressUntilRelease)
             {
@@ -62,17 +57,22 @@ namespace OOPGames
             return new G10_TetrisInput(
                 _Horizontal.Read(_KeyState),
                 _KeyState.IsDown(Key.Down) || _KeyState.IsDown(Key.S),
-                rotate,
-                hardDrop,
-                confirm);
+                WasPressed(pressedKeys, Key.Up) || WasPressed(pressedKeys, Key.Z),
+                WasPressed(pressedKeys, Key.Space),
+                WasPressed(pressedKeys, Key.Enter));
         }
 
         public void Reset()
         {
-            _RotateEdge.Reset(_KeyState.IsDown(Key.Up) || _KeyState.IsDown(Key.Z));
-            _HardDropEdge.Reset(_KeyState.IsDown(Key.Space));
-            _ConfirmEdge.Reset(_KeyState.IsDown(Key.Enter));
             _SuppressUntilRelease = AreControlsDown();
+        }
+
+        static bool WasPressed(IReadOnlyCollection<Key> pressedKeys, Key key)
+        {
+            foreach (Key pressedKey in pressedKeys)
+                if (pressedKey == key)
+                    return true;
+            return false;
         }
 
         bool AreControlsDown()

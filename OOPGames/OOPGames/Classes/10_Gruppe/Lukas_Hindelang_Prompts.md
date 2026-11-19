@@ -171,3 +171,118 @@ erfolgreich, ohne Warnungen oder Fehler.
 zwischengespeichert; kompatible statische Meshes zusammengefasst und
 eingefroren; Kamera-, UI- und Bildschirmupdates bei unveraendertem Zustand
 vermieden. Build erfolgreich; manuelle Messung der Zoom-Performance noch offen.
+
+## 2026-11-19
+
+### 16
+
+**Prompt:**
+> Kannst du Tetris bitte noch für den Gameboy implementieren? (bitte nach vorbild von dem Void Courier)
+
+**Ergebnis:** Tetris als eigenständige GameBoy-Cartridge mit Session, Renderer
+und Input-Mapping implementiert und im GameBoy-Menü registriert. Projektbuild
+erfolgreich.
+
+### 17
+
+**Prompt:**
+> Ich möchte, dass sich mein Schiff in Void Courier nicht mehr nur per einzelnem Tastendruck bewegt, sondern solange eine Taste gehalten wird. Wichtig ist, dass es sofort losfliegt, ohne die kurze Gedenksekunde, die man vom Halten einer Taste kennt, und dass es beim Loslassen auch sofort stoppt. Das Gleiche soll für Feuer gelten: Wer die Taste hält, schießt im normalen Waffen-Cooldown dauerhaft weiter.
+>
+> Ich vermute, dass das Problem an der Tastenwiederholung von Windows liegt. Das Framework gibt uns die Tasten nur als KeyDown-Events, und beim Halten kommt erst ein Event, dann eine Pause und erst danach die Wiederholungen. Dafür reicht unser Latch von 0,12 s nicht aus. Bitte prüfe das kurz im Repo, bevor du etwas baust.
+>
+> Mein Vorschlag ist, die Events für die Bewegung gar nicht mehr zu nutzen und stattdessen in jedem 40-ms-Tick den echten Tastenzustand mit Keyboard.IsKeyDown abzufragen. Prüfe dafür vorher, ob Update auf dem UI-Thread läuft. Falls nicht, sag mir Bescheid, bevor du am Framework etwas änderst, denn das liegt außerhalb von G10.
+>
+> Mir ist dabei die Objektstruktur wichtig, sie soll sauber und nicht überladen sein. Die Tastaturabfrage hinter ein kleines Interface (zum Beispiel IG10_KeyStateSource), das nur eine WPF-Klasse implementiert. Die Tastenbelegung gehört in eine eigene Klasse, damit sie auch für den Overlay-Text genutzt werden kann. Für Links/Rechts und Hoch/Runter brauche ich eine wiederverwendbare Achsen-Klasse, die bei zwei gleichzeitig gedrückten Gegentasten 0 liefert und das bisherige Copy-Paste ersetzt. Ein Mapper baut daraus pro Tick ein unveränderliches G10_SolarShooterInput. Für den Neustart per Enter reicht eine kleine Klasse, die nur die steigende Flanke erkennt, damit Halten nichts mehrfach auslöst. Das Game reicht dann nur noch weiter und enthält keine Tastenlogik mehr. Session und Modell sollen keine Key-Typen kennen.
+>
+> Der alte Latch mit seinen Feldern und der Konstante in der Config soll komplett raus, ohne tote Reste. Alles andere bleibt wie es ist: Geschwindigkeit, Diagonalbewegung, Waffen-Cooldown, 160x144, 40 ms und die Optik. Der Neustart geht nur über Enter, und der Overlay-Text sagt "PRESS ENTER". Beim Neustart dürfen keine alten Tastenzustände mitgeschleppt werden.
+>
+> Es müssen keine Tests geschrieben werden. Beende vor dem Build die laufende OOPGames.exe. Am Ende möchte ich kurz wissen, was du beim UI-Thread-Check gefunden hast, welche Variante du umgesetzt hast und ein Mermaid-Diagramm der Input-Klassen.
+
+**Ergebnis:** Windows-Tastenwiederholung durch Abfrage des Live-Tastenzustands
+pro Tick ersetzt. Key-State-Interface, WPF-Implementierung, Bindings,
+wiederverwendbare Achse, Mapper und Rising-Edge-Helfer ergänzt. UI-Tick läuft
+über den WPF-Dispatcher; Build erfolgreich.
+
+### 18
+
+**Prompt:**
+> Das Einstecken eines Spiels in den Gameboy ist bei uns (Kinderzimmer90er, G10, WPF) aktuell nicht richtig umgesetzt. Bitte lies zuerst den bestehenden Code dazu und die angehängten Screenshots [ANHÄNGEN], damit du siehst, was falsch ist. Beschreibe mir kurz, was du gefunden hast, bevor du etwas änderst.
+>
+> So funktioniert das beim echten Game Boy (DMG), und so soll es bei uns aussehen: Das Modul wird von oben in den Schacht auf der Rückseite des Geräts gesteckt. Es bewegt sich dabei senkrecht nach unten, nicht seitlich und nicht von vorn. Die Kontaktseite mit den Pins zeigt nach unten in das Gerät, die Beschriftungsseite zeigt nach hinten, vom Spieler weg. Von vorn gesehen ist das Modul deshalb größtenteils vom Gerät verdeckt. Man sieht nur den Teil, der oben aus dem Gerät herausragt, als graue Kante über dem Gehäuse. Das Modul steckt am Ende nicht komplett im Gerät. Etwa [ANTEIL, z. B. ein Drittel] ragt oben heraus. Das Modul ist oben breiter als unten, wo der schmalere Steckteil in den Schacht geht.
+>
+> Daraus ergibt sich für die Umsetzung: Beim Einstecken wird nur die Y-Position des Moduls von oben nach unten animiert, bis es einrastet. Dabei muss die Zeichenreihenfolge stimmen: Das Modul wird hinter der Gerätefront bzw. dem Gehäuse gezeichnet, damit der untere Teil verschwindet und nur der obere sichtbar bleibt. Das Herausziehen läuft umgekehrt. Erst nach dem Einrasten darf das Gerät "angehen" und das Spiel starten [ABLAUF ANPASSEN: z. B. Power-Schalter, Startlogo, direkt Spiel].
+>
+> Zur Struktur: Das Modul soll ein eigenes Objekt mit klarer Verantwortung sein (Position, Zustand wie draußen, einsteckend, drin, herausziehend, und das zugehörige Spiel als IB5RoomMiniGame). Die Animation und die Zeichnung sollen nicht in einer großen Methode stehen. Der Gameboy kennt nur, welches Modul eingesteckt ist, und startet das Spiel erst im Zustand "drin". Halte dich an die vorhandenen Konventionen und das bestehende Framework.
+>
+> Alles andere bleibt unverändert, also Spielmechanik, 160x144, 40-ms-Takt und der übrige Raum. Keine Tests schreiben. Beende vor dem Build die laufende OOPGames.exe. Am Ende bitte kurz: was war falsch, was hast du geändert, und ein kleines Mermaid-Diagramm der beteiligten Klassen.
+
+**Anhang:** Screenshot eines Game-Boy-Moduls und der rückseitigen
+Modulaufnahme. In der anschließenden Klärung wurde „ein Viertel“ als sichtbarer
+Modulanteil und „Startlogo zeigen, dann starten“ als Ablauf festgelegt.
+
+**Ergebnis:** Ein separates Modulmodell und eine rückseitige 3D-Darstellung
+wurden kurzzeitig umgesetzt. Auf spätere Bitte wurde diese Änderung vollständig
+wieder zurückgenommen; die bisherige Animation blieb bestehen.
+
+### 19
+
+**Prompt:**
+> Ich möchte nun, dass du einer andern AI einen zusammenfassung unseres Projektes gibst (Primär einfach mal meine zwei spiele). Fokus auf den Objekten, damit diese im diagramm dargesetellt werden können
+
+**Ergebnis:** Objektorientierte Zusammenfassung und Mermaid-Klassendiagramm für
+Void Courier und Tetris erstellt.
+
+### 20
+
+**Prompt:**
+> Bitte für mich zur vereinfachung kleine hinweise auf die Pfeile schreiben: Sprich erbt, polimotphie usw
+
+**Ergebnis:** Pfeilbeschriftete Diagrammversion mit Begriffen wie „erbt von“,
+„implementiert“, „besitzt“ und „verwendet“ erstellt.
+
+### 21
+
+**Prompt:**
+> kannst du das bitte so prompten, damit mir die andere AI das selbe erstellen kann
+
+**Ergebnis:** Einen kopierbaren Prompt erstellt, der die andere AI anweist,
+den aktuellen Code zu prüfen und eine objektorientierte Zusammenfassung samt
+beschriftetem Mermaid-Klassendiagramm für beide Spiele zu erstellen.
+
+### 22
+
+**Prompt:**
+> bitte das gleiche noch für tetris
+
+**Ergebnis:** Einen separaten kopierbaren Prompt für ein Tetris-spezifisches
+Klassendiagramm erstellt, einschließlich Session, Renderer, Input und
+wiederverwendeten Input-Helfern.
+
+### 23
+
+**Prompt:**
+> Berwerte den code von Tetris und Solar shooter hinsichtlich Objekten (das ist der ausschalgeegebden punkt hier im projekt)
+
+**Ergebnis:** Beide Spiele hinsichtlich Objektverantwortung, Vererbung,
+Polymorphie, Kapselung und Abstraktion verglichen. Void Courier nutzt eine
+Entity-Vererbungshierarchie und Strategien; Tetris ist in Komponenten getrennt,
+hat aber eine zentrale Session ohne eigene Vererbungshierarchie.
+
+### 24
+
+**Prompt:**
+> Kannst du der andern bitte einen prompt geben, idem sie verberung polymorphie usw die pfeile einfach farbig macht?
+
+**Ergebnis:** Kopierbaren Prompt erstellt, der Vererbung,
+Interface-Implementierung, Polymorphie/Strategien, Besitz und Abhängigkeiten
+im Diagramm farblich unterscheidbar darstellen lässt.
+
+### 25
+
+**Prompt:**
+> Kannst du bitte Aus meinen Beiden games nun richtige OOP games machen. Polimotphie, Verevbung usw bitte stark implementieren. Das wäre super
+
+**Ergebnis:** Tetris-Spielsteine als polymorphe Klassen modelliert und Brett,
+7er-Beutel sowie Wertung in eigene Objekte aufgeteilt. Void-Courier-Gegner
+erzeugen ihre Schüsse nun über überschriebenes Verhalten der Gegnertypen.
+Spielmechanik und vorhandene Werte beibehalten; Build erfolgreich.

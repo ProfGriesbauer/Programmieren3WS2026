@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace OOPGames
 {
@@ -22,6 +23,23 @@ namespace OOPGames
     internal interface IG10_Collidable
     {
         G10_SolarShooterBounds Bounds { get; }
+    }
+
+    internal interface IG10_ShooterCollisionContext
+    {
+        IG10_Collidable PlayerCollider { get; }
+        IG10_Collidable BossCollider { get; }
+        IReadOnlyList<G10_SolarShooterEnemy> Enemies { get; }
+        IReadOnlyList<G10_SolarShooterProjectile> PlayerProjectiles { get; }
+        IReadOnlyList<G10_SolarShooterProjectile> EnemyProjectiles { get; }
+        IReadOnlyList<G10_SolarShooterPowerCell> PowerCells { get; }
+        void RemovePlayerProjectile(G10_SolarShooterProjectile projectile);
+        void DestroyEnemy(G10_SolarShooterEnemy enemy);
+        void RemoveEnemy(G10_SolarShooterEnemy enemy);
+        void RemoveEnemyProjectile(G10_SolarShooterProjectile projectile);
+        void HitPlayer();
+        void HitBoss();
+        void CollectPowerCell(G10_SolarShooterPowerCell powerCell);
     }
 
     internal interface IG10_ShooterView
@@ -78,65 +96,94 @@ namespace OOPGames
         }
     }
 
+    internal sealed class G10_ShooterEnemyAppearance
+    {
+        public G10_ShooterEnemyAppearance(
+            int shapeIndex,
+            double glowWidth,
+            double glowHeight,
+            bool useBulwarkHull,
+            bool hasArmorLines,
+            bool hasTrail)
+        {
+            ShapeIndex = shapeIndex;
+            GlowWidth = glowWidth;
+            GlowHeight = glowHeight;
+            UseBulwarkHull = useBulwarkHull;
+            HasArmorLines = hasArmorLines;
+            HasTrail = hasTrail;
+        }
+
+        public int ShapeIndex { get; private set; }
+        public double GlowWidth { get; private set; }
+        public double GlowHeight { get; private set; }
+        public bool UseBulwarkHull { get; private set; }
+        public bool HasArmorLines { get; private set; }
+        public bool HasTrail { get; private set; }
+    }
+
     internal sealed class G10_CollisionResolver
     {
-        public void ResolvePlayerShots(G10_SolarShooterSession session)
+        static bool Intersects(IG10_Collidable first, IG10_Collidable second)
         {
-            for (int projectileIndex = session.PlayerProjectilesMutable.Count - 1; projectileIndex >= 0; projectileIndex--)
+            return first.Bounds.Intersects(second.Bounds);
+        }
+
+        public void ResolvePlayerShots(IG10_ShooterCollisionContext world)
+        {
+            for (int projectileIndex = world.PlayerProjectiles.Count - 1; projectileIndex >= 0; projectileIndex--)
             {
-                G10_SolarShooterProjectile projectile = session.PlayerProjectilesMutable[projectileIndex];
-                if (session.Boss != null && session.Boss.Bounds.Intersects(projectile.Bounds))
+                G10_SolarShooterProjectile projectile = world.PlayerProjectiles[projectileIndex];
+                if (world.BossCollider != null && Intersects(world.BossCollider, projectile))
                 {
-                    session.PlayerProjectilesMutable.RemoveAt(projectileIndex);
-                    session.HitBoss();
+                    world.RemovePlayerProjectile(projectile);
+                    world.HitBoss();
                     continue;
                 }
 
-                for (int enemyIndex = session.EnemiesMutable.Count - 1; enemyIndex >= 0; enemyIndex--)
+                for (int enemyIndex = world.Enemies.Count - 1; enemyIndex >= 0; enemyIndex--)
                 {
-                    G10_SolarShooterEnemy enemy = session.EnemiesMutable[enemyIndex];
-                    if (!projectile.Bounds.Intersects(enemy.Bounds)) continue;
+                    G10_SolarShooterEnemy enemy = world.Enemies[enemyIndex];
+                    if (!Intersects(projectile, enemy)) continue;
 
-                    session.PlayerProjectilesMutable.RemoveAt(projectileIndex);
-                    session.EnemiesMutable.RemoveAt(enemyIndex);
-                    session.DestroyEnemy(enemy);
+                    world.RemovePlayerProjectile(projectile);
+                    world.DestroyEnemy(enemy);
                     break;
                 }
             }
         }
 
-        public void ResolveEnemyHits(G10_SolarShooterSession session)
+        public void ResolveEnemyHits(IG10_ShooterCollisionContext world)
         {
-            G10_SolarShooterPlayer player = session.Player;
-            for (int i = session.EnemyProjectilesMutable.Count - 1; i >= 0; i--)
+            for (int i = world.EnemyProjectiles.Count - 1; i >= 0; i--)
             {
-                if (session.EnemyProjectilesMutable[i].Bounds.Intersects(player.Bounds))
+                G10_SolarShooterProjectile projectile = world.EnemyProjectiles[i];
+                if (Intersects(projectile, world.PlayerCollider))
                 {
-                    session.EnemyProjectilesMutable.RemoveAt(i);
-                    if (player.TakeHit()) session.OnPlayerHit();
+                    world.RemoveEnemyProjectile(projectile);
+                    world.HitPlayer();
                 }
             }
 
-            for (int i = session.EnemiesMutable.Count - 1; i >= 0; i--)
+            for (int i = world.Enemies.Count - 1; i >= 0; i--)
             {
-                if (player.Bounds.Intersects(session.EnemiesMutable[i].Bounds))
+                G10_SolarShooterEnemy enemy = world.Enemies[i];
+                if (Intersects(world.PlayerCollider, enemy))
                 {
-                    session.EnemiesMutable.RemoveAt(i);
-                    if (player.TakeHit()) session.OnPlayerHit();
+                    world.RemoveEnemy(enemy);
+                    world.HitPlayer();
                 }
             }
         }
 
-        public void ResolvePowerCells(G10_SolarShooterSession session)
+        public void ResolvePowerCells(IG10_ShooterCollisionContext world)
         {
-            for (int i = session.PowerCellsMutable.Count - 1; i >= 0; i--)
+            for (int i = world.PowerCells.Count - 1; i >= 0; i--)
             {
-                G10_SolarShooterPowerCell cell = session.PowerCellsMutable[i];
-                if (!session.Player.Bounds.Intersects(cell.Bounds)) continue;
+                G10_SolarShooterPowerCell cell = world.PowerCells[i];
+                if (!Intersects(world.PlayerCollider, cell)) continue;
 
-                session.PowerCellsMutable.RemoveAt(i);
-                if (session.Player.WeaponLevel < 3) session.Player.UpgradeWeapon();
-                else session.AddScore(250);
+                world.CollectPowerCell(cell);
             }
         }
     }
@@ -234,6 +281,34 @@ namespace OOPGames
             });
     }
 
+    internal sealed class G10_ShooterProgress
+    {
+        public int Score { get; private set; }
+        public int EnemiesDefeated { get; private set; }
+
+        public bool RegisterEnemyDefeated(int pointValue)
+        {
+            Score += pointValue;
+            EnemiesDefeated++;
+            return EnemiesDefeated % 4 == 0;
+        }
+
+        public void RegisterBossDefeated(int pointValue)
+        {
+            Score += pointValue;
+        }
+
+        public void RegisterPowerCellOverflow(int pointValue)
+        {
+            Score += pointValue;
+        }
+
+        public void ResetStage()
+        {
+            EnemiesDefeated = 0;
+        }
+    }
+
     internal abstract class G10_SolarShooterEnemy : G10_ShooterEntity
     {
         protected float Direction;
@@ -249,38 +324,32 @@ namespace OOPGames
         }
 
         public abstract int PointValue { get; }
-        public abstract float ShotDrift { get; }
-        public abstract float ShotSpeed { get; }
-        public abstract int RendererKind { get; }
-
-        public void SetShotCooldown(float value) { _ShotCooldown = value; }
-
-        public bool TryFire(float deltaSeconds)
+        public abstract G10_ShooterEnemyAppearance Appearance { get; }
+        public G10_SolarShooterProjectile UpdateAndTryFire(
+            float deltaSeconds,
+            G10_SolarShooterPlayer player)
         {
+            Update(deltaSeconds);
             _ShotCooldown -= deltaSeconds;
-            if (_ShotCooldown > 0) return false;
+            if (_ShotCooldown > 0) return null;
             _ShotCooldown = FireInterval;
-            return true;
+            return CreateShot(player);
         }
 
         protected abstract float FireInterval { get; }
-
-        public G10_SolarShooterProjectile CreateShot(G10_SolarShooterPlayer player)
-        {
-            float aim = Math.Sign(player.X - X) * ShotDrift;
-            return new G10_SolarShooterProjectile(X, Y + 4, aim, ShotSpeed);
-        }
+        protected abstract G10_SolarShooterProjectile CreateShot(G10_SolarShooterPlayer player);
     }
 
     internal sealed class G10_Driftling : G10_SolarShooterEnemy
     {
+        static readonly G10_ShooterEnemyAppearance _Appearance =
+            new G10_ShooterEnemyAppearance(0, 7, 6, false, false, false);
+
         public G10_Driftling(float x, float y, float direction, float firstShot)
             : base(x, y, direction, firstShot) { }
 
         public override int PointValue { get { return 75; } }
-        public override float ShotDrift { get { return 16; } }
-        public override float ShotSpeed { get { return 60; } }
-        public override int RendererKind { get { return 0; } }
+        public override G10_ShooterEnemyAppearance Appearance { get { return _Appearance; } }
         protected override float FireInterval { get { return 1.9f; } }
         public override G10_SolarShooterBounds Bounds
         {
@@ -293,17 +362,24 @@ namespace OOPGames
             Y += 22 * deltaSeconds;
             X = Math.Max(7, Math.Min(153, X));
         }
+
+        protected override G10_SolarShooterProjectile CreateShot(G10_SolarShooterPlayer player)
+        {
+            float aim = Math.Sign(player.X - X) * 16;
+            return new G10_SolarShooterProjectile(X, Y + 4, aim, 60);
+        }
     }
 
     internal sealed class G10_Needlewing : G10_SolarShooterEnemy
     {
+        static readonly G10_ShooterEnemyAppearance _Appearance =
+            new G10_ShooterEnemyAppearance(1, 7, 6, false, false, true);
+
         public G10_Needlewing(float x, float y, float direction, float firstShot)
             : base(x, y, direction, firstShot) { }
 
         public override int PointValue { get { return 125; } }
-        public override float ShotDrift { get { return 16; } }
-        public override float ShotSpeed { get { return 60; } }
-        public override int RendererKind { get { return 1; } }
+        public override G10_ShooterEnemyAppearance Appearance { get { return _Appearance; } }
         protected override float FireInterval { get { return 1.9f; } }
         public override G10_SolarShooterBounds Bounds
         {
@@ -318,17 +394,24 @@ namespace OOPGames
             Y += 34 * deltaSeconds;
             X = Math.Max(7, Math.Min(153, X));
         }
+
+        protected override G10_SolarShooterProjectile CreateShot(G10_SolarShooterPlayer player)
+        {
+            float aim = Math.Sign(player.X - X) * 16;
+            return new G10_SolarShooterProjectile(X, Y + 4, aim, 60);
+        }
     }
 
     internal sealed class G10_Bulwark : G10_SolarShooterEnemy
     {
+        static readonly G10_ShooterEnemyAppearance _Appearance =
+            new G10_ShooterEnemyAppearance(2, 10, 8, true, true, false);
+
         public G10_Bulwark(float x, float y, float direction, float firstShot)
             : base(x, y, direction, firstShot) { }
 
         public override int PointValue { get { return 175; } }
-        public override float ShotDrift { get { return 25; } }
-        public override float ShotSpeed { get { return 68; } }
-        public override int RendererKind { get { return 2; } }
+        public override G10_ShooterEnemyAppearance Appearance { get { return _Appearance; } }
         protected override float FireInterval { get { return 1.35f; } }
         public override G10_SolarShooterBounds Bounds
         {
@@ -340,6 +423,12 @@ namespace OOPGames
             X += (float)Math.Sin(Phase) * 10 * deltaSeconds;
             Y += 14 * deltaSeconds;
             X = Math.Max(7, Math.Min(153, X));
+        }
+
+        protected override G10_SolarShooterProjectile CreateShot(G10_SolarShooterPlayer player)
+        {
+            float aim = Math.Sign(player.X - X) * 25;
+            return new G10_SolarShooterProjectile(X, Y + 4, aim, 68);
         }
     }
 
@@ -594,21 +683,24 @@ namespace OOPGames
         public float Y { get; private set; }
     }
 
-    internal sealed class G10_SolarShooterSession : IG10_ShooterView
+    internal sealed class G10_SolarShooterSession : IG10_ShooterView, IG10_ShooterCollisionContext
     {
         readonly IReadOnlyList<G10_SolarShooterStage> _Stages;
         readonly G10_EnemySpawner _Spawner = new G10_EnemySpawner();
         readonly G10_CollisionResolver _CollisionResolver = new G10_CollisionResolver();
+        readonly G10_ShooterProgress _Progress = new G10_ShooterProgress();
         readonly List<G10_SolarShooterEnemy> _Enemies = new List<G10_SolarShooterEnemy>();
         readonly List<G10_SolarShooterProjectile> _PlayerProjectiles = new List<G10_SolarShooterProjectile>();
         readonly List<G10_SolarShooterProjectile> _EnemyProjectiles = new List<G10_SolarShooterProjectile>();
         readonly List<G10_SolarShooterPowerCell> _PowerCells = new List<G10_SolarShooterPowerCell>();
+        readonly ReadOnlyCollection<G10_SolarShooterEnemy> _EnemyView;
+        readonly ReadOnlyCollection<G10_SolarShooterProjectile> _PlayerProjectileView;
+        readonly ReadOnlyCollection<G10_SolarShooterProjectile> _EnemyProjectileView;
+        readonly ReadOnlyCollection<G10_SolarShooterPowerCell> _PowerCellView;
         G10_ShooterPhase _Phase = G10_ShooterPhase.Playing;
         float _SpawnCooldown = 0.8f;
         float _BossWarningTimer;
         float _StageTransitionTimer;
-        int _Score;
-        int _DefeatedEnemies;
 
         public G10_SolarShooterSession()
             : this(G10_SolarShooterStage.All) { }
@@ -618,27 +710,29 @@ namespace OOPGames
             if (stages == null || stages.Count == 0)
                 throw new ArgumentException("At least one shooter stage is required.", "stages");
             _Stages = stages;
+            _EnemyView = _Enemies.AsReadOnly();
+            _PlayerProjectileView = _PlayerProjectiles.AsReadOnly();
+            _EnemyProjectileView = _EnemyProjectiles.AsReadOnly();
+            _PowerCellView = _PowerCells.AsReadOnly();
             Player = new G10_SolarShooterPlayer(
                 G10_ShooterConfig.PlayerStartX,
                 G10_ShooterConfig.PlayerStartY);
         }
 
         public G10_SolarShooterPlayer Player { get; private set; }
-        public IReadOnlyList<G10_SolarShooterEnemy> Enemies { get { return _Enemies; } }
-        public IReadOnlyList<G10_SolarShooterProjectile> PlayerProjectiles { get { return _PlayerProjectiles; } }
-        public IReadOnlyList<G10_SolarShooterProjectile> EnemyProjectiles { get { return _EnemyProjectiles; } }
-        public IReadOnlyList<G10_SolarShooterPowerCell> PowerCells { get { return _PowerCells; } }
-        internal IList<G10_SolarShooterEnemy> EnemiesMutable { get { return _Enemies; } }
-        internal IList<G10_SolarShooterProjectile> PlayerProjectilesMutable { get { return _PlayerProjectiles; } }
-        internal IList<G10_SolarShooterProjectile> EnemyProjectilesMutable { get { return _EnemyProjectiles; } }
-        internal IList<G10_SolarShooterPowerCell> PowerCellsMutable { get { return _PowerCells; } }
+        public IReadOnlyList<G10_SolarShooterEnemy> Enemies { get { return _EnemyView; } }
+        public IReadOnlyList<G10_SolarShooterProjectile> PlayerProjectiles { get { return _PlayerProjectileView; } }
+        public IReadOnlyList<G10_SolarShooterProjectile> EnemyProjectiles { get { return _EnemyProjectileView; } }
+        public IReadOnlyList<G10_SolarShooterPowerCell> PowerCells { get { return _PowerCellView; } }
+        IG10_Collidable IG10_ShooterCollisionContext.PlayerCollider { get { return Player; } }
+        IG10_Collidable IG10_ShooterCollisionContext.BossCollider { get { return Boss; } }
         public G10_SolarShooterBoss Boss { get; private set; }
         public G10_SolarShooterStage Stage { get { return _Stages[StageIndex]; } }
         public int StageIndex { get; private set; }
         public int StageNumber { get { return StageIndex + 1; } }
-        public int Score { get { return _Score; } }
+        public int Score { get { return _Progress.Score; } }
         public int TickNumber { get; private set; }
-        public int DefeatedEnemies { get { return _DefeatedEnemies; } }
+        public int DefeatedEnemies { get { return _Progress.EnemiesDefeated; } }
         public G10_ShooterPhase Phase { get { return _Phase; } }
         public bool IsGameOver { get { return _Phase == G10_ShooterPhase.GameOver; } }
         public bool IsVictory { get { return _Phase == G10_ShooterPhase.Victory; } }
@@ -650,7 +744,39 @@ namespace OOPGames
         public event EventHandler<G10_BossHitEventArgs> BossHit;
         public event EventHandler<G10_EntityDestroyedEventArgs> BossDefeated;
 
-        public void AddScore(int amount) { _Score += amount; }
+        void IG10_ShooterCollisionContext.RemovePlayerProjectile(G10_SolarShooterProjectile projectile)
+        {
+            _PlayerProjectiles.Remove(projectile);
+        }
+
+        void IG10_ShooterCollisionContext.DestroyEnemy(G10_SolarShooterEnemy enemy)
+        {
+            if (_Enemies.Remove(enemy)) RegisterEnemyDestroyed(enemy);
+        }
+
+        void IG10_ShooterCollisionContext.RemoveEnemy(G10_SolarShooterEnemy enemy)
+        {
+            _Enemies.Remove(enemy);
+        }
+
+        void IG10_ShooterCollisionContext.RemoveEnemyProjectile(G10_SolarShooterProjectile projectile)
+        {
+            _EnemyProjectiles.Remove(projectile);
+        }
+
+        void IG10_ShooterCollisionContext.HitPlayer()
+        {
+            if (Player.TakeHit()) OnPlayerHit();
+        }
+
+        void IG10_ShooterCollisionContext.HitBoss() { HitBoss(); }
+
+        void IG10_ShooterCollisionContext.CollectPowerCell(G10_SolarShooterPowerCell powerCell)
+        {
+            if (!_PowerCells.Remove(powerCell)) return;
+            if (Player.WeaponLevel < 3) Player.UpgradeWeapon();
+            else _Progress.RegisterPowerCellOverflow(250);
+        }
 
         public void Update(float deltaSeconds, G10_SolarShooterInput input)
         {
@@ -687,7 +813,7 @@ namespace OOPGames
 
         void UpdateEnemies(float deltaSeconds)
         {
-            if (_DefeatedEnemies < Stage.EnemiesToDefeat)
+            if (_Progress.EnemiesDefeated < Stage.EnemiesToDefeat)
             {
                 _SpawnCooldown -= deltaSeconds;
                 if (_SpawnCooldown <= 0)
@@ -700,14 +826,13 @@ namespace OOPGames
             for (int i = _Enemies.Count - 1; i >= 0; i--)
             {
                 G10_SolarShooterEnemy enemy = _Enemies[i];
-                enemy.Update(deltaSeconds);
-                if (enemy.TryFire(deltaSeconds))
-                    _EnemyProjectiles.Add(enemy.CreateShot(Player));
+                G10_SolarShooterProjectile shot = enemy.UpdateAndTryFire(deltaSeconds, Player);
+                if (shot != null) _EnemyProjectiles.Add(shot);
                 if (enemy.Y > G10_ShooterConfig.WorldHeight + 8)
                     _Enemies.RemoveAt(i);
             }
 
-            if (_DefeatedEnemies >= Stage.EnemiesToDefeat && _Enemies.Count == 0)
+            if (_Progress.EnemiesDefeated >= Stage.EnemiesToDefeat && _Enemies.Count == 0)
                 BeginBossEncounter();
         }
 
@@ -751,11 +876,9 @@ namespace OOPGames
             }
         }
 
-        internal void DestroyEnemy(G10_SolarShooterEnemy enemy)
+        void RegisterEnemyDestroyed(G10_SolarShooterEnemy enemy)
         {
-            _Score += enemy.PointValue;
-            _DefeatedEnemies++;
-            if (_DefeatedEnemies % 4 == 0)
+            if (_Progress.RegisterEnemyDefeated(enemy.PointValue))
                 _PowerCells.Add(new G10_SolarShooterPowerCell(enemy.X, enemy.Y));
             EventHandler<G10_EntityDestroyedEventArgs> handler = EnemyDestroyed;
             if (handler != null) handler(this, new G10_EntityDestroyedEventArgs(enemy.X, enemy.Y, false));
@@ -777,7 +900,7 @@ namespace OOPGames
 
         void DefeatBoss()
         {
-            _Score += Stage.BossScore;
+            _Progress.RegisterBossDefeated(Stage.BossScore);
             float bossX = Boss.X;
             float bossY = Boss.Y;
             Boss = null;
@@ -797,7 +920,7 @@ namespace OOPGames
             }
 
             StageIndex++;
-            _DefeatedEnemies = 0;
+            _Progress.ResetStage();
             _SpawnCooldown = 1;
             _Spawner.Reset();
             _Enemies.Clear();

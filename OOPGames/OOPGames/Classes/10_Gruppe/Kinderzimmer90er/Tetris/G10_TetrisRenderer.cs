@@ -12,17 +12,6 @@ namespace OOPGames
         const int BoardX = 10;
         const int BoardY = 18;
 
-        static readonly Color[] PieceColors =
-        {
-            Color.FromRgb(62, 215, 224),
-            Color.FromRgb(239, 209, 94),
-            Color.FromRgb(180, 119, 222),
-            Color.FromRgb(115, 214, 143),
-            Color.FromRgb(235, 105, 117),
-            Color.FromRgb(105, 145, 232),
-            Color.FromRgb(236, 157, 83)
-        };
-
         static readonly Color Background = Color.FromRgb(10, 19, 30);
         static readonly Color BoardBackground = Color.FromRgb(15, 30, 43);
         static readonly Color Grid = Color.FromRgb(30, 49, 61);
@@ -49,16 +38,16 @@ namespace OOPGames
             {
                 for (int x = 0; x < G10_TetrisConfig.Columns; x++)
                 {
-                    byte value = session.GetCell(x, y);
+                    G10_Tetromino piece = session.GetCell(x, y);
                     double px = BoardX + x * CellSize;
                     double py = BoardY + y * CellSize;
-                    if (value == 0)
+                    if (piece == null)
                     {
                         B5RoomDraw.Rect(canvas, px, py, CellSize - 0.4, CellSize - 0.4, Grid);
                     }
                     else
                     {
-                        DrawBlock(canvas, px, py, value);
+                        DrawBlock(canvas, px, py, piece.Color);
                     }
                 }
             }
@@ -87,13 +76,12 @@ namespace OOPGames
         {
             for (int y = 0; y < 4; y++)
                 for (int x = 0; x < 4; x++)
-                    if (G10_TetrominoShapes.IsPreviewCell(piece, x, y))
-                        DrawBlock(canvas, 84 + x * 7, 34 + y * 7, (byte)((int)piece + 1));
+                    if (piece.ContainsCell(x, y))
+                        DrawBlock(canvas, 84 + x * 7, 34 + y * 7, piece.Color);
         }
 
-        void DrawBlock(Canvas canvas, double x, double y, byte value)
+        void DrawBlock(Canvas canvas, double x, double y, Color color)
         {
-            Color color = PieceColors[value - 1];
             B5RoomDraw.Rect(canvas, x, y, CellSize - 0.45, CellSize - 0.45, color);
             B5RoomDraw.Rect(canvas, x + 0.8, y + 0.8, CellSize - 2.1, 0.55,
                 Color.FromRgb(255, 242, 211));
