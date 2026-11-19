@@ -114,10 +114,10 @@ namespace OOPGames
 
             if (!field.CarSelectionComplete)
             {
-                int carIndex = _random.Next(9);
+                int carIndex = _random.Next(3);
                 if (_playerNumber == 2 && carIndex == field.PlayerOneCar)
                 {
-                    carIndex = (carIndex + 1) % 9;
+                    carIndex = (carIndex + 1) % 3;
                 }
 
                 return new Gruppe3DragRaceMove(
