@@ -10,13 +10,8 @@ namespace OOPGames
         private readonly G5_WeltSpielfeld _welt;
         private readonly G5_FactorySimulation _simulation;
         private readonly G5_Storage _hub;
-        private readonly List<IReadOnlyList<G5_GridPosition>> _foerderbandRouten =
-            new List<IReadOnlyList<G5_GridPosition>>();
         private G5_Bauwerkzeug _aktuellesWerkzeug;
         private string _statusMeldung;
-        private bool _foerderbaenderAktiv;
-        private G5_Building _ausgewaehlterAusgang;
-        private G5_Building _ausgewaehltesGebaeude;
 
         internal G5_FabrikSpielfeld(G5_WeltSpielfeld welt, int hubX, int hubY)
         {
@@ -59,19 +54,11 @@ namespace OOPGames
             get
             {
                 IG5_GebaeudeInfo[] gebaeude = _simulation.Buildings
-                    .Select(building => (IG5_GebaeudeInfo)new G5_GebaeudeInfo(
-                        building,
-                        ReferenceEquals(building, _ausgewaehlterAusgang),
-                        ReferenceEquals(building, _ausgewaehltesGebaeude)))
+                    .Select(building => (IG5_GebaeudeInfo)new G5_GebaeudeInfo(building))
                     .ToArray();
                 return new ReadOnlyCollection<IG5_GebaeudeInfo>(gebaeude);
             }
         }
-
-        bool IG5_FabrikSpielInfo.FoerderbaenderAktiv => _foerderbaenderAktiv;
-
-        IReadOnlyList<IReadOnlyList<G5_GridPosition>> IG5_FabrikSpielInfo.FoerderbandRouten =>
-            _foerderbandRouten.AsReadOnly();
 
         string IG5_FabrikSpielInfo.StatusMeldung => _statusMeldung;
 
@@ -115,31 +102,6 @@ namespace OOPGames
             _statusMeldung = meldung ?? string.Empty;
         }
 
-        internal void SetFoerderbaenderAktiv(bool aktiv)
-        {
-            _foerderbaenderAktiv = aktiv;
-        }
-
-        internal void SetAusgewaehltenAusgang(G5_Building gebaeude)
-        {
-            _ausgewaehlterAusgang = gebaeude;
-        }
-
-        internal void SetAusgewaehltesGebaeude(G5_Building gebaeude)
-        {
-            _ausgewaehltesGebaeude = gebaeude;
-        }
-
-        internal void AddFoerderbandRoute(IReadOnlyList<G5_GridPosition> route)
-        {
-            if (route == null)
-            {
-                throw new ArgumentNullException(nameof(route));
-            }
-
-            _foerderbandRouten.Add(new ReadOnlyCollection<G5_GridPosition>(route.ToList()));
-        }
-
         internal void AddGebaeude(G5_Building gebaeude)
         {
             _simulation.AddBuilding(gebaeude);
@@ -149,19 +111,10 @@ namespace OOPGames
     internal sealed class G5_GebaeudeInfo : IG5_GebaeudeInfo
     {
         private readonly G5_Building _gebaeude;
-        private static readonly IReadOnlyDictionary<G5_Item, int> LeererEingang =
-            new ReadOnlyDictionary<G5_Item, int>(new Dictionary<G5_Item, int>());
-        private readonly bool _ausgangAusgewaehlt;
-        private readonly bool _gebaeudeAusgewaehlt;
 
-        internal G5_GebaeudeInfo(
-            G5_Building gebaeude,
-            bool ausgangAusgewaehlt,
-            bool gebaeudeAusgewaehlt)
+        internal G5_GebaeudeInfo(G5_Building gebaeude)
         {
             _gebaeude = gebaeude ?? throw new ArgumentNullException(nameof(gebaeude));
-            _ausgangAusgewaehlt = ausgangAusgewaehlt;
-            _gebaeudeAusgewaehlt = gebaeudeAusgewaehlt;
         }
 
         G5_FabrikGebaeudeTyp IG5_GebaeudeInfo.Typ
@@ -220,46 +173,5 @@ namespace OOPGames
         int IG5_GebaeudeInfo.Level => _gebaeude.Level;
         G5_BuildingStatus IG5_GebaeudeInfo.Status => _gebaeude.Status;
         bool IG5_GebaeudeInfo.IstMitStromVersorgt => _gebaeude.IsPowered;
-        bool IG5_GebaeudeInfo.HatEingang =>
-            _gebaeude is G5_Storage || _gebaeude is G5_ProductionBuilding;
-        bool IG5_GebaeudeInfo.HatAusgang =>
-            _gebaeude is G5_Storage || _gebaeude is G5_Miner || _gebaeude is G5_ProductionBuilding;
-        G5_GridPosition IG5_GebaeudeInfo.EingangsPosition =>
-            new G5_GridPosition(_gebaeude.Position.X, _gebaeude.Position.Y + _gebaeude.Height / 2);
-        G5_GridPosition IG5_GebaeudeInfo.AusgangsPosition =>
-            new G5_GridPosition(_gebaeude.Position.X + _gebaeude.Width - 1,
-                _gebaeude.Position.Y + _gebaeude.Height / 2);
-        bool IG5_GebaeudeInfo.AusgangAusgewaehlt => _ausgangAusgewaehlt;
-        bool IG5_GebaeudeInfo.IstAusgewaehlt => _gebaeudeAusgewaehlt;
-        IReadOnlyDictionary<G5_Item, int> IG5_GebaeudeInfo.EingangsInhalt
-        {
-            get
-            {
-                if (_gebaeude is G5_ProductionBuilding productionBuilding)
-                {
-                    return productionBuilding.InputContents;
-                }
-
-                if (_gebaeude is G5_Storage storage)
-                {
-                    return storage.Contents;
-                }
-
-                if (_gebaeude is G5_Conveyor conveyor)
-                {
-                    return conveyor.Contents;
-                }
-
-                return LeererEingang;
-            }
-        }
-
-        IReadOnlyList<string> IG5_GebaeudeInfo.VerfuegbareRezepte =>
-            _gebaeude is G5_ProductionBuilding productionBuilding
-                ? productionBuilding.Recipes.Select(recipe => recipe.Name).ToArray()
-                : Array.Empty<string>();
-
-        string IG5_GebaeudeInfo.AktuellesRezept =>
-            (_gebaeude as G5_ProductionBuilding)?.SelectedRecipe?.Name ?? string.Empty;
     }
 }

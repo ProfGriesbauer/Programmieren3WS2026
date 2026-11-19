@@ -32,6 +32,8 @@ namespace OOPGames
         public override string Name => "Laufband";
         public IReadOnlyDictionary<G5_Item, int> Contents => _items.Contents;
         public override IReadOnlyDictionary<G5_Item, int> TransferableContents => _items.Contents;
+        internal IG5_ItemEndpoint Source => _source;
+        internal IG5_ItemEndpoint Destination => _destination;
 
         public void Connect(IG5_ItemEndpoint source, IG5_ItemEndpoint destination)
         {
@@ -53,6 +55,12 @@ namespace OOPGames
 
             _source = source;
             _destination = destination;
+        }
+
+        internal void Disconnect()
+        {
+            _source = null;
+            _destination = null;
         }
 
         public void Tick()

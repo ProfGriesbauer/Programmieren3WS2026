@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -12,10 +13,6 @@ namespace OOPGames
         internal int ResourceAmount { get; set; }
         internal int MinerCycleTicks { get; set; }
         internal int SmelterCycleTicks { get; set; }
-        internal int ConstructorCycleTicks { get; set; }
-        internal bool SmeltersEnabled { get; set; }
-        internal bool ConstructorsEnabled { get; set; }
-        internal bool ConveyorsEnabled { get; set; }
     }
 
     internal sealed class SatisfactoryStartScreen
@@ -34,10 +31,7 @@ namespace OOPGames
             Guide,
             Home,
             ChangeResource,
-            ChangeSpeed,
-            ToggleSmelters,
-            ToggleConstructors,
-            ToggleConveyors
+            ChangeSpeed
         }
 
         private sealed class HitTarget
@@ -54,9 +48,6 @@ namespace OOPGames
         private Page _page = Page.Home;
         private int _resourceChoice = 1;
         private int _speedChoice = 1;
-        private bool _smeltersEnabled;
-        private bool _constructorsEnabled;
-        private bool _conveyorsEnabled;
 
         internal SatisfactoryStartScreenSettings SelectedSettings
         {
@@ -66,11 +57,7 @@ namespace OOPGames
                 {
                     ResourceAmount = _resourceChoice == 0 ? 150 : _resourceChoice == 2 ? 600 : 300,
                     MinerCycleTicks = _speedChoice == 0 ? 55 : _speedChoice == 2 ? 22 : 35,
-                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55,
-                    ConstructorCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55,
-                    SmeltersEnabled = _smeltersEnabled,
-                    ConstructorsEnabled = _constructorsEnabled,
-                    ConveyorsEnabled = _conveyorsEnabled
+                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55
                 };
             }
         }
@@ -126,12 +113,6 @@ namespace OOPGames
                 switch (target.Action)
                 {
                     case Action.Start:
-                        if (!_smeltersEnabled)
-                        {
-                            _page = Page.Settings;
-                            return false;
-                        }
-
                         return true;
                     case Action.Settings:
                         _page = Page.Settings;
@@ -147,15 +128,6 @@ namespace OOPGames
                         break;
                     case Action.ChangeSpeed:
                         _speedChoice = (_speedChoice + 1) % 3;
-                        break;
-                    case Action.ToggleSmelters:
-                        _smeltersEnabled = !_smeltersEnabled;
-                        break;
-                    case Action.ToggleConstructors:
-                        _constructorsEnabled = !_constructorsEnabled;
-                        break;
-                    case Action.ToggleConveyors:
-                        _conveyorsEnabled = !_conveyorsEnabled;
                         break;
                 }
 
@@ -208,16 +180,16 @@ namespace OOPGames
             AddText(canvas, "Rohstoffe rein.\nProduktion an.", Brushes.White,
                 left + 26, top + 70, width - 52, 100, 35, FontWeights.Bold);
             AddText(canvas,
-                "Setze Förderer auf Erzvorkommen, errichte Schmelzen und Konstruktoren und lass deine Produktion automatisch laufen.",
+                "Baue Förderer und Schmelzen, verbinde sie mit Förderbändern und beobachte den Rohstofftransport.",
                 MutedBrush, left + 28, top + 185, width - 206, 68, 13);
             DrawFactoryArt(canvas, left + width - 166, top + 170);
 
             DrawStep(canvas, left + 28, top + 280, "01", "Förderer",
                 "F drücken und auf ein Erzvorkommen klicken.");
-            DrawStep(canvas, left + 28, top + 350, "02", "Schmelze",
-                "Schmelzen aktivieren, S für Eisen oder K für Kupfer drücken.");
-            DrawStep(canvas, left + 28, top + 420, "03", "Automatische Produktion",
-                "Konstruktoren lassen sich ebenfalls in den Einstellungen aktivieren.");
+            DrawStep(canvas, left + 28, top + 350, "02", "Förderband",
+                "B drücken und eine Verbindung zur Schmelze bauen.");
+            DrawStep(canvas, left + 28, top + 420, "03", "Transport & Umbau",
+                "Rohstoffe bewegen sich sichtbar; mit M versetzt du Gebäude.");
         }
 
         private void DrawControlPanel(
@@ -254,54 +226,45 @@ namespace OOPGames
                 "SPIEL STARTEN", "Welt öffnen und Produktion beginnen",
                 AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
             DrawButton(canvas, left + 28, top + 199, width - 56, 54,
-                "EINSTELLUNGEN", "Rohstoffe, Tempo und Gebäude festlegen",
+                "EINSTELLUNGEN", "Rohstoffvorrat und Tempo festlegen",
                 BrushFromRgb(38, 55, 59), Brushes.White, Action.Settings);
             DrawButton(canvas, left + 28, top + 270, width - 56, 54,
                 "ANLEITUNG", "Steuerung und Spielablauf ansehen",
                 BrushFromRgb(38, 55, 59), Brushes.White, Action.Guide);
 
             AddRoundedRectangle(canvas, BrushFromRgb(29, 47, 43),
-                left + 28, top + height - 126, width - 56, 90, 12);
+                left + 28, top + height - 118, width - 56, 82, 12);
             AddText(canvas, "AKTUELLE EINSTELLUNGEN", AccentBrush,
-                left + 42, top + height - 112, width - 84, 15, 9, FontWeights.Bold);
+                left + 42, top + height - 103, width - 84, 15, 9, FontWeights.Bold);
             AddText(canvas,
                 ResourceLabel() + "  ·  " + SpeedLabel(),
-                Brushes.White, left + 42, top + height - 90, width - 84, 18, 12,
+                Brushes.White, left + 42, top + height - 80, width - 84, 22, 13,
                 FontWeights.SemiBold);
             AddText(canvas, "Nach dem Start begleitet dich ein Mentor durch die verpflichtende Einführung.",
-                MutedBrush, left + 42, top + height - 46, width - 84, 18, 10);
-            AddText(canvas, BuildingAvailabilityLabel(), MutedBrush,
-                left + 42, top + height - 68, width - 84, 18, 11);
+                MutedBrush, left + 30, top + 340, width - 60, 38, 11);
         }
 
         private void DrawSettings(Canvas canvas, double left, double top, double width, double height)
         {
             DrawBackButton(canvas, left + 28, top + 26);
-            DrawButton(canvas, left + width - 180, top + 26, 152, 34,
-                "SPIEL STARTEN", " ",
-                AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
             AddText(canvas, "Einstellungen", Brushes.White,
                 left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
-            AddText(canvas, "Schmelzen müssen für die verpflichtende Einführung aktiviert sein.",
+            AddText(canvas, "Klicke auf eine Auswahl, um den Wert zu ändern.",
                 MutedBrush, left + 30, top + 113, width - 60, 40, 12);
 
-            double optionWidth = (width - 64) / 2;
-            DrawOptionButton(canvas, left + 28, top + 158, optionWidth, 52,
+            AddText(canvas, "ROHSTOFFVORRAT", AccentBrush,
+                left + 30, top + 190, width - 60, 18, 10, FontWeights.Bold);
+            DrawOptionButton(canvas, left + 28, top + 216, width - 56, 54,
                 ResourceLabel(), "Erz pro Vorkommen", Action.ChangeResource);
-            DrawOptionButton(canvas, left + 36 + optionWidth, top + 158, optionWidth, 52,
-                SpeedLabel(), "Produktionstempo", Action.ChangeSpeed);
 
-            AddText(canvas, "GEBÄUDE FREISCHALTEN", AccentBrush,
-                left + 30, top + 220, width - 60, 18, 10, FontWeights.Bold);
-            DrawOptionButton(canvas, left + 28, top + 242, optionWidth, 52,
-                "Schmelzen: " + EnabledLabel(_smeltersEnabled),
-                "S Eisen · K Kupfer", Action.ToggleSmelters);
-            DrawOptionButton(canvas, left + 36 + optionWidth, top + 242, optionWidth, 52,
-                "Konstruktoren: " + EnabledLabel(_constructorsEnabled),
-                "C zum Platzieren", Action.ToggleConstructors);
-            DrawOptionButton(canvas, left + 28, top + 300, width - 56, 48,
-                "Förderbänder: " + EnabledLabel(_conveyorsEnabled),
-                "AN: manuell verbinden · AUS: automatisch", Action.ToggleConveyors);
+            AddText(canvas, "PRODUKTIONSTEMPO", AccentBrush,
+                left + 30, top + 300, width - 60, 18, 10, FontWeights.Bold);
+            DrawOptionButton(canvas, left + 28, top + 326, width - 56, 54,
+                SpeedLabel(), "Förderer- und Schmelzzyklen", Action.ChangeSpeed);
+
+            DrawButton(canvas, left + 28, top + height - 96, width - 56, 54,
+                "SPIEL STARTEN", "Einstellungen übernehmen",
+                AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
         }
 
         private void DrawGuide(Canvas canvas, double left, double top, double width, double height)
@@ -312,16 +275,18 @@ namespace OOPGames
             AddText(canvas, "Diese Einführung ist verpflichtend und nicht überspringbar:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
-            DrawStep(canvas, left + 30, top + 170, "01", "Förderer bauen",
+            DrawStep(canvas, left + 30, top + 155, "01", "Förderer bauen",
                 "Drücke F und platziere ihn auf dem markierten Eisenerzvorkommen.");
-            DrawStep(canvas, left + 30, top + 250, "02", "Erz abbauen",
-                "Warte, bis der Förderer automatisch Erz abgebaut hat.");
-            DrawStep(canvas, left + 30, top + 330, "03", "Schmelze bauen",
+            DrawStep(canvas, left + 30, top + 225, "02", "Schmelze bauen",
                 "Drücke S und platziere sie auf dem markierten freien Feld.");
-            DrawStep(canvas, left + 30, top + 425, "04", "Hub ansehen",
-                "Klicke auf das markierte Hub. Danach sind freies Bauen und Förderband-Verbindungen möglich.");
+            DrawStep(canvas, left + 30, top + 295, "03", "Gebäude versetzen",
+                "Drücke M, klicke das Gebäude und danach das Ziel.");
+            DrawStep(canvas, left + 30, top + 365, "04", "Förderbänder",
+                "Drücke B und verbinde Förderer und Schmelze über freie Nachbarfelder.");
+            AddText(canvas, "Der Mentor zeigt dir alle Schritte. Bei aktivem Transport siehst du die Rohstoffe auf dem Band.",
+                MutedBrush, left + 30, top + 440, width - 60, 40, 10);
 
-            DrawButton(canvas, left + 28, top + height - 78, width - 56, 48,
+            DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
                 "SPIEL STARTEN", " ", AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
         }
 
@@ -409,7 +374,7 @@ namespace OOPGames
 
         private void DrawFooter(Canvas canvas, double left, double top, double width)
         {
-            AddText(canvas, "F Förderer · S Eisen/K Kupfer-Schmelze* · C Konstruktor* · B Band verbinden* · Esc abwählen",
+            AddText(canvas, "BEDIENUNG IM SPIEL:  F Förderer   ·   S Schmelze   ·   B Förderband   ·   M Gebäude versetzen",
                 MutedBrush, left, top, width, 16, 10, FontWeights.Normal, TextAlignment.Center);
         }
 
@@ -423,18 +388,6 @@ namespace OOPGames
         {
             return _speedChoice == 0 ? "Entspannt" :
                 _speedChoice == 2 ? "Schnell" : "Standard";
-        }
-
-        private string BuildingAvailabilityLabel()
-        {
-            return "Schmelzen " + EnabledLabel(_smeltersEnabled) +
-                " · Konstruktoren " + EnabledLabel(_constructorsEnabled) +
-                " · Förderbänder " + EnabledLabel(_conveyorsEnabled);
-        }
-
-        private static string EnabledLabel(bool enabled)
-        {
-            return enabled ? "AN" : "AUS";
         }
 
         private void AddHitTarget(double left, double top, double width, double height, Action action)
@@ -572,6 +525,29 @@ namespace OOPGames
         internal SatisfactoryStartScreen StartScreen { get { return _startScreen; } }
         internal SatisfactoryGameMentor Mentor { get { return _mentor; } }
         internal Canvas MentorOverlay { get; }
+        internal long SimulationTickNumber { get { return _field.Simulation.TickNumber; } }
+
+        internal bool TryGetConveyorFlow(int x, int y, out bool isVertical, out bool isReversed)
+        {
+            foreach (G5_Conveyor conveyor in _field.InterneGebaeude.OfType<G5_Conveyor>())
+            {
+                if (conveyor.Position.X != x || conveyor.Position.Y != y ||
+                    !(conveyor.Destination is G5_Building destination))
+                {
+                    continue;
+                }
+
+                int deltaX = destination.Position.X - conveyor.Position.X;
+                int deltaY = destination.Position.Y - conveyor.Position.Y;
+                isVertical = Math.Abs(deltaY) > Math.Abs(deltaX);
+                isReversed = isVertical ? deltaY < 0 : deltaX < 0;
+                return true;
+            }
+
+            isVertical = false;
+            isReversed = false;
+            return false;
+        }
 
         int IG5_WeltSpielfeld.Breite => ((IG5_WeltSpielfeld)_field).Breite;
         int IG5_WeltSpielfeld.Hoehe => ((IG5_WeltSpielfeld)_field).Hoehe;
@@ -581,12 +557,6 @@ namespace OOPGames
 
         IReadOnlyList<IG5_GebaeudeInfo> IG5_FabrikSpielInfo.Gebaeude =>
             ((IG5_FabrikSpielInfo)_field).Gebaeude;
-
-        bool IG5_FabrikSpielInfo.FoerderbaenderAktiv =>
-            ((IG5_FabrikSpielInfo)_field).FoerderbaenderAktiv;
-
-        IReadOnlyList<IReadOnlyList<G5_GridPosition>> IG5_FabrikSpielInfo.FoerderbandRouten =>
-            ((IG5_FabrikSpielInfo)_field).FoerderbandRouten;
 
         string IG5_FabrikSpielInfo.StatusMeldung =>
             ((IG5_FabrikSpielInfo)_field).StatusMeldung;
