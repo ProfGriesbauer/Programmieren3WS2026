@@ -94,18 +94,18 @@ namespace OOPGames
     {
         internal const int Left = 20;
         internal const int Top = 80;
-        internal const int Cell = 50;
+        internal const int CellSize = 50;
 
         internal static int ColumnAt(int x, int y)
         {
             if (x < Left || y < Top
-                || x >= Left + G8_VierGewinntLogic.Columns * Cell
-                || y >= Top + G8_VierGewinntLogic.Rows * Cell)
+                || x >= Left + G8_VierGewinntLogic.Columns * CellSize
+                || y >= Top + G8_VierGewinntLogic.Rows * CellSize)
             {
                 return -1;
             }
 
-            return (x - Left) / Cell;
+            return (x - Left) / CellSize;
         }
     }
 
@@ -204,7 +204,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class G8_VierGewinntPaint : IPaintGame2
+    public sealed class G8_VierGewinntPaint : IPaintGame2, IConnectFourPainter
     {
         private static readonly Brush PlayerOneBrush = new SolidColorBrush(Color.FromRgb(30, 144, 255));
         private static readonly Brush PlayerTwoBrush = new SolidColorBrush(Color.FromRgb(255, 105, 180));
@@ -233,6 +233,11 @@ namespace OOPGames
 
         public string Name { get { return "Gruppe 8 Vier Gewinnt Painter"; } }
 
+        public int ColumnAt(int x, int y)
+        {
+            return G8_VierGewinntLayout.ColumnAt(x, y);
+        }
+
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
             I4GWFeld field = currentField as I4GWFeld;
@@ -255,15 +260,15 @@ namespace OOPGames
             for (int column = 0; column < G8_VierGewinntLogic.Columns; column++)
             {
                 AddText(canvas, (column + 1).ToString(),
-                    G8_VierGewinntLayout.Left + column * G8_VierGewinntLayout.Cell + 20,
+                    G8_VierGewinntLayout.Left + column * G8_VierGewinntLayout.CellSize + 20,
                     G8_VierGewinntLayout.Top - 22,
                     14);
             }
 
             Rectangle board = new Rectangle
             {
-                Width = G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.Cell,
-                Height = G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.Cell,
+                Width = G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.CellSize,
+                Height = G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.CellSize,
                 Fill = Brushes.Black,
                 Stroke = Brushes.DimGray,
                 StrokeThickness = 2
@@ -283,7 +288,7 @@ namespace OOPGames
                     Brush outline = player == 1 ? Brushes.Navy
                         : player == 2 ? Brushes.DeepPink
                         : Brushes.Gray;
-                    double diameter = G8_VierGewinntLayout.Cell - 10;
+                    double diameter = G8_VierGewinntLayout.CellSize - 10;
 
                     Ellipse disc = new Ellipse
                     {
@@ -294,9 +299,9 @@ namespace OOPGames
                         StrokeThickness = 2
                     };
                     Canvas.SetLeft(disc, G8_VierGewinntLayout.Left
-                        + column * G8_VierGewinntLayout.Cell + 5);
+                        + column * G8_VierGewinntLayout.CellSize + 5);
                     Canvas.SetTop(disc, G8_VierGewinntLayout.Top
-                        + row * G8_VierGewinntLayout.Cell + 5);
+                        + row * G8_VierGewinntLayout.CellSize + 5);
                     canvas.Children.Add(disc);
                 }
             }
@@ -403,10 +408,10 @@ namespace OOPGames
 
             double elapsedMilliseconds = (now - _activeMove.StartedAt).TotalMilliseconds;
             double progress = Math.Min(1, elapsedMilliseconds / DropMilliseconds);
-            double diameter = G8_VierGewinntLayout.Cell - 10;
+            double diameter = G8_VierGewinntLayout.CellSize - 10;
             double startTop = G8_VierGewinntLayout.Top - diameter;
             double destinationTop = G8_VierGewinntLayout.Top
-                + _activeMove.Row * G8_VierGewinntLayout.Cell + 5;
+                + _activeMove.Row * G8_VierGewinntLayout.CellSize + 5;
             Ellipse fallingDisc = new Ellipse
             {
                 Width = diameter,
@@ -417,7 +422,7 @@ namespace OOPGames
                 IsHitTestVisible = false
             };
             Canvas.SetLeft(fallingDisc, G8_VierGewinntLayout.Left
-                + _activeMove.Column * G8_VierGewinntLayout.Cell + 5);
+                + _activeMove.Column * G8_VierGewinntLayout.CellSize + 5);
             Canvas.SetTop(fallingDisc, startTop + (destinationTop - startTop) * progress);
             canvas.Children.Add(fallingDisc);
         }
@@ -441,9 +446,9 @@ namespace OOPGames
             _confetti.Clear();
 
             double centerX = G8_VierGewinntLayout.Left
-                + G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.Cell / 2.0;
+                + G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.CellSize / 2.0;
             double centerY = G8_VierGewinntLayout.Top
-                + G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.Cell / 2.0;
+                + G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.CellSize / 2.0;
             for (int i = 0; i < ConfettiCount; i++)
             {
                 double angle = _random.NextDouble() * Math.PI * 2;
@@ -499,7 +504,7 @@ namespace OOPGames
             TextBlock winnerText = new TextBlock
             {
                 Text = "Spieler " + _celebrationWinner + " hat gewonnen!",
-                Width = G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.Cell - 20,
+                Width = G8_VierGewinntLogic.Columns * G8_VierGewinntLayout.CellSize - 20,
                 FontSize = 30,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.Gold,
@@ -512,7 +517,7 @@ namespace OOPGames
             Canvas.SetLeft(winnerText, G8_VierGewinntLayout.Left + 10);
             Canvas.SetTop(winnerText,
                 G8_VierGewinntLayout.Top
-                + G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.Cell / 2.0 - 35);
+                + G8_VierGewinntLogic.Rows * G8_VierGewinntLayout.CellSize / 2.0 - 35);
             canvas.Children.Add(winnerText);
         }
 
@@ -640,7 +645,11 @@ namespace OOPGames
             IClickSelection click = selection as IClickSelection;
             if (click != null)
             {
-                column = G8_VierGewinntLayout.ColumnAt(click.XClickPos, click.YClickPos);
+                IConnectFourPainter painter =
+                    OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter;
+                column = painter != null
+                    ? painter.ColumnAt(click.XClickPos, click.YClickPos)
+                    : G8_VierGewinntLayout.ColumnAt(click.XClickPos, click.YClickPos);
             }
             else
             {

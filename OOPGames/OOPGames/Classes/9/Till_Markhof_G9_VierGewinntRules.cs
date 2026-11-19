@@ -32,7 +32,8 @@ namespace OOPGames
 
         public bool CanBePaintedBy(IPaintGame painter)
         {
-            return painter is IG9_4GewinntPainter;
+            return painter is IG9_4GewinntPainter
+                || painter is IConnectFourPainter  ;
         }
 
         private static bool IsInBounds(int row, int column)

@@ -283,8 +283,8 @@ namespace OOPGames
             }
         }
 
-        //The shared interfaces define no painter interface, so every painter is accepted;
-        //painters that cannot handle an I4GWFeld simply paint nothing
+        //Every painter is accepted for now: not all groups implement the shared IConnectFourPainter yet,
+        //checking for it would block their painters. Painters that cannot handle an I4GWFeld simply paint nothing.
         public bool CanBePaintedBy(IPaintGame painter)
         {
             return painter != null;
@@ -379,7 +379,7 @@ namespace OOPGames
     }
 
     //Implements IPaintGame2 so that moves made via keyboard are painted as well
-    public class G10_VierGewinntPaint : IG10_Painter, IPaintGame2
+    public class G10_VierGewinntPaint : IConnectFourPainter, IPaintGame2
     {
         const int Rows = G10_VierGewinntLogic.Rows;
         const int Columns = G10_VierGewinntLogic.Columns;
@@ -563,9 +563,10 @@ namespace OOPGames
             int column = -1;
             if (selection is IClickSelection)
             {
-                //A group 10 painter knows its own layout; for other painters the default layout is assumed
+                //Painters implementing the shared IConnectFourPainter know their own layout (of any group);
+                //for other painters the group 10 default layout is assumed
                 IClickSelection sel = (IClickSelection)selection;
-                IG10_Painter painter = OOPGamesManager.Singleton.ActivePainter as IG10_Painter;
+                IConnectFourPainter painter = OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter;
                 column = painter != null
                     ? painter.ColumnAt(sel.XClickPos, sel.YClickPos)
                     : G10_VierGewinntLayout.Default.ColumnAt(sel.XClickPos, sel.YClickPos);

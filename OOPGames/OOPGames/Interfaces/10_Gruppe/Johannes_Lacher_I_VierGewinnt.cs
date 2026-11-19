@@ -27,11 +27,4 @@ namespace OOPGames
         //Current vertical position in rows: -1 is above the board, Row is the final position
         double Position { get; }
     }
-
-    //Painter that converts click positions into columns matching its own layout
-    public interface IG10_Painter : IPaintGame
-    {
-        //Returns the column at the given canvas position, -1 if no column was hit
-        int ColumnAt(int x, int y);
-    }
 }

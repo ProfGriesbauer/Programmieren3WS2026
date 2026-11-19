@@ -9,6 +9,7 @@ namespace OOPGames
         Device,
         Inserting,
         Ejecting,
+        Focusing,
         Playing
     }
 
@@ -28,5 +29,11 @@ namespace OOPGames
         void Update(IReadOnlyCollection<Key> keys);
         void Draw(System.Windows.Controls.Canvas canvas);
         bool ExitRequested { get; }
+    }
+
+    // Mini games with their own pause menu: Esc / X are passed to Update instead of closing
+    // the game. Such a game leaves through ExitRequested.
+    public interface IB5RoomOwnBackKey : IB5RoomMiniGame
+    {
     }
 }

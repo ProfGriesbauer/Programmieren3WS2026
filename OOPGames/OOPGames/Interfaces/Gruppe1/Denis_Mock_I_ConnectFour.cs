@@ -8,8 +8,7 @@ namespace OOPGames
     {
     }
 
-    public interface IG1_ConnectFourPainter : IPaintGame2
+    public interface IG1_ConnectFourPainter : IConnectFourPainter, IPaintGame2
     {
-        int ColumnAt(int x, int y);
     }
 }

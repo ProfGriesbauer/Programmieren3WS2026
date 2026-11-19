@@ -40,8 +40,8 @@ namespace OOPGames
             IClickSelection click = selection as IClickSelection;
             if (click != null)
             {
-                IG1_ConnectFourPainter painter =
-                    OOPGamesManager.Singleton.ActivePainter as IG1_ConnectFourPainter;
+                IConnectFourPainter painter =
+                    OOPGamesManager.Singleton.ActivePainter as IConnectFourPainter;
                 column = painter != null
                     ? painter.ColumnAt(click.XClickPos, click.YClickPos)
                     : G1_ConnectFourLayout.ColumnAt(click.XClickPos, click.YClickPos);

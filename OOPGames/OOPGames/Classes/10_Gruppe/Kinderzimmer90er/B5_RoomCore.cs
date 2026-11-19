@@ -51,10 +51,15 @@ namespace OOPGames
                 new List<B5RoomGameEntry>
                 {
                     new B5RoomGameEntry("Snake", Color.FromRgb(116, 158, 70), () => new B5RoomSnakeGame()),
-                    new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new B5RoomPongGame())
+                    new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new B5RoomPongGame()),
+                    new B5RoomGameEntry("Void Courier", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame())
                 }),
             new B5RoomDevice(B5RoomDeviceKind.Commodore, "HEIMCOMPUTER", Color.FromRgb(124, 112, 218), Color.FromRgb(53, 40, 121),
-                new List<B5RoomGameEntry> { new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132))) })
+                new List<B5RoomGameEntry>
+                {
+                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132))),
+                    new B5RoomGameEntry("Tower Defense", Color.FromRgb(82, 105, 190), () => new B5RoomTowerDefenseGame())
+                })
         };
 
         public static IList<B5RoomDevice> Devices { get { return _Devices; } }
@@ -134,7 +139,7 @@ namespace OOPGames
             List<Key> keys = DrainInput();
             if (Phase == B5RoomPhase.Playing)
             {
-                if (keys.Any(IsBackKey))
+                if (keys.Any(IsBackKey) && !(ActiveGame is IB5RoomOwnBackKey))
                 {
                     Phase = B5RoomPhase.Device;
                     _ShowTitle = false;
@@ -150,6 +155,21 @@ namespace OOPGames
                         _ShowTitle = false;
                     }
                 }
+                return;
+            }
+
+            if (Phase == B5RoomPhase.Focusing)
+            {
+                if (keys.Any(IsBackKey))
+                {
+                    Phase = B5RoomPhase.Device;
+                    _ShowTitle = false;
+                    return;
+                }
+
+                _TransitionTime += 0.04;
+                if (_TransitionTime >= 0.8)
+                    Phase = B5RoomPhase.Playing;
                 return;
             }
 
@@ -169,9 +189,9 @@ namespace OOPGames
 
                 if (Phase == B5RoomPhase.Room)
                 {
-                    if (key == Key.A || key == Key.D)
+                    if (B5RoomKeys.IsLeft(key) || B5RoomKeys.IsRight(key))
                     {
-                        int direction = key == Key.D ? 1 : -1;
+                        int direction = B5RoomKeys.IsRight(key) ? 1 : -1;
                         SelectedDevice = (SelectedDevice + direction + B5RoomRegistry.Devices.Count) % B5RoomRegistry.Devices.Count;
                         SelectedGame = 0;
                     }
@@ -209,7 +229,8 @@ namespace OOPGames
                     ActiveGame = Device.Games[InsertedGame].Create();
                     ActiveGame.Start();
                     _ShowTitle = false;
-                    Phase = B5RoomPhase.Playing;
+                    _TransitionTime = 0;
+                    Phase = B5RoomPhase.Focusing;
                 }
             }
             else if (Phase == B5RoomPhase.Ejecting)
