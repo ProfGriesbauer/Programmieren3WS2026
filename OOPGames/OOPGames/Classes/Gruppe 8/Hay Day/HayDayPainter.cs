@@ -122,11 +122,11 @@ namespace OOPGames
 
             string[] info = field.GetOpenMenuInfo();
             string[] options = field.GetOpenMenuOptions();
-            double optionsTop = top + 44 + info.Length * 19 + 8;
+            double optionsTop = top + 40 + info.Length * 16 + 6;
             for (int i = 0; i < options.Length; i++)
             {
-                double optionTop = optionsTop + i * 29;
-                if (y >= optionTop && y <= optionTop + 25)
+                double optionTop = optionsTop + i * 21;
+                if (y >= optionTop && y <= optionTop + 19)
                 {
                     return i;
                 }
@@ -303,12 +303,28 @@ namespace OOPGames
         private static void DrawCrop(Canvas canvas, Point center, double tileWidth,
             double tileHeight, FarmPlot plot)
         {
-            bool wheat = plot.Crop == HayDayField.Wheat;
             bool ripe = plot.IsRipe(DateTime.UtcNow);
-            Brush stem = wheat ? new SolidColorBrush(Color.FromRgb(213, 174, 64))
-                : new SolidColorBrush(Color.FromRgb(42, 133, 57));
-            Brush leaf = wheat ? new SolidColorBrush(Color.FromRgb(244, 208, 91))
-                : new SolidColorBrush(Color.FromRgb(71, 173, 68));
+            Brush stem;
+            Brush leaf;
+            switch (plot.Crop)
+            {
+                case HayDayField.Wheat:
+                    stem = new SolidColorBrush(Color.FromRgb(213, 174, 64));
+                    leaf = new SolidColorBrush(Color.FromRgb(244, 208, 91));
+                    break;
+                case HayDayField.Corn:
+                    stem = new SolidColorBrush(Color.FromRgb(42, 133, 57));
+                    leaf = new SolidColorBrush(Color.FromRgb(71, 173, 68));
+                    break;
+                case HayDayField.Carrots:
+                    stem = new SolidColorBrush(Color.FromRgb(61, 132, 51));
+                    leaf = new SolidColorBrush(Color.FromRgb(224, 116, 48));
+                    break;
+                default:
+                    stem = new SolidColorBrush(Color.FromRgb(61, 117, 69));
+                    leaf = new SolidColorBrush(Color.FromRgb(162, 116, 188));
+                    break;
+            }
             double spread = tileWidth * 0.24;
             double stemHeight = tileHeight * 0.7;
             for (int i = -1; i <= 1; i++)
@@ -357,7 +373,9 @@ namespace OOPGames
 
         private void DrawCoopPens(Canvas canvas, HayDayField field, double tileWidth, double tileHeight)
         {
-            foreach (FarmBuilding building in field.Buildings.Where(value => value.Kind == "Coop"))
+            foreach (FarmBuilding building in field.Buildings.Where(value =>
+                value.Kind == "Coop" || value.Kind == "CowBarn" || value.Kind == "PigBarn"
+                    || value.Kind == "SheepBarn" || value.Kind == "GoatBarn"))
             {
                 Point center = ToScreen(building.Row, building.Column, field, tileWidth, tileHeight);
                 Point top = new Point(center.X, center.Y - tileHeight * 1.6);
@@ -402,30 +420,51 @@ namespace OOPGames
                 DrawFenceSegment(canvas, left, bottom, tileWidth, tileHeight);
                 DrawFenceSegment(canvas, bottom, right, tileWidth, tileHeight);
             }
+
+            foreach (FarmBuilding building in field.Buildings.Where(value =>
+                value.Kind == "CowBarn" || value.Kind == "PigBarn"
+                    || value.Kind == "SheepBarn" || value.Kind == "GoatBarn"))
+            {
+                Point center = ToScreen(building.Row, building.Column, field, tileWidth, tileHeight);
+                Point left = new Point(center.X - tileWidth * 1.6, center.Y);
+                Point right = new Point(center.X + tileWidth * 1.6, center.Y);
+                Point bottom = new Point(center.X, center.Y + tileHeight * 1.6);
+                DrawFenceSegment(canvas, left, bottom, tileWidth, tileHeight);
+                DrawFenceSegment(canvas, bottom, right, tileWidth, tileHeight);
+            }
         }
 
         private void DrawLivestock(Canvas canvas, HayDayField field,
             double tileWidth, double tileHeight)
         {
-            foreach (FarmBuilding building in field.Buildings.Where(value =>
-                value.Kind == "CowBarn" || value.Kind == "SheepBarn"))
+            foreach (string kind in new[] { "CowBarn", "PigBarn", "SheepBarn", "GoatBarn" })
             {
-                Point center = ToScreen(building.Row, building.Column, field, tileWidth, tileHeight);
-                bool sheep = building.Kind == "SheepBarn";
-                for (int i = 0; i < 2; i++)
+                int remaining = kind == "CowBarn" ? field.CowCount
+                    : kind == "PigBarn" ? field.PigCount
+                    : kind == "SheepBarn" ? field.SheepCount : field.GoatCount;
+                foreach (FarmBuilding building in field.Buildings.Where(value => value.Kind == kind))
                 {
-                    DrawFarmAnimal(canvas,
-                        new Point(center.X + (i == 0 ? -0.55 : 0.55) * tileWidth,
-                            center.Y + (0.55 + i * 0.25) * tileHeight),
-                        tileWidth, sheep);
+                    Point center = ToScreen(building.Row, building.Column, field, tileWidth, tileHeight);
+                    for (int i = 0; i < 2 && remaining > 0; i++, remaining--)
+                    {
+                        DrawFarmAnimal(canvas,
+                            new Point(center.X + (i == 0 ? -0.55 : 0.55) * tileWidth,
+                                center.Y + (0.55 + i * 0.25) * tileHeight),
+                            tileWidth, kind);
+                    }
                 }
             }
         }
 
-        private static void DrawFarmAnimal(Canvas canvas, Point ground, double tileWidth, bool sheep)
+        private static void DrawFarmAnimal(Canvas canvas, Point ground, double tileWidth, string kind)
         {
+            bool sheep = kind == "SheepBarn";
+            bool pig = kind == "PigBarn";
+            bool goat = kind == "GoatBarn";
             Brush coat = sheep
                 ? new SolidColorBrush(Color.FromRgb(250, 244, 224))
+                : pig ? new SolidColorBrush(Color.FromRgb(238, 164, 161))
+                : goat ? new SolidColorBrush(Color.FromRgb(213, 190, 145))
                 : new SolidColorBrush(Color.FromRgb(240, 235, 218));
             Brush outline = new SolidColorBrush(Color.FromRgb(95, 78, 60));
             double bodyWidth = Math.Max(8, tileWidth * 0.42);
@@ -459,7 +498,7 @@ namespace OOPGames
                     canvas.Children.Add(wool);
                 }
             }
-            else
+            else if (!pig && !goat)
             {
                 Ellipse patch = new Ellipse
                 {
@@ -485,6 +524,29 @@ namespace OOPGames
             Canvas.SetLeft(head, ground.X + bodyWidth * 0.32);
             Canvas.SetTop(head, ground.Y - bodyHeight * 1.15);
             canvas.Children.Add(head);
+
+            if (pig)
+            {
+                Ellipse snout = new Ellipse
+                {
+                    Width = bodyHeight * 0.46,
+                    Height = bodyHeight * 0.35,
+                    Fill = new SolidColorBrush(Color.FromRgb(211, 111, 116)),
+                    Stroke = outline,
+                    StrokeThickness = 0.5,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(snout, ground.X + bodyWidth * 0.42);
+                Canvas.SetTop(snout, ground.Y - bodyHeight * 0.82);
+                canvas.Children.Add(snout);
+            }
+            else if (goat)
+            {
+                AddLine(canvas,
+                    new Point(ground.X + bodyWidth * 0.39, ground.Y - bodyHeight * 1.27),
+                    new Point(ground.X + bodyWidth * 0.46, ground.Y - bodyHeight * 1.55),
+                    new SolidColorBrush(Color.FromRgb(116, 91, 56)), Math.Max(1, tileWidth * 0.025));
+            }
 
             for (int i = -1; i <= 1; i += 2)
             {
@@ -672,19 +734,19 @@ namespace OOPGames
             string[] info = field.GetOpenMenuInfo();
             for (int i = 0; i < info.Length; i++)
             {
-                AddText(canvas, info[i], left + 11, top + 37 + i * 19, 11,
+                AddText(canvas, info[i], left + 11, top + 34 + i * 16, 10,
                     Brushes.DarkSlateGray, false, width - 22);
             }
 
             string[] options = field.GetOpenMenuOptions();
-            double optionsTop = top + 44 + info.Length * 19 + 8;
+            double optionsTop = top + 40 + info.Length * 16 + 6;
             for (int i = 0; i < options.Length; i++)
             {
-                double optionTop = optionsTop + i * 29;
+                double optionTop = optionsTop + i * 21;
                 Rectangle button = new Rectangle
                 {
                     Width = width - 16,
-                    Height = 25,
+                    Height = 19,
                     Fill = new SolidColorBrush(Color.FromRgb(222, 190, 125)),
                     Stroke = new SolidColorBrush(Color.FromRgb(145, 100, 54)),
                     StrokeThickness = 1,
@@ -695,7 +757,7 @@ namespace OOPGames
                 Canvas.SetLeft(button, left + 8);
                 Canvas.SetTop(button, optionTop);
                 canvas.Children.Add(button);
-                AddText(canvas, options[i], left + 14, optionTop + 4, 11,
+                AddText(canvas, options[i], left + 14, optionTop + 2, 10,
                     Brushes.SaddleBrown, true, width - 28);
             }
         }
@@ -705,9 +767,9 @@ namespace OOPGames
         {
             width = Math.Min(260, Math.Max(140, _canvasWidth - 20));
             left = Math.Max(8, _canvasWidth - width - 10);
-            top = 78;
-            height = 44 + field.GetOpenMenuInfo().Length * 19
-                + 8 + field.GetOpenMenuOptions().Length * 29 + 10;
+            height = 40 + field.GetOpenMenuInfo().Length * 16
+                + 6 + field.GetOpenMenuOptions().Length * 21 + 8;
+            top = Math.Max(38, Math.Min(78, _canvasHeight - height - 8));
         }
 
         private static HousePalette PaletteFor(string kind)
@@ -726,9 +788,17 @@ namespace OOPGames
                     return new HousePalette(Color.FromRgb(237, 228, 199), Color.FromRgb(199, 186, 152),
                         Color.FromRgb(119, 88, 65), Color.FromRgb(84, 62, 51), Color.FromRgb(107, 73, 52),
                         Color.FromRgb(125, 91, 61), Color.FromRgb(255, 244, 211), Color.FromRgb(82, 61, 43));
+                case "PigBarn":
+                    return new HousePalette(Color.FromRgb(245, 204, 194), Color.FromRgb(215, 164, 157),
+                        Color.FromRgb(165, 94, 86), Color.FromRgb(124, 66, 66), Color.FromRgb(107, 73, 52),
+                        Color.FromRgb(125, 91, 61), Color.FromRgb(255, 244, 211), Color.FromRgb(82, 61, 43));
                 case "SheepBarn":
                     return new HousePalette(Color.FromRgb(232, 222, 194), Color.FromRgb(198, 185, 157),
                         Color.FromRgb(133, 111, 81), Color.FromRgb(94, 78, 64), Color.FromRgb(107, 73, 52),
+                        Color.FromRgb(125, 91, 61), Color.FromRgb(255, 244, 211), Color.FromRgb(82, 61, 43));
+                case "GoatBarn":
+                    return new HousePalette(Color.FromRgb(225, 209, 175), Color.FromRgb(194, 169, 127),
+                        Color.FromRgb(145, 117, 78), Color.FromRgb(104, 80, 57), Color.FromRgb(107, 73, 52),
                         Color.FromRgb(125, 91, 61), Color.FromRgb(255, 244, 211), Color.FromRgb(82, 61, 43));
                 case "Dairy":
                     return new HousePalette(Color.FromRgb(231, 238, 215), Color.FromRgb(187, 207, 165),

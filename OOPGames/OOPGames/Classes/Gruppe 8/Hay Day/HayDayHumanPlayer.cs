@@ -68,7 +68,9 @@ namespace OOPGames
             return key == Key.Left || key == Key.Right || key == Key.Up || key == Key.Down
                 || key == Key.Add || key == Key.OemPlus || key == Key.Subtract
                 || key == Key.OemMinus || key == Key.B || key == Key.D1 || key == Key.D2
-                || key == Key.D3 || key == Key.NumPad1 || key == Key.NumPad2 || key == Key.NumPad3;
+                || key == Key.D3 || key == Key.D4 || key == Key.D5 || key == Key.NumPad1
+                || key == Key.NumPad2 || key == Key.NumPad3 || key == Key.NumPad4
+                || key == Key.NumPad5;
         }
     }
 }
