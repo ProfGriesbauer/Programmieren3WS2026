@@ -39,6 +39,7 @@ namespace OOPGames
         public int Master { get; set; } = 80;
         public int Music { get; set; } = 50;
         public int Effects { get; set; } = 80;
+        public bool Muted { get; set; }
         public int MaxSimultaneous { get; set; } = 3;      // 1..8 Effekte gleichzeitig (Musik zählt nicht)
         public int BirdRadius { get; set; } = 4;           // Kacheln, in denen Vögel zu hören sind
         public Dictionary<string, G1C_SoundEntrySettings> Sounds { get; set; } = new Dictionary<string, G1C_SoundEntrySettings>();
@@ -108,7 +109,7 @@ namespace OOPGames
         {
             lock (_lock)
             {
-                Master = 80; Music = 50; Effects = 80; MaxSimultaneous = 3; BirdRadius = 4;
+                Master = 80; Music = 50; Effects = 80; Muted = false; MaxSimultaneous = 3; BirdRadius = 4;
                 Sounds = new Dictionary<string, G1C_SoundEntrySettings>();
                 Revision++;
             }
@@ -189,7 +190,7 @@ namespace OOPGames
                 G1C_SoundSettings loaded = FromJson(File.ReadAllText(path));
                 lock (_lock)
                 {
-                    Master = loaded.Master; Music = loaded.Music; Effects = loaded.Effects;
+                    Master = loaded.Master; Music = loaded.Music; Effects = loaded.Effects; Muted = loaded.Muted;
                     MaxSimultaneous = loaded.MaxSimultaneous; BirdRadius = loaded.BirdRadius; Sounds = loaded.Sounds;
                     Revision++;
                 }

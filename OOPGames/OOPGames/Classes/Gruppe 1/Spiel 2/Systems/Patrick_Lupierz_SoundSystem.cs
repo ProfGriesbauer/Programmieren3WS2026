@@ -181,6 +181,7 @@ namespace OOPGames
             Backend = new G1C_MediaBackend();
             PersistPath = G1C_SoundSettings.DefaultPath;
             Settings.LoadFrom(PersistPath);
+            SetMuted(Settings.Muted);
             _savedRevision = Settings.Revision;
             _appliedRevision = Settings.Revision;
         }
@@ -219,6 +220,8 @@ namespace OOPGames
         public void SetMuted(bool muted)
         {
             Muted = muted;
+            Settings.Muted = muted;
+            if (PersistPath != null) Settings.Save(PersistPath);
             RefreshVolumes();
         }
 

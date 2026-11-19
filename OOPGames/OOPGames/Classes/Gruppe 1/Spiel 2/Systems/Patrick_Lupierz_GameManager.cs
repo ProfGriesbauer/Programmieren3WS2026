@@ -605,6 +605,29 @@ namespace OOPGames
         {
             int interest = Finance.ApplyDailyInterest(Clock.Day);
             if (interest > 0) NotifySystemMessage("Tag " + Clock.Day + ": Die Bank schreibt dir " + interest + " Chips Zinsen gut.");
+            int loanInterest = Finance.ApplyLoanInterest(Clock.Day);
+            if (loanInterest > 0)
+            {
+                NotifySystemMessage("Geldhai: Deine Schuld ist um " + loanInterest + " Chips gewachsen.");
+            }
+            if (Finance.ApplyLoanRespectDay(Clock.Day))
+            {
+                G1C_NpcCharacter shark = Npcs.Find("Geldhai Viktor");
+                if (shark != null)
+                {
+                    shark.Relationship.ChangeRespect(-5);
+                    shark.Relationship.UpdateStatus(shark.Memory, shark.Personality);
+                }
+            }
+            if (Finance.ApplyLoanSmsDay(Clock.Day))
+            {
+                string text = Finance.LoanSmsCount == 1
+                    ? "Du hast immer noch Schulden bei mir. Denk daran, bevor ich persoenlich vorbeikomme."
+                    : Finance.LoanSmsCount < 4
+                        ? "Die Frist laeuft. " + Finance.LoanOwed + " Chips stehen noch offen. Zahl heute."
+                        : "Letzte Warnung: " + Finance.LoanOwed + " Chips Schulden. Ich komme vorbei, wenn du nicht zahlst.";
+                Phone.Receive("Geldhai Viktor", text, Clock);
+            }
             return interest;
         }
 
@@ -927,9 +950,30 @@ namespace OOPGames
                     break;
                 case G1C_PhoneRequestKind.Save:
                     Phone.Info = G1C_SaveSystem.Save(request.Slot, CreateSave())
-                        ? "Gespeichert auf Platz " + request.Slot + "."
+                        ? "Spiel gespeichert."
                         : "Speichern fehlgeschlagen!";
                     Phone.RefreshSlots();
+                    break;
+                case G1C_PhoneRequestKind.AudioAdjust:
+                    if (request.Text == "master")
+                    {
+                        int value = G1C_SoundSettings.Clamp(Sound.Settings.Master + request.IntValue, 0, 100);
+                        Sound.Settings.Set(G1C_SoundSettings.GlobalId, "master", value);
+                    }
+                    else if (request.Text == "music")
+                    {
+                        int value = G1C_SoundSettings.Clamp(Sound.Settings.Music + request.IntValue, 0, 100);
+                        Sound.Settings.Set(G1C_SoundSettings.GlobalId, "music", value);
+                    }
+                    else
+                    {
+                        int value = G1C_SoundSettings.Clamp(Sound.Settings.Effects + request.IntValue, 0, 100);
+                        Sound.Settings.Set(G1C_SoundSettings.GlobalId, "effects", value);
+                    }
+                    Phone.Info = "Lautstaerke: " + Sound.Settings.Master + "% Gesamt.";
+                    break;
+                case G1C_PhoneRequestKind.AudioMute:
+                    Phone.Info = Sound.ToggleMute();
                     break;
             }
         }
@@ -974,7 +1018,11 @@ namespace OOPGames
                 Messages = Phone.Messages, Trash = _trash.SearchedOnDay,
                 BankInterestDay = Finance.LastInterestDay, BankInterestTotal = Finance.TotalInterestPaid,
                 RidingBike = Bikes.Riding, ActiveBike = Bikes.ActiveBikeId, BikeParkedAtDoor = Bikes.ParkedAtDoor,
-                ArcadeHighscores = new Dictionary<string, int>(ArcadeHighscores)
+                ArcadeHighscores = new Dictionary<string, int>(ArcadeHighscores),
+                LoanInterestDay = Finance.LoanInterestLastDay, LoanRespectDay = Finance.LoanRespectLastDay,
+                LoanSmsDay = Finance.LoanSmsLastDay, LoanSmsCount = Finance.LoanSmsCount,
+                AudioMaster = Sound.Settings.Master, AudioMusic = Sound.Settings.Music,
+                AudioEffects = Sound.Settings.Effects, AudioMuted = Sound.Muted
             };
         }
 
@@ -991,6 +1039,7 @@ namespace OOPGames
             Buffs.Restore(data.Buffs);
             Clock.TotalTicks = data.ClockTicks;
             Finance.RestoreInterest(data.BankInterestDay, data.BankInterestTotal, Clock.Day); // Patrick Lupierz – 15.11.2026
+            Finance.RestoreLoanState(data.LoanInterestDay, data.LoanRespectDay, data.LoanSmsDay, data.LoanSmsCount, Clock.Day);
             TickCount = Math.Max(0, data.PlayTicks);
             GamesPlayed = Math.Max(0, data.GamesPlayed);
             Npcs.RestoreReputation(data.Reputation);
@@ -1011,6 +1060,10 @@ namespace OOPGames
             }
             Phone.Messages = (data.Messages ?? new List<G1C_Sms>()).Where(m => m != null).ToList();
             _trash.SearchedOnDay = data.Trash ?? new Dictionary<string, int>();
+            Sound.Settings.Set(G1C_SoundSettings.GlobalId, "master", data.AudioMaster);
+            Sound.Settings.Set(G1C_SoundSettings.GlobalId, "music", data.AudioMusic);
+            Sound.Settings.Set(G1C_SoundSettings.GlobalId, "effects", data.AudioEffects);
+            Sound.SetMuted(data.AudioMuted);
 
             _sceneTransitions.Restore((G1C_WorldLocation)data.Location);
             IG1C_WorldScene scene = CurrentWorld;

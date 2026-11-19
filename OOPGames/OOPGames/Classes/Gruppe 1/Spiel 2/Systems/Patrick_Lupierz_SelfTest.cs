@@ -106,6 +106,8 @@ namespace OOPGames
             run("Bank", "Einzahlen und Abheben", BankDepositWithdraw);
             run("Bank", "2 % Zinsen pro Spieltag, kein Doppelzins", BankInterest);
             run("Bank", "Zinsen beim Tageswechsel im laufenden Spiel genau einmal", BankInterestInGame);
+            run("Geldhai", "5000-Chips-Kredit, 50 % Zinsen pro Tag, Teil- und Vollrückzahlung", LoanSharkDailyRules);
+            run("Angler", "Angler-NPC und vorhandene Fischdaten aus Inventory/Fishing verwenden", AnglerFishData);
 
             // ---- Spielzustände
             run("Zustände", "Inventar und Handy öffnen und schließen", StatesMenus);
@@ -683,6 +685,38 @@ namespace OOPGames
             Equal(510, loaded.Finance.Savings, "Konto nach Speichern/Laden am selben Tag");
         }
 
+        private static void LoanSharkDailyRules()
+        {
+            G1C_MoneyManager money = new G1C_MoneyManager(3000);
+            G1C_FinanceManager finance = new G1C_FinanceManager();
+            finance.Borrow(money, 1000, 1);
+            Equal(1000, finance.LoanOwed, "Kreditbetrag");
+            Equal(500, finance.ApplyLoanInterest(2), "Zinsen Tag 2");
+            Equal(1500, finance.LoanOwed, "Schuld nach 50 % Zinsen");
+            Equal(750, finance.ApplyLoanInterest(3), "Zinsen Tag 3");
+            Equal(2250, finance.LoanOwed, "Schuld nach Zinseszins");
+            Equal(0, finance.ApplyLoanInterest(3), "kein zweiter Zinslauf am selben Tag");
+            finance.Repay(money, 250);
+            Equal(2000, finance.LoanOwed, "Teilrueckzahlung");
+            finance.Repay(money, 2000);
+            Equal(0, finance.LoanOwed, "Vollrueckzahlung");
+        }
+
+        private static void AnglerFishData()
+        {
+            G1C_GameManager game = RunningGame();
+            Check(game.Exterior.TownNpcs.Any(n => n.Name == "Angler Fabian"), "Angler-NPC fehlt");
+            G1C_NpcCharacter angler = game.Npcs.Find("Angler Fabian");
+            Check(angler != null, "Angler-Profil fehlt");
+            Check(angler.Personality.Topics.Any(t => t.Question.Contains("Angelspiel")), "Angel-Tutorial-Thema fehlt");
+            Check(angler.Personality.Topics.Any(t => t.Question.Contains("Fische")), "Fischliste-Thema fehlt");
+            foreach (G1C_CatchInfo fish in G1C_FishingGame.Catches.Where(c => c.IsFish))
+            {
+                G1C_Item item = G1C_ItemCatalog.Get(fish.ItemId);
+                Check(item != null && item.Category == G1C_ItemCategory.Fisch, "Fischdaten fehlen fuer " + fish.Name);
+            }
+        }
+
         // ------------------------------------------------------------------ Zustände
 
         private static void StatesMenus()
@@ -720,7 +754,7 @@ namespace OOPGames
         {
             G1C_ExteriorWorld city = new G1C_ExteriorWorld();
             G1C_CollisionManager collision = new G1C_CollisionManager(city);
-            List<G1C_WorldObject> pavilions = city.Objects.Where(o => o.SpriteId == "building_pavilion").ToList();
+            List<G1C_WorldObject> pavilions = city.Objects.Where(o => o.SpriteId == "building_pavilion_back").ToList();
             Check(pavilions.Count == 2, "Anzahl Pavillons: " + pavilions.Count);
             foreach (G1C_WorldObject p in pavilions)
             {

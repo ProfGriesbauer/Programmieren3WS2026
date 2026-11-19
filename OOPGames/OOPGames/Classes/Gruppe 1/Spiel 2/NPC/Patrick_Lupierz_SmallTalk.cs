@@ -182,7 +182,7 @@ namespace OOPGames
                     yield return new G1C_DialogueTopic("Wovon lebst du eigentlich?", G1C_DialogueTopic.Cycle(
                         "Von Zinsen. Deinen, bald.", "Und von Leuten, die zu viele Fragen stellen. Also: Kredit oder nicht?"));
                     yield return new G1C_DialogueTopic("Was passiert, wenn ich nicht zahle?", G1C_DialogueTopic.Cycle(
-                        "Dann reden wir. Lange. Sehr lange. Ohne Kaffee."));
+                        "Dann wachsen deine Schulden um 50 % pro Tag. Dazu verlierts du taeglich Respekt und ich schreibe dir eine SMS."));
                     break;
                 case "Bankierin Frida":
                     yield return new G1C_DialogueTopic("Sind meine Chips bei euch sicher?", G1C_DialogueTopic.Cycle(

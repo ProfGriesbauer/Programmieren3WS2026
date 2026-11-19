@@ -13,15 +13,17 @@ namespace OOPGames
         public bool Read { get; set; }
     }
 
-    public enum G1C_PhoneScreen { Home, Contacts, Messages, MessageDetail, Clock, Tasks, Save }
+    public enum G1C_PhoneScreen { Home, Contacts, Messages, MessageDetail, Clock, Tasks, Save, Settings }
 
-    public enum G1C_PhoneRequestKind { None, Close, Call, Inventory, Save }
+    public enum G1C_PhoneRequestKind { None, Close, Call, Inventory, Save, AudioAdjust, AudioMute }
 
     public struct G1C_PhoneRequest
     {
         public G1C_PhoneRequestKind Kind;
         public G1C_NpcCharacter Contact;
         public int Slot;
+        public int IntValue;
+        public string Text;
     }
 
     // =====================================================
@@ -35,12 +37,12 @@ namespace OOPGames
     // =====================================================
     public class G1C_Phone
     {
-        public static readonly string[] Apps = { "Kontakte", "SMS", "Uhr", "Aufgaben", "Inventar", "Speichern" };
+        public static readonly string[] Apps = { "Kontakte", "SMS", "Uhr", "Aufgaben", "Inventar", "Speichern", "Einstellungen" };
         // Bildschirm je App (gleiche Reihenfolge wie Apps; "Inventar" öffnet das Inventarmenü)
         private static readonly G1C_PhoneScreen[] AppScreens =
         {
             G1C_PhoneScreen.Contacts, G1C_PhoneScreen.Messages, G1C_PhoneScreen.Clock,
-            G1C_PhoneScreen.Tasks, G1C_PhoneScreen.Home, G1C_PhoneScreen.Save
+            G1C_PhoneScreen.Tasks, G1C_PhoneScreen.Home, G1C_PhoneScreen.Save, G1C_PhoneScreen.Settings
         };
         public const int MaxMessages = 20;
 
@@ -96,6 +98,7 @@ namespace OOPGames
                     case G1C_PhoneScreen.Contacts: return Contacts.Count;
                     case G1C_PhoneScreen.Messages: return Messages.Count;
                     case G1C_PhoneScreen.Save: return G1C_SaveSystem.SlotCount;
+                    case G1C_PhoneScreen.Settings: return 4;
                     default: return 0;
                 }
             }
@@ -112,6 +115,13 @@ namespace OOPGames
             int rows = RowCount;
             if (rows > 0 && (key == Key.W || key == Key.Up)) Selected = (Selected + rows - 1) % rows;
             else if (rows > 0 && (key == Key.S || key == Key.Down)) Selected = (Selected + 1) % rows;
+            else if (Screen == G1C_PhoneScreen.Settings && (key == Key.A || key == Key.Left || key == Key.D || key == Key.Right))
+            {
+                int delta = (key == Key.D || key == Key.Right) ? 5 : -5;
+                if (Selected == 3) return new G1C_PhoneRequest { Kind = G1C_PhoneRequestKind.AudioMute };
+                string field = Selected == 0 ? "master" : Selected == 1 ? "music" : "effects";
+                return new G1C_PhoneRequest { Kind = G1C_PhoneRequestKind.AudioAdjust, Text = field, IntValue = delta };
+            }
             else if (G1C_InputManager.IsBack(key))
             {
                 if (Screen == G1C_PhoneScreen.Home) return new G1C_PhoneRequest { Kind = G1C_PhoneRequestKind.Close };
@@ -121,6 +131,11 @@ namespace OOPGames
             }
             else if (G1C_InputManager.IsConfirm(key))
             {
+                if (Screen == G1C_PhoneScreen.Settings)
+                {
+                    if (Selected == 3) return new G1C_PhoneRequest { Kind = G1C_PhoneRequestKind.AudioMute };
+                    return none;
+                }
                 return Select(clock);
             }
             return none;

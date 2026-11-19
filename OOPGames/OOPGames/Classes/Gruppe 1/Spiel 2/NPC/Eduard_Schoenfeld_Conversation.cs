@@ -272,7 +272,10 @@ namespace OOPGames
                 }
                 else
                 {
-                    AddOption("250 Chips leihen.", BorrowFromShark);
+                    AddOption("500 Chips leihen.", () => BorrowFromShark(500));
+                    AddOption("1000 Chips leihen.", () => BorrowFromShark(1000));
+                    AddOption("2500 Chips leihen.", () => BorrowFromShark(2500));
+                    AddOption("5000 Chips leihen.", () => BorrowFromShark(5000));
                     AddOption("Konditionen erklären.", ExplainLoan);
                 }
                 AddOption("Lass uns plaudern.", SmallTalk);
@@ -514,10 +517,11 @@ namespace OOPGames
                 " % Zinsen\nauf dein Guthaben. Das Konto wird mit deinem Spielstand gespeichert.", G1C_NpcExpression.Thoughtful);
         }
 
-        private void BorrowFromShark()
+        private void BorrowFromShark(int amount)
         {
             int oldDebt = _system.Finance.LoanOwed;
-            string reply = _system.Finance.Borrow(_system.Money);
+            int day = _system.Clock != null ? _system.Clock.Day : 1;
+            string reply = _system.Finance.Borrow(_system.Money, amount, day);
             if (oldDebt == 0 && _system.Finance.LoanOwed > 0)
             {
                 Adjust(1, 0);
@@ -536,7 +540,7 @@ namespace OOPGames
 
         private void ExplainLoan()
         {
-            Say("Ich zahle dir einmalig 250 Chips aus.\nDu schuldest mir dafür insgesamt 300 Chips. Kein zweiter Kredit, solange der erste offen ist.",
+            Say("Du kannst bis zu 5000 Chips wählen.\nJeden neuen Tag steigen die Schulden um 50 %. Währenddessen verlierst du taeglich Respekt. Kein neuer Kredit, solange die alte Schuld offen ist.",
                 G1C_NpcExpression.Thoughtful);
         }
 

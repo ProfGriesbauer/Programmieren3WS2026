@@ -56,6 +56,15 @@ namespace OOPGames
         public string ActiveBike { get; set; }
         public bool BikeParkedAtDoor { get; set; } // Patrick Lupierz – 16.11.2026
         public Dictionary<string, int> ArcadeHighscores { get; set; }
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Geldhai-Schuld und Handy-Audio
+        public int LoanInterestDay { get; set; }
+        public int LoanRespectDay { get; set; }
+        public int LoanSmsDay { get; set; }
+        public int LoanSmsCount { get; set; }
+        public int AudioMaster { get; set; } = 80;
+        public int AudioMusic { get; set; } = 50;
+        public int AudioEffects { get; set; } = 80;
+        public bool AudioMuted { get; set; }
     }
 
     // =====================================================
@@ -70,7 +79,7 @@ namespace OOPGames
     public static class G1C_SaveSystem
     {
         public const int SlotCount = 3;
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public static string Folder { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "G1Casino_Saves");
 
@@ -104,6 +113,17 @@ namespace OOPGames
             {
                 if (slot < 1 || slot > SlotCount || !File.Exists(FileOf(slot))) return null;
                 G1C_SaveData data = JsonSerializer.Deserialize<G1C_SaveData>(File.ReadAllText(FileOf(slot)));
+                if (data != null && data.Version < 3)
+                {
+                    data.LoanInterestDay = 0;
+                    data.LoanRespectDay = 0;
+                    data.LoanSmsDay = 0;
+                    data.LoanSmsCount = 0;
+                    data.AudioMaster = 80;
+                    data.AudioMusic = 50;
+                    data.AudioEffects = 80;
+                    data.AudioMuted = false;
+                }
                 bool valid = data != null && data.Version >= 1 && data.Version <= CurrentVersion && data.Profile != null &&
                              G1C_PlayerProfile.IsValidName(data.Profile.Name) && data.Coins >= 0 && data.ClockTicks >= 0 &&
                              Enum.IsDefined(typeof(G1C_WorldLocation), data.Location) &&

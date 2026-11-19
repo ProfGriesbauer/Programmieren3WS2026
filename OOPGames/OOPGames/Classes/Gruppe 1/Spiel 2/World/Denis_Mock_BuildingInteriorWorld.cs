@@ -74,6 +74,10 @@ namespace OOPGames
             AddFurniture("Medizinschrank", "obj_clinic_cabinet", 3, 7, 2, 2);
             AddFurniture("Pflanze", "obj_plant", 13, 2, 1, 1);
             AddFurniture("Stuhl", "obj_chair", 7, 6, 1, 1);
+            // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Hinweiszettel im Krankenhaus
+            _objects.Add(new G1C_WorldObject("Krankenhaus-Hinweiszettel", "obj_picture_hospital_notice", 11, 0, 1, 1, true,
+                G1C_InteractionType.Inspect,
+                "Hier werden keine Mitarbeiter benötigt, da man sich im Casino sowieso nicht verletzen kann."));
         }
 
         // Entwickler: Denis Mock

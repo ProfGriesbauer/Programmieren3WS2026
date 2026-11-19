@@ -52,6 +52,8 @@ namespace OOPGames
                 case "building_fire_station": return TownBuilding(Rgb(0xB0, 0x38, 0x38), Rgb(0xD8, 0xD0, 0xB0), Rgb(0xD8, 0x40, 0x40));
                 case "building_cinema": return TownBuilding(Rgb(0x38, 0x38, 0x58), Rgb(0xC8, 0xB8, 0x98), Rgb(0xD8, 0x40, 0x48));
                 case "building_pavilion": return Pavilion();
+                case "building_pavilion_back": return PavilionBack();
+                case "building_pavilion_front": return PavilionFront();
                 case "building_warehouse": return TownBuilding(Rgb(0x58, 0x68, 0x68), Rgb(0xB8, 0xA8, 0x88), Rgb(0xD0, 0xB8, 0x68));
                 case "building_post": return TownBuilding(Rgb(0x48, 0x68, 0x88), Rgb(0xE0, 0xD0, 0xA0), Rgb(0xD0, 0xB0, 0x48));
                 case "obj_city_tree": return Tree();
@@ -359,6 +361,44 @@ namespace OOPGames
             canvas.FillRect(29, 36, 6, 5, Rgb(0xF8, 0xD8, 0x70));
             canvas.DrawRectBorder(29, 36, 6, 5, outline);
             // vordere Säulen mit Sockel und Kapitell
+            foreach (int x in new[] { 2, 56 })
+            {
+                canvas.FillRect(x, 33, 6, 44, pillar);
+                canvas.FillRect(x + 4, 33, 2, 44, pillarShade);
+                canvas.FillRect(x - 1, 33, 8, 3, Rgb(0xD8, 0xCC, 0xB8));
+                canvas.FillRect(x - 1, 75, 8, 4, Rgb(0xA8, 0xA0, 0x90));
+                canvas.DrawRectBorder(x, 33, 6, 44, outline);
+            }
+            canvas.AddOutline(outline);
+            return canvas.ToBitmap();
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Dach und hintere Stützen werden getrennt gerendert
+        private static BitmapSource PavilionBack()
+        {
+            G1C_PixelCanvas canvas = new G1C_PixelCanvas(64, 80);
+            Color roof = Rgb(0xB0, 0x48, 0x38), roofLight = Rgb(0xD0, 0x68, 0x50), roofDark = Rgb(0x80, 0x30, 0x28);
+            Color pillarShade = Rgb(0xC0, 0xB4, 0xA0), outline = Rgb(0x38, 0x28, 0x28);
+            canvas.FillRect(12, 30, 3, 26, pillarShade);
+            canvas.FillRect(49, 30, 3, 26, pillarShade);
+            for (int y = 3; y < 30; y++)
+            {
+                int inset = System.Math.Max(0, (15 - y) * 2);
+                Color row = y < 7 ? roofLight : (y % 5 == 0 ? roofDark : roof);
+                canvas.FillRect(1 + inset, y, 62 - 2 * inset, 1, row);
+            }
+            canvas.FillRect(1, 29, 62, 2, Rgb(0xE8, 0xD8, 0xB8));
+            canvas.FillRect(1, 31, 62, 2, roofDark);
+            canvas.FillRect(30, 0, 4, 4, Rgb(0xE8, 0xC0, 0x40));
+            canvas.AddOutline(outline);
+            return canvas.ToBitmap();
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Vorderstützen liegen über der Spielfigur
+        private static BitmapSource PavilionFront()
+        {
+            G1C_PixelCanvas canvas = new G1C_PixelCanvas(64, 80);
+            Color pillar = Rgb(0xF0, 0xE8, 0xD8), pillarShade = Rgb(0xC0, 0xB4, 0xA0), outline = Rgb(0x38, 0x28, 0x28);
             foreach (int x in new[] { 2, 56 })
             {
                 canvas.FillRect(x, 33, 6, 44, pillar);
