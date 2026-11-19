@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -11,8 +11,8 @@ namespace OOPGames
     {
         static readonly string[] HelpTitles =
         {
-            "SPIELZIEL", "SPIELOBERFLAECHE", "TUERME BAUEN", "UPGRADES",
-            "GEGNER UND WELLEN", "SCHADENSARTEN", "STEUERUNG", "SPIELSTAENDE"
+            "SPIELZIEL", "SPIELOBERFLÄCHE", "TÜRME BAUEN", "UPGRADES",
+            "GEGNER UND WELLEN", "SCHADENSARTEN", "STEUERUNG", "SPIELSTÄNDE"
         };
 
         // Picture area on the left side of a help page.
@@ -77,7 +77,7 @@ namespace OOPGames
             _ClickAreas.Clear();
             AddClickArea(0, 0, DesignWidth, DesignHeight, null, null);
             DrawHelpButton("X", 296, 9, 13, CloseHelp);
-            if (_HelpPage > 0) DrawHelpButton("< ZURUECK", 12, 152, 46, () => TurnHelpPage(-1));
+            if (_HelpPage > 0) DrawHelpButton("< ZURÜCK", 12, 152, 46, () => TurnHelpPage(-1));
             if (_HelpPage < HelpTitles.Length - 1) DrawHelpButton("WEITER >", 262, 152, 46, () => TurnHelpPage(1));
             else DrawHelpButton("FERTIG", 262, 152, 46, CloseHelp);
 
@@ -173,14 +173,7 @@ namespace OOPGames
 
         void HelpCircle(double cx, double cy, double radius)
         {
-            int points = Math.Max(24, (int)(radius * 0.8));
-            for (int i = 0; i < points; i++)
-            {
-                double angle = i * Math.PI * 2 / points;
-                double x = Math.Round(cx + Math.Cos(angle) * radius), y = Math.Round(cy + Math.Sin(angle) * radius);
-                Surface.Rect(x - 1, y - 1, 3, 3, Color.FromArgb(120, 43, 37, 32));
-                Surface.Rect(x, y, 1, 1, Color.FromRgb(255, 236, 150));
-            }
+            DrawRangeRing(cx, cy, radius, double.MinValue, double.MaxValue);
         }
 
         void KeyCap(string label, double x, double y)
@@ -220,15 +213,15 @@ namespace OOPGames
                 "Gegner laufen in Wellen den Weg",
                 "entlang zur Burg.",
                 "1  Gegner folgen immer dem Erdweg.",
-                "2  Tuerme stehen auf Steinpodesten",
-                "   und schiessen automatisch auf den",
+                "2  Türme stehen auf Steinpodesten",
+                "   und schießen automatisch auf den",
                 "   vordersten Gegner in Reichweite.",
-                "3  Die Burg schiesst mit. Erreicht ein",
+                "3  Die Burg schießt mit. Erreicht ein",
                 "   Gegner sie, verliert sie Leben.",
                 "   Bei 0 % ist die Welle verloren.",
                 "",
                 "Jede Karte hat 50 Wellen. Wer alle",
-                "schafft, schaltet die naechste",
+                "schafft, schaltet die nächste",
                 "Karte frei.");
         }
 
@@ -245,7 +238,7 @@ namespace OOPGames
             Surface.Rect(249, hudY + 1, 58, 15, PanelInside);
             for (int skull = 0; skull < 2; skull++) Icon(TowerDefenseIcon.Skull, 251 + skull * 7, hudY + 2, 6);
             Surface.Text("NORMAL", 274, hudY + 1, 5, TextDim);
-            Surface.Text("WELLE 12 LAEUFT", 251, hudY + 9, 5, TextLight);
+            Surface.Text("WELLE 12 LÄUFT", 251, hudY + 9, 5, TextLight);
             for (int i = 0; i < 5; i++) Callout(i + 1, 36 + i * 59, hudY + 20);
 
             HelpLines(14, 72,
@@ -262,7 +255,7 @@ namespace OOPGames
             Surface.Rect(10, footerY, 300, 11, Color.FromArgb(200, 20, 18, 16));
             Surface.Text("LEERTASTE  WELLE STARTEN   ENTER  BAUEN", 14, footerY + 2, 5, TextDim);
             double right = 308;
-            right = FakeButton("MENUE", right, footerY + 1);
+            right = FakeButton("MENÜ", right, footerY + 1);
             double menuX = right;
             right = FakeButton("TEMPO x1", right, footerY + 1);
             double speedX = right;
@@ -272,9 +265,9 @@ namespace OOPGames
             Callout(8, menuX + 10, footerY + 13);
 
             HelpLines(14, 128,
-                "6  WELLE STARTEN (Leertaste): naechste Welle beginnt",
+                "6  WELLE STARTEN (Leertaste): nächste Welle beginnt",
                 "7  TEMPO (T): Spielgeschwindigkeit x1, x2 oder x3",
-                "8  MENUE (Esc): Pause, Anleitung, Hauptmenue, Verlassen");
+                "8  MENÜ (Esc): Pause, Anleitung, Hauptmenü, Verlassen");
         }
 
         double FakeButton(string label, double right, double y)
@@ -313,17 +306,17 @@ namespace OOPGames
 
             HelpLines(TextX, 36,
                 "1  Freies Podest: mit Pfeilen oder",
-                "   Maus auswaehlen, Enter/Klick",
-                "   oeffnet das Baumenue.",
-                "2  Gebauter Turm: Enter/Klick oeffnet",
+                "   Maus auswählen, Enter/Klick",
+                "   öffnet das Baumenü.",
+                "2  Gebauter Turm: Enter/Klick öffnet",
                 "   Upgrades und Verkaufen.",
                 "3  Der Kreis zeigt die Reichweite",
-                "   des ausgewaehlten Turms.",
+                "   des ausgewählten Turms.",
                 "",
                 "Acht Turmtypen, jeder mit eigener",
                 "Schadensart (siehe Seite 6).",
-                "Gebaut wird auch waehrend einer",
-                "Welle - solange ein Menue offen",
+                "Gebaut wird auch während einer",
+                "Welle - solange ein Menü offen",
                 "ist, pausiert das Spiel.");
         }
 
@@ -363,9 +356,9 @@ namespace OOPGames
                 "1  Wappen: Turmstufe (Silber II,",
                 "   Gold III)",
                 "2  Balken: Schaden rot, Reichweite",
-                "   gruen, Tempo gelb",
-                "Verkaufen gibt die Haelfte aller",
-                "Ausgaben zurueck.");
+                "   grün, Tempo gelb",
+                "Verkaufen gibt die Hälfte aller",
+                "Ausgaben zurück.");
         }
 
         // Map 2 path start with walking enemies, a boss and the wave preview.
@@ -409,7 +402,7 @@ namespace OOPGames
                 "Zwischen den Wellen ist Bauphase.",
                 "1  Lebensbalken nach dem 1. Treffer",
                 "2  Punkte: Brand, Gift, verlangsamt,",
-                "   Ruestungsbruch",
+                "   Rüstungsbruch",
                 "3  Jeder besiegte Gegner gibt Gold,",
                 "   jede geschaffte Welle einen Bonus",
                 "4  Welle 5, 15 ... 45: Miniboss",
@@ -417,7 +410,7 @@ namespace OOPGames
                 "   - immer als letzter Gegner",
                 "5  Vorschau (E / Klick auf FEINDE):",
                 "   welche Gegner kommen",
-                "Gegner werden jede Welle staerker.");
+                "Gegner werden jede Welle stärker.");
         }
 
         // The six damage types with their towers, and two example enemies with weaknesses.
@@ -427,7 +420,7 @@ namespace OOPGames
             string[] towers =
             {
                 "Physical Archer", "Fire Mage, Flamethrower: Brand", "Ice Mage, Ice Area: langsamer",
-                "Earth Mage: Ruestungsbruch", "Strom Mage: Kettenblitz", "Poison Archer: Gift"
+                "Earth Mage: Rüstungsbruch", "Strom Mage: Kettenblitz", "Poison Archer: Gift"
             };
             for (int i = 0; i < names.Length; i++)
             {
@@ -440,11 +433,11 @@ namespace OOPGames
             DrawWeaknessCard("Skeleton", 14, 90);
             DrawWeaknessCard("Stone Golem", 14, 116);
             HelpLines(TextX, 92,
-                "SCHWAECHE: +50 % Schaden",
+                "SCHWÄCHE: +50 % Schaden",
                 "RESISTENZ: -50 % Schaden",
-                "RUESTUNG senkt Treffer prozentual;",
+                "RÜSTUNG senkt Treffer prozentual;",
                 "Brand und Gift ignorieren sie.",
-                "Gemischte Tuerme lohnen sich!");
+                "Gemischte Türme lohnen sich!");
         }
 
         void DrawWeaknessCard(string enemyName, double x, double y)
@@ -468,14 +461,14 @@ namespace OOPGames
             ShadowText("TASTATUR", 14, 34, 7, TitleGold);
             string[][] keys =
             {
-                new[] { "PFEILE / WASD", "auswaehlen, Podest wechseln" },
-                new[] { "ENTER / Z", "bestaetigen, bauen, kaufen" },
-                new[] { "BACKSPACE", "zurueck, Menue schliessen" },
+                new[] { "PFEILE / WASD", "auswählen, Podest wechseln" },
+                new[] { "ENTER / Z", "bestätigen, bauen, kaufen" },
+                new[] { "BACKSPACE", "zurück, Menü schließen" },
                 new[] { "LEERTASTE", "Welle starten" },
                 new[] { "T", "Tempo x1 / x2 / x3" },
                 new[] { "E", "Gegnervorschau" },
-                new[] { "ENTF", "Spielstand loeschen" },
-                new[] { "ESC / X", "Menue mit Pause" }
+                new[] { "ENTF", "Spielstand löschen" },
+                new[] { "ESC / X", "Menü mit Pause" }
             };
             for (int i = 0; i < keys.Length; i++)
             {
@@ -488,15 +481,15 @@ namespace OOPGames
             DrawMouseIcon(178, 48);
             string[] mouse =
             {
-                "UEBERFAHREN: auswaehlen",
-                "LINKSKLICK: bestaetigen, bauen,",
+                "ÜBERFAHREN: auswählen",
+                "LINKSKLICK: bestätigen, bauen,",
                 "  kaufen, Karte starten",
-                "RECHTSKLICK: oberstes Menue",
-                "  schliessen",
+                "RECHTSKLICK: oberstes Menü",
+                "  schließen",
                 "KLICK AUF FEINDE: Vorschau",
                 "BUTTONS UNTEN: Welle starten,",
-                "  Tempo, Menue, Zurueck",
-                "KLICK NEBEN EIN MENUE: schliessen"
+                "  Tempo, Menü, Zurück",
+                "KLICK NEBEN EIN MENÜ: schließen"
             };
             for (int i = 0; i < mouse.Length; i++)
                 ShadowText(mouse[i].ToUpperInvariant(), 200, 48 + i * 10, 5, TextLight);
@@ -541,7 +534,7 @@ namespace OOPGames
             double dy = ImageY + 82;
             Surface.Rect(cx, dy, 142, 22, Outline);
             Surface.Rect(cx + 1, dy + 1, 140, 20, PanelInsideDark);
-            ShadowText("BURG ZERSTOERT", cx + 6, dy + 3, 6, TitleGold);
+            ShadowText("BURG ZERSTÖRT", cx + 6, dy + 3, 6, TitleGold);
             Surface.Text("WELLE NEU   /   KARTENWAHL", cx + 6, dy + 12, 5, TextLight);
             Callout(1, cx + 128, cy + 2);
             Callout(2, cx + 108, by + 1);
@@ -550,16 +543,16 @@ namespace OOPGames
             EndHelpImage();
 
             HelpLines(TextX, 36,
-                "1  3 unabhaengige Spielstaende mit",
+                "1  3 unabhängige Spielstände mit",
                 "   eigenen freigeschalteten Karten",
                 "2  Angefangene Karten lassen sich",
-                "   fortsetzen (mit Rueckfrage)",
+                "   fortsetzen (mit Rückfrage)",
                 "3  Gespeichert wird nach jeder",
-                "   geschafften Welle: Gold, Tuerme",
+                "   geschafften Welle: Gold, Türme",
                 "   und Upgrades von diesem Moment.",
                 "   Wer mitten in einer Welle geht,",
-                "   startet sie spaeter neu.",
-                "4  Faellt die Burg, startet die",
+                "   startet sie später neu.",
+                "4  Fällt die Burg, startet die",
                 "   Welle ab dem letzten Speicherpunkt",
                 "   oder es geht zur Kartenwahl.");
         }

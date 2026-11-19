@@ -53,6 +53,8 @@ namespace OOPGames
         int _LastCardPending = -1;
         int _LastCardInserted = -1;
         int _LastOverlayDevice = -1;
+        bool _LastOverlayMonitor;
+        Grid _ScreenEffect;
         bool _CameraInitialized;
         double _LastWidth = -1;
 
@@ -155,6 +157,47 @@ namespace OOPGames
             }
         }
 
+        // Game canvas plus a CRT effect layer (scanlines and dark corners) that is only shown in monitor view.
+        UIElement BuildScreenContent()
+        {
+            Grid screen = new Grid();
+            screen.Children.Add(new Viewbox { Stretch = Stretch.Uniform, Child = _GameCanvas });
+
+            GeometryDrawing line = new GeometryDrawing(new SolidColorBrush(Color.FromArgb(255, 0, 0, 0)), null,
+                new RectangleGeometry(new Rect(0, 2, 4, 1)));
+            GeometryDrawing gap = new GeometryDrawing(Brushes.Transparent, null, new RectangleGeometry(new Rect(0, 0, 4, 3)));
+            DrawingGroup tile = new DrawingGroup();
+            tile.Children.Add(gap);
+            tile.Children.Add(line);
+            DrawingBrush scanlines = new DrawingBrush(tile)
+            {
+                TileMode = TileMode.Tile,
+                Viewport = new Rect(0, 0, 4, 3),
+                ViewportUnits = BrushMappingMode.Absolute,
+                Viewbox = new Rect(0, 0, 4, 3),
+                ViewboxUnits = BrushMappingMode.Absolute,
+                Stretch = Stretch.None
+            };
+            scanlines.Freeze();
+
+            RadialGradientBrush vignette = new RadialGradientBrush { RadiusX = 0.75, RadiusY = 0.75 };
+            vignette.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0.6));
+            vignette.GradientStops.Add(new GradientStop(Color.FromArgb(110, 0, 0, 0), 1.0));
+            vignette.Freeze();
+
+            _ScreenEffect = new Grid { IsHitTestVisible = false, Visibility = Visibility.Collapsed };
+            _ScreenEffect.Children.Add(new Rectangle { Fill = scanlines, Opacity = 0.14 });
+            _ScreenEffect.Children.Add(new Rectangle { Fill = vignette });
+            screen.Children.Add(_ScreenEffect);
+            return screen;
+        }
+
+        // Tower Defense is shown on a full-size old monitor instead of inside the small console shell.
+        static bool IsMonitorView(B5RoomField field)
+        {
+            return field.Phase == B5RoomPhase.Playing && field.ActiveGame is B5RoomTowerDefenseGame;
+        }
+
         void BuildInterface()
         {
             _GameCanvas = new Canvas { Width = 160, Height = 144, Background = Brushes.Black, ClipToBounds = true };
@@ -167,7 +210,7 @@ namespace OOPGames
                 Background = new SolidColorBrush(Color.FromRgb(24, 25, 28)),
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new Viewbox { Stretch = Stretch.Uniform, Child = _GameCanvas },
+                Child = BuildScreenContent(),
                 Visibility = Visibility.Collapsed
             };
             _GameFrame.SetValue(Panel.ZIndexProperty, 2);
@@ -1299,8 +1342,41 @@ namespace OOPGames
 
         void ConfigureGameOverlay(B5RoomField field)
         {
-            if (_LastOverlayDevice == field.SelectedDevice) return;
+            bool monitor = IsMonitorView(field);
+            if (_LastOverlayDevice == field.SelectedDevice && _LastOverlayMonitor == monitor) return;
             _LastOverlayDevice = field.SelectedDevice;
+            _LastOverlayMonitor = monitor;
+
+            _GameFrame.BorderThickness = new Thickness(8);
+            _ConsoleShell.BorderThickness = new Thickness(4);
+            _ConsoleShellTitle.FontSize = 14;
+            _ConsoleShellTitle.VerticalAlignment = VerticalAlignment.Top;
+            _ConsoleShellTitle.Margin = new Thickness(0, 9, 0, 0);
+            _ScreenEffect.Visibility = monitor ? Visibility.Visible : Visibility.Collapsed;
+
+            if (monitor)
+            {
+                // Beige CRT monitor: thin plastic bezel, dark glass edge, label at the bottom.
+                _GameFrame.BorderThickness = new Thickness(MonitorGlass);
+                _GameFrame.BorderBrush = GetFrozenBrush(Color.FromRgb(22, 22, 24));
+                _GameFrame.Background = GetFrozenBrush(Color.FromRgb(10, 10, 12));
+                _GameFrame.CornerRadius = new CornerRadius(14);
+                _ConsoleShell.BorderThickness = new Thickness(2);
+                _ConsoleShell.BorderBrush = GetFrozenBrush(Color.FromRgb(120, 112, 96));
+                _ConsoleShell.Background = GetFrozenBrush(Color.FromRgb(200, 191, 166));
+                _ConsoleShell.CornerRadius = new CornerRadius(18);
+                _ConsoleShellTitle.Text = "COMMODORE";
+                _ConsoleShellTitle.FontSize = 11;
+                _ConsoleShellTitle.Foreground = GetFrozenBrush(Color.FromRgb(92, 86, 74));
+                _ConsoleShellTitle.VerticalAlignment = VerticalAlignment.Bottom;
+                _ConsoleShellTitle.Margin = new Thickness(0, 0, 0, 3);
+                _Root.Background = GetFrozenBrush(Color.FromRgb(28, 27, 31));
+                return;
+            }
+
+            // Back to the normal console view: the shell sizes itself again like before the monitor view.
+            _ConsoleShell.Width = double.NaN;
+            _ConsoleShell.Height = double.NaN;
 
             switch (field.Device.Kind)
             {
@@ -1340,8 +1416,61 @@ namespace OOPGames
             }
         }
 
+        const double MonitorGlass = 5;
+        const double MonitorOuterMargin = 6;
+        const double MonitorBezelSide = 12;
+        const double MonitorBezelTop = 12;
+        const double MonitorBezelBottom = 22;
+
+        // Width/Height start as NaN (auto size); a plain difference check would never set them.
+        static void SetWidth(FrameworkElement element, double value)
+        {
+            if (double.IsNaN(element.Width) || Math.Abs(element.Width - value) > 0.1) element.Width = value;
+        }
+
+        static void SetHeight(FrameworkElement element, double value)
+        {
+            if (double.IsNaN(element.Height) || Math.Abs(element.Height - value) > 0.1) element.Height = value;
+        }
+
+        // Monitor view: the screen fills the canvas except for a thin bezel. The scale is not rounded,
+        // so the game grows with the window (1920x1080 when there is enough room).
+        void SizeMonitorFrame(int gameWidth, int gameHeight)
+        {
+            double rootWidth = Math.Max(1, _Root.ActualWidth);
+            double rootHeight = Math.Max(1, _Root.ActualHeight);
+            double glass = MonitorGlass * 2;
+            double availableWidth = rootWidth - MonitorOuterMargin * 2 - MonitorBezelSide * 2 - glass;
+            double availableHeight = rootHeight - MonitorOuterMargin * 2 - MonitorBezelTop - MonitorBezelBottom - glass;
+            double scale = Math.Max(0.05, Math.Min(1.0, Math.Min(availableWidth / gameWidth, availableHeight / gameHeight)));
+            double frameWidth = gameWidth * scale + glass;
+            double frameHeight = gameHeight * scale + glass;
+            double shellWidth = frameWidth + MonitorBezelSide * 2;
+            double shellHeight = frameHeight + MonitorBezelTop + MonitorBezelBottom;
+            double shellLeft = Math.Max(0, (rootWidth - shellWidth) / 2);
+            double shellTop = Math.Max(0, (rootHeight - shellHeight) / 2);
+
+            SetWidth(_GameFrame, frameWidth);
+            SetHeight(_GameFrame, frameHeight);
+            SetWidth(_ConsoleShell, shellWidth);
+            SetHeight(_ConsoleShell, shellHeight);
+            if (_GameFrame.VerticalAlignment != VerticalAlignment.Top) _GameFrame.VerticalAlignment = VerticalAlignment.Top;
+            if (_ConsoleShell.VerticalAlignment != VerticalAlignment.Top) _ConsoleShell.VerticalAlignment = VerticalAlignment.Top;
+            Thickness frameMargin = new Thickness(shellLeft + MonitorBezelSide, shellTop + MonitorBezelTop, 0, 0);
+            Thickness shellMargin = new Thickness(shellLeft, shellTop, 0, 0);
+            if (_GameFrame.Margin != frameMargin) _GameFrame.Margin = frameMargin;
+            if (_ConsoleShell.Margin != shellMargin) _ConsoleShell.Margin = shellMargin;
+        }
+
         void SizeGameFrame(B5RoomField field, int gameWidth, int gameHeight)
         {
+            if (IsMonitorView(field))
+            {
+                SizeMonitorFrame(gameWidth, gameHeight);
+                return;
+            }
+            if (_GameFrame.VerticalAlignment != VerticalAlignment.Center) _GameFrame.VerticalAlignment = VerticalAlignment.Center;
+            if (_ConsoleShell.VerticalAlignment != VerticalAlignment.Center) _ConsoleShell.VerticalAlignment = VerticalAlignment.Center;
             double rootWidth = Math.Max(1, _Root.ActualWidth);
             double rootHeight = Math.Max(1, _Root.ActualHeight);
             bool sidebarVisible = _Sidebar.Visibility == Visibility.Visible;
@@ -1362,8 +1491,8 @@ namespace OOPGames
             double marginLeft = Math.Max(0, (usableWidth - frameWidth) / 2);
             double shellHorizontalPadding = field.Device.Kind == B5RoomDeviceKind.Atari ? 52 : 38;
             double shellVerticalPadding = 32;
-            if (Math.Abs(_GameFrame.Width - frameWidth) > 0.1) _GameFrame.Width = frameWidth;
-            if (Math.Abs(_GameFrame.Height - frameHeight) > 0.1) _GameFrame.Height = frameHeight;
+            SetWidth(_GameFrame, frameWidth);
+            SetHeight(_GameFrame, frameHeight);
             Thickness frameMargin = new Thickness(marginLeft, 0, 0, barHeight);
             if (_GameFrame.Margin != frameMargin) _GameFrame.Margin = frameMargin;
             double shellWidth = frameWidth + shellHorizontalPadding * 2;

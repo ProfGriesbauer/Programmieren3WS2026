@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
@@ -67,7 +67,7 @@ namespace OOPGames
         static readonly IList<TowerDefenseMapDefinition> _Maps = new List<TowerDefenseMapDefinition>
         {
             new TowerDefenseMapDefinition(
-                "Gruene Wiese", "LANGER SCHLANGENWEG",
+                "Grüne Wiese", "LANGER SCHLANGENWEG",
                 "map_gruene_wiese.png",
                 new Point(286, 70),
                 Points(14, 50, 14, 104, 68, 60, 68, 112, 132, 45, 132, 100, 196, 60, 196, 112, 260, 124, 305, 124),
@@ -79,7 +79,7 @@ namespace OOPGames
                 Points(30, 76, 70, 76, 30, 128, 70, 128, 130, 48, 175, 48, 150, 100, 220, 46, 240, 122, 290, 122),
                 Points(-10, 40, 100, 40, 100, 120, 200, 120, 200, 76, 280, 76, 280, 60)),
             new TowerDefenseMapDefinition(
-                "Wuestenpass", "KURZER PASS",
+                "Wüstenpass", "KURZER PASS",
                 "map_wuestenpass.png",
                 new Point(272, 60),
                 Points(20, 60, 55, 60, 90, 60, 20, 130, 60, 130, 100, 130, 160, 124, 210, 124, 260, 124, 170, 40),
@@ -211,8 +211,11 @@ namespace OOPGames
         const int RepairPerWave = 3;
 
         public string Title { get { return "Tower Defense"; } }
-        public int Width { get { return DesignWidth * 2; } }
-        public int Height { get { return DesignHeight * 2; } }
+        // The game logic works in 320x180 logical pixels; the screen is rendered at 1920x1080 (factor 6).
+        // Sprites are scaled with nearest neighbour, so higher resolution sprites can replace them later.
+        const int PixelScale = 6;
+        public int Width { get { return DesignWidth * PixelScale; } }
+        public int Height { get { return DesignHeight * PixelScale; } }
         public bool ExitRequested { get { return _Exit; } }
         public int CurrentWave { get { return _Wave; } }
         // Enemies still to defeat in the running wave, or the size of the next wave while building.
@@ -435,7 +438,7 @@ namespace OOPGames
             if (_Battle == null || _Battle.Phase != TowerDefenseBattlePhase.Building) return;
             _Battle.StartWave(_Wave);
             TowerDefenseWave wave = _Battle.CurrentWave;
-            _StatusMessage = "Welle " + _Wave + " laeuft";
+            _StatusMessage = "Welle " + _Wave + " läuft";
             if (wave.Boss != null)
                 ShowBanner((wave.IsMiniBoss ? "MINIBOSS: " : "BOSS: ") + wave.Boss.ToUpperInvariant());
             else
@@ -458,7 +461,7 @@ namespace OOPGames
             if (_PixelSurface == null || !ReferenceEquals(canvas.Tag, _PixelSurface))
             {
                 canvas.Children.Clear();
-                _PixelSurface = new TowerDefensePixelSurface(DesignWidth, DesignHeight, 2);
+                _PixelSurface = new TowerDefensePixelSurface(DesignWidth, DesignHeight, PixelScale);
                 canvas.Tag = _PixelSurface;
                 canvas.Children.Add(_PixelSurface.Image);
             }
@@ -548,7 +551,7 @@ namespace OOPGames
         {
             if (_Dialog == TowerDefenseDialog.ResumeRun) return new[] { "WEITERSPIELEN", "NEU BEGINNEN", "ABBRECHEN" };
             if (_Dialog == TowerDefenseDialog.Defeat) return new[] { "WELLE NEU", "KARTENWAHL" };
-            return new[] { "NEIN", "JA, LOESCHEN" };
+            return new[] { "NEIN", "JA, LÖSCHEN" };
         }
 
         // The defeat question cannot be dismissed: the lost battle must not continue.
@@ -608,19 +611,19 @@ namespace OOPGames
                 foreach (string tower in run.Towers) if (tower != null) towers++;
                 title = "WEITERSPIELEN?";
                 info = TowerDefenseMaps.Maps[_MapSelection].Name.ToUpperInvariant() + "  WELLE " + run.Wave +
-                    "  GOLD " + run.Gold + "  TUERME " + towers + "  " + DifficultyNames[run.Difficulty].ToUpperInvariant();
+                    "  GOLD " + run.Gold + "  TÜRME " + towers + "  " + DifficultyNames[run.Difficulty].ToUpperInvariant();
                 icons = new[] { TowerDefenseIcon.Upgrade, TowerDefenseIcon.Sword, TowerDefenseIcon.Wave };
             }
             else if (_Dialog == TowerDefenseDialog.Defeat)
             {
-                title = "BURG ZERSTOERT";
+                title = "BURG ZERSTÖRT";
                 info = "WELLE " + _Wave + " VERLOREN - NEUSTART AB WELLENBEGINN";
                 icons = new[] { TowerDefenseIcon.Upgrade, TowerDefenseIcon.Wave };
             }
             else
             {
-                title = "LOESCHEN?";
-                info = "SPIELSTAND " + (_SlotSelection + 1) + " WIRKLICH LOESCHEN?";
+                title = "LÖSCHEN?";
+                info = "SPIELSTAND " + (_SlotSelection + 1) + " WIRKLICH LÖSCHEN?";
                 icons = new[] { TowerDefenseIcon.Heart, TowerDefenseIcon.Skull };
             }
 
@@ -645,7 +648,7 @@ namespace OOPGames
         {
             return _Screen == TowerDefenseScreen.MainMenu
                 ? new[] { "FORTSETZEN", "ANLEITUNG", "SPIEL VERLASSEN" }
-                : new[] { "FORTSETZEN", "ANLEITUNG", "HAUPTMENUE", "SPIEL VERLASSEN" };
+                : new[] { "FORTSETZEN", "ANLEITUNG", "HAUPTMENÜ", "SPIEL VERLASSEN" };
         }
 
         void HandlePauseKey(Key key)
@@ -668,7 +671,7 @@ namespace OOPGames
                 return;
             }
             _Paused = false;
-            if (item == "HAUPTMENUE") ReturnToMainMenu();
+            if (item == "HAUPTMENÜ") ReturnToMainMenu();
             else if (item == "SPIEL VERLASSEN")
             {
                 _Exit = true;
@@ -697,11 +700,11 @@ namespace OOPGames
             double top = 90 - height / 2;
             DrawPanel(80, top, 160, height);
             AddClickArea(80, top, 160, height, null, null);
-            DrawTitle("MENUE", top + 8);
+            DrawTitle("MENÜ", top + 8);
             Dictionary<string, TowerDefenseIcon> icons = new Dictionary<string, TowerDefenseIcon>
             {
                 { "FORTSETZEN", TowerDefenseIcon.Upgrade }, { "ANLEITUNG", TowerDefenseIcon.Range },
-                { "HAUPTMENUE", TowerDefenseIcon.Star }, { "SPIEL VERLASSEN", TowerDefenseIcon.Wave }
+                { "HAUPTMENÜ", TowerDefenseIcon.Star }, { "SPIEL VERLASSEN", TowerDefenseIcon.Wave }
             };
             for (int i = 0; i < items.Length; i++)
             {
@@ -824,6 +827,7 @@ namespace OOPGames
 
         void ConfirmSelection()
         {
+            _RangeSpot = -1;
             if (_Screen == TowerDefenseScreen.MainMenu)
             {
                 if (_MenuSelection == 0)
@@ -998,7 +1002,7 @@ namespace OOPGames
             DrawMenuBackground();
             DrawPanel(70, 30, 180, 108);
             DrawTitle("TOWER DEFENSE", 40);
-            ShadowText("BAUE TUERME. HALTE DIE WELLEN AUF.", 86, 64, 6, TextDim);
+            ShadowText("BAUE TÜRME. HALTE DIE WELLEN AUF.", 86, 64, 6, TextDim);
             DrawMenuEntry("SPIELEN", TowerDefenseIcon.Sword, _MenuSelection == 0, 76,
                 () => _MenuSelection = 0, ConfirmSelection);
             DrawMenuEntry("ANLEITUNG", TowerDefenseIcon.Range, _MenuSelection == 1, 95,
@@ -1012,7 +1016,7 @@ namespace OOPGames
         {
             DrawMenuBackground();
             DrawPanel(36, 16, 248, 146);
-            DrawTitle("SPIELSTAND WAEHLEN", 24);
+            DrawTitle("SPIELSTAND WÄHLEN", 24);
             for (int i = 0; i < TowerDefenseSaves.SlotCount; i++)
                 DrawSlotCard(i, 48, 50 + i * 35);
         }
@@ -1081,7 +1085,7 @@ namespace OOPGames
         {
             DrawMenuBackground();
             DrawPanel(56, 14, 208, 146);
-            DrawTitle("KARTE AUSWAEHLEN", 21);
+            DrawTitle("KARTE AUSWÄHLEN", 21);
             TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[_MapSelection];
             bool unlocked = CurrentSlot.IsUnlocked(_MapSelection);
             TowerDefenseRunState savedRun = CurrentSlot.GetRun(_MapSelection);
@@ -1194,9 +1198,12 @@ namespace OOPGames
             Surface.Sprite(TowerDefenseSprites.Map(_Map.BackgroundFile), 0, MapTop - 2,
                 TowerDefenseSprites.MapImageWidth, TowerDefenseSprites.MapImageHeight);
             DrawMainBuilding(_Map, MapTop);
-            if (_Screen == TowerDefenseScreen.Map && _Towers[_SelectedSpot] != null)
-                DrawRangeCircle(_Map.TowerSpots[_SelectedSpot],
-                    TowerDefenseBattle.TowerRange(_Towers[_SelectedSpot], _Upgrades[_SelectedSpot]));
+            if (_Screen == TowerDefenseScreen.Map)
+            {
+                Tower selected = _Towers[_SelectedSpot];
+                double range = selected == null ? 0 : TowerDefenseBattle.TowerRange(selected, _Upgrades[_SelectedSpot]);
+                if (RangeVisible(range) && selected != null) DrawRangeCircle(_Map.TowerSpots[_SelectedSpot], range);
+            }
 
             // Towers and enemies back to front, so lower sprites overlap the ones behind them.
             // Click areas follow the same order, so the frontmost tower wins the hit test.
@@ -1308,14 +1315,44 @@ namespace OOPGames
 
         void DrawRangeCircle(Point spot, double range)
         {
-            double cx = spot.X, cy = spot.Y - 6 + MapTop;
-            int points = Math.Max(24, (int)(range * 0.8));
+            DrawRangeRing(spot.X, spot.Y - 6 + MapTop, range, 25, 169);
+        }
+
+        static readonly TimeSpan RangeShowTime = TimeSpan.FromSeconds(3);
+        int _RangeSpot = -1;
+        Tower _RangeTower;
+        double _RangeValue;
+        DateTime _RangeShownSince;
+
+        // The range shows for a few seconds after a tower gets selected, built or upgraded.
+        // Hovering the same tower again does not restart the timer; clicking or Enter does.
+        bool RangeVisible(double range)
+        {
+            Tower tower = _Towers[_SelectedSpot];
+            if (_SelectedSpot != _RangeSpot || tower != _RangeTower || range != _RangeValue)
+            {
+                _RangeSpot = _SelectedSpot;
+                _RangeTower = tower;
+                _RangeValue = range;
+                _RangeShownSince = DateTime.UtcNow;
+            }
+            return DateTime.UtcNow - _RangeShownSince < RangeShowTime;
+        }
+
+        static readonly Color RangeRingColor = Color.FromRgb(120, 235, 255);
+        static readonly Color RangeRingShadow = Color.FromArgb(200, 20, 16, 30);
+
+        // Dotted ring; every dot has a dark border so it stays visible on light and dark maps.
+        void DrawRangeRing(double cx, double cy, double radius, double minY, double maxY)
+        {
+            int points = Math.Max(24, (int)(radius * 0.8));
             for (int i = 0; i < points; i++)
             {
                 double angle = i * Math.PI * 2 / points;
-                double x = cx + Math.Cos(angle) * range, y = cy + Math.Sin(angle) * range;
-                if (y < 25 || y > 169) continue;
-                Surface.Rect(Math.Round(x), Math.Round(y), 1, 1, Color.FromArgb(200, 255, 236, 150));
+                double x = Math.Round(cx + Math.Cos(angle) * radius), y = Math.Round(cy + Math.Sin(angle) * radius);
+                if (y < minY || y > maxY) continue;
+                Surface.Rect(x - 1, y - 1, 4, 4, RangeRingShadow);
+                Surface.Rect(x, y, 2, 2, RangeRingColor);
             }
         }
 
@@ -1342,7 +1379,7 @@ namespace OOPGames
             Surface.Rect(x, y, width, height, Outline);
             Surface.Rect(x + 1, y + 1, width - 2, height - 2, StoneDark);
             Surface.Rect(x + 2, y + 2, width - 4, height - 4, PanelInside);
-            string title = (WaveRunning ? "WELLE " : "NAECHSTE WELLE ") + wave.Number;
+            string title = (WaveRunning ? "WELLE " : "NÄCHSTE WELLE ") + wave.Number;
             ShadowText(title, x + 6, y + 4, 6, TitleGold);
             ShadowText("x", x + width - 10, y + 3, 6, TextDim);
             for (int i = 0; i < types.Count; i++)
@@ -1357,8 +1394,39 @@ namespace OOPGames
                     Surface.Sprite(TowerDefenseSprites.Enemy(name, 0), x + 6, rowY, 16, 16);
                 ShadowText(name.ToUpperInvariant(), x + 27, rowY + 2, 5, boss ? TitleGold : TextLight);
                 if (boss)
-                    Surface.Text(wave.IsMiniBoss ? "MINIBOSS" : "BOSS", x + 27, rowY + 9, 5, Color.FromRgb(230, 110, 200));
+                {
+                    string label = wave.IsMiniBoss ? "MINIBOSS" : "BOSS";
+                    Surface.Text(label, x + width - 5 - label.Length * 2.75, rowY + 2, 5, Color.FromRgb(230, 110, 200));
+                }
+                DrawPreviewDamageTypes(PreviewEnemy(name), x + 27, rowY + 9);
             }
+        }
+
+        static readonly Color WeakColor = Color.FromRgb(120, 220, 90);
+        static readonly Color ResistColor = Color.FromRgb(222, 96, 64);
+        static readonly Dictionary<string, Enemy> _PreviewEnemies = new Dictionary<string, Enemy>();
+
+        static Enemy PreviewEnemy(string name)
+        {
+            Enemy enemy;
+            if (!_PreviewEnemies.TryGetValue(name, out enemy))
+            {
+                enemy = TowerDefenseWaves.CreateEnemy(name, 1);
+                _PreviewEnemies[name] = enemy;
+            }
+            return enemy;
+        }
+
+        // One line with weakness and resistance icons, same labels as in the help page.
+        void DrawPreviewDamageTypes(Enemy enemy, double x, double y)
+        {
+            ShadowText("SCHWACH", x, y, 5, WeakColor);
+            x += 7 * 2.75 + 1;
+            foreach (DamageType type in enemy.WeakAgainst) { Icon(TowerDefenseSprites.DamageIcon(type), x, y, 7); x += 8; }
+            x += 3;
+            ShadowText("RESIST.", x, y, 5, ResistColor);
+            x += 7 * 2.75 + 1;
+            foreach (DamageType type in enemy.ResistantDamageTypes) { Icon(TowerDefenseSprites.DamageIcon(type), x, y, 7); x += 8; }
         }
 
         void DrawMainBuilding(TowerDefenseMapDefinition map, double top)
@@ -1440,7 +1508,7 @@ namespace OOPGames
             DrawHudCell(3, TowerDefenseIcon.Coin, "GOLD", Gold.ToString());
             DrawHudCell(67, TowerDefenseIcon.Heart, "LEBEN", MainBuildingHealth + "%");
             DrawHudCell(131, TowerDefenseIcon.Wave, "WELLE", CurrentWave + "/" + TowerDefenseWaves.WaveCount);
-            DrawHudCell(195, TowerDefenseIcon.Skull, WaveRunning ? "FEINDE" : "NAECHSTE", ExpectedEnemies.ToString());
+            DrawHudCell(195, TowerDefenseIcon.Skull, WaveRunning ? "FEINDE" : "NÄCHSTE", ExpectedEnemies.ToString());
             // The enemy cell opens the wave preview (mouse or E).
             bool hovered = IsMouseOver(195, 3, 60, 17);
             AddClickArea(195, 3, 60, 17, null, () => _ShowWavePreview = !_ShowWavePreview);
@@ -1503,7 +1571,7 @@ namespace OOPGames
             DrawTowerShowcase(tower, 178, 56);
             AddClickArea(178, 56, 48, 72, null, BuildTower);
             DrawTowerStats(tower, 230, 58);
-            ShadowText("KLICK / ENTER  BAUEN    RECHTSKLICK / BACKSPACE  ZURUECK", 64, 153, 5, TextDim);
+            ShadowText("KLICK / ENTER  BAUEN    RECHTSKLICK / BACKSPACE  ZURÜCK", 64, 153, 5, TextDim);
         }
 
         void DrawTowerUpgradeMenu()
@@ -1580,7 +1648,7 @@ namespace OOPGames
                 ShadowText(cost.ToString(), 256, y + 3, 6, _Gold >= cost ? TextGold : Color.FromRgb(222, 96, 64));
             }
 
-            ShadowText("KLICK / ENTER  KAUFEN    RECHTSKLICK / BACKSPACE  ZURUECK", 84, 155, 5, TextDim);
+            ShadowText("KLICK / ENTER  KAUFEN    RECHTSKLICK / BACKSPACE  ZURÜCK", 84, 155, 5, TextDim);
         }
 
         void DrawUpgradeStat(TowerDefenseIcon icon, string value, string next, double x)
@@ -1613,8 +1681,8 @@ namespace OOPGames
                 : tower.Effect == TowerEffect.Burn ? "BRAND " + tower.EffectDamagePerSecond + "/S"
                 : tower.Effect == TowerEffect.PoisonDamageOverTime ? "GIFT " + tower.EffectDamagePerSecond + "/S"
                 : tower.Effect == TowerEffect.Slow ? "VERLANGSAMT"
-                : tower.Effect == TowerEffect.ArmorBreak ? "RUESTUNG -" + tower.EffectStrength
-                : tower.AttackMode == AttackMode.AreaDamage ? "FLAECHE" : "EINZELZIEL";
+                : tower.Effect == TowerEffect.ArmorBreak ? "RÜSTUNG -" + tower.EffectStrength
+                : tower.AttackMode == AttackMode.AreaDamage ? "FLÄCHE" : "EINZELZIEL";
             DrawStat(TowerDefenseSprites.Icon(TowerDefenseIcon.Physical), mode, x, y + 56);
         }
 
@@ -1697,15 +1765,15 @@ namespace OOPGames
             switch (_Screen)
             {
                 case TowerDefenseScreen.MainMenu:
-                    hint = "MAUS / PFEILE  WAEHLEN   KLICK / ENTER  BESTAETIGEN   ESC  MENUE";
+                    hint = "MAUS / PFEILE  WÄHLEN   KLICK / ENTER  BESTÄTIGEN   ESC  MENÜ";
                     back = false;
                     menu = false;
                     break;
                 case TowerDefenseScreen.SlotSelection:
-                    hint = "KLICK / ENTER  LADEN   ENTF  LOESCHEN";
+                    hint = "KLICK / ENTER  LADEN   ENTF  LÖSCHEN";
                     break;
                 case TowerDefenseScreen.DifficultySelection:
-                    hint = "KLICK / ENTER  KARTE STARTEN   RECHTSKLICK  ZURUECK";
+                    hint = "KLICK / ENTER  KARTE STARTEN   RECHTSKLICK  ZURÜCK";
                     break;
                 case TowerDefenseScreen.MapSelection:
                     hint = CurrentSlot.IsUnlocked(_MapSelection)
@@ -1714,28 +1782,28 @@ namespace OOPGames
                     break;
                 case TowerDefenseScreen.Map:
                     hint = WaveRunning
-                        ? "KLICK / PFEILE  PODEST   T  TEMPO   E  GEGNER   ESC  MENUE"
+                        ? "KLICK / PFEILE  PODEST   T  TEMPO   E  GEGNER   ESC  MENÜ"
                         : "LEERTASTE  WELLE STARTEN   ENTER  BAUEN   E  GEGNER";
                     back = false;
                     break;
                 default:
-                    hint = "KLICK  WAEHLEN   RECHTSKLICK  SCHLIESSEN   ESC  MENUE";
+                    hint = "KLICK  WÄHLEN   RECHTSKLICK  SCHLIESSEN   ESC  MENÜ";
                     break;
             }
             bool delete = _Screen == TowerDefenseScreen.SlotSelection && !TowerDefenseSaves.Slots[_SlotSelection].IsEmpty;
             if (_Dialog != TowerDefenseDialog.None)
             {
-                hint = _Dialog == TowerDefenseDialog.Defeat ? "KLICK / ENTER  AUSWAEHLEN" : "KLICK / ENTER  AUSWAEHLEN   ESC  ABBRECHEN";
+                hint = _Dialog == TowerDefenseDialog.Defeat ? "KLICK / ENTER  AUSWÄHLEN" : "KLICK / ENTER  AUSWÄHLEN   ESC  ABBRECHEN";
                 back = menu = delete = false;
             }
             if (_Paused)
             {
-                hint = "KLICK / ENTER  AUSWAEHLEN   ESC  WEITERSPIELEN";
+                hint = "KLICK / ENTER  AUSWÄHLEN   ESC  WEITERSPIELEN";
                 back = menu = delete = false;
             }
             if (_ShowHelp)
             {
-                hint = "PFEILE / KLICK  BLAETTERN   ESC  SCHLIESSEN";
+                hint = "PFEILE / KLICK  BLÄTTERN   ESC  SCHLIESSEN";
                 back = menu = delete = false;
             }
 
@@ -1743,15 +1811,15 @@ namespace OOPGames
             Surface.Rect(0, 170, DesignWidth, 1, Color.FromArgb(200, 0, 0, 0));
             Surface.Text(hint, 4, 171, 5, TextDim);
             double right = DesignWidth - 2;
-            if (menu) right = DrawFooterButton("MENUE", right, () => { _Paused = true; _PauseSelection = 0; });
-            if (back) right = DrawFooterButton("ZURUECK", right, GoBack);
+            if (menu) right = DrawFooterButton("MENÜ", right, () => { _Paused = true; _PauseSelection = 0; });
+            if (back) right = DrawFooterButton("ZURÜCK", right, GoBack);
             if (menu && _Screen == TowerDefenseScreen.Map && _Battle != null)
             {
                 right = DrawFooterButton("TEMPO x" + _GameSpeed, right, ToggleSpeed);
                 if (_Battle.Phase == TowerDefenseBattlePhase.Building)
                     right = DrawFooterButton("WELLE STARTEN", right, StartNextWave);
             }
-            if (delete) DrawFooterButton("LOESCHEN", right, AskDeleteSlot);
+            if (delete) DrawFooterButton("LÖSCHEN", right, AskDeleteSlot);
         }
 
         // Draws a small button that ends at x = right and returns the x where the next button may end.
