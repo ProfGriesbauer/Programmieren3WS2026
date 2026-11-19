@@ -187,8 +187,9 @@ namespace OOPGames
                 window.Show();
                 Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
                 rules.ClearField();
+                Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
                 Gruppe2_SubwayPainter painter = new Gruppe2_SubwayPainter();
-                painter.PaintGameField(canvas, rules.CurrentField);
+                painter.PaintGameField(canvas, field);
 
                 AssertTrue(canvas.Background is SolidColorBrush
                     && ((SolidColorBrush)canvas.Background).Color == Colors.LightSkyBlue,
@@ -200,6 +201,14 @@ namespace OOPGames
                 AssertTrue(viewport.Children.OfType<ModelVisual3D>()
                     .Any(visual => visual.Content is Model3DGroup),
                     "the 3D scene contains rendered world models");
+
+                ModelVisual3D skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                Model3DGroup skaterModel = skaterVisual.Content as Model3DGroup;
+                AssertTrue(skaterModel != null
+                    && skaterModel.Children.OfType<Model3DGroup>()
+                        .Any(component => component.Children.OfType<GeometryModel3D>().Count() >= 20),
+                    "the runner model includes a detailed skateboard with wheels");
+                double restingHeight = GetRunnerHeight(skaterVisual);
 
                 string[] labels = canvas.Children.OfType<TextBlock>()
                     .Select(block => block.Text).ToArray();
@@ -215,11 +224,29 @@ namespace OOPGames
                 painter.TickPaintGameField(canvas, rules.CurrentField);
                 AssertTrue(canvas.Children.Count == paintedChildCount,
                     "redrawing the scene does not accumulate canvas elements");
+
+                field.Distance = Math.PI / (2 * 0.48);
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                AssertTrue(GetRunnerHeight(skaterVisual) > restingHeight + 0.02,
+                    "the skater bobs as the run progresses");
             }
             finally
             {
                 window.Close();
             }
+        }
+
+        private static double GetRunnerHeight(ModelVisual3D skaterVisual)
+        {
+            Transform3DGroup transform = skaterVisual.Transform as Transform3DGroup;
+            AssertTrue(transform != null,
+                "the skater has a scene transform");
+
+            TranslateTransform3D translation = transform.Children
+                .OfType<TranslateTransform3D>().Single();
+            return translation.OffsetY;
         }
 
         private static void TestFatalAndNonFatalObstacles()

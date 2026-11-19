@@ -254,3 +254,75 @@ Assistant answer:
 - I traced the likely cause to the Start New Game button retaining keyboard focus: Space activates the button, whose handler clears the field.
 - Keeping the change within the Subway Surfer folder, I made the game canvas focusable and give it keyboard focus when the game is first painted. That keeps Space from activating the start button while the game is running.
 - I did not edit the shared MainWindow files.
+
+### Prompt 17
+Timestamp: 2026-11-19T08:55:26+01:00
+
+User prompt:
+> can you create tests for the relevant rules and important optics regarding the subway surfer game? write them into the powershell file so that it can be used as a test file. consider the markdown files in "plans" when you create the tests
+
+Assistant answer:
+- I reviewed the Gruppe2 plans and added checks for progression and reset behavior, the jump arc, and the 3D scene and HUD, in addition to the existing rules tests.
+- I corrected the safe-lane test to exclude signals, which are boundary hazards rather than lane-blocking obstacles.
+- The expanded test suite passed repeatedly.
+
+### Prompt 18
+Timestamp: 2026-11-19T09:00:19+01:00
+
+User prompt:
+> is it better to have the tests in the cs file?
+
+Assistant answer:
+- Yes. Keeping test logic in `Gruppe2_SubwayTests.cs` is clearer and easier to maintain than embedding C# checks in the PowerShell script.
+- The PowerShell script can remain as a convenient launcher; a separate test project could be considered later.
+
+### Prompt 19
+Timestamp: 2026-11-19T09:01:09+01:00
+
+User prompt:
+> does it then make sense to have the tests in the powershell folder?
+
+Assistant answer:
+- I understood this as asking whether to keep `RunSubwayTests.ps1` alongside the tests. Keeping the launcher beside the C# test file is useful, but a separate PowerShell folder is unnecessary.
+- The test logic should remain in C# and the script should only launch it.
+
+### Prompt 20
+Timestamp: 2026-11-19T09:01:37+01:00
+
+User prompt:
+> ok can you adjust the changes to reflect this
+
+Assistant answer:
+- I moved the added progression, reset, jump-arc, and 3D/HUD checks into `Gruppe2_SubwayTests.cs`.
+- `RunSubwayTests.ps1` now only creates a temporary runner and invokes `RunAllTests()`.
+- The full suite passed after the move.
+
+### Prompt 21
+Timestamp: 2026-11-19T09:03:16+01:00
+
+User prompt:
+> and now run them please
+
+Assistant answer:
+- I ran `RunSubwayTests.ps1`; all Subway Surfer tests passed.
+
+### Prompt 22
+Timestamp: 2026-11-19T09:05:53+01:00
+
+User prompt:
+> ok. for future changes please run the tests to prevent recession and write new tests where required. please document this conversation (prompts + answers) in the markdown file lani_sorensen_prompts_subwaysurfer that already exists in the subway surfer folder
+
+Assistant answer:
+- I appended this exchange to this conversation log.
+- For future Subway Surfer changes, run `RunSubwayTests.ps1` and add focused tests when behavior changes or a regression needs coverage.
+
+### Prompt 23
+Timestamp: 2026-11-19T09:08:10+01:00
+
+User prompt:
+> in the game currently the character is very static. can you add some more detail in the style of the game graphics and make them ride a skateboard?
+
+Assistant answer:
+- I updated the 3D runner with a skateboard, riding pose, brighter clothing and face details, and subtle motion tied to run distance.
+- I added a regression check for the skateboard model and the skater's movement.
+- The Subway Surfer test suite passed.
