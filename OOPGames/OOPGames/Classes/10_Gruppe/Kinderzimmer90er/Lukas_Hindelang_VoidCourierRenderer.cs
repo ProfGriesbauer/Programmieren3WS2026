@@ -9,9 +9,9 @@ namespace OOPGames
 {
     internal sealed class G10_VoidCourierRenderer
     {
-        const int Width = 160;
-        const int Height = 144;
-        const int HeaderHeight = 18;
+        const int Width = (int)G10_ShooterConfig.WorldWidth;
+        const int Height = (int)G10_ShooterConfig.WorldHeight;
+        const int HeaderHeight = (int)G10_ShooterConfig.HeaderHeight;
 
         static readonly Dictionary<uint, Brush> SolidBrushes = new Dictionary<uint, Brush>();
         static readonly Brush Background = Linear(
@@ -108,23 +108,17 @@ namespace OOPGames
         static readonly Geometry BossCrown = Polygon(
             new Point(-8, -4), new Point(0, -7), new Point(8, -4), new Point(5, -1), new Point(-5, -1));
 
-        readonly List<TrackedEnemy> _PreviousEnemies = new List<TrackedEnemy>();
-        readonly List<G10_SolarShooterBurst> _Bursts = new List<G10_SolarShooterBurst>();
-        G10_SolarShooterSession _ObservedSession;
-        G10_SolarShooterBoss _PreviousBoss;
-        float _PreviousBossX;
-        float _PreviousBossY;
-        int _PreviousBossHealth;
-        int _PreviousLives;
-        int _LastTick = -1;
+        readonly G10_EffectSystem _Effects = new G10_EffectSystem();
         float _BossHitFlash;
-        int _BurstSeed;
         G10_VoidCourierVisualHost _Host;
+        IG10_ShooterView _ObservedSession;
 
-        public void Draw(Canvas canvas, G10_SolarShooterSession session)
+        public void Draw(Canvas canvas, IG10_ShooterView session)
         {
             EnsureHost(canvas);
-            UpdateVisualEffects(session);
+            ObserveSession(session);
+            _Effects.Update(G10_ShooterConfig.FixedDeltaSeconds);
+            _BossHitFlash = Math.Max(0, _BossHitFlash - G10_ShooterConfig.FixedDeltaSeconds);
             _Host.Render(delegate(DrawingContext drawing)
             {
                 drawing.PushClip(new RectangleGeometry(new Rect(0, 0, Width, Height)));
@@ -157,90 +151,31 @@ namespace OOPGames
             canvas.Children.Add(_Host);
         }
 
-        void UpdateVisualEffects(G10_SolarShooterSession session)
+        void ObserveSession(IG10_ShooterView session)
         {
             if (!ReferenceEquals(_ObservedSession, session))
             {
                 _ObservedSession = session;
-                _PreviousEnemies.Clear();
-                _Bursts.Clear();
-                _PreviousBoss = null;
-                _PreviousLives = session.Player.Lives;
-                _LastTick = session.TickNumber;
                 _BossHitFlash = 0;
-            }
-
-            int tickDelta = _LastTick < 0 ? 0 : Math.Max(0, session.TickNumber - _LastTick);
-            float elapsed = tickDelta * 0.04f;
-            _LastTick = session.TickNumber;
-            _BossHitFlash = Math.Max(0, _BossHitFlash - elapsed);
-
-            for (int i = 0; i < _PreviousEnemies.Count; i++)
-            {
-                TrackedEnemy previous = _PreviousEnemies[i];
-                bool stillAlive = false;
-                foreach (G10_SolarShooterEnemy enemy in session.Enemies)
-                {
-                    if (ReferenceEquals(enemy, previous.Enemy))
-                    {
-                        stillAlive = true;
-                        break;
-                    }
-                }
-
-                if (!stillAlive) AddBurst(previous.X, previous.Y, false);
-            }
-
-            if (_PreviousBoss != null)
-            {
-                if (!ReferenceEquals(_PreviousBoss, session.Boss))
-                {
-                    AddBurst(_PreviousBossX, _PreviousBossY, true);
-                }
-                else if (session.Boss.Health < _PreviousBossHealth)
-                {
-                    AddBurst(session.Boss.X, session.Boss.Y, false);
-                    _BossHitFlash = 0.12f;
-                }
-            }
-
-            if (session.Player.Lives < _PreviousLives)
-                AddBurst(session.Player.X, session.Player.Y, true);
-            _PreviousLives = session.Player.Lives;
-
-            for (int i = _Bursts.Count - 1; i >= 0; i--)
-            {
-                _Bursts[i].Age += elapsed;
-                if (_Bursts[i].Age >= 0.72f) _Bursts.RemoveAt(i);
-            }
-
-            _PreviousEnemies.Clear();
-            foreach (G10_SolarShooterEnemy enemy in session.Enemies)
-                _PreviousEnemies.Add(new TrackedEnemy(enemy, enemy.X, enemy.Y));
-            _PreviousBoss = session.Boss;
-            if (_PreviousBoss != null)
-            {
-                _PreviousBossX = _PreviousBoss.X;
-                _PreviousBossY = _PreviousBoss.Y;
-                _PreviousBossHealth = _PreviousBoss.Health;
+                _Effects.Attach(session);
+                session.BossHit += OnBossHit;
             }
         }
 
-        void AddBurst(float x, float y, bool large)
+        void OnBossHit(object sender, G10_BossHitEventArgs args)
         {
-            if (_Bursts.Count >= 24) _Bursts.RemoveAt(0);
-            _Bursts.Add(new G10_SolarShooterBurst(x, y, large, _BurstSeed++));
+            _BossHitFlash = 0.12f;
         }
 
-        void DrawBackdrop(DrawingContext drawing, G10_SolarShooterSession session)
+        void DrawBackdrop(DrawingContext drawing, IG10_ShooterView session)
         {
             drawing.DrawRectangle(Background, null, new Rect(0, 0, Width, Height));
 
-            Brush nebula = session.StageIndex == 0 ? GreenNebula :
-                session.StageIndex == 1 ? VioletNebula : AmberNebula;
+            Brush nebula = session.Stage.Backdrop == G10_ShooterBackdrop.ShardField ? GreenNebula :
+                session.Stage.Backdrop == G10_ShooterBackdrop.SporeGrove ? VioletNebula : AmberNebula;
             drawing.DrawEllipse(nebula, null,
                 new Point(42 + (float)Math.Sin(session.TickNumber * 0.006) * 5, 67), 54, 39);
-            drawing.DrawEllipse(session.StageIndex == 2 ? VioletNebula : AmberNebula, null,
+            drawing.DrawEllipse(session.Stage.Backdrop == G10_ShooterBackdrop.Ironworks ? VioletNebula : AmberNebula, null,
                 new Point(132, 105 + (float)Math.Sin(session.TickNumber * 0.004) * 4), 37, 48);
 
             DrawDistantBody(drawing, session);
@@ -258,12 +193,13 @@ namespace OOPGames
                 new Rect(0, HeaderHeight, Width, Height - HeaderHeight));
         }
 
-        void DrawDistantBody(DrawingContext drawing, G10_SolarShooterSession session)
+        void DrawDistantBody(DrawingContext drawing, IG10_ShooterView session)
         {
-            double x = session.StageIndex == 1 ? 126 : 28;
-            double y = 45 + (session.StageIndex * 11);
-            double radius = session.StageIndex == 2 ? 18 : 15;
-            Brush planet = session.StageIndex == 1 ? PlanetCanopy : PlanetSurface;
+            double x = session.Stage.Backdrop == G10_ShooterBackdrop.SporeGrove ? 126 : 28;
+            double y = session.Stage.Backdrop == G10_ShooterBackdrop.ShardField ? 45 :
+                session.Stage.Backdrop == G10_ShooterBackdrop.SporeGrove ? 56 : 67;
+            double radius = session.Stage.Backdrop == G10_ShooterBackdrop.Ironworks ? 18 : 15;
+            Brush planet = session.Stage.Backdrop == G10_ShooterBackdrop.SporeGrove ? PlanetCanopy : PlanetSurface;
             drawing.DrawEllipse(planet, null, new Point(x, y), radius, radius);
             drawing.DrawEllipse(null, new Pen(Solid(Color.FromArgb(80, 161, 206, 239)), 0.5),
                 new Point(x - radius * 0.18, y - radius * 0.18), radius * 0.81, radius * 0.81);
@@ -289,7 +225,7 @@ namespace OOPGames
             }
         }
 
-        void DrawHud(DrawingContext drawing, G10_SolarShooterSession session)
+        void DrawHud(DrawingContext drawing, IG10_ShooterView session)
         {
             drawing.DrawRectangle(Panel, null, new Rect(0, 0, Width, HeaderHeight));
             drawing.DrawLine(new Pen(Linear(Color.FromArgb(30, 132, 206, 255),
@@ -328,7 +264,7 @@ namespace OOPGames
             }
         }
 
-        void DrawPlayer(DrawingContext drawing, G10_SolarShooterSession session)
+        void DrawPlayer(DrawingContext drawing, IG10_ShooterView session)
         {
             G10_SolarShooterPlayer player = session.Player;
             if (player.IsInvulnerable && session.TickNumber % 4 < 2) return;
@@ -357,8 +293,8 @@ namespace OOPGames
         void DrawEnemy(DrawingContext drawing, G10_SolarShooterEnemy enemy, int tick)
         {
             drawing.PushTransform(new TranslateTransform(enemy.X, enemy.Y));
-            bool bulwark = enemy.Kind == G10_ShooterEnemyKind.Bulwark;
-            bool needle = enemy.Kind == G10_ShooterEnemyKind.Needlewing;
+            bool bulwark = enemy is G10_Bulwark;
+            bool needle = enemy is G10_Needlewing;
             drawing.DrawEllipse(EnemyGlow, null, new Point(0, 0), bulwark ? 10 : 7, bulwark ? 8 : 6);
             Geometry hull = EnemyShapes[bulwark ? 2 : needle ? 1 : 0];
             Brush enemyHull = bulwark ? BulwarkHull : EnemyHull;
@@ -433,7 +369,7 @@ namespace OOPGames
 
         void DrawBursts(DrawingContext drawing)
         {
-            foreach (G10_SolarShooterBurst burst in _Bursts)
+            foreach (G10_SolarShooterBurst burst in _Effects.Bursts)
             {
                 double progress = burst.Age / 0.72;
                 double radius = (burst.Large ? 3 : 1.5) + progress * (burst.Large ? 17 : 10);
@@ -459,12 +395,12 @@ namespace OOPGames
             }
         }
 
-        void DrawStateOverlay(DrawingContext drawing, G10_SolarShooterSession session)
+        void DrawStateOverlay(DrawingContext drawing, IG10_ShooterView session)
         {
             if (session.IsGameOver)
-                Overlay(drawing, "SHIP LOST", "PRESS ENTER OR Z TO RETRY", Red);
+                Overlay(drawing, "SHIP LOST", "PRESS ENTER", Red);
             else if (session.IsVictory)
-                Overlay(drawing, "ROUTE SECURE", "PRESS ENTER OR Z TO RESTART", Cyan);
+                Overlay(drawing, "ROUTE SECURE", "PRESS ENTER", Cyan);
             else if (session.IsBossWarning)
             {
                 drawing.DrawRoundedRectangle(Panel,
@@ -559,19 +495,6 @@ namespace OOPGames
             return brush;
         }
 
-        sealed class TrackedEnemy
-        {
-            public TrackedEnemy(G10_SolarShooterEnemy enemy, float x, float y)
-            {
-                Enemy = enemy;
-                X = x;
-                Y = y;
-            }
-
-            public G10_SolarShooterEnemy Enemy { get; private set; }
-            public float X { get; private set; }
-            public float Y { get; private set; }
-        }
     }
 
     internal sealed class G10_SolarShooterBurst
