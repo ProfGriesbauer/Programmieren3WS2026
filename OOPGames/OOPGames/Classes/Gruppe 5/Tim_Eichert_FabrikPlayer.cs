@@ -49,6 +49,27 @@ namespace OOPGames
                         G5_Bauwerkzeug.Schmelze);
                 }
 
+                if (keySelection.Key == Key.K)
+                {
+                    return G5_FabrikAktion.WerkzeugWaehlen(
+                        _playerNumber,
+                        G5_Bauwerkzeug.Kupferschmelze);
+                }
+
+                if (keySelection.Key == Key.C)
+                {
+                    return G5_FabrikAktion.WerkzeugWaehlen(
+                        _playerNumber,
+                        G5_Bauwerkzeug.Konstruktor);
+                }
+
+                if (keySelection.Key == Key.B)
+                {
+                    return G5_FabrikAktion.WerkzeugWaehlen(
+                        _playerNumber,
+                        G5_Bauwerkzeug.Foerderband);
+                }
+
                 if (keySelection.Key == Key.Escape)
                 {
                     return G5_FabrikAktion.WerkzeugWaehlen(
@@ -66,7 +87,12 @@ namespace OOPGames
                     out int x,
                     out int y))
             {
-                return G5_FabrikAktion.GebaeudePlatzieren(_playerNumber, x, y);
+                return G5_FabrikAktion.GebaeudePlatzieren(
+                    _playerNumber,
+                    x,
+                    y,
+                    clickSelection.XClickPos,
+                    clickSelection.YClickPos);
             }
 
             return null;
@@ -80,13 +106,17 @@ namespace OOPGames
             G5_FabrikAktionstyp aktionstyp,
             G5_Bauwerkzeug werkzeug,
             int x,
-            int y)
+            int y,
+            int bildschirmX,
+            int bildschirmY)
         {
             PlayerNumber = playerNumber;
             Aktionstyp = aktionstyp;
             Werkzeug = werkzeug;
             X = x;
             Y = y;
+            BildschirmX = bildschirmX;
+            BildschirmY = bildschirmY;
         }
 
         public int PlayerNumber { get; }
@@ -94,6 +124,8 @@ namespace OOPGames
         public G5_Bauwerkzeug Werkzeug { get; }
         public int X { get; }
         public int Y { get; }
+        public int BildschirmX { get; }
+        public int BildschirmY { get; }
 
         internal static G5_FabrikAktion WerkzeugWaehlen(int playerNumber, G5_Bauwerkzeug werkzeug)
         {
@@ -102,17 +134,26 @@ namespace OOPGames
                 G5_FabrikAktionstyp.WerkzeugWaehlen,
                 werkzeug,
                 -1,
+                -1,
+                -1,
                 -1);
         }
 
-        internal static G5_FabrikAktion GebaeudePlatzieren(int playerNumber, int x, int y)
+        internal static G5_FabrikAktion GebaeudePlatzieren(
+            int playerNumber,
+            int x,
+            int y,
+            int bildschirmX,
+            int bildschirmY)
         {
             return new G5_FabrikAktion(
                 playerNumber,
                 G5_FabrikAktionstyp.GebaeudePlatzieren,
                 G5_Bauwerkzeug.Keines,
                 x,
-                y);
+                y,
+                bildschirmX,
+                bildschirmY);
         }
     }
 }

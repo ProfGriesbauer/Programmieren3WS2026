@@ -111,7 +111,10 @@ namespace OOPGames
                     G5_Item.Eisenstange, 1, cycleTicks, powerDemandPerTick),
                 new G5_Recipe("Kupferdraht herstellen", G5_RecipeType.Construction,
                     new[] { new KeyValuePair<G5_Item, int>(G5_Item.Kupferbarren, 1) },
-                    G5_Item.Kupferdraht, 1, cycleTicks, powerDemandPerTick)
+                    G5_Item.Kupferdraht, 1, cycleTicks, powerDemandPerTick),
+                new G5_Recipe("Schraube herstellen", G5_RecipeType.Construction,
+                    new[] { new KeyValuePair<G5_Item, int>(G5_Item.Eisenstange, 1) },
+                    G5_Item.Schraube, 4, cycleTicks, powerDemandPerTick)
             };
         }
 
