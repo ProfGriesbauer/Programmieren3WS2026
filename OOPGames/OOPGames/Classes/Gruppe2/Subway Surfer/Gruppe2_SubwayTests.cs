@@ -204,10 +204,27 @@ namespace OOPGames
 
                 ModelVisual3D skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
                 Model3DGroup skaterModel = skaterVisual.Content as Model3DGroup;
-                AssertTrue(skaterModel != null
-                    && skaterModel.Children.OfType<Model3DGroup>()
-                        .Any(component => component.Children.OfType<GeometryModel3D>().Count() >= 20),
-                    "the runner model includes a detailed skateboard with wheels");
+                Vector3D forward = GetRunnerTransform(skaterVisual).Transform(new Vector3D(0, 0, 1));
+                AssertTrue(forward.Z < -0.99,
+                    "the skater faces away from the camera toward the track");
+                AssertTrue(Math.Abs(GetRunnerX(skaterVisual)) < 0.001,
+                    "the skater starts centered in the middle track");
+
+                Rect3D runnerBounds = skaterModel.Bounds;
+                AssertTrue(runnerBounds.X >= -0.55
+                    && runnerBounds.X + runnerBounds.SizeX <= 0.55,
+                    "the skater and skateboard fit between the track rails");
+
+                Model3DGroup skateboardModel = GetSkateboardModel(skaterModel);
+                GeometryModel3D[] skateboardParts = skateboardModel == null
+                    ? new GeometryModel3D[0]
+                    : skateboardModel.Children.OfType<GeometryModel3D>().ToArray();
+                AssertTrue(skateboardParts.Length == 8
+                    && skateboardParts.Take(4)
+                        .All(part => ReferenceEquals(part.Geometry, skateboardParts[0].Geometry))
+                    && skateboardParts.Skip(4)
+                        .All(part => ReferenceEquals(part.Geometry, skateboardParts[4].Geometry)),
+                    "the skateboard has four wheels and reuses its box and sphere meshes");
                 double restingHeight = GetRunnerHeight(skaterVisual);
 
                 string[] labels = canvas.Children.OfType<TextBlock>()
@@ -224,13 +241,21 @@ namespace OOPGames
                 painter.TickPaintGameField(canvas, rules.CurrentField);
                 AssertTrue(canvas.Children.Count == paintedChildCount,
                     "redrawing the scene does not accumulate canvas elements");
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                AssertTrue(ReferenceEquals(skateboardModel,
+                        GetSkateboardModel(skaterVisual.Content as Model3DGroup)),
+                    "redrawing reuses the cached skateboard model");
 
+                rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
                 field.Distance = Math.PI / (2 * 0.48);
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
                 AssertTrue(GetRunnerHeight(skaterVisual) > restingHeight + 0.02,
                     "the skater bobs as the run progresses");
+                AssertTrue(Math.Abs(GetRunnerX(skaterVisual) - 1.55) < 0.001,
+                    "the skater stays centered when moving to the right track");
             }
             finally
             {
@@ -238,15 +263,39 @@ namespace OOPGames
             }
         }
 
+        private static Model3DGroup GetSkateboardModel(Model3DGroup skaterModel)
+        {
+            if (skaterModel == null)
+            {
+                return null;
+            }
+
+            return skaterModel.Children.OfType<Model3DGroup>()
+                .SelectMany(component => component.Children.OfType<Model3DGroup>())
+                .FirstOrDefault(component =>
+                    component.Children.OfType<GeometryModel3D>().Count() == 8);
+        }
+
         private static double GetRunnerHeight(ModelVisual3D skaterVisual)
+        {
+            Transform3DGroup transform = GetRunnerTransform(skaterVisual);
+            TranslateTransform3D translation = transform.Children
+                .OfType<TranslateTransform3D>().Single();
+            return translation.OffsetY;
+        }
+
+        private static double GetRunnerX(ModelVisual3D skaterVisual)
+        {
+            Transform3DGroup transform = GetRunnerTransform(skaterVisual);
+            return transform.Children.OfType<TranslateTransform3D>().Single().OffsetX;
+        }
+
+        private static Transform3DGroup GetRunnerTransform(ModelVisual3D skaterVisual)
         {
             Transform3DGroup transform = skaterVisual.Transform as Transform3DGroup;
             AssertTrue(transform != null,
                 "the skater has a scene transform");
-
-            TranslateTransform3D translation = transform.Children
-                .OfType<TranslateTransform3D>().Single();
-            return translation.OffsetY;
+            return transform;
         }
 
         private static void TestFatalAndNonFatalObstacles()

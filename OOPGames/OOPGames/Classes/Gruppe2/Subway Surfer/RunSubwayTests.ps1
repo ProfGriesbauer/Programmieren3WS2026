@@ -53,7 +53,7 @@ internal static class Program
 
     Get-Command dotnet -ErrorAction Stop | Out-Null
     & dotnet run --project (Join-Path $runnerDirectory 'SubwayTestsRunner.csproj') `
-        -p:UseAppHost=false
+        -p:UseAppHost=false "-p:OutDir=$(Join-Path $runnerDirectory 'build')\"
     if ($LASTEXITCODE -ne 0) {
         $runnerExitCode = $LASTEXITCODE
     }

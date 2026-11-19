@@ -16,6 +16,21 @@ namespace OOPGames
         private static readonly Brush TrackBrush = Brush(Color.FromRgb(77, 74, 69));
         private static readonly Brush RailBrush = Brush(Color.FromRgb(203, 210, 216));
         private static readonly Brush PinkBrush = Brush(Color.FromRgb(231, 49, 135));
+        private static readonly MeshGeometry3D BoxMesh = CreateBoxMesh();
+        private static readonly MeshGeometry3D SphereMesh = CreateSphereMesh();
+        private static readonly Material GuardOutfitMaterial = Material(Color.FromRgb(43, 74, 112));
+        private static readonly Material RunnerOutfitMaterial = Material(Color.FromRgb(231, 49, 135));
+        private static readonly Material SkinMaterial = Material(Color.FromRgb(245, 194, 157));
+        private static readonly Material GuardHairMaterial = Material(Color.FromRgb(105, 67, 38));
+        private static readonly Material RunnerHairMaterial = Material(Color.FromRgb(111, 0, 110));
+        private static readonly Material PantsMaterial = Material(Color.FromRgb(35, 37, 41));
+        private static readonly Material RunnerAccentMaterial = Material(Color.FromRgb(39, 193, 194));
+        private static readonly Material RunnerEyeMaterial = Material(Color.FromRgb(45, 37, 52));
+        private static readonly Material RunnerShoeMaterial = Material(Color.FromRgb(255, 190, 62));
+        private static readonly Material SkateboardDeckMaterial = Material(Color.FromRgb(39, 193, 194));
+        private static readonly Material SkateboardGraphicMaterial = Material(Color.FromRgb(231, 49, 135));
+        private static readonly Material SkateboardTruckMaterial = Material(Color.FromRgb(176, 190, 197));
+        private static readonly Model3DGroup SkateboardModel = CreateSkateboardModel();
         private static readonly Model3DGroup CargoWagonModel = CreateCargoWagonModel();
         private static readonly Model3DGroup TrainModel = CreateTrainModel();
         private static readonly Model3DGroup CargoRampModel = CreateCargoRampModel();
@@ -244,13 +259,21 @@ namespace OOPGames
                 : 0;
             double movement = Math.Sin(field.Distance * 0.48);
             double bob = !guard && field.Level == Gruppe2_SubwayLevel.Track
-                ? 0.025 * (1 - Math.Cos(field.Distance * 0.48))
+                ? 0.06 * (1 - Math.Cos(field.Distance * 0.48))
                 : 0;
             Model3DGroup runner = CreateRunnerModel(guard, movement);
             Transform3DGroup transform = new Transform3DGroup();
             if (!guard && field.RollTicks > 0)
             {
                 transform.Children.Add(new ScaleTransform3D(1, 0.55, 1));
+            }
+            if (!guard)
+            {
+                transform.Children.Add(new RotateTransform3D(
+                    new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180)));
+                transform.Children.Add(new RotateTransform3D(
+                    new AxisAngleRotation3D(new Vector3D(0, 0, 1), movement * 3),
+                    new Point3D(0, 1, 0)));
             }
             transform.Children.Add(new TranslateTransform3D(x, jump + bob, z));
             viewport.Children.Add(new ModelVisual3D { Content = runner, Transform = transform });
@@ -473,29 +496,26 @@ namespace OOPGames
         private static Model3DGroup CreateRunnerModel(bool guard, double run)
         {
             Model3DGroup runner = new Model3DGroup();
-            Material outfit = Material(guard
-                ? Color.FromRgb(43, 74, 112)
-                : Color.FromRgb(231, 49, 135));
-            Material skin = Material(Color.FromRgb(245, 194, 157));
-            Material hair = Material(guard
-                ? Color.FromRgb(105, 67, 38)
-                : Color.FromRgb(111, 0, 110));
-            Material pants = Material(Color.FromRgb(35, 37, 41));
-            Material accent = Material(guard
-                ? Color.FromRgb(112, 163, 199)
-                : Color.FromRgb(39, 193, 194));
+            Material outfit = guard ? GuardOutfitMaterial : RunnerOutfitMaterial;
+            Material hair = guard ? GuardHairMaterial : RunnerHairMaterial;
 
             if (!guard)
             {
-                runner.Children.Add(CreateSkateboardModel(run));
+                Model3DGroup skateboardPose = new Model3DGroup
+                {
+                    Transform = new RotateTransform3D(
+                        new AxisAngleRotation3D(new Vector3D(0, 0, 1), run * 4),
+                        new Point3D(0, 0.12, 0))
+                };
+                skateboardPose.Children.Add(SkateboardModel);
+                runner.Children.Add(skateboardPose);
             }
             AddBox(runner, -0.34, 0.91, -0.18, 0.34, 1.70, 0.18, outfit);
-            AddScaledSphere(runner, 0, 1.98, 0, 0.25, 0.31, 0.24, skin);
+            AddScaledSphere(runner, 0, 1.98, 0, 0.25, 0.31, 0.24, SkinMaterial);
             AddScaledSphere(runner, 0, 2.20, 0, 0.30, 0.12, 0.29, hair);
 
-            Material eye = Material(Color.FromRgb(45, 37, 52));
-            AddScaledSphere(runner, -0.085, 2.02, 0.218, 0.027, 0.035, 0.02, eye);
-            AddScaledSphere(runner, 0.085, 2.02, 0.218, 0.027, 0.035, 0.02, eye);
+            AddScaledSphere(runner, -0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
+            AddScaledSphere(runner, 0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
 
             Model3DGroup looseHair = new Model3DGroup();
             AddScaledSphere(looseHair, -0.25, 2.11, -0.08, 0.12, 0.20, 0.14, hair);
@@ -512,72 +532,62 @@ namespace OOPGames
                 AddRunnerLimb(runner, 0.22, 1.57, -0.01, 0.55, 1.01, 0.03,
                     -0.17 * run, outfit);
                 AddRunnerLimb(runner, -0.16, 0.97, 0, -0.20, 0.08, 0.06,
-                    -0.24 * run, pants);
+                    -0.24 * run, PantsMaterial);
                 AddRunnerLimb(runner, 0.16, 0.97, 0, 0.20, 0.08, 0.06,
-                    0.24 * run, pants);
+                    0.24 * run, PantsMaterial);
             }
             else
             {
-                AddBox(runner, -0.035, 1.08, 0.181, 0.035, 1.57, 0.205, accent);
-                AddBox(runner, -0.27, 1.12, 0.181, -0.09, 1.30, 0.205, accent);
+                AddBox(runner, -0.035, 1.08, 0.181, 0.035, 1.57, 0.205, RunnerAccentMaterial);
+                AddBox(runner, -0.27, 1.12, 0.181, -0.09, 1.30, 0.205, RunnerAccentMaterial);
 
-                AddRunnerLimb(runner, -0.22, 1.57, -0.01, -0.49, 1.69, 0.03,
-                    -0.08 * run, outfit);
-                AddRunnerLimb(runner, -0.49, 1.69, 0.03, -0.70, 1.54, 0.08,
-                    -0.05 * run, outfit);
-                AddRunnerLimb(runner, 0.22, 1.57, -0.01, 0.49, 1.69, 0.03,
-                    0.08 * run, outfit);
-                AddRunnerLimb(runner, 0.49, 1.69, 0.03, 0.70, 1.54, 0.08,
-                    0.05 * run, outfit);
-                AddScaledSphere(runner, -0.70, 1.54, 0.08, 0.08, 0.07, 0.07, skin);
-                AddScaledSphere(runner, 0.70, 1.54, 0.08, 0.08, 0.07, 0.07, skin);
+                AddRunnerLimb(runner, -0.22, 1.57, -0.01, -0.31, 1.69, 0.03,
+                    -0.18 * run, outfit);
+                AddRunnerLimb(runner, -0.31, 1.69, 0.03, -0.40, 1.55, 0.08,
+                    -0.12 * run, outfit);
+                AddRunnerLimb(runner, 0.22, 1.57, -0.01, 0.31, 1.69, 0.03,
+                    0.18 * run, outfit);
+                AddRunnerLimb(runner, 0.31, 1.69, 0.03, 0.40, 1.55, 0.08,
+                    0.12 * run, outfit);
+                AddScaledSphere(runner, -0.40, 1.55, 0.08, 0.06, 0.06, 0.06, SkinMaterial);
+                AddScaledSphere(runner, 0.40, 1.55, 0.08, 0.06, 0.06, 0.06, SkinMaterial);
 
-                AddRunnerLimb(runner, -0.16, 0.97, 0, -0.20, 0.61, 0.03,
-                    -0.04 * run, pants);
-                AddRunnerLimb(runner, -0.20, 0.61, 0.03, -0.29, 0.27, 0.06,
-                    -0.03 * run, pants);
-                AddRunnerLimb(runner, 0.16, 0.97, 0, 0.18, 0.61, 0.03,
-                    0.04 * run, pants);
-                AddRunnerLimb(runner, 0.18, 0.61, 0.03, 0.28, 0.27, 0.06,
-                    0.03 * run, pants);
+                AddRunnerLimb(runner, -0.16, 0.97, 0, -0.12, 0.61, 0.12,
+                    -0.14 * run, PantsMaterial);
+                AddRunnerLimb(runner, -0.12, 0.61, 0.12, -0.07, 0.27, 0.24,
+                    -0.10 * run, PantsMaterial);
+                AddRunnerLimb(runner, 0.16, 0.97, 0, 0.12, 0.61, -0.12,
+                    0.14 * run, PantsMaterial);
+                AddRunnerLimb(runner, 0.12, 0.61, -0.12, 0.07, 0.27, -0.24,
+                    0.10 * run, PantsMaterial);
 
-                Material sole = Material(Color.FromRgb(35, 37, 41));
-                Material shoe = Material(Color.FromRgb(255, 190, 62));
-                AddBox(runner, -0.43, 0.17, -0.01, -0.12, 0.22, 0.18, sole);
-                AddBox(runner, -0.42, 0.22, 0.00, -0.13, 0.30, 0.18, shoe);
-                AddBox(runner, 0.12, 0.17, -0.01, 0.43, 0.22, 0.18, sole);
-                AddBox(runner, 0.13, 0.22, 0.00, 0.42, 0.30, 0.18, shoe);
+                AddBox(runner, -0.18, 0.17, 0.13, 0.04, 0.22, 0.35, PantsMaterial);
+                AddBox(runner, -0.18, 0.22, 0.14, 0.04, 0.30, 0.35, RunnerShoeMaterial);
+                AddBox(runner, -0.04, 0.17, -0.35, 0.18, 0.22, -0.13, PantsMaterial);
+                AddBox(runner, -0.04, 0.22, -0.35, 0.18, 0.30, -0.14, RunnerShoeMaterial);
             }
 
             runner.Freeze();
             return runner;
         }
 
-        private static Model3DGroup CreateSkateboardModel(double movement)
+        private static Model3DGroup CreateSkateboardModel()
         {
             Model3DGroup skateboard = new Model3DGroup();
-            Material deck = Material(Color.FromRgb(39, 193, 194));
-            Material graphic = Material(Color.FromRgb(231, 49, 135));
-            Material truck = Material(Color.FromRgb(176, 190, 197));
-            Material wheel = Material(Color.FromRgb(35, 37, 41));
-
-            AddBox(skateboard, -0.52, 0.12, -0.24, 0.52, 0.19, 0.24, deck);
-            AddBox(skateboard, -0.12, 0.191, -0.20, 0.12, 0.202, 0.20, graphic);
-            AddBox(skateboard, -0.34, 0.08, -0.18, 0.34, 0.13, -0.12, truck);
-            AddBox(skateboard, -0.34, 0.08, 0.12, 0.34, 0.13, 0.18, truck);
+            AddBox(skateboard, -0.24, 0.12, -0.52, 0.24, 0.19, 0.52, SkateboardDeckMaterial);
+            AddBox(skateboard, -0.12, 0.191, -0.40, 0.12, 0.202, 0.40, SkateboardGraphicMaterial);
+            AddBox(skateboard, -0.18, 0.08, -0.36, 0.18, 0.13, -0.28, SkateboardTruckMaterial);
+            AddBox(skateboard, -0.18, 0.08, 0.28, 0.18, 0.13, 0.36, SkateboardTruckMaterial);
 
             for (int axle = -1; axle <= 1; axle += 2)
             {
                 for (int side = -1; side <= 1; side += 2)
                 {
-                    AddScaledSphere(skateboard, axle * 0.34, 0.055, side * 0.16,
-                        0.08, 0.065, 0.06, wheel);
+                    AddScaledSphere(skateboard, side * 0.16, 0.055, axle * 0.34,
+                        0.08, 0.065, 0.06, PantsMaterial);
                 }
             }
 
-            skateboard.Transform = new RotateTransform3D(
-                new AxisAngleRotation3D(new Vector3D(0, 0, 1), movement * 2),
-                new Point3D(0, 0.12, 0));
             skateboard.Freeze();
             return skateboard;
         }
@@ -589,8 +599,10 @@ namespace OOPGames
             double thickness = 0.12;
             Model3DGroup limb = new Model3DGroup();
             AddBox(limb,
-                Math.Min(x1, x2) - thickness, Math.Min(y1, y2), -0.10,
-                Math.Max(x1, x2) + thickness, Math.Max(y1, y2) + 0.08, 0.10, material);
+                Math.Min(x1, x2) - thickness, Math.Min(y1, y2),
+                Math.Min(z1, z2) - 0.10,
+                Math.Max(x1, x2) + thickness, Math.Max(y1, y2) + 0.08,
+                Math.Max(z1, z2) + 0.10, material);
             limb.Transform = new RotateTransform3D(
                 new AxisAngleRotation3D(new Vector3D(0, 0, 1), angle * 20),
                 new Point3D(x1, y1, z1));
@@ -601,7 +613,7 @@ namespace OOPGames
             Model3DGroup model, double x, double y, double z,
             double radiusX, double radiusY, double radiusZ, Material material)
         {
-            model.Children.Add(new GeometryModel3D(CreateSphereMesh(), material)
+            GeometryModel3D sphere = new GeometryModel3D(SphereMesh, material)
             {
                 BackMaterial = material,
                 Transform = new Transform3DGroup
@@ -612,7 +624,9 @@ namespace OOPGames
                         new TranslateTransform3D(x, y, z)
                     }
                 }
-            });
+            };
+            sphere.Freeze();
+            model.Children.Add(sphere);
         }
 
         private static Model3DGroup CreateCityModel()
@@ -1329,12 +1343,11 @@ namespace OOPGames
 
         private static void AddSignalLens(Model3DGroup signal, double y, Color color)
         {
-            MeshGeometry3D sphere = CreateSphereMesh();
             Material backing = Material(Color.FromRgb(12, 14, 16));
             Material lens = new EmissiveMaterial(Brush(color));
             lens.Freeze();
 
-            signal.Children.Add(new GeometryModel3D(sphere, backing)
+            signal.Children.Add(new GeometryModel3D(SphereMesh, backing)
             {
                 BackMaterial = backing,
                 Transform = new Transform3DGroup
@@ -1346,7 +1359,7 @@ namespace OOPGames
                     }
                 }
             });
-            signal.Children.Add(new GeometryModel3D(sphere, lens)
+            signal.Children.Add(new GeometryModel3D(SphereMesh, lens)
             {
                 BackMaterial = lens,
                 Transform = new Transform3DGroup
@@ -1386,9 +1399,8 @@ namespace OOPGames
             Model3DGroup bush, double x, double y, double z, double radiusX, double radiusY,
             double radiusZ, Color color)
         {
-            MeshGeometry3D sphere = CreateSphereMesh();
             Material leaves = Material(color);
-            GeometryModel3D cluster = new GeometryModel3D(sphere, leaves)
+            GeometryModel3D cluster = new GeometryModel3D(SphereMesh, leaves)
             {
                 BackMaterial = leaves,
                 Transform = new Transform3DGroup
@@ -1475,21 +1487,73 @@ namespace OOPGames
         private static void AddBox(Model3DGroup model,
             double x1, double y1, double z1, double x2, double y2, double z2, Material material)
         {
-            Point3D p000 = new Point3D(x1, y1, z1);
-            Point3D p001 = new Point3D(x1, y1, z2);
-            Point3D p010 = new Point3D(x1, y2, z1);
-            Point3D p011 = new Point3D(x1, y2, z2);
-            Point3D p100 = new Point3D(x2, y1, z1);
-            Point3D p101 = new Point3D(x2, y1, z2);
-            Point3D p110 = new Point3D(x2, y2, z1);
-            Point3D p111 = new Point3D(x2, y2, z2);
+            Transform3DGroup transform = new Transform3DGroup();
+            transform.Children.Add(new ScaleTransform3D(x2 - x1, y2 - y1, z2 - z1));
+            transform.Children.Add(new TranslateTransform3D(
+                (x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2));
+            GeometryModel3D box = new GeometryModel3D(BoxMesh, material)
+            {
+                BackMaterial = material,
+                Transform = transform
+            };
+            box.Freeze();
+            model.Children.Add(box);
+        }
 
-            AddQuad(model, p000, p001, p011, p010, material);
-            AddQuad(model, p100, p110, p111, p101, material);
-            AddQuad(model, p000, p100, p101, p001, material);
-            AddQuad(model, p010, p011, p111, p110, material);
-            AddQuad(model, p000, p010, p110, p100, material);
-            AddQuad(model, p001, p101, p111, p011, material);
+        private static MeshGeometry3D CreateBoxMesh()
+        {
+            Point3D[][] faces =
+            {
+                new[]
+                {
+                    new Point3D(-0.5, -0.5, -0.5), new Point3D(-0.5, -0.5, 0.5),
+                    new Point3D(-0.5, 0.5, 0.5), new Point3D(-0.5, 0.5, -0.5)
+                },
+                new[]
+                {
+                    new Point3D(0.5, -0.5, -0.5), new Point3D(0.5, 0.5, -0.5),
+                    new Point3D(0.5, 0.5, 0.5), new Point3D(0.5, -0.5, 0.5)
+                },
+                new[]
+                {
+                    new Point3D(-0.5, -0.5, -0.5), new Point3D(0.5, -0.5, -0.5),
+                    new Point3D(0.5, -0.5, 0.5), new Point3D(-0.5, -0.5, 0.5)
+                },
+                new[]
+                {
+                    new Point3D(-0.5, 0.5, -0.5), new Point3D(-0.5, 0.5, 0.5),
+                    new Point3D(0.5, 0.5, 0.5), new Point3D(0.5, 0.5, -0.5)
+                },
+                new[]
+                {
+                    new Point3D(-0.5, -0.5, -0.5), new Point3D(-0.5, 0.5, -0.5),
+                    new Point3D(0.5, 0.5, -0.5), new Point3D(0.5, -0.5, -0.5)
+                },
+                new[]
+                {
+                    new Point3D(-0.5, -0.5, 0.5), new Point3D(0.5, -0.5, 0.5),
+                    new Point3D(0.5, 0.5, 0.5), new Point3D(-0.5, 0.5, 0.5)
+                }
+            };
+            MeshGeometry3D mesh = new MeshGeometry3D();
+            foreach (Point3D[] face in faces)
+            {
+                int firstIndex = mesh.Positions.Count;
+                foreach (Point3D point in face)
+                {
+                    mesh.Positions.Add(point);
+                }
+
+                mesh.TriangleIndices.Add(firstIndex);
+                mesh.TriangleIndices.Add(firstIndex + 1);
+                mesh.TriangleIndices.Add(firstIndex + 2);
+                mesh.TriangleIndices.Add(firstIndex);
+                mesh.TriangleIndices.Add(firstIndex + 2);
+                mesh.TriangleIndices.Add(firstIndex + 3);
+            }
+
+            mesh.Freeze();
+            return mesh;
         }
 
         private static void DrawTexturedTrainPart(
