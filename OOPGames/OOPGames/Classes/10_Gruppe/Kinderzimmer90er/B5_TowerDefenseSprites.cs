@@ -2,39 +2,28 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace OOPGames
 {
-    // Loads a PNG from "Classes/10_Gruppe/Tower Defense/Assets". All sheets store their pixel art with a 4x scale,
-    // so coordinates passed to Region are in art pixels (the same unit the game draws in).
-    sealed class TowerDefenseSpriteSheet
+    // Location of "Classes/10_Gruppe/Tower Defense/Assets". The PNGs are plain files in our group folder (no
+    // Resource entry in OOPGames.csproj, which belongs to all groups). The compiler puts the path of this source
+    // file into sourceFile, so the folder is found next to it. Fallback: search upwards from the program folder.
+    static class TowerDefenseAssets
     {
-        const int SourceScale = 4;
-        static readonly string AssetFolder = FindAssetFolder();
-        readonly BitmapImage _Image;
-        readonly Dictionary<Int32Rect, BitmapSource> _Regions = new Dictionary<Int32Rect, BitmapSource>();
+        public static readonly string Folder = FindFolder();
 
-        public TowerDefenseSpriteSheet(string fileName)
+        public static string PathOf(string relativePath)
         {
-            string path = Path.Combine(AssetFolder, fileName);
+            string path = Path.Combine(Folder, relativePath);
             if (!File.Exists(path))
-                throw new FileNotFoundException("Tower Defense graphic not found. Expected in " + AssetFolder, path);
-
-            BitmapImage image = new BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri(path, UriKind.Absolute);
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.EndInit();
-            image.Freeze();
-            _Image = image;
+                throw new FileNotFoundException("Tower Defense asset not found. Expected in " + Folder, path);
+            return path;
         }
 
-        // The PNGs are plain files in our group folder (no Resource entry in OOPGames.csproj, which belongs to all
-        // groups). The compiler puts the path of this source file into sourceFile, so the folder is found next to it.
-        // Fallback, e.g. when the source path is not available: search upwards from the program folder.
-        static string FindAssetFolder([CallerFilePath] string sourceFile = "")
+        static string FindFolder([CallerFilePath] string sourceFile = "")
         {
             string relative = Path.Combine("Classes", "10_Gruppe", "Tower Defense", "Assets");
             if (!string.IsNullOrEmpty(sourceFile))
@@ -50,24 +39,106 @@ namespace OOPGames
             }
             return Path.Combine(AppContext.BaseDirectory, relative);
         }
+    }
+
+    // One PNG with cached sub images. Coordinates are image pixels.
+    sealed class TowerDefenseImage
+    {
+        readonly BitmapImage _Image;
+        readonly Dictionary<Int32Rect, BitmapSource> _Regions = new Dictionary<Int32Rect, BitmapSource>();
+
+        public TowerDefenseImage(string relativePath)
+        {
+            BitmapImage image = new BitmapImage();
+            image.BeginInit();
+            image.UriSource = new Uri(TowerDefenseAssets.PathOf(relativePath), UriKind.Absolute);
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.EndInit();
+            image.Freeze();
+            _Image = image;
+        }
+
+        public BitmapSource Whole { get { return _Image; } }
+        public int PixelWidth { get { return _Image.PixelWidth; } }
+        public int PixelHeight { get { return _Image.PixelHeight; } }
 
         public BitmapSource Region(int x, int y, int width, int height)
         {
-            Int32Rect rect = new Int32Rect(x * SourceScale, y * SourceScale, width * SourceScale, height * SourceScale);
-            BitmapSource frame;
-            if (!_Regions.TryGetValue(rect, out frame))
+            Int32Rect rect = new Int32Rect(x, y, width, height);
+            BitmapSource region;
+            if (!_Regions.TryGetValue(rect, out region))
             {
                 CroppedBitmap cropped = new CroppedBitmap(_Image, rect);
                 cropped.Freeze();
-                frame = cropped;
-                _Regions.Add(rect, frame);
+                region = cropped;
+                _Regions.Add(rect, region);
             }
-            return frame;
+            return region;
+        }
+    }
+
+    sealed class TowerDefenseAnimation
+    {
+        public int Row;
+        public int Frames;
+        public double Fps;
+        public bool Loop;
+
+        public double Duration { get { return Frames / Fps; } }
+    }
+
+    // A sprite sheet from sprites.json: rows = animations, columns = frames. All values in 1080p pixels.
+    sealed class TowerDefenseSprite
+    {
+        readonly Dictionary<string, TowerDefenseAnimation> _Animations = new Dictionary<string, TowerDefenseAnimation>();
+        TowerDefenseImage _Sheet;
+
+        public TowerDefenseSprite(string key, string file, int frameWidth, int frameHeight, Point pivot, Point? muzzle)
+        {
+            Key = key;
+            File = file;
+            FrameWidth = frameWidth;
+            FrameHeight = frameHeight;
+            Pivot = pivot;
+            Muzzle = muzzle;
         }
 
-        public BitmapSource Cell(int column, int row, int cellWidth, int cellHeight)
+        public string Key { get; private set; }
+        public string File { get; private set; }
+        public int FrameWidth { get; private set; }
+        public int FrameHeight { get; private set; }
+        // Foot point inside a frame.
+        public Point Pivot { get; private set; }
+        // Towers only: where projectiles leave the sprite (inside a frame).
+        public Point? Muzzle { get; private set; }
+
+        public void AddAnimation(string name, TowerDefenseAnimation animation) { _Animations[name] = animation; }
+
+        public bool HasAnimation(string name) { return _Animations.ContainsKey(name); }
+
+        public TowerDefenseAnimation Animation(string name)
         {
-            return Region(column * cellWidth, row * cellHeight, cellWidth, cellHeight);
+            TowerDefenseAnimation animation;
+            if (!_Animations.TryGetValue(name, out animation))
+                throw new ArgumentException("Sprite " + Key + " has no animation " + name + ".", nameof(name));
+            return animation;
+        }
+
+        public BitmapSource Frame(string animation, int frame)
+        {
+            TowerDefenseAnimation a = Animation(animation);
+            if (_Sheet == null) _Sheet = new TowerDefenseImage(File);
+            int column = Math.Max(0, Math.Min(a.Frames - 1, frame));
+            return _Sheet.Region(column * FrameWidth, a.Row * FrameHeight, FrameWidth, FrameHeight);
+        }
+
+        // Frame of an animation after `seconds`: loops wrap around, other animations stop on their last frame.
+        public BitmapSource FrameAt(string animation, double seconds)
+        {
+            TowerDefenseAnimation a = Animation(animation);
+            int frame = (int)Math.Floor(Math.Max(0, seconds) * a.Fps);
+            frame = a.Loop ? frame % a.Frames : Math.Min(a.Frames - 1, frame);
+            return Frame(animation, frame);
         }
     }
 
@@ -77,79 +148,100 @@ namespace OOPGames
         Upgrade, Sell, Cursor, Star, Sword, Range, Speed, Lock
     }
 
-    // Central access to all Tower Defense sprite sheets. The sheet layouts are described in
-    // Tower Defense/SpriteGenerator/README.md.
+    // Central access to the sprites in Tower Defense/Assets (described by sprites.json, see LIESMICH_Sprites.txt).
     static class TowerDefenseSprites
     {
-        public const int EnemySize = 16;
-        public const int BossSize = 32;
-        public const int MapImageWidth = 320;
-        public const int MapImageHeight = 155;
+        // Device pixels per logical UI unit: the game draws 320x180 UI units on a 1920x1080 surface.
+        public const double PixelsPerUnit = 6;
 
-        static readonly string[] _TowerNames =
+        static readonly Dictionary<string, TowerDefenseSprite> _Sprites = LoadSprites();
+        static readonly TowerDefenseImage _Icons = new TowerDefenseImage("ui_icons.png");
+        static readonly Dictionary<string, TowerDefenseImage> _MapLayers = new Dictionary<string, TowerDefenseImage>();
+
+        // Game names (Tower.Name / Enemy.Name) to sprite keys.
+        static readonly Dictionary<string, string> _Keys = new Dictionary<string, string>
         {
-            "Physical Archer", "Poison Archer", "Fire Mage", "Ice Mage",
-            "Earth Mage", "Strom Mage", "Flamethrower", "Ice Area Tower"
+            { "Physical Archer", "tuerme/physical_archer" }, { "Poison Archer", "tuerme/poison_archer" },
+            { "Fire Mage", "tuerme/fire_mage" }, { "Ice Mage", "tuerme/ice_mage" }, { "Earth Mage", "tuerme/earth_mage" },
+            { "Strom Mage", "tuerme/storm_mage" }, { "Flamethrower", "tuerme/flamethrower" },
+            { "Ice Area Tower", "tuerme/ice_area_tower" },
+
+            { "Goblin", "gegner/goblin" }, { "Goblin Archer", "gegner/goblin_archer" }, { "Goblin Shaman", "gegner/goblin_shaman" },
+            { "Orc", "gegner/orc" }, { "Orc Berserker", "gegner/orc_berserker" }, { "Orc Warlord", "gegner/orc_warlord" },
+            { "Skeleton", "gegner/skeleton" }, { "Skeleton Knight", "gegner/skeleton_knight" }, { "Troll", "gegner/troll" },
+            { "Stone Golem", "gegner/stone_golem" }, { "Fire Elemental", "gegner/fire_element" },
+            { "Ice Elemental", "gegner/ice_element" }, { "Storm Elemental", "gegner/storm_element" },
+            { "Earth Elemental", "gegner/earth_element" }, { "Dark Elf", "gegner/dark_elf" }, { "Vampire", "gegner/vampire" },
+            { "Wyvern", "gegner/wyvern" }, { "Fire Golem", "gegner/fire_golem" }, { "Dragon", "gegner/dragon" },
+            { "Arcane Titan", "gegner/arcane_titan" },
+
+            { "Fire Dragon", "minibosse/fire_dragon" }, { "Skeleton Mage", "minibosse/skeleton_mage" },
+            { "Dark Elf King", "minibosse/dark_elf_king" }, { "All Elements Golem", "minibosse/all_elements_golem" },
+            { "Goblin Lord", "minibosse/goblin_lord" },
+
+            { "Skeleton King", "bosse/skeletonking" }, { "Orc Lord", "bosse/orc_lord" },
+            { "Elemental God", "bosse/elemental_god" }, { "Vampire Lord", "bosse/vampire_lord" },
+            { "Elder Dragon", "bosse/elder_dragon" }
         };
 
-        static readonly string[] _EnemyNames =
+        public static TowerDefenseSprite Get(string key)
         {
-            "Goblin", "Goblin Archer", "Goblin Shaman", "Orc", "Orc Berserker", "Orc Warlord",
-            "Skeleton", "Skeleton Knight", "Troll", "Stone Golem", "Fire Elemental", "Ice Elemental",
-            "Storm Elemental", "Earth Elemental", "Dark Elf", "Vampire", "Wyvern", "Fire Golem",
-            "Dragon", "Arcane Titan"
-        };
-
-        static readonly string[] _BossNames =
-        {
-            "Skeleton King", "Orc Lord", "Elemental God", "Vampire Lord", "Elder Dragon",
-            "Fire Dragon", "Skeleton Mage", "Dark Elf King", "All Elements Golem", "Goblin Lord"
-        };
-
-        static readonly TowerDefenseSpriteSheet _Towers = new TowerDefenseSpriteSheet("tower_spritesheet.png");
-        static readonly TowerDefenseSpriteSheet _Enemies = new TowerDefenseSpriteSheet("enemy_spritesheet.png");
-        static readonly TowerDefenseSpriteSheet _Bosses = new TowerDefenseSpriteSheet("boss_spritesheet.png");
-        static readonly TowerDefenseSpriteSheet _Icons = new TowerDefenseSpriteSheet("ui_icons.png");
-        static readonly TowerDefenseSpriteSheet _MainBuilding = new TowerDefenseSpriteSheet("main_building.png");
-        static readonly TowerDefenseSpriteSheet _Scenery = new TowerDefenseSpriteSheet("scenery_sprites.png");
-        static readonly Dictionary<string, TowerDefenseSpriteSheet> _Maps = new Dictionary<string, TowerDefenseSpriteSheet>();
-
-        public static IList<string> EnemyNames { get { return _EnemyNames; } }
-        public static IList<string> BossNames { get { return _BossNames; } }
-
-        // 32x48, the tower spot lies at (16, 43) inside the frame.
-        public static BitmapSource Tower(string towerName)
-        {
-            int index = Array.IndexOf(_TowerNames, towerName);
-            if (index < 0) throw new ArgumentException("No sprite is configured for this tower.", nameof(towerName));
-            return _Towers.Cell(index, 0, 32, 48);
+            TowerDefenseSprite sprite;
+            if (!_Sprites.TryGetValue(key, out sprite)) throw new ArgumentException("Unknown sprite: " + key, nameof(key));
+            return sprite;
         }
 
-        // 16x16, two walking frames. The feet stand on row 13.
-        public static BitmapSource Enemy(string enemyName, int frame)
+        // Tower, enemy, mini boss or boss by its name in the game.
+        public static TowerDefenseSprite ForName(string name)
         {
-            int index = Array.IndexOf(_EnemyNames, enemyName);
-            if (index < 0) throw new ArgumentException("No sprite is configured for this enemy.", nameof(enemyName));
-            return _Enemies.Cell(index, frame & 1, EnemySize, EnemySize);
-        }
-
-        // 32x32, two walking frames. The feet stand on row 28.
-        public static BitmapSource Boss(string bossName, int frame)
-        {
-            int index = Array.IndexOf(_BossNames, bossName);
-            if (index < 0) throw new ArgumentException("No sprite is configured for this boss.", nameof(bossName));
-            return _Bosses.Cell(index, frame & 1, BossSize, BossSize);
+            string key;
+            if (!_Keys.TryGetValue(name, out key)) throw new ArgumentException("No sprite is configured for " + name + ".", nameof(name));
+            return Get(key);
         }
 
         public static bool IsBoss(string name)
         {
-            return Array.IndexOf(_BossNames, name) >= 0;
+            string key;
+            return _Keys.TryGetValue(name, out key) && (key.StartsWith("bosse/") || key.StartsWith("minibosse/"));
         }
 
-        // 16x16
+        public static TowerDefenseSprite Castle { get { return Get("hauptgebaeude/schloss"); } }
+
+        // intakt > 66 %, beschaedigt 33 - 66 %, ruine below.
+        public static string CastleAnimation(int healthPercent)
+        {
+            return healthPercent > 66 ? "intakt" : healthPercent > 33 ? "beschaedigt" : "ruine";
+        }
+
+        public static TowerDefenseSprite Effect(string name) { return Get("effekte/" + name); }
+
+        // Map layer of a map from Assets/karten: "boden", "deko", "bruecken" or "komplett" (1920x1056 each).
+        public static BitmapSource MapLayer(string mapId, string layer)
+        {
+            return MapImage(mapId, layer).Whole;
+        }
+
+        public static BitmapSource MapRegion(string mapId, string layer, int x, int y, int width, int height)
+        {
+            return MapImage(mapId, layer).Region(x, y, width, height);
+        }
+
+        static TowerDefenseImage MapImage(string mapId, string layer)
+        {
+            string file = Path.Combine("karten", mapId + "_" + layer + ".png");
+            TowerDefenseImage image;
+            if (!_MapLayers.TryGetValue(file, out image))
+            {
+                image = new TowerDefenseImage(file);
+                _MapLayers.Add(file, image);
+            }
+            return image;
+        }
+
+        // UI icons (16x16 pixel art stored with a 4x scale, 64x64 image pixels per icon).
         public static BitmapSource Icon(TowerDefenseIcon icon)
         {
-            return _Icons.Cell((int)icon, 0, 16, 16);
+            return _Icons.Region((int)icon * 64, 0, 64, 64);
         }
 
         public static BitmapSource DamageIcon(DamageType damageType)
@@ -157,34 +249,36 @@ namespace OOPGames
             return Icon(TowerDefenseIcon.Physical + (int)damageType);
         }
 
-        // 64x48, stage 0 = intact, 1 = damaged, 2 = ruined. The gate threshold lies at (32, 44).
-        public static BitmapSource MainBuilding(int stage)
+        static Dictionary<string, TowerDefenseSprite> LoadSprites()
         {
-            return _MainBuilding.Cell(Math.Max(0, Math.Min(2, stage)), 0, 64, 48);
-        }
-
-        // 32x32, the tower spot lies at (16, 24).
-        public static BitmapSource Pedestal()
-        {
-            return _Scenery.Region(64, 32, 32, 32);
-        }
-
-        // Pre-composed map background (320x155). Row 0 lies two pixels above map coordinate y = 0.
-        public static BitmapSource Map(string fileName)
-        {
-            return MapRegion(fileName, 0, 0, MapImageWidth, MapImageHeight);
-        }
-
-        // Part of a map background in image pixels (image row = map y + 2).
-        public static BitmapSource MapRegion(string fileName, int x, int y, int width, int height)
-        {
-            TowerDefenseSpriteSheet sheet;
-            if (!_Maps.TryGetValue(fileName, out sheet))
+            Dictionary<string, TowerDefenseSprite> sprites = new Dictionary<string, TowerDefenseSprite>();
+            using (JsonDocument document = JsonDocument.Parse(System.IO.File.ReadAllText(TowerDefenseAssets.PathOf("sprites.json"))))
             {
-                sheet = new TowerDefenseSpriteSheet(fileName);
-                _Maps.Add(fileName, sheet);
+                foreach (JsonProperty entry in document.RootElement.GetProperty("sprites").EnumerateObject())
+                {
+                    JsonElement s = entry.Value;
+                    JsonElement pivot = s.GetProperty("pivot");
+                    Point? muzzle = null;
+                    JsonElement origin;
+                    if (s.TryGetProperty("schuss_ursprung", out origin))
+                        muzzle = new Point(origin[0].GetDouble(), origin[1].GetDouble());
+                    TowerDefenseSprite sprite = new TowerDefenseSprite(entry.Name, s.GetProperty("file").GetString(),
+                        s.GetProperty("frame_w").GetInt32(), s.GetProperty("frame_h").GetInt32(),
+                        new Point(pivot[0].GetDouble(), pivot[1].GetDouble()), muzzle);
+                    foreach (JsonProperty animation in s.GetProperty("animations").EnumerateObject())
+                    {
+                        sprite.AddAnimation(animation.Name, new TowerDefenseAnimation
+                        {
+                            Row = animation.Value.GetProperty("row").GetInt32(),
+                            Frames = animation.Value.GetProperty("frames").GetInt32(),
+                            Fps = animation.Value.GetProperty("fps").GetDouble(),
+                            Loop = animation.Value.GetProperty("loop").GetBoolean()
+                        });
+                    }
+                    sprites.Add(entry.Name, sprite);
+                }
             }
-            return sheet.Region(x, y, width, height);
+            return sprites;
         }
     }
 }

@@ -126,20 +126,64 @@ namespace OOPGames
             _Context.Pop();
         }
 
-        // Draws a sprite in logical pixels. Positions are rounded so pixel art stays on the grid.
+        // Draws a sprite in logical units. The position is rounded to whole device pixels so pixel art stays sharp.
         public void Sprite(BitmapSource sprite, double x, double y, double width, double height, bool flipX = false)
         {
-            EnsureDrawing();
-            Rect target = new Rect(Math.Round(x) * _PixelScale, Math.Round(y) * _PixelScale,
-                width * _PixelScale, height * _PixelScale);
-            if (!flipX)
-            {
-                _Context.DrawImage(sprite, target);
-                return;
-            }
+            Sprite(sprite, x, y, width, height, flipX, 0, 0);
+        }
 
-            _Context.PushTransform(new ScaleTransform(-1, 1, target.X + target.Width / 2, 0));
+        // rotation: degrees around the sprite's centre. flash: 0..1, paints the sprite's shape white (hit feedback).
+        public void Sprite(BitmapSource sprite, double x, double y, double width, double height, bool flipX, double rotation, double flash)
+        {
+            EnsureDrawing();
+            Rect target = new Rect(Math.Round(x * _PixelScale), Math.Round(y * _PixelScale),
+                Math.Round(width * _PixelScale), Math.Round(height * _PixelScale));
+            int pushed = 0;
+            if (rotation != 0)
+            {
+                _Context.PushTransform(new RotateTransform(rotation, target.X + target.Width / 2, target.Y + target.Height / 2));
+                pushed++;
+            }
+            if (flipX)
+            {
+                _Context.PushTransform(new ScaleTransform(-1, 1, target.X + target.Width / 2, 0));
+                pushed++;
+            }
             _Context.DrawImage(sprite, target);
+            if (flash > 0)
+            {
+                _Context.PushOpacityMask(GetMask(sprite));
+                _Context.DrawRectangle(GetBrush(Color.FromArgb((byte)(Math.Min(1, flash) * 255), 255, 255, 255)), null, target);
+                _Context.Pop();
+            }
+            for (int i = 0; i < pushed; i++) _Context.Pop();
+        }
+
+        readonly Dictionary<BitmapSource, ImageBrush> _Masks = new Dictionary<BitmapSource, ImageBrush>();
+
+        ImageBrush GetMask(BitmapSource sprite)
+        {
+            ImageBrush mask;
+            if (!_Masks.TryGetValue(sprite, out mask))
+            {
+                mask = new ImageBrush(sprite) { Stretch = Stretch.Fill };
+                RenderOptions.SetBitmapScalingMode(mask, BitmapScalingMode.NearestNeighbor);
+                mask.Freeze();
+                _Masks.Add(sprite, mask);
+            }
+            return mask;
+        }
+
+        // Everything drawn until PopOpacity is drawn with this opacity (0..1).
+        public void PushOpacity(double opacity)
+        {
+            EnsureDrawing();
+            _Context.PushOpacity(opacity);
+        }
+
+        public void PopOpacity()
+        {
+            EnsureDrawing();
             _Context.Pop();
         }
 

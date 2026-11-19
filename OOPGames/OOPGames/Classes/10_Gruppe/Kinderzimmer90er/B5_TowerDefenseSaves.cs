@@ -22,6 +22,7 @@ namespace OOPGames
         public int[] DamageLevels { get; set; } = new int[0];
         public int[] RangeLevels { get; set; } = new int[0];
         public int[] SpeedLevels { get; set; } = new int[0];
+        public int[] MasteryLevels { get; set; } = new int[0];
 
         public TowerUpgrades GetUpgrades(int spot)
         {
@@ -32,6 +33,8 @@ namespace OOPGames
                 upgrades.Damage = Clamp(At(DamageLevels, spot), 0, TowerUpgrades.MaxDamage);
                 upgrades.Range = Clamp(At(RangeLevels, spot), 0, TowerUpgrades.MaxRange);
                 upgrades.Speed = Clamp(At(SpeedLevels, spot), 0, TowerUpgrades.MaxSpeed);
+                // Mastery only counts while everything else is maxed.
+                if (upgrades.IsComplete) upgrades.Mastery = Math.Max(0, At(MasteryLevels, spot));
             }
             else if (TowerLevels != null && spot < TowerLevels.Length)
             {
@@ -47,6 +50,7 @@ namespace OOPGames
             DamageLevels = new int[upgrades.Length];
             RangeLevels = new int[upgrades.Length];
             SpeedLevels = new int[upgrades.Length];
+            MasteryLevels = new int[upgrades.Length];
             for (int i = 0; i < upgrades.Length; i++)
             {
                 if (upgrades[i] == null) continue;
@@ -54,6 +58,7 @@ namespace OOPGames
                 DamageLevels[i] = upgrades[i].Damage;
                 RangeLevels[i] = upgrades[i].Range;
                 SpeedLevels[i] = upgrades[i].Speed;
+                MasteryLevels[i] = upgrades[i].Mastery;
             }
         }
 
@@ -69,6 +74,8 @@ namespace OOPGames
         public DateTime? LastPlayed { get; set; }
         // Map that was played last, -1 if none.
         public int LastMap { get; set; } = -1;
+        // Starts the next wave automatically shortly after a wave has been beaten.
+        public bool AutoStart { get; set; }
 
         [JsonIgnore]
         public bool IsEmpty { get { return LastPlayed == null; } }
@@ -119,11 +126,13 @@ namespace OOPGames
         }
 
         // Unlocks the next map and drops the finished run. Returns true when a new map was unlocked.
-        public static bool CompleteMap(int slotIndex, int mapIndex)
+        // Removes the map's run. The next map is only unlocked when unlocksNext is true (beaten on
+        // Normal or harder); returns true if a new map was unlocked.
+        public static bool CompleteMap(int slotIndex, int mapIndex, bool unlocksNext)
         {
             TowerDefenseSaveSlot slot = Slots[slotIndex];
             slot.Runs.Remove(mapIndex);
-            int unlocked = Math.Min(TowerDefenseMaps.Maps.Count, mapIndex + 2);
+            int unlocked = unlocksNext ? Math.Min(TowerDefenseMaps.Maps.Count, mapIndex + 2) : slot.UnlockedMaps;
             bool newMap = unlocked > slot.UnlockedMaps;
             if (newMap) slot.UnlockedMaps = unlocked;
             Touch(slot, mapIndex);

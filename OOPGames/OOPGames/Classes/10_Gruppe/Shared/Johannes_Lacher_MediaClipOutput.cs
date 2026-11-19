@@ -10,10 +10,9 @@ namespace OOPGames
     // If that is not possible, the game simply stays silent.
     // Opening is asynchronous and the very first open in a process can take seconds; a clip that
     // is not open yet is skipped instead of being played late.
+    // The volume follows the group's master volume (G10_SoundVolume), also while a clip is playing.
     internal sealed class G10_MediaClipOutput : IG10_ClipOutput
     {
-        const double Volume = 0.6;
-
         readonly string _Folder;
         readonly Dictionary<string, MediaPlayer> _Players = new Dictionary<string, MediaPlayer>();
         readonly HashSet<string> _Opened = new HashSet<string>();
@@ -31,7 +30,7 @@ namespace OOPGames
                 foreach (G10_SoundClip clip in clips)
                 {
                     string name = clip.Name;
-                    MediaPlayer player = new MediaPlayer { Volume = Volume };
+                    MediaPlayer player = new MediaPlayer { Volume = G10_SoundVolume.Volume };
                     player.MediaOpened += (sender, e) => _Opened.Add(name);
                     player.Open(new Uri(WriteClip(clip)));
                     _Players[name] = player;
@@ -45,6 +44,12 @@ namespace OOPGames
             {
                 _Players.Clear();
             }
+            G10_SoundVolume.Changed += ApplyVolume;
+        }
+
+        void ApplyVolume()
+        {
+            foreach (MediaPlayer player in _Players.Values) player.Volume = G10_SoundVolume.Volume;
         }
 
         public bool IsReady(G10_SoundClip clip)

@@ -403,3 +403,82 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 **Datum:** 2026-11-19
 
 > Speichere mir meine heutigen Prompts in der Johannes_Gabriel_Prompts.md Datei
+
+## Prompt 53
+
+**Datum:** 2026-11-19
+
+> Erstelle mir für unser Projekt der 10_Gruppe einen Lautstärkeregler, welcher im 3D Raum genutzt werden kann, damit alle Spiele lauter und leiser gestellt werden können
+
+## Prompt 54
+
+**Datum:** 2026-11-19
+
+> Der Lautstärkeregeler gefällt mir gut, aber mir würden 5er Schritte besser gefallen
+
+## Prompt 55
+
+**Datum:** 2026-11-19
+
+> Und stelle mir den Lautstärkeregler standardmäßig auf 50%, wenn man startet
+
+## Prompt 56
+
+**Datum:** 2026-11-19
+
+> Der letzte gespeicherte Wert klingt gut, das habe ich wohl überlesen. Aber es soll trotzdem beim ersten Start bei 50% bleiben
+
+## Prompt 57
+
+**Datum:** 2026-11-19
+
+> Ich habe neue Sprites generieren lassen und würde diese gerne mit den aktuellen austauschen. Ich hätte einen Ordner auf meinem Pc mit den darin befindenden PNG Dateien zu allem. Wie kann ich dir diese effektiv geben, dass du diese für mein Tower Defense Spiel einbinden kannst
+
+## Prompt 58
+
+**Datum:** 2026-11-19
+
+> C:\Users\gabri\Downloads\tower_defense_sprites_v4\tower_defense_sprites\1080p
+> Das ist der Pfad mit Ordnern in denen alle Sprite PNG liegen. Die Sprites sind nun auch mit Animationen gedacht, weshalb mehrere Sprites in einer PNG liegen. Es sind auch neue Angriffsanimationen der Türme vorhanden und diese bitte einbinden. Stelle mir nun alles auf das neue Sprite System um und lege die neuen Karten an. Es wird alles ersetzt und die alten Sprites werden nicht mehr benötigt. Falls die Auflösung und das Pixel Raster nicht für die Sprites passt, passe bitte die Auflösung und das Raster an und nicht die Sprites. Auflösung sollte im besten Fall bei 1080p bzw. dem jetztigen bleiben.
+
+## Prompt 59
+
+**Datum:** 2026-11-19
+
+> Das HUD mit Gold, Leben, Welle und so weiter ist nun sehr klein, wodurch es nicht so einfach zu lesen ist. Dieses sollte mindestens doppelt so groß werden. Dazu könnte man Welle starten, Tempo und Menü nach unten verlegen, wodurch oben mehr Platz entsteht. Zusätzlich optimiere mir die Podest Position der Türme, damit jeder Turm den Weg mit seiner Standard Reichweite erreichen kann, aber die Schwierigkeit der Karten beibehalten werden
+
+## Prompt 60
+
+**Datum:** 2026-11-19
+
+> Nun hätte ich gerne einen Button unten mit dem man Autostart ein und ausschalten kann. Dabei wird sobald eine Welle beendet ist, die nächste gestartet. Ich weiß nicht ob es besser wäre direkt die neue zu starten oder 1 Sekunde zu warten, nachdem der letzte Gegner der Welle stirbt. Dazu schießt das Hauptgebäude auch Pfeile, wenn Gegner in die Nähe kommen?
+
+## Prompt 61
+
+**Datum:** 2026-11-19
+
+> Nein, sie soll keine Pfeile schießen. Die Burg sollte aber nicht zu stark werden, sondern nur etwas aushelfen, wenn Gegner zu nahe kommen. Gerne könnte die Burg mit jeder Welle etwas stärker werden und das Scaling von der Schwierigkeit abhängig machen, sodass diese im God Modus schwächer ist als in Easy
+
+## Prompt 62
+
+**Datum:** 2026-11-19
+
+> Die nächste Karte soll nur freigeschaltet werden, wenn man eine Karte mit Normal, Hard oder God durchspielt
+
+## Prompt 63
+
+**Datum:** 2026-11-19
+
+> Mir sind mehrere Sachen aufgefallen, welche abgeändert werden sollten. Das Icon für die Turm Stufe passt nun nicht mehr zu den neuen Sprites, es ist zu groß und deckt teilweise einen nebenstehenden Turm ab, wenn die Podeste zu nahe aneinander stehen. Dazu ist das Goldsystem noch nicht ausgereift. Ich habe auf der ersten Karte nach Welle 38 allte 10 möglichen Podeste mit voll upgegradeten Türmen stehen und schon knapp 10000 Gold übrig. Das übrige Gold geht bis Welle 50 auf über 50000 Gold. Dieses wird nie verwendet bzw. kann nicht verwendet werden. Bitte ändere das Icon ab und was würdest du für das Gold System vorschlagen?
+
+## Prompt 64
+
+**Datum:** 2026-11-19
+
+> Die Einnahmen dämpfen klingt gut, aber ich überlege noch einen Endlos-Modus einzubauen, nachdem man eine Karte geschafft hat und dieser sollte dann auch noch etwas Gold pro Welle einbringen. Wie wäre es, wenn wir Upgrades etwas teurer machen, dafür etwas stärker, dazu noch die Meisterschaftsstufe sobald man alle Upgrades für einen Turm gekauft hat. Fähigkeiten möchte ich nicht und den Endlos-Modus soll erst nur eine Idee sein
+
+## Prompt 65
+
+**Datum:** 2026-11-19
+
+> Bitte weitermachen

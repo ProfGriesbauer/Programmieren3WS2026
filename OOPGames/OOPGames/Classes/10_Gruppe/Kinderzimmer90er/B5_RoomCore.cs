@@ -143,6 +143,8 @@ namespace OOPGames
         internal void Tick()
         {
             List<Key> keys = DrainInput();
+            // + / - change the volume of all games in every phase; the games never see these keys.
+            keys.RemoveAll(HandleVolumeKey);
             if (Phase == B5RoomPhase.Playing)
             {
                 if (keys.Any(IsBackKey) && !(ActiveGame is IB5RoomOwnBackKey))
@@ -263,6 +265,14 @@ namespace OOPGames
             ActiveGame = Device.Games[InsertedGame].Create();
             ActiveGame.Start();
             Phase = B5RoomPhase.Playing;
+        }
+
+        static bool HandleVolumeKey(Key key)
+        {
+            if (key == Key.OemPlus || key == Key.Add) G10_SoundVolume.Increase();
+            else if (key == Key.OemMinus || key == Key.Subtract) G10_SoundVolume.Decrease();
+            else return false;
+            return true;
         }
 
         static bool IsBackKey(Key key) { return key == Key.Escape || key == Key.X; }
