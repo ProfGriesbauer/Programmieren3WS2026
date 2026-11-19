@@ -534,3 +534,19 @@ User prompt:
 Assistant answer:
 - I kept the one-second follow phase and changed only the fall-behind/despawn phase to three seconds, for four seconds total.
 - I updated the timing regression checks to use the separate phase durations. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
+
+### Prompt 48
+User prompt:
+> ok great. can you stop the upgrade coins from spinning?
+
+Assistant answer:
+- I removed the rotation from the 3D pink upgrade coins while preserving their size, color, and movement through the scene.
+- I added a regression check that upgrade coin transforms contain no spin rotation. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.
+
+### Prompt 49
+User prompt:
+> can you also change the coin behaviour so that they dont increase the spin speed with the speed of the player
+
+Assistant answer:
+- I changed regular coin rotation to use an elapsed game-tick clock instead of player distance, so coins keep a constant spin rate as the player speeds up. The pink upgrade coins remain stationary.
+- I added regression checks for fixed spin per tick and animation clock reset. The Subway Surfer tests passed, and the application build succeeded with no warnings or errors.

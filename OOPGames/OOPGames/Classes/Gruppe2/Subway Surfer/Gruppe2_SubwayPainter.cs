@@ -170,6 +170,8 @@ namespace OOPGames
 
             // Everything added from here on casts a shadow.
             int firstShadowCaster = viewport.Children.Count;
+            Gruppe2_SubwayField animationField = field as Gruppe2_SubwayField;
+            int animationTicks = animationField == null ? 0 : animationField.AnimationTicks;
             foreach (Gruppe2_SubwayObstacle obstacle in field.Obstacles)
             {
                 AddThreeDimensionalObstacle(viewport, obstacle);
@@ -179,11 +181,11 @@ namespace OOPGames
             {
                 if (reward.Kind == Gruppe2_SubwayRewardKind.Coin)
                 {
-                    AddThreeDimensionalCoin(viewport, reward, field, laneChange.X);
+                    AddThreeDimensionalCoin(viewport, reward, field, laneChange.X, animationTicks);
                 }
                 else
                 {
-                    AddThreeDimensionalUpgradeCoin(viewport, reward, field.Distance);
+                    AddThreeDimensionalUpgradeCoin(viewport, reward);
                 }
             }
 
@@ -345,12 +347,16 @@ namespace OOPGames
         }
 
         private static void AddThreeDimensionalCoin(
-            Viewport3D viewport, Gruppe2_SubwayReward reward, IGruppe2_SubwayField field, double runnerX)
+            Viewport3D viewport,
+            Gruppe2_SubwayReward reward,
+            IGruppe2_SubwayField field,
+            double runnerX,
+            int animationTicks)
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(0.34, 0.34, 0.10));
             transform.Children.Add(new RotateTransform3D(
-                new AxisAngleRotation3D(new Vector3D(0, 1, 0), field.Distance * 11)));
+                new AxisAngleRotation3D(new Vector3D(0, 1, 0), animationTicks * 11)));
             // Coins of the jetpack trail float at flight level, just above the flying runner.
             double x = LaneWorldX(reward.Lane);
             double y = reward.Elevated
@@ -375,12 +381,10 @@ namespace OOPGames
         }
 
         private static void AddThreeDimensionalUpgradeCoin(
-            Viewport3D viewport, Gruppe2_SubwayReward reward, double distance)
+            Viewport3D viewport, Gruppe2_SubwayReward reward)
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(0.62, 0.62, 0.16));
-            transform.Children.Add(new RotateTransform3D(
-                new AxisAngleRotation3D(new Vector3D(0, 1, 0), distance * 11)));
             transform.Children.Add(new TranslateTransform3D(
                 LaneWorldX(reward.Lane), 0.82, WorldZ(reward.Distance)));
             viewport.Children.Add(new ModelVisual3D

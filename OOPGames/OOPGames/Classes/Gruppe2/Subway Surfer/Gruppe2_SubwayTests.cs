@@ -552,6 +552,8 @@ namespace OOPGames
 
             AssertTrue(field.Distance > 0 && field.Score > 0,
                 "distance and score advance while running");
+            AssertTrue(((Gruppe2_SubwayField)field).AnimationTicks == 24,
+                "the animation clock advances once per game tick");
             AssertTrue(field.Speed > 1,
                 "speed increases as the score grows");
 
@@ -562,6 +564,8 @@ namespace OOPGames
                 "starting a new run resets the runner position");
             AssertTrue(field.Distance == 0 && field.Score == 0 && field.Coins == 0 && field.Speed == 1,
                 "starting a new run resets progression");
+            AssertTrue(((Gruppe2_SubwayField)field).AnimationTicks == 0,
+                "starting a new run resets the animation clock");
             AssertTrue(field.GuardGap == 100 && !field.GameOver
                 && field.Obstacles.Count == 0 && field.Rewards.Count == 0
                 && field.ActiveUpgrades.Count == 0,
@@ -670,6 +674,34 @@ namespace OOPGames
                 ModelVisual3D upgradeCoin = GetPinkUpgradeCoinVisual(viewport);
                 AssertTrue(upgradeCoin != null,
                     "upgrade rewards render as large pink coins");
+                Transform3DGroup upgradeCoinTransform = upgradeCoin.Transform as Transform3DGroup;
+                AssertTrue(upgradeCoinTransform != null
+                    && !upgradeCoinTransform.Children.OfType<RotateTransform3D>().Any(),
+                    "upgrade coins do not spin");
+
+                field.MutableRewards.Add(new Gruppe2_SubwayReward(
+                    Gruppe2_SubwayRewardKind.Coin, 1, 25));
+                field.AnimationTicks = 10;
+                field.Speed = 1;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                ModelVisual3D coinVisual = GetSpinningCoinVisual(viewport);
+                double initialCoinAngle = GetCoinRotationAngle(coinVisual);
+
+                field.Speed = 5;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                coinVisual = GetSpinningCoinVisual(viewport);
+                AssertTrue(Math.Abs(GetCoinRotationAngle(coinVisual) - initialCoinAngle) < 0.001,
+                    "increasing player speed does not change coin spin without advancing time");
+
+                field.AnimationTicks++;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                coinVisual = GetSpinningCoinVisual(viewport);
+                AssertTrue(Math.Abs(GetCoinRotationAngle(coinVisual) - initialCoinAngle - 11) < 0.001,
+                    "coins spin at a fixed rate per game tick");
+                field.Speed = 1;
                 field.MutableRewards.Clear();
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
@@ -912,6 +944,26 @@ namespace OOPGames
                         return brush != null && brush.Color == pink;
                     });
             });
+        }
+
+        private static ModelVisual3D GetSpinningCoinVisual(Viewport3D viewport)
+        {
+            return viewport.Children.OfType<ModelVisual3D>().FirstOrDefault(visual =>
+            {
+                Transform3DGroup transform = visual.Transform as Transform3DGroup;
+                ScaleTransform3D scale = transform == null
+                    ? null
+                    : transform.Children.OfType<ScaleTransform3D>().FirstOrDefault();
+                return scale != null && Math.Abs(scale.ScaleX - 0.34) < 0.001
+                    && transform.Children.OfType<RotateTransform3D>().Any();
+            });
+        }
+
+        private static double GetCoinRotationAngle(ModelVisual3D coinVisual)
+        {
+            Transform3DGroup transform = coinVisual.Transform as Transform3DGroup;
+            RotateTransform3D rotation = transform.Children.OfType<RotateTransform3D>().Single();
+            return ((AxisAngleRotation3D)rotation.Rotation).Angle;
         }
 
         private static void AssertRunnerHasRunningAnimation(Model3DGroup skaterModel)

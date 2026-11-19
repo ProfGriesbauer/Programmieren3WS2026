@@ -127,6 +127,7 @@ namespace OOPGames
                 return;
             }
 
+            _field.AnimationTicks++;
             _field.Distance += _field.Speed;
             _field.Score = (int)_field.Distance + _field.Coins * 10;
             // The speed keeps rising with the score, without an upper limit.
