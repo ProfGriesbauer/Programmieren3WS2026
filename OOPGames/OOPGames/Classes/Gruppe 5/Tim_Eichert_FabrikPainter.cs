@@ -20,6 +20,13 @@ namespace OOPGames
                 throw new ArgumentException("Der Painter benötigt ein Gruppe-5-Weltspielfeld.", nameof(currentField));
             }
 
+            if (currentField is SatisfactoryFieldView satisfactoryField &&
+                !satisfactoryField.IsGameStarted)
+            {
+                satisfactoryField.StartScreen.Paint(canvas);
+                return;
+            }
+
             PaintWeltField(canvas, welt);
         }
 

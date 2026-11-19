@@ -17,7 +17,10 @@ namespace OOPGames
 
         private readonly Dictionary<G5_GridPosition, G5_ResourceDeposit> _deposits =
             new Dictionary<G5_GridPosition, G5_ResourceDeposit>();
+        private readonly SatisfactoryStartScreen _startScreen = new SatisfactoryStartScreen();
         private G5_FabrikSpielfeld _field;
+        private SatisfactoryFieldView _fieldView;
+        private bool _gameStarted;
 
         public SatisfactoryGameRules()
         {
@@ -25,7 +28,7 @@ namespace OOPGames
         }
 
         public string Name { get { return "G5 Satisfactory Rules"; } }
-        public IGameField CurrentField { get { return _field; } }
+        public IGameField CurrentField { get { return _fieldView; } }
         public bool MovesPossible { get { return _field != null; } }
 
         public void DoMove(IPlayMove move)
@@ -39,6 +42,22 @@ namespace OOPGames
             if (action == null)
             {
                 _field.SetStatusMeldung("Eingabe konnte nicht verarbeitet werden.");
+                return;
+            }
+
+            if (!_gameStarted)
+            {
+                if (action.Aktionstyp == G5_FabrikAktionstyp.GebaeudePlatzieren &&
+                    _startScreen.HandleClick(action.X, action.Y))
+                {
+                    SatisfactoryStartScreenSettings settings = _startScreen.SelectedSettings;
+                    _resourceAmount = settings.ResourceAmount;
+                    _minerCycleTicks = settings.MinerCycleTicks;
+                    _smelterCycleTicks = settings.SmelterCycleTicks;
+                    _gameStarted = true;
+                    ClearField();
+                }
+
                 return;
             }
 
@@ -74,6 +93,7 @@ namespace OOPGames
             }
 
             _field = new G5_FabrikSpielfeld(world, 1, 1);
+            _fieldView = new SatisfactoryFieldView(_field, _startScreen, _gameStarted);
             AddDeposit(5, 2, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, _resourceAmount);
             AddDeposit(5, 9, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, _resourceAmount);
             AddDeposit(17, 2, G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz, _resourceAmount);
@@ -91,20 +111,14 @@ namespace OOPGames
 
         public void StartedGameCall()
         {
-            SatisfactoryStartScreen startScreen = new SatisfactoryStartScreen();
-            if (startScreen.ShowDialog() == true)
-            {
-                _resourceAmount = startScreen.SelectedSettings.ResourceAmount;
-                _minerCycleTicks = startScreen.SelectedSettings.MinerCycleTicks;
-                _smelterCycleTicks = startScreen.SelectedSettings.SmelterCycleTicks;
-            }
-
+            _gameStarted = false;
+            _startScreen.ShowHome();
             ClearField();
         }
 
         public void TickGameCall()
         {
-            if (_field == null)
+            if (_field == null || !_gameStarted)
             {
                 return;
             }

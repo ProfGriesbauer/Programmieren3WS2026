@@ -2,12 +2,13 @@
 
 ## Spiel starten
 
-Im Framework die Regeln **„G5 Satisfactory Rules“**, den gemeinsamen Gruppe-5-
-Painter **„G5 Fabrik-Welt“** und den gemeinsamen menschlichen Spieler
-**„G5 Fabrik-Spieler“** auswählen. Beim Start erscheint zuerst ein Fenster mit
-der Anleitung und den Spieleinstellungen. Dort Rohstoffvorrat und
-Produktionstempo wählen und **„Fabrik starten“** anklicken. Satisfactory
-registriert keine eigenen Mensch- oder KI-Spieler. Es ist das einzige Fabrik-
+Im Framework die Regeln **„G5 Satisfactory Rules“**, den Painter
+**„G5 Fabrik-Welt“** und den gemeinsamen menschlichen Spieler
+**„G5 Fabrik-Spieler“** auswählen. Der Startbildschirm erscheint im
+Framework-Spielfeld, nicht in einem zusätzlichen Fenster. Dort stehen
+**„Spiel starten“**, **„Einstellungen“** und **„Anleitung“** zur Auswahl.
+Rohstoffvorrat und Produktionstempo lassen sich unter Einstellungen wählen.
+Satisfactory registriert keine eigenen Mensch- oder KI-Spieler. Es ist das einzige Fabrik-
 Regelwerk und verwendet die gemeinsame Welt, Gebäude, Items, Rezepte und
 Simulation von Gruppe 5. Für den Zwei-Spieler-Workaround denselben
 Fabrik-Spieler in beiden Spielerfeldern auswählen; das Framework selbst

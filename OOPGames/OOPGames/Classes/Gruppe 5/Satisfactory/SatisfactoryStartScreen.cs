@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace OOPGames
 {
@@ -12,440 +14,461 @@ namespace OOPGames
         internal int SmelterCycleTicks { get; set; }
     }
 
-    internal sealed class SatisfactoryStartScreen : Window
+    internal sealed class SatisfactoryStartScreen
     {
+        private enum Page
+        {
+            Home,
+            Settings,
+            Guide
+        }
+
+        private enum Action
+        {
+            Start,
+            Settings,
+            Guide,
+            Home,
+            ChangeResource,
+            ChangeSpeed
+        }
+
+        private sealed class HitTarget
+        {
+            internal Rect Bounds { get; set; }
+            internal Action Action { get; set; }
+        }
+
         private static readonly Brush BackgroundBrush = BrushFromRgb(12, 19, 23);
         private static readonly Brush CardBrush = BrushFromRgb(23, 34, 39);
         private static readonly Brush MutedBrush = BrushFromRgb(162, 181, 181);
         private static readonly Brush AccentBrush = BrushFromRgb(96, 220, 151);
-        private readonly ComboBox _resourceAmount;
-        private readonly ComboBox _productionSpeed;
-        private readonly ContentControl _guideContent;
-        private readonly Button _overviewButton;
-        private readonly Button _guideButton;
+        private readonly List<HitTarget> _hitTargets = new List<HitTarget>();
+        private Page _page = Page.Home;
+        private int _resourceChoice = 1;
+        private int _speedChoice = 1;
 
-        internal SatisfactoryStartScreenSettings SelectedSettings { get; private set; }
-
-        internal SatisfactoryStartScreen()
+        internal SatisfactoryStartScreenSettings SelectedSettings
         {
-            Title = "Satisfactory | Start";
-            Width = 1040;
-            Height = 700;
-            MinWidth = 900;
-            MinHeight = 620;
-            ResizeMode = ResizeMode.NoResize;
-            WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            Background = BackgroundBrush;
-            Foreground = Brushes.White;
-            FontFamily = new FontFamily("Segoe UI");
-
-            if (Application.Current != null &&
-                Application.Current.MainWindow != null &&
-                Application.Current.MainWindow != this)
+            get
             {
-                Owner = Application.Current.MainWindow;
+                return new SatisfactoryStartScreenSettings
+                {
+                    ResourceAmount = _resourceChoice == 0 ? 150 : _resourceChoice == 2 ? 600 : 300,
+                    MinerCycleTicks = _speedChoice == 0 ? 55 : _speedChoice == 2 ? 22 : 35,
+                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55
+                };
+            }
+        }
+
+        internal void ShowHome()
+        {
+            _page = Page.Home;
+        }
+
+        internal void Paint(Canvas canvas)
+        {
+            if (canvas == null)
+            {
+                throw new ArgumentNullException(nameof(canvas));
             }
 
-            _resourceAmount = CreateComboBox(new[]
+            double width = canvas.ActualWidth;
+            double height = canvas.ActualHeight;
+            if (width <= 0 || height <= 0)
             {
-                new ComboBoxItem { Content = "Knapp - 150 Erz pro Vorkommen", Tag = 150 },
-                new ComboBoxItem { Content = "Standard - 300 Erz pro Vorkommen", Tag = 300 },
-                new ComboBoxItem { Content = "Reich - 600 Erz pro Vorkommen", Tag = 600 }
-            });
-            _resourceAmount.SelectedIndex = 1;
-
-            _productionSpeed = CreateComboBox(new[]
-            {
-                new ComboBoxItem { Content = "Entspannt", Tag = 1 },
-                new ComboBoxItem { Content = "Standard", Tag = 2 },
-                new ComboBoxItem { Content = "Schnell", Tag = 3 }
-            });
-            _productionSpeed.SelectedIndex = 1;
-
-            _guideContent = new ContentControl();
-            _overviewButton = CreateButton("Übersicht", AccentBrush, BackgroundBrush);
-            _guideButton = CreateButton("Anleitung", CardBrush, MutedBrush);
-            _overviewButton.Click += (sender, args) => ShowOverview();
-            _guideButton.Click += (sender, args) => ShowGuide();
-
-            Content = BuildLayout();
-            ShowOverview();
-        }
-
-        private UIElement BuildLayout()
-        {
-            Grid layout = new Grid { Margin = new Thickness(30) };
-            layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            StackPanel header = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(2, 0, 0, 20)
-            };
-            Border logo = new Border
-            {
-                Width = 38,
-                Height = 38,
-                CornerRadius = new CornerRadius(12),
-                Background = AccentBrush,
-                Child = new TextBlock
-                {
-                    Text = "S",
-                    FontSize = 23,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = BackgroundBrush,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                }
-            };
-            header.Children.Add(logo);
-            StackPanel brand = new StackPanel { Margin = new Thickness(12, 0, 0, 0) };
-            brand.Children.Add(new TextBlock
-            {
-                Text = "SATISFACTORY",
-                FontSize = 17,
-                FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White
-            });
-            brand.Children.Add(new TextBlock
-            {
-                Text = "GRUPPE 5  /  FABRIK-SIMULATION",
-                FontSize = 10,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = MutedBrush,
-                Margin = new Thickness(0, 3, 0, 0)
-            });
-            header.Children.Add(brand);
-            Grid.SetRow(header, 0);
-            layout.Children.Add(header);
-
-            Grid columns = new Grid();
-            columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.13, GridUnitType.Star) });
-            columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
-            columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.87, GridUnitType.Star) });
-
-            Border introduction = CreateCard();
-            Grid.SetColumn(introduction, 0);
-            columns.Children.Add(introduction);
-
-            Grid introLayout = new Grid { Margin = new Thickness(26) };
-            introLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            introLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            introLayout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            introLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-            TextBlock eyebrow = new TextBlock
-            {
-                Text = "DEINE FABRIK BEGINNT HIER",
-                Foreground = AccentBrush,
-                FontSize = 11,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            Grid.SetRow(eyebrow, 0);
-            introLayout.Children.Add(eyebrow);
-
-            TextBlock title = new TextBlock
-            {
-                Text = "Rohstoffe rein.\nProduktion an.",
-                Foreground = Brushes.White,
-                FontSize = 36,
-                FontWeight = FontWeights.Bold,
-                LineHeight = 43,
-                Margin = new Thickness(0, 0, 0, 16)
-            };
-            Grid.SetRow(title, 1);
-            introLayout.Children.Add(title);
-
-            Grid guideArea = new Grid();
-            guideArea.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            guideArea.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            StackPanel navigation = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 4, 0, 18)
-            };
-            navigation.Children.Add(_overviewButton);
-            navigation.Children.Add(_guideButton);
-            Grid.SetRow(navigation, 0);
-            guideArea.Children.Add(navigation);
-            Grid.SetRow(_guideContent, 1);
-            guideArea.Children.Add(_guideContent);
-            Grid.SetRow(guideArea, 2);
-            introLayout.Children.Add(guideArea);
-
-            TextBlock compatibility = new TextBlock
-            {
-                Text = "Welt, Förderer, Schmelzen und Darstellung nutzen die gemeinsamen Gruppe-5-Schnittstellen.",
-                Foreground = MutedBrush,
-                FontSize = 11,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 18, 0, 0)
-            };
-            Grid.SetRow(compatibility, 3);
-            introLayout.Children.Add(compatibility);
-            introduction.Child = introLayout;
-
-            Border settings = CreateCard();
-            Grid.SetColumn(settings, 2);
-            columns.Children.Add(settings);
-
-            StackPanel settingsLayout = new StackPanel { Margin = new Thickness(25) };
-            settingsLayout.Children.Add(new TextBlock
-            {
-                Text = "Spiel einstellen",
-                FontSize = 22,
-                FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White,
-                Margin = new Thickness(0, 0, 0, 5)
-            });
-            settingsLayout.Children.Add(new TextBlock
-            {
-                Text = "Passe die Ressourcen und das Tempo an.",
-                FontSize = 12,
-                Foreground = MutedBrush,
-                Margin = new Thickness(0, 0, 0, 22)
-            });
-
-            AddSetting(settingsLayout, "ROHSTOFFVORRAT", _resourceAmount,
-                "Bestimmt die Erzmenge jedes Vorkommens.");
-            AddSetting(settingsLayout, "PRODUKTIONSTEMPO", _productionSpeed,
-                "Beeinflusst Förderer und Schmelzzyklen.");
-
-            Border objective = new Border
-            {
-                Background = BrushFromRgb(29, 47, 43),
-                CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(14),
-                Margin = new Thickness(0, 10, 0, 0),
-                Child = new TextBlock
-                {
-                    Text = "DEIN ZIEL\nBaue Förderer auf Erzvorkommen. Das Hub transportiert Erz automatisch zu passenden Schmelzen.",
-                    Foreground = Brushes.White,
-                    FontSize = 12,
-                    TextWrapping = TextWrapping.Wrap,
-                    LineHeight = 19
-                }
-            };
-            settingsLayout.Children.Add(objective);
-
-            Button start = CreateButton("FABRIK STARTEN   →", AccentBrush, BackgroundBrush);
-            start.FontSize = 14;
-            start.FontWeight = FontWeights.Bold;
-            start.HorizontalContentAlignment = HorizontalAlignment.Center;
-            start.Height = 48;
-            start.Margin = new Thickness(0, 20, 0, 0);
-            start.Click += StartGame;
-            settingsLayout.Children.Add(start);
-            settings.Child = settingsLayout;
-
-            Grid.SetColumn(settings, 1);
-            Grid.SetRow(columns, 1);
-            layout.Children.Add(columns);
-
-            TextBlock footer = new TextBlock
-            {
-                Text = "Steuerung im Spiel: F Förderer   •   S Schmelze   •   Esc Auswahl aufheben",
-                Foreground = MutedBrush,
-                FontSize = 11,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(0, 16, 0, 0)
-            };
-            Grid.SetRow(footer, 2);
-            layout.Children.Add(footer);
-            return layout;
-        }
-
-        private void ShowOverview()
-        {
-            _overviewButton.Background = AccentBrush;
-            _overviewButton.Foreground = BackgroundBrush;
-            _guideButton.Background = CardBrush;
-            _guideButton.Foreground = MutedBrush;
-            _guideContent.Content = BuildSteps();
-        }
-
-        private void ShowGuide()
-        {
-            _overviewButton.Background = CardBrush;
-            _overviewButton.Foreground = MutedBrush;
-            _guideButton.Background = AccentBrush;
-            _guideButton.Foreground = BackgroundBrush;
-            _guideContent.Content = BuildGuide();
-        }
-
-        private static UIElement BuildSteps()
-        {
-            StackPanel steps = new StackPanel();
-            AddStep(steps, "01", "Förderer platzieren",
-                "Drücke F und klicke auf ein Eisen- oder Kupfervorkommen.");
-            AddStep(steps, "02", "Schmelze bauen",
-                "Drücke S und wähle eine freie Fläche für eine Schmelze.");
-            AddStep(steps, "03", "Produktion starten",
-                "Erz und Barren werden automatisch zwischen Hub und Gebäuden transportiert.");
-            return steps;
-        }
-
-        private static UIElement BuildGuide()
-        {
-            StackPanel guide = new StackPanel();
-            guide.Children.Add(new TextBlock
-            {
-                Text = "ANLEITUNG",
-                FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                Foreground = AccentBrush,
-                Margin = new Thickness(0, 0, 0, 12)
-            });
-            guide.Children.Add(new TextBlock
-            {
-                Text = "1. Wähle mit F den Förderer und setze ihn direkt auf ein Vorkommen.\\n\\n" +
-                    "2. Wähle mit S eine Schmelze und platziere sie auf freiem Gelände.\\n\\n" +
-                    "3. Förderer bringen Erz zum Hub. Das Hub versorgt passende Schmelzen und lagert ihre Produkte ein.\\n\\n" +
-                    "4. Esc hebt das aktuelle Bauwerkzeug auf. Mit F oder S wählst du anschließend ein neues.",
-                FontSize = 13,
-                Foreground = Brushes.White,
-                TextWrapping = TextWrapping.Wrap,
-                LineHeight = 21
-            });
-            return guide;
-        }
-
-        private void StartGame(object sender, RoutedEventArgs e)
-        {
-            ComboBoxItem resource = (ComboBoxItem)_resourceAmount.SelectedItem;
-            ComboBoxItem speed = (ComboBoxItem)_productionSpeed.SelectedItem;
-            int speedChoice = (int)speed.Tag;
-            SelectedSettings = new SatisfactoryStartScreenSettings
-            {
-                ResourceAmount = (int)resource.Tag,
-                MinerCycleTicks = speedChoice == 1 ? 55 : speedChoice == 3 ? 22 : 35,
-                SmelterCycleTicks = speedChoice == 1 ? 80 : speedChoice == 3 ? 32 : 55
-            };
-            DialogResult = true;
-        }
-
-        private static void AddSetting(
-            Panel parent,
-            string label,
-            ComboBox options,
-            string description)
-        {
-            parent.Children.Add(new TextBlock
-            {
-                Text = label,
-                FontSize = 10,
-                FontWeight = FontWeights.Bold,
-                Foreground = AccentBrush,
-                Margin = new Thickness(0, 0, 0, 7)
-            });
-            parent.Children.Add(options);
-            parent.Children.Add(new TextBlock
-            {
-                Text = description,
-                FontSize = 11,
-                Foreground = MutedBrush,
-                Margin = new Thickness(0, 5, 0, 18)
-            });
-        }
-
-        private static void AddStep(Panel parent, string number, string heading, string detail)
-        {
-            Grid row = new Grid { Margin = new Thickness(0, 0, 0, 15) };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(42) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            Border badge = new Border
-            {
-                Width = 32,
-                Height = 32,
-                CornerRadius = new CornerRadius(10),
-                Background = BrushFromRgb(41, 58, 61),
-                Child = new TextBlock
-                {
-                    Text = number,
-                    Foreground = AccentBrush,
-                    FontSize = 11,
-                    FontWeight = FontWeights.Bold,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                }
-            };
-            row.Children.Add(badge);
-            StackPanel text = new StackPanel { Margin = new Thickness(8, 0, 0, 0) };
-            text.Children.Add(new TextBlock
-            {
-                Text = heading,
-                FontSize = 13,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = Brushes.White
-            });
-            text.Children.Add(new TextBlock
-            {
-                Text = detail,
-                FontSize = 11,
-                Foreground = MutedBrush,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 3, 0, 0)
-            });
-            Grid.SetColumn(text, 1);
-            row.Children.Add(text);
-            parent.Children.Add(row);
-        }
-
-        private static Border CreateCard()
-        {
-            return new Border
-            {
-                Background = CardBrush,
-                CornerRadius = new CornerRadius(18),
-                BorderBrush = BrushFromRgb(40, 55, 60),
-                BorderThickness = new Thickness(1)
-            };
-        }
-
-        private static ComboBox CreateComboBox(ComboBoxItem[] items)
-        {
-            ComboBox comboBox = new ComboBox
-            {
-                Height = 38,
-                FontSize = 12,
-                Foreground = Brushes.White,
-                Background = BrushFromRgb(31, 45, 50),
-                BorderBrush = BrushFromRgb(58, 77, 80),
-                Padding = new Thickness(9, 5, 7, 5)
-            };
-            Style itemStyle = new Style(typeof(ComboBoxItem));
-            itemStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
-            itemStyle.Setters.Add(new Setter(Control.BackgroundProperty, BrushFromRgb(31, 45, 50)));
-            itemStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(8, 6, 8, 6)));
-            comboBox.ItemContainerStyle = itemStyle;
-            foreach (ComboBoxItem item in items)
-            {
-                item.Foreground = Brushes.White;
-                item.Background = BrushFromRgb(31, 45, 50);
-                comboBox.Items.Add(item);
+                return;
             }
 
-            return comboBox;
+            canvas.Children.Clear();
+            canvas.Background = BackgroundBrush;
+            _hitTargets.Clear();
+            DrawBackground(canvas, width, height);
+
+            double contentWidth = Math.Min(1040, width - 48);
+            double contentHeight = Math.Min(640, height - 40);
+            double left = Math.Max(24, (width - contentWidth) / 2);
+            double top = Math.Max(20, (height - contentHeight) / 2);
+            DrawHeader(canvas, left, top, contentWidth);
+
+            double panelTop = top + 64;
+            double panelHeight = contentHeight - 80;
+            double panelWidth = (contentWidth - 20) / 2;
+            DrawHeroPanel(canvas, left, panelTop, panelWidth, panelHeight);
+            DrawControlPanel(canvas, left + panelWidth + 20, panelTop, panelWidth, panelHeight);
+            DrawFooter(canvas, left, top + contentHeight - 8, contentWidth);
         }
 
-        private static Button CreateButton(string label, Brush background, Brush foreground)
+        internal bool HandleClick(int x, int y)
         {
-            return new Button
+            Point click = new Point(x, y);
+            foreach (HitTarget target in _hitTargets)
             {
-                Content = label,
-                Background = background,
-                Foreground = foreground,
-                BorderBrush = Brushes.Transparent,
-                Padding = new Thickness(15, 8, 15, 8),
-                Margin = new Thickness(0, 0, 8, 0),
-                Cursor = System.Windows.Input.Cursors.Hand,
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold
+                if (!target.Bounds.Contains(click))
+                {
+                    continue;
+                }
+
+                switch (target.Action)
+                {
+                    case Action.Start:
+                        return true;
+                    case Action.Settings:
+                        _page = Page.Settings;
+                        break;
+                    case Action.Guide:
+                        _page = Page.Guide;
+                        break;
+                    case Action.Home:
+                        _page = Page.Home;
+                        break;
+                    case Action.ChangeResource:
+                        _resourceChoice = (_resourceChoice + 1) % 3;
+                        break;
+                    case Action.ChangeSpeed:
+                        _speedChoice = (_speedChoice + 1) % 3;
+                        break;
+                }
+
+                return false;
+            }
+
+            return false;
+        }
+
+        private void DrawBackground(Canvas canvas, double width, double height)
+        {
+            AddRectangle(canvas, BackgroundBrush, 0, 0, width, height);
+            AddCircle(canvas, BrushFromRgb(22, 52, 45), width - 370, -240, 570, 0.45);
+            AddCircle(canvas, BrushFromRgb(29, 52, 58), -260, height - 260, 440, 0.35);
+
+            for (int i = 0; i < 9; i++)
+            {
+                double x = width * 0.57 + i * 44;
+                double y = height * 0.18 + (i % 3) * 38;
+                AddRectangle(canvas, BrushFromRgb(45, 70, 67), x, y, 2, 2, 0.65);
+            }
+        }
+
+        private static void DrawHeader(Canvas canvas, double left, double top, double width)
+        {
+            AddRoundedRectangle(canvas, AccentBrush, left, top, 40, 40, 12);
+            AddText(canvas, "S", Brushes.Black, left, top + 4, 40, 31, 24, FontWeights.Bold,
+                TextAlignment.Center);
+            AddText(canvas, "SATISFACTORY", Brushes.White, left + 54, top + 1, 260, 20, 16,
+                FontWeights.Bold);
+            AddText(canvas, "GRUPPE 5  /  FABRIK-SIMULATION", MutedBrush, left + 54, top + 23,
+                300, 16, 10, FontWeights.SemiBold);
+            AddText(canvas, "DEINE FABRIK BEGINNT HIER", AccentBrush,
+                left + width - 260, top + 11, 260, 18, 10, FontWeights.Bold,
+                TextAlignment.Right);
+        }
+
+        private void DrawHeroPanel(
+            Canvas canvas,
+            double left,
+            double top,
+            double width,
+            double height)
+        {
+            AddRoundedRectangle(canvas, CardBrush, left, top, width, height, 20);
+            AddRoundedRectangle(canvas, BrushFromRgb(37, 62, 54),
+                left + 24, top + 24, 116, 24, 12);
+            AddText(canvas, "PRODUKTION STARTEN", AccentBrush,
+                left + 34, top + 29, 100, 14, 9, FontWeights.Bold);
+            AddText(canvas, "Rohstoffe rein.\nProduktion an.", Brushes.White,
+                left + 26, top + 70, width - 52, 100, 35, FontWeights.Bold);
+            AddText(canvas,
+                "Baue deine Fabrik auf der gemeinsamen Gruppe-5-Welt auf. Förderer, Schmelzen und Rezepte verwenden die Modelle deiner Gruppenmitglieder.",
+                MutedBrush, left + 28, top + 185, width - 56, 68, 13);
+
+            DrawStep(canvas, left + 28, top + 280, "01", "Förderer",
+                "F drücken und auf ein Erzvorkommen klicken.");
+            DrawStep(canvas, left + 28, top + 350, "02", "Schmelze",
+                "S drücken und auf freies Gelände klicken.");
+            DrawStep(canvas, left + 28, top + 420, "03", "Automatische Produktion",
+                "Erz und Barren werden über das Hub transportiert.");
+        }
+
+        private void DrawControlPanel(
+            Canvas canvas,
+            double left,
+            double top,
+            double width,
+            double height)
+        {
+            AddRoundedRectangle(canvas, BrushFromRgb(19, 30, 34), left, top, width, height, 20);
+
+            if (_page == Page.Home)
+            {
+                DrawHome(canvas, left, top, width, height);
+            }
+            else if (_page == Page.Settings)
+            {
+                DrawSettings(canvas, left, top, width, height);
+            }
+            else
+            {
+                DrawGuide(canvas, left, top, width, height);
+            }
+        }
+
+        private void DrawHome(Canvas canvas, double left, double top, double width, double height)
+        {
+            AddText(canvas, "Willkommen in der Fabrik", Brushes.White,
+                left + 28, top + 30, width - 56, 34, 22, FontWeights.Bold);
+            AddText(canvas, "Wie möchtest du beginnen?", MutedBrush,
+                left + 30, top + 70, width - 60, 22, 13);
+
+            DrawButton(canvas, left + 28, top + 128, width - 56, 54,
+                "SPIEL STARTEN", "Welt öffnen und Produktion beginnen",
+                AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
+            DrawButton(canvas, left + 28, top + 199, width - 56, 54,
+                "EINSTELLUNGEN", "Rohstoffvorrat und Tempo festlegen",
+                BrushFromRgb(38, 55, 59), Brushes.White, Action.Settings);
+            DrawButton(canvas, left + 28, top + 270, width - 56, 54,
+                "ANLEITUNG", "Steuerung und Spielablauf ansehen",
+                BrushFromRgb(38, 55, 59), Brushes.White, Action.Guide);
+
+            AddRoundedRectangle(canvas, BrushFromRgb(29, 47, 43),
+                left + 28, top + height - 118, width - 56, 82, 12);
+            AddText(canvas, "AKTUELLE EINSTELLUNGEN", AccentBrush,
+                left + 42, top + height - 103, width - 84, 15, 9, FontWeights.Bold);
+            AddText(canvas,
+                ResourceLabel() + "  ·  " + SpeedLabel(),
+                Brushes.White, left + 42, top + height - 80, width - 84, 22, 13,
+                FontWeights.SemiBold);
+        }
+
+        private void DrawSettings(Canvas canvas, double left, double top, double width, double height)
+        {
+            DrawBackButton(canvas, left + 28, top + 26);
+            AddText(canvas, "Einstellungen", Brushes.White,
+                left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
+            AddText(canvas, "Klicke auf eine Auswahl, um den Wert zu ändern.",
+                MutedBrush, left + 30, top + 113, width - 60, 40, 12);
+
+            AddText(canvas, "ROHSTOFFVORRAT", AccentBrush,
+                left + 30, top + 190, width - 60, 18, 10, FontWeights.Bold);
+            DrawOptionButton(canvas, left + 28, top + 216, width - 56, 54,
+                ResourceLabel(), "Erz pro Vorkommen", Action.ChangeResource);
+
+            AddText(canvas, "PRODUKTIONSTEMPO", AccentBrush,
+                left + 30, top + 300, width - 60, 18, 10, FontWeights.Bold);
+            DrawOptionButton(canvas, left + 28, top + 326, width - 56, 54,
+                SpeedLabel(), "Förderer- und Schmelzzyklen", Action.ChangeSpeed);
+
+            DrawButton(canvas, left + 28, top + height - 96, width - 56, 54,
+                "SPIEL STARTEN", "Einstellungen übernehmen",
+                AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
+        }
+
+        private void DrawGuide(Canvas canvas, double left, double top, double width, double height)
+        {
+            DrawBackButton(canvas, left + 28, top + 26);
+            AddText(canvas, "Anleitung", Brushes.White,
+                left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
+            AddText(canvas, "So bringst du deine Fabrik in Gang:",
+                MutedBrush, left + 30, top + 113, width - 60, 22, 12);
+
+            DrawStep(canvas, left + 30, top + 170, "01", "Förderer auswählen",
+                "Drücke F und klicke direkt auf ein Eisen- oder Kupfervorkommen.");
+            DrawStep(canvas, left + 30, top + 250, "02", "Schmelze platzieren",
+                "Drücke S und klicke auf eine freie Fläche.");
+            DrawStep(canvas, left + 30, top + 330, "03", "Produktion beobachten",
+                "Förderer bringen Erz zum Hub. Passende Schmelzen erhalten Erz und lagern Barren im Hub.");
+            DrawStep(canvas, left + 30, top + 425, "04", "Werkzeug wechseln",
+                "Esc hebt das Bauwerkzeug auf. Mit F oder S wählst du ein neues.");
+
+            DrawButton(canvas, left + 28, top + height - 78, width - 56, 48,
+                "SPIEL STARTEN", " ", AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
+        }
+
+        private void DrawBackButton(Canvas canvas, double left, double top)
+        {
+            DrawButton(canvas, left, top, 96, 34, "← ZURÜCK", " ",
+                BrushFromRgb(38, 55, 59), Brushes.White, Action.Home);
+        }
+
+        private void DrawOptionButton(
+            Canvas canvas,
+            double left,
+            double top,
+            double width,
+            double height,
+            string value,
+            string hint,
+            Action action)
+        {
+            AddRoundedRectangle(canvas, BrushFromRgb(34, 49, 53), left, top, width, height, 10);
+            AddText(canvas, value, Brushes.White, left + 14, top + 8, width - 50, 20, 13,
+                FontWeights.SemiBold);
+            AddText(canvas, hint, MutedBrush, left + 14, top + 29, width - 50, 16, 10);
+            AddText(canvas, "›", AccentBrush, left + width - 32, top + 9, 20, 26, 22,
+                FontWeights.Bold, TextAlignment.Center);
+            AddHitTarget(left, top, width, height, action);
+        }
+
+        private void DrawButton(
+            Canvas canvas,
+            double left,
+            double top,
+            double width,
+            double height,
+            string title,
+            string subtitle,
+            Brush background,
+            Brush foreground,
+            Action action)
+        {
+            AddRoundedRectangle(canvas, background, left, top, width, height, 11);
+            AddText(canvas, title, foreground, left + 15, top + (subtitle == " " ? 14 : 9),
+                width - 30, 20, 12, FontWeights.Bold);
+            if (!string.IsNullOrWhiteSpace(subtitle))
+            {
+                AddText(canvas, subtitle, foreground == Brushes.White ? MutedBrush : foreground,
+                    left + 15, top + 30, width - 30, 17, 10);
+            }
+
+            AddHitTarget(left, top, width, height, action);
+        }
+
+        private void DrawStep(
+            Canvas canvas,
+            double left,
+            double top,
+            string number,
+            string heading,
+            string detail)
+        {
+            AddRoundedRectangle(canvas, BrushFromRgb(41, 58, 61), left, top, 36, 36, 11);
+            AddText(canvas, number, AccentBrush, left, top + 9, 36, 18, 11,
+                FontWeights.Bold, TextAlignment.Center);
+            AddText(canvas, heading, Brushes.White, left + 50, top, 300, 21, 13,
+                FontWeights.SemiBold);
+            AddText(canvas, detail, MutedBrush, left + 50, top + 24, 390, 40, 11);
+        }
+
+        private void DrawFooter(Canvas canvas, double left, double top, double width)
+        {
+            AddText(canvas, "BEDIENUNG IM SPIEL:  F Förderer   ·   S Schmelze   ·   Esc Werkzeug abwählen",
+                MutedBrush, left, top, width, 16, 10, FontWeights.Normal, TextAlignment.Center);
+        }
+
+        private string ResourceLabel()
+        {
+            return _resourceChoice == 0 ? "Knapp · 150 Erz" :
+                _resourceChoice == 2 ? "Reich · 600 Erz" : "Standard · 300 Erz";
+        }
+
+        private string SpeedLabel()
+        {
+            return _speedChoice == 0 ? "Entspannt" :
+                _speedChoice == 2 ? "Schnell" : "Standard";
+        }
+
+        private void AddHitTarget(double left, double top, double width, double height, Action action)
+        {
+            _hitTargets.Add(new HitTarget
+            {
+                Bounds = new Rect(left, top, width, height),
+                Action = action
+            });
+        }
+
+        private static void AddRectangle(
+            Canvas canvas,
+            Brush brush,
+            double left,
+            double top,
+            double width,
+            double height,
+            double opacity = 1)
+        {
+            Rectangle rectangle = new Rectangle
+            {
+                Width = Math.Max(0, width),
+                Height = Math.Max(0, height),
+                Fill = brush,
+                Opacity = opacity,
+                IsHitTestVisible = false
             };
+            Canvas.SetLeft(rectangle, left);
+            Canvas.SetTop(rectangle, top);
+            canvas.Children.Add(rectangle);
+        }
+
+        private static void AddRoundedRectangle(
+            Canvas canvas,
+            Brush brush,
+            double left,
+            double top,
+            double width,
+            double height,
+            double radius)
+        {
+            Rectangle rectangle = new Rectangle
+            {
+                Width = Math.Max(0, width),
+                Height = Math.Max(0, height),
+                Fill = brush,
+                RadiusX = radius,
+                RadiusY = radius,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(rectangle, left);
+            Canvas.SetTop(rectangle, top);
+            canvas.Children.Add(rectangle);
+        }
+
+        private static void AddCircle(
+            Canvas canvas,
+            Brush brush,
+            double left,
+            double top,
+            double size,
+            double opacity)
+        {
+            Ellipse ellipse = new Ellipse
+            {
+                Width = size,
+                Height = size,
+                Fill = brush,
+                Opacity = opacity,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(ellipse, left);
+            Canvas.SetTop(ellipse, top);
+            canvas.Children.Add(ellipse);
+        }
+
+        private static void AddText(
+            Canvas canvas,
+            string text,
+            Brush brush,
+            double left,
+            double top,
+            double width,
+            double height,
+            double fontSize,
+            FontWeight fontWeight = default(FontWeight),
+            TextAlignment alignment = TextAlignment.Left)
+        {
+            TextBlock block = new TextBlock
+            {
+                Text = text,
+                Foreground = brush,
+                FontSize = fontSize,
+                FontWeight = fontWeight == default(FontWeight) ? FontWeights.Normal : fontWeight,
+                TextAlignment = alignment,
+                TextWrapping = TextWrapping.Wrap,
+                Width = Math.Max(0, width),
+                Height = Math.Max(0, height),
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(block, left);
+            Canvas.SetTop(block, top);
+            canvas.Children.Add(block);
         }
 
         private static Brush BrushFromRgb(byte red, byte green, byte blue)
@@ -455,4 +478,68 @@ namespace OOPGames
             return brush;
         }
     }
+
+    internal sealed class SatisfactoryFieldView : IG5_FabrikSpielInfo
+    {
+        private readonly G5_FabrikSpielfeld _field;
+        private readonly SatisfactoryStartScreen _startScreen;
+
+        internal SatisfactoryFieldView(
+            G5_FabrikSpielfeld field,
+            SatisfactoryStartScreen startScreen,
+            bool isGameStarted)
+        {
+            _field = field ?? throw new ArgumentNullException(nameof(field));
+            _startScreen = startScreen ?? throw new ArgumentNullException(nameof(startScreen));
+            IsGameStarted = isGameStarted;
+        }
+
+        internal bool IsGameStarted { get; set; }
+        internal SatisfactoryStartScreen StartScreen { get { return _startScreen; } }
+
+        int IG5_WeltSpielfeld.Breite => ((IG5_WeltSpielfeld)_field).Breite;
+        int IG5_WeltSpielfeld.Hoehe => ((IG5_WeltSpielfeld)_field).Hoehe;
+
+        G5_Bauwerkzeug IG5_FabrikSpielInfo.AktuellesWerkzeug =>
+            ((IG5_FabrikSpielInfo)_field).AktuellesWerkzeug;
+
+        IReadOnlyList<IG5_GebaeudeInfo> IG5_FabrikSpielInfo.Gebaeude =>
+            ((IG5_FabrikSpielInfo)_field).Gebaeude;
+
+        string IG5_FabrikSpielInfo.StatusMeldung =>
+            ((IG5_FabrikSpielInfo)_field).StatusMeldung;
+
+        int IG5_FabrikSpielInfo.HubMenge(G5_Item item)
+        {
+            return ((IG5_FabrikSpielInfo)_field).HubMenge(item);
+        }
+
+        bool IG5_WeltSpielfeld.TryGetKachelInfo(int x, int y, out IG5_KachelInfo info)
+        {
+            return ((IG5_WeltSpielfeld)_field).TryGetKachelInfo(x, y, out info);
+        }
+
+        bool IG5_WeltSpielfeld.TryBildschirmZuRaster(int screenX, int screenY, out int x, out int y)
+        {
+            if (!IsGameStarted)
+            {
+                x = screenX;
+                y = screenY;
+                return x >= 0 && y >= 0;
+            }
+
+            return ((IG5_WeltSpielfeld)_field).TryBildschirmZuRaster(screenX, screenY, out x, out y);
+        }
+
+        bool IG5_WeltSpielfeld.TryRasterZuBildschirm(int x, int y, out Point position)
+        {
+            return ((IG5_WeltSpielfeld)_field).TryRasterZuBildschirm(x, y, out position);
+        }
+
+        public bool CanBePaintedBy(IPaintGame painter)
+        {
+            return painter is IG5_FabrikPainter;
+        }
+    }
+
 }

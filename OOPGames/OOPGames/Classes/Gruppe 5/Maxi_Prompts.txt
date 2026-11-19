@@ -122,3 +122,9 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-19 09:39:55] Erstelle eine Art Startbildschirm die angezeigt wird bevor man das Spielfeld etc. sieht. Dort soll unter anderem die Anleitung aber auch Settings mit verschiedenen Auswahlmöglichkeiten auswählbar sein. Lege diese Datei in den Ordner Satisfactory. Gestalte dieses Fenster, das auftaucht bitte optisch ansprechend und stelle sicher, dass die Datei von den Schnittstellen her kompatibel ist mit den Dateien meiner Gruppenmitglider und mit dem framework
 
 [2026-11-19 09:47:31] Pull commit und push
+
+[2026-11-19 09:57:31] Bitte ändere die Datei Start Screen so, dass kein extra eigenes fenster aufploppt,sondern das Fenster in dem Framework nur aufgeht und man die Wahl zwischen den buttons einstellungen, start game und anleitung hat bevor man das Spielfeld sieht
+
+[2026-11-19 10:08:27] Kannst du diesen "Startbildschirm" auch ohne einen neuen Painter zu erstellen mit Canva designen, wenn ja mache das, wenn nein, lösche trotzdem den zusätzlichen painter "Start & Fabrik"
+
+[2026-11-19 10:11:40] pull push und commit
