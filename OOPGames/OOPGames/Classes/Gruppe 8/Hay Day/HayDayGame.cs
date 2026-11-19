@@ -9,6 +9,7 @@ namespace OOPGames
 {
     public sealed class HayDayField : IGameField                                                        
     {
+        private const int CurrentSaveVersion = 1;
         public const int Rows = 50;
         public const int Columns = 100;
         public const int InitialPlotCount = 6;
@@ -76,6 +77,7 @@ namespace OOPGames
         private int _woolReady;
         private int _goatMilkReady;
         private int _marketDay = int.MinValue;
+        private int _orderSequence;
         private bool _pendingBuildingPlacement;
 
         private HayDayField()
@@ -257,18 +259,27 @@ namespace OOPGames
             switch (building.Kind)
             {
                 case "Barn":
+                    int barnInventoryCount = Inventory
+                        .Where(item => !CropKinds.Contains(item.Key))
+                        .Sum(item => item.Value);
                     return new[]
                     {
-                        "Eier: " + Inventory[Eggs],
-                        "Futter: " + Inventory[Feed],
-                        "Kapazität: " + BarnCapacity
+                        "Tierprodukte: Eier: " + Inventory[Eggs] + " | Milch: " + Inventory[Milk],
+                        "Wolle: " + Inventory[Wool] + " | Fleisch: " + Inventory[Pork]
+                            + " | Ziegenmilch: " + Inventory[GoatMilk],
+                        "Käse: " + Inventory[Cheese],
+                        "Futter: Hühner: " + Inventory[Feed] + " | Kühe: " + Inventory[CowFeed],
+                        "Schafe: " + Inventory[SheepFeed] + " | Schweine: " + Inventory[PigFeed]
+                            + " | Ziegen: " + Inventory[GoatFeed],
+                        "Lager: " + barnInventoryCount + " / " + BarnCapacity
                     };
                 case "Silo":
+                    int siloInventoryCount = CropKinds.Sum(crop => Inventory[crop]);
                     return new[]
                     {
-                        "Weizen: " + Inventory[Wheat],
-                        "Mais: " + Inventory[Corn],
-                        "Kapazität: " + SiloCapacity
+                        "Weizen: " + Inventory[Wheat] + " | Mais: " + Inventory[Corn],
+                        "Karotten: " + Inventory[Carrots] + " | Soja: " + Inventory[Soybeans],
+                        "Lager: " + siloInventoryCount + " / " + SiloCapacity
                     };
                 case "Mill":
                     return new[]
@@ -309,11 +320,12 @@ namespace OOPGames
                     return new[]
                     {
                         "Verkaufsangebote:",
-                        "Feldfrüchte: Weizen " + MarketPrice(Wheat) + ", Mais " + MarketPrice(Corn)
-                            + ", Karotten " + MarketPrice(Carrots) + ", Soja " + MarketPrice(Soybeans) + " M",
-                        "Produkte: Eier " + MarketPrice(Eggs) + ", Milch " + MarketPrice(Milk)
-                            + ", Wolle " + MarketPrice(Wool) + ", Käse " + MarketPrice(Cheese) + " M",
-                        "Fleisch " + MarketPrice(Pork) + " | Ziegenmilch " + MarketPrice(GoatMilk) + " M",
+                        "Feldfrüchte: Weizen " + Inventory[Wheat] + " | Mais " + Inventory[Corn],
+                        "Karotten " + Inventory[Carrots] + " | Soja " + Inventory[Soybeans],
+                        "Tierprodukte: Eier " + Inventory[Eggs] + " | Milch " + Inventory[Milk],
+                        "Wolle " + Inventory[Wool] + " | Käse " + Inventory[Cheese]
+                            + " | Fleisch " + Inventory[Pork],
+                        "Ziegenmilch " + Inventory[GoatMilk],
                         "Lieferwagen: " + (Order == null ? "keine offene Anfrage" : Order.Description)
                     };
                 case "Van":
@@ -373,7 +385,8 @@ namespace OOPGames
                         "Ziegenfutter: 1 Weizen + 1 Soja"
                     };
                 case "Coop":
-                    return new[] { "Mit Hühnerfutter füttern", "Eier einsammeln", "Eier verkaufen" };
+                    return new[] { "Mit Hühnerfutter füttern",
+                        "Eier einsammeln (" + EggReady + " bereit)", "Eier verkaufen" };
                 case "CowBarn":
                     return new[] { "Mit Kuhfutter füttern", "Milch einsammeln", "Milch verkaufen" };
                 case "PigBarn":
@@ -383,17 +396,19 @@ namespace OOPGames
                 case "GoatBarn":
                     return new[] { "Mit Ziegenfutter füttern", "Ziegenmilch einsammeln", "Ziegenmilch verkaufen" };
                 case "Market":
-                    return MarketItems.Select(item => item + " verkaufen (" +
-                        MarketPrice(item) + " Münzen)").Concat(new[]
+                    return MarketItems.Select(item => "1 " + item + " verkaufen ("
+                        + Inventory[item] + " da, " + MarketPrice(item) + " M/St.)")
+                        .Concat(new[]
                     {
                         "5 Weizen kaufen (" + PurchasePrice(Wheat, 5) + " Münzen)",
                         "5 Mais kaufen (" + PurchasePrice(Corn, 5) + " Münzen)",
                         "5 Karottensamen kaufen (" + SeedPurchasePrice(Carrots, 5) + " Münzen)",
                         "5 Sojasamen kaufen (" + SeedPurchasePrice(Soybeans, 5) + " Münzen)",
-                        "Lieferung abgeben"
+                        "Bestellung abgeben",
+                        "Bestellung überspringen"
                     }).ToArray();
                 case "Van":
-                    return new[] { "Lieferung abgeben" };
+                    return new[] { "Bestellung abgeben", "Bestellung überspringen" };
                 case "Dairy":
                     return new[] { "Käse herstellen (2 Milch)" };
                 default:
@@ -411,22 +426,21 @@ namespace OOPGames
             int elapsed = (int)Math.Min(int.MaxValue, (now - _lastAdvancedAt).TotalSeconds);
             if (elapsed > 0)
             {
-                _eggProgressSeconds = AdvanceAnimalProduction(elapsed, ChickenCount, Feed, Eggs,
-                    60, ref _feedProgressSeconds, _eggProgressSeconds);
-                _cowProgressSeconds = AdvanceAnimalProduction(elapsed, CowCount, CowFeed, Milk,
-                    300, ref _cowFeedProgressSeconds, _cowProgressSeconds);
-                _sheepProgressSeconds = AdvanceAnimalProduction(elapsed, SheepCount, SheepFeed, Wool,
-                    600, ref _sheepFeedProgressSeconds, _sheepProgressSeconds);
-                _pigProgressSeconds = AdvanceAnimalProduction(elapsed, PigCount, PigFeed, Pork,
-                    360, ref _pigFeedProgressSeconds, _pigProgressSeconds);
-                _goatProgressSeconds = AdvanceAnimalProduction(elapsed, GoatCount, GoatFeed, GoatMilk,
-                    300, ref _goatFeedProgressSeconds, _goatProgressSeconds);
+                AdvanceAnimalProduction(elapsed, ChickenCount, Eggs, ref _feedProgressSeconds);
+                AdvanceAnimalProduction(elapsed, CowCount, Milk, ref _cowFeedProgressSeconds);
+                AdvanceAnimalProduction(elapsed, SheepCount, Wool, ref _sheepFeedProgressSeconds);
+                AdvanceAnimalProduction(elapsed, PigCount, Pork, ref _pigFeedProgressSeconds);
+                AdvanceAnimalProduction(elapsed, GoatCount, GoatMilk, ref _goatFeedProgressSeconds);
                 _lastAdvancedAt = now;
             }
 
             foreach (FarmPlot plot in Plots)
             {
                 if (plot.MarkRipeIfNeeded(now))
+                {
+                    IsDirty = true;
+                }
+                else if (elapsed > 0 && plot.Crop != null)
                 {
                     IsDirty = true;
                 }
@@ -559,11 +573,13 @@ namespace OOPGames
                             case 2: Buy(Carrots, 5, true); break;
                             case 3: Buy(Soybeans, 5, true); break;
                             case 4: FulfillOrder(); break;
+                            case 5: SkipOrder(); break;
                         }
                     }
                     break;
                 case "Van":
-                    FulfillOrder();
+                    if (option == 0) FulfillOrder();
+                    else SkipOrder();
                     break;
                 case "Dairy":
                     ProduceCheese();
@@ -679,7 +695,7 @@ namespace OOPGames
             field.Inventory[Carrots] = 0;
             field.Inventory[Soybeans] = 0;
             field.Inventory[Eggs] = 0;
-            field.Inventory[Feed] = 3;
+            field.Inventory[Feed] = field.ChickenCount;
             field.Inventory[CowFeed] = 0;
             field.Inventory[SheepFeed] = 0;
             field.Inventory[PigFeed] = 0;
@@ -734,20 +750,22 @@ namespace OOPGames
                 Zoom = Math.Max(0.5, Math.Min(3.0, data.Zoom)),
                 LastSavedAt = data.LastSavedAt,
                 _eggProgressSeconds = Math.Max(0, data.EggProgressSeconds) % 60,
-                _feedProgressSeconds = Math.Max(0, data.FeedProgressSeconds) % 300,
+                _feedProgressSeconds = Math.Min(300, Math.Max(0, data.FeedProgressSeconds)),
                 _cowProgressSeconds = Math.Max(0, data.CowProgressSeconds) % 300,
-                _cowFeedProgressSeconds = Math.Max(0, data.CowFeedProgressSeconds) % 300,
+                _cowFeedProgressSeconds = Math.Min(300, Math.Max(0, data.CowFeedProgressSeconds)),
                 _sheepProgressSeconds = Math.Max(0, data.SheepProgressSeconds) % 600,
-                _sheepFeedProgressSeconds = Math.Max(0, data.SheepFeedProgressSeconds) % 300,
+                _sheepFeedProgressSeconds = Math.Min(300, Math.Max(0, data.SheepFeedProgressSeconds)),
                 _pigProgressSeconds = Math.Max(0, data.PigProgressSeconds) % 360,
-                _pigFeedProgressSeconds = Math.Max(0, data.PigFeedProgressSeconds) % 300,
+                _pigFeedProgressSeconds = Math.Min(300, Math.Max(0, data.PigFeedProgressSeconds)),
                 _goatProgressSeconds = Math.Max(0, data.GoatProgressSeconds) % 300,
-                _goatFeedProgressSeconds = Math.Max(0, data.GoatFeedProgressSeconds) % 300,
+                _goatFeedProgressSeconds = Math.Min(300, Math.Max(0, data.GoatFeedProgressSeconds)),
                 _eggReady = Math.Max(0, data.EggReady),
                 _milkReady = Math.Max(0, data.MilkReady),
                 _porkReady = Math.Max(0, data.PorkReady),
                 _woolReady = Math.Max(0, data.WoolReady),
                 _goatMilkReady = Math.Max(0, data.GoatMilkReady),
+                _orderSequence = data.OrderSequence > 0 ? data.OrderSequence
+                    : data.Order == null ? 0 : 1,
                 _marketDay = data.MarketDay
             };
 
@@ -758,6 +776,11 @@ namespace OOPGames
                 field.Inventory[item] = data.Inventory.TryGetValue(item, out amount)
                     ? Math.Min(capacity, Math.Max(0, amount))
                     : 0;
+            }
+
+            if (data.SaveVersion < CurrentSaveVersion)
+            {
+                field.Inventory[Feed] = Math.Max(field.Inventory[Feed], field.ChickenCount);
             }
 
             foreach (FarmPlotSaveData plot in data.Plots)
@@ -938,8 +961,7 @@ namespace OOPGames
                 case "Coop":
                     if (rightClick)
                     {
-                        SetStatus("Hühner: " + ChickenCount + ". Futter: " + Inventory[Feed]
-                            + ". Bereit: " + EggReady + " Eier.");
+                        CollectAnimalProduct(Eggs, "Eier");
                     }
                     else
                     {
@@ -1136,6 +1158,40 @@ namespace OOPGames
                 return false;
             }
 
+            string productLabel;
+            int readyProductCount;
+            switch (kind)
+            {
+                case "Coop":
+                    productLabel = "Eier";
+                    readyProductCount = _eggReady;
+                    break;
+                case "CowBarn":
+                    productLabel = "Milch";
+                    readyProductCount = _milkReady;
+                    break;
+                case "PigBarn":
+                    productLabel = "Fleisch";
+                    readyProductCount = _porkReady;
+                    break;
+                case "SheepBarn":
+                    productLabel = "Wolle";
+                    readyProductCount = _woolReady;
+                    break;
+                case "GoatBarn":
+                    productLabel = "Ziegenmilch";
+                    readyProductCount = _goatMilkReady;
+                    break;
+                default:
+                    return false;
+            }
+            if (readyProductCount > 0)
+            {
+                SetStatus("Bitte zuerst " + readyProductCount + " " + productLabel +
+                    " einsammeln.");
+                return false;
+            }
+
             int remainingFeedSeconds;
             switch (kind)
             {
@@ -1232,14 +1288,14 @@ namespace OOPGames
                 return "Keine Tiere";
             }
 
-            string productStatus = ready > 0
-                ? ready + " " + productLabel + " bereit"
-                : "";
+            if (ready > 0)
+            {
+                return ready + " " + productLabel + " bereit | Einsammeln";
+            }
+
             if (feedProgressSeconds <= 0)
             {
-                return productStatus.Length > 0
-                    ? productStatus + " | Hungrig"
-                    : "Hungrig";
+                return "Hungrig";
             }
 
             int remainingSeconds = feedProgressSeconds;
@@ -1247,9 +1303,7 @@ namespace OOPGames
             int seconds = remainingSeconds % 60;
             string fedStatus = "Gefüttert " + minutes.ToString("0") + ":" +
                 seconds.ToString("00");
-            return productStatus.Length > 0
-                ? productStatus + " | " + fedStatus
-                : fedStatus;
+            return fedStatus;
         }
 
         public bool CollectAnimalProduct(string productItem, string label)
@@ -1271,71 +1325,61 @@ namespace OOPGames
                 return false;
             }
 
-            if (!AddInventory(productItem, ready))
+            int capacity = CropKinds.Contains(productItem) ? SiloCapacity : BarnCapacity;
+            int current = Inventory.ContainsKey(productItem) ? Inventory[productItem] : 0;
+            int space = Math.Max(0, capacity - current);
+            int collected = Math.Min(ready, space);
+            if (collected <= 0 || !AddInventory(productItem, collected))
             {
                 SetStatus("Kein Platz für " + label + " in der Scheune.");
                 return false;
             }
 
+            int remaining = ready - collected;
             switch (productItem)
             {
-                case Eggs: _eggReady = 0; break;
-                case Milk: _milkReady = 0; break;
-                case Pork: _porkReady = 0; break;
-                case Wool: _woolReady = 0; break;
-                case GoatMilk: _goatMilkReady = 0; break;
+                case Eggs: _eggReady = remaining; break;
+                case Milk: _milkReady = remaining; break;
+                case Pork: _porkReady = remaining; break;
+                case Wool: _woolReady = remaining; break;
+                case GoatMilk: _goatMilkReady = remaining; break;
             }
 
-            SetStatus(ready + " " + label + " eingesammelt.");
+            SetStatus(remaining > 0
+                ? collected + " " + label + " eingesammelt. " + remaining +
+                    " bleiben im Stall; schaffe erst Lagerplatz."
+                : collected + " " + label + " eingesammelt.");
             IsDirty = true;
             return true;
         }
 
-        private int AdvanceAnimalProduction(int elapsed, int animalCount, string feedItem,
-            string productItem, int productIntervalSeconds, ref int feedProgressSeconds,
-            int productProgressSeconds)
+        private void AdvanceAnimalProduction(int elapsed, int animalCount,
+            string productItem, ref int feedProgressSeconds)
         {
-            if (animalCount == 0 || feedProgressSeconds <= 0)
+            if (animalCount <= 0 || feedProgressSeconds <= 0)
             {
-                return productProgressSeconds;
+                return;
             }
 
-            int capacity = CropKinds.Contains(productItem) ? SiloCapacity : BarnCapacity;
-            int space = Math.Max(0, capacity - Inventory[productItem]);
-            if (space == 0)
-            {
-                return productProgressSeconds;
-            }
-
-            long availableFeedSeconds = feedProgressSeconds;
-            long productCapacitySeconds = (long)Math.Ceiling(space / (double)animalCount) * productIntervalSeconds
-                - productProgressSeconds;
-            productCapacitySeconds = Math.Max(0L, productCapacitySeconds);
-            int activeSeconds = (int)Math.Min((long)elapsed,
-                Math.Min(availableFeedSeconds, productCapacitySeconds));
-            long totalProductSeconds = productProgressSeconds + (long)activeSeconds;
-            long produced = totalProductSeconds / productIntervalSeconds * animalCount;
-            int stored = (int)Math.Min(produced, space);
-            if (stored > 0)
+            int feedActiveSeconds = Math.Min(elapsed, feedProgressSeconds);
+            feedProgressSeconds -= feedActiveSeconds;
+            if (feedProgressSeconds == 0 && feedActiveSeconds > 0)
             {
                 switch (productItem)
                 {
-                    case Eggs: _eggReady += stored; break;
-                    case Milk: _milkReady += stored; break;
-                    case Pork: _porkReady += stored; break;
-                    case Wool: _woolReady += stored; break;
-                    case GoatMilk: _goatMilkReady += stored; break;
+                    case Eggs: _eggReady = Math.Max(_eggReady, animalCount); break;
+                    case Milk: _milkReady = Math.Max(_milkReady, animalCount); break;
+                    case Pork: _porkReady = Math.Max(_porkReady, animalCount); break;
+                    case Wool: _woolReady = Math.Max(_woolReady, animalCount); break;
+                    case GoatMilk: _goatMilkReady = Math.Max(_goatMilkReady, animalCount); break;
                 }
                 IsDirty = true;
             }
 
-            feedProgressSeconds = (int)Math.Max(0L, feedProgressSeconds - activeSeconds);
-            if (activeSeconds > 0)
+            if (feedActiveSeconds > 0)
             {
                 IsDirty = true;
             }
-
-            return (int)(totalProductSeconds % productIntervalSeconds);
         }
 
         private void Buy(string item, int quantity, bool discountedSeed = false)
@@ -1457,15 +1501,26 @@ namespace OOPGames
 
         private void Sell(string item, int amount)
         {
+            if (amount <= 0 || !MarketItems.Contains(item))
+            {
+                SetStatus("Dieser Artikel kann nicht verkauft werden.");
+                return;
+            }
+
             int available = Inventory.ContainsKey(item) ? Inventory[item] : 0;
             int quantity = Math.Min(amount, available);
-            if (quantity == 0)
+            if (quantity <= 0)
             {
                 SetStatus("Keine " + item + " zum Verkaufen.");
                 return;
             }
 
-            RemoveInventory(item, quantity);
+            if (!RemoveInventory(item, quantity))
+            {
+                SetStatus("Verkauf von " + item + " fehlgeschlagen. Bestand bitte prüfen.");
+                return;
+            }
+
             int earnings = MarketPrice(item) * quantity;
             Coins += earnings;
             SetStatus(quantity + " " + item + " für " + earnings + " Münzen verkauft.");
@@ -1486,8 +1541,22 @@ namespace OOPGames
             }
 
             Coins += Order.Reward;
-            SetStatus("Bestellung geliefert: +" + Order.Reward + " Münzen.");
-            Order = null;
+            int reward = Order.Reward;
+            CreateNextOrder(DateTime.UtcNow);
+            SetStatus("Bestellung geliefert: +" + reward + " Münzen. Neue Anfrage: " +
+                Order.Description);
+        }
+
+        private void SkipOrder()
+        {
+            if (Order == null)
+            {
+                SetStatus("Aktuell keine Bestellanfrage zum Überspringen.");
+                return;
+            }
+
+            CreateNextOrder(DateTime.UtcNow);
+            SetStatus("Bestellung übersprungen. Neue Anfrage: " + Order.Description);
         }
 
         private void RefreshMarket(DateTime now)
@@ -1503,20 +1572,44 @@ namespace OOPGames
                     MarketOffers.Add(new MarketOffer(MarketItems[i], price));
                 }
 
-                Order = CreateOrder(now);
+                CreateNextOrder(now);
                 _marketDay = day;
+                IsDirty = true;
+            }
+            else if (Order == null)
+            {
+                CreateNextOrder(now);
                 IsDirty = true;
             }
         }
 
-        private static MarketOrder CreateOrder(DateTime now)
+        private void CreateNextOrder(DateTime now)
+        {
+            Order = CreateOrder(now, _orderSequence, Order == null ? null : Order.Item);
+            _orderSequence++;
+        }
+
+        private static MarketOrder CreateOrder(DateTime now, int sequence, string previousItem)
         {
             int day = (int)(now.Date - new DateTime(2020, 1, 1)).TotalDays;
             int[] basePrices = { 3, 4, 2, 3, 6, 8, 7, 12, 10, 9 };
-            int index = Math.Abs(day % MarketItems.Length);
-            int quantity = 3 + day % 3;
-            int price = Math.Max(1, basePrices[index] + ((day * 7 + index * 11) % 5) - 2);
-            return new MarketOrder(MarketItems[index], quantity, quantity * price + 10);
+            int index = PositiveModulo(day * 3 + sequence * 7, MarketItems.Length);
+            if (MarketItems[index] == previousItem)
+            {
+                index = (index + 1) % MarketItems.Length;
+            }
+
+            int quantity = 2 + PositiveModulo(day + sequence * 3, 4);
+            int price = Math.Max(1, basePrices[index] +
+                ((day * 7 + index * 11 + sequence * 13) % 5) - 2);
+            int bonus = 8 + PositiveModulo(day * 3 + sequence * 5, 13);
+            return new MarketOrder(MarketItems[index], quantity, quantity * price + bonus);
+        }
+
+        private static int PositiveModulo(int value, int modulus)
+        {
+            int result = value % modulus;
+            return result < 0 ? result + modulus : result;
         }
 
         private bool AddInventory(string item, int amount)
@@ -1560,6 +1653,7 @@ namespace OOPGames
         {
             return new HayDaySaveData
             {
+                SaveVersion = CurrentSaveVersion,
                 Coins = Coins,
                 BarnCapacity = BarnCapacity,
                 SiloCapacity = SiloCapacity,
@@ -1611,6 +1705,7 @@ namespace OOPGames
                 PorkReady = _porkReady,
                 WoolReady = _woolReady,
                 GoatMilkReady = _goatMilkReady,
+                OrderSequence = _orderSequence,
                 CowCount = CowCount,
                 PigCount = PigCount,
                 SheepCount = SheepCount,
@@ -1713,9 +1808,7 @@ namespace OOPGames
 
         public static TimeSpan GrowthDuration(string crop)
         {
-            return crop == HayDayField.Corn
-                ? TimeSpan.FromMinutes(3)
-                : TimeSpan.FromMinutes(2);
+            return TimeSpan.FromMinutes(2);
         }
 
         public string RemainingGrowthText(DateTime now)
@@ -1885,6 +1978,7 @@ namespace OOPGames
 
     public sealed class HayDaySaveData
     {
+        public int SaveVersion { get; set; }
         public int Coins { get; set; }
         public int BarnCapacity { get; set; }
         public int SiloCapacity { get; set; }
@@ -1919,6 +2013,7 @@ namespace OOPGames
         public int PorkReady { get; set; }
         public int WoolReady { get; set; }
         public int GoatMilkReady { get; set; }
+        public int OrderSequence { get; set; }
         public int MarketDay { get; set; } = int.MinValue;
         public DateTime LastSavedAt { get; set; }
     }

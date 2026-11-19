@@ -78,7 +78,7 @@ erhalten.
 - Im Spiel: Pfeiltasten oder WASD steuern; Esc oder X geht zur Geraeteansicht zurueck.
   Ausnahme: Spiele mit `IB5RoomOwnBackKey` (Tower Defense) erhalten Esc/X selbst und
   oeffnen damit ein eigenes Menue; sie werden ueber `ExitRequested` verlassen.
-- Void Courier: Pfeiltasten oder WASD bewegen das Schiff; Z oder Leertaste feuert.
+- SolarShooter: Pfeiltasten oder WASD bewegen das Schiff; Z oder Leertaste feuert.
   Nach Game Over oder dem Sieg startet Enter oder Z eine neue Runde. Dauerfeuer
   und Bewegung puffern Tastatureingaben kurz, da das Framework kein KeyUp liefert.
 - Snake (Game Boy): Eine Pfeiltaste oder WASD startet und lenkt; Enter, Z, Leertaste
@@ -124,7 +124,7 @@ Die vier Game-Boy-Gruentoene liegen gemeinsam in `Shared/` (`G10_GameBoyColors`)
   dasselbe Interface `IG10_PaddleControl` (Strategy). Als Highscore zaehlt der
   laengste Ballwechsel gegen den Computer.
 
-Void Courier ist ein eigenstaendiger Shoot-'em-up mit einer farbigen,
+SolarShooter ist ein eigenstaendiger Shoot-'em-up mit einer farbigen,
 vektorbasierten 2.5D-Darstellung. WPF zeichnet die Szene in einem 160x144-
 Koordinatensystem und skaliert die Vektorgrafik in den vorhandenen Spielrahmen.
 Farbverlaeufe und Formen werden dadurch bei der vergroesserten Anzeige weich
@@ -161,3 +161,12 @@ Aeltere Dateien mit 10-%-Stufen werden beim Laden umgerechnet.
 an. Neue Spiele, die ihre Toene ueber `G10_MediaClipOutput` abspielen, folgen dem Regler
 automatisch. Die Stummschaltung einzelner Spiele (`M` in Pac-Man und Bomberman) bleibt davon
 unabhaengig.
+
+SolarShooter bietet die Modi Klassik und Missionen mit eigenem Eingangs-,
+Pausen-, Anleitungs- und Bestenlistenmenue. Im Missionsmodus waehlt ein
+separater Missionsverwalter aus sieben polymorphen Aufgabentypen; Belohnungen,
+Strafen, Missionsergebnisse und ein zeitlich begrenzter Kombo-Multiplikator
+werden dort abgewickelt. Der Missionsmodus bietet ausserdem einen zeitlich
+begrenzten Schild. Fortschritt und Bestwerte der Modi werden getrennt als JSON
+unter `%LOCALAPPDATA%\\Programmieren3WS2026\\Kinderzimmer90er\\solarshooter_saves.json`
+gespeichert.

@@ -18,5 +18,10 @@ namespace OOPGames
         public const float PlayerSpeed = 92;
         public const float BossStartX = 80;
         public const float BossStartY = 35;
+        public const int MaximumLives = 3;
+        public static float LowerThirdY
+        {
+            get { return PlayfieldTop + (WorldHeight - PlayfieldTop) * 2 / 3; }
+        }
     }
 }
