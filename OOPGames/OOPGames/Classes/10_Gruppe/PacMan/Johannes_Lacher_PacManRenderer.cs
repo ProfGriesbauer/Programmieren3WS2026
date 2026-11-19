@@ -229,6 +229,7 @@ namespace OOPGames
             DrawLabelAndValue(buffer, "LEVEL", _LevelText, 64);
             DrawLives(buffer, view.Lives);
             DrawFruits(buffer, view);
+            buffer.DrawText("M SOUND", Left, 222, HintColor);
             buffer.DrawText("ENTER PAUSE", Left, 232, HintColor);
             buffer.DrawText("ESC BACK", Left, 242, HintColor);
         }
@@ -256,7 +257,7 @@ namespace OOPGames
             for (int i = start; i < total; i++)
             {
                 G10_Sprite sprite = G10_PacManSprites.Fruit(view.FruitHistory[i]);
-                buffer.Blit(sprite, Left - 2 + (i - start) * FruitStep, 206, buffer.Bounds, 0);
+                buffer.Blit(sprite, Left - 2 + (i - start) * FruitStep, 198, buffer.Bounds, 0);
             }
         }
     }

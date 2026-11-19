@@ -614,3 +614,9 @@ Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Reb
 > continue
 
 **Ergebnis:** Zwischennachricht während der Umsetzung von Eintrag 98; Arbeit fortgesetzt.
+
+### 100
+**Prompt:**
+> add sound effects to pac man
+
+**Ergebnis:** übernommen – Soundeffekte ohne Framework- oder Hub-Änderung: Die Session meldet nur Ereignisse (`G10_SoundCue` in der nur lesenden Ansicht), `G10_PacManAudio` entscheidet, was zu hören ist (Einmal-Sounds plus eine Hintergrundschleife je nach Spielzustand: Sirene, verängstigte Geister, heimkehrende Augen), `IG10_SoundOutput`/`G10_MediaSoundOutput` spielt mit WPF-`MediaPlayer` ab, `G10_SoundSynth` erzeugt alle Klänge im Code (eigene Entwürfe inklusive eigener Startmelodie). Taste M schaltet den Ton um (Hinweis im HUD). Schleifen werden von den Ticks neu gestartet, enden also nach Esc von selbst. Gemessen: Das erste Öffnen einer Mediendatei dauert ca. 6,6 s; deshalb werden die Sounds schon während der Kassetten-Animation geladen und noch nicht geladene Sounds übersprungen statt verspätet gespielt. Build ohne Fehler/Warnungen, Testprogramm 120/120 bestanden; Plan (Abschnitt 10) und README ergänzt. Hörbarkeit und Klang im laufenden Programm noch nicht von Hand geprüft; nicht committet.
