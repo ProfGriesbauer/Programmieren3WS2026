@@ -20,7 +20,12 @@ namespace OOPGames
         private static readonly Model3DGroup CityModel = CreateCityModel();
         private static readonly Model3DGroup BushModel = CreateBushModel();
         private static readonly Model3DGroup SignalModel = CreateSignalModel();
-        private const double ObstaclePreviewDistance = 170;
+        private const double CityModelScale = 0.72;
+        private const double CityRepeatDistance = 42;
+        private const double TrackHorizonRatio = 0.40;
+        private const double TrackBottomRatio = 0.94;
+        private const double ObjectTrackDepthRatio = 0.82;
+        private const double ObstaclePreviewDistance = 280;
 
         public string Name { get { return "Gruppe 2 - Subway Surfer Painter"; } }
 
@@ -75,7 +80,8 @@ namespace OOPGames
         private static void DrawBackground(Canvas canvas, double width, double height, double distance)
         {
             double center = width / 2;
-            AddRectangle(canvas, 0, 0, width, height * 0.39, Brush(Color.FromRgb(104, 190, 224)));
+            AddRectangle(canvas, 0, 0, width, height * TrackHorizonRatio,
+                Brush(Color.FromRgb(104, 190, 224)));
             Viewport3D city = new Viewport3D
             {
                 Width = width,
@@ -84,10 +90,10 @@ namespace OOPGames
                 IsHitTestVisible = false,
                 Camera = CreateCityCamera()
             };
-            double cityScroll = distance * 0.25 % 42;
+            double cityScroll = (distance * 0.25 % CityRepeatDistance) * CityModelScale;
             city.Children.Add(CreateCityVisual(cityScroll));
-            city.Children.Add(CreateCityVisual(cityScroll - 42));
-            city.Children.Add(CreateCityVisual(cityScroll + 42));
+            city.Children.Add(CreateCityVisual(cityScroll - CityRepeatDistance * CityModelScale));
+            city.Children.Add(CreateCityVisual(cityScroll + CityRepeatDistance * CityModelScale));
             canvas.Children.Add(city);
 
             AddLine(canvas, center - width * 0.38, height * 0.28, center + width * 0.38, height * 0.28, Brushes.DimGray, 3);
@@ -103,11 +109,17 @@ namespace OOPGames
 
         private static ModelVisual3D CreateCityVisual(double zOffset)
         {
-            return new ModelVisual3D
+            ModelVisual3D visual = new ModelVisual3D
             {
-                Content = CityModel,
                 Transform = new TranslateTransform3D(0, 0, zOffset)
             };
+            visual.Children.Add(new ModelVisual3D
+            {
+                Content = CityModel,
+                Transform = new ScaleTransform3D(
+                    CityModelScale, CityModelScale, CityModelScale)
+            });
+            return visual;
         }
 
         private static Model3DGroup CreateCityModel()
@@ -227,8 +239,8 @@ namespace OOPGames
         private static void DrawTrack(Canvas canvas, double width, double height, IGruppe2_SubwayField field)
         {
             double center = width / 2;
-            double horizon = height * 0.34;
-            double bottom = height * 0.94;
+            double horizon = height * TrackHorizonRatio;
+            double bottom = height * TrackBottomRatio;
             AddPolygon(canvas, new[]
             {
                 new Point(0, height * 0.91),
@@ -289,6 +301,18 @@ namespace OOPGames
             return width / 2 + (lane - 1) * width * (0.018 + 0.212 * progress);
         }
 
+        private static double TrackProgressAtY(double height, double y)
+        {
+            double horizon = height * TrackHorizonRatio;
+            double bottom = height * TrackBottomRatio;
+            return Math.Max(0, Math.Min(1, (y - horizon) / (bottom - horizon)));
+        }
+
+        private static double TrackHalfWidth(double width, double progress)
+        {
+            return width * (0.012 + (0.075 - 0.012) * progress);
+        }
+
         private static void DrawWorldObjects(Canvas canvas, double width, double height, IGruppe2_SubwayField field)
         {
             foreach (Gruppe2_SubwayObstacle obstacle in field.Obstacles.OrderByDescending(item => item.Distance))
@@ -299,10 +323,15 @@ namespace OOPGames
                 bool signal = obstacle.Kind == Gruppe2_SubwayObstacleKind.Signal;
                 double previewDistance = trainObject ? ObstaclePreviewDistance : signal ? 180 : 100;
                 double approach = 1 - Math.Max(0, Math.Min(previewDistance, obstacle.Distance)) / previewDistance;
-                double progress = approach * 0.82;
-
-                double scale = 0.32 + approach * 0.9;
-                double y = height * 0.34 + approach * height * 0.50;
+                double horizon = height * TrackHorizonRatio;
+                double trackBottom = height * TrackBottomRatio;
+                double y = horizon + approach * (trackBottom - horizon) * ObjectTrackDepthRatio;
+                double progress = TrackProgressAtY(height, y);
+                double laneHalfWidth = TrackHalfWidth(width, progress);
+                double perspectiveScale = laneHalfWidth / (width * 0.075);
+                double scale = trainObject
+                    ? Math.Max(0.08, laneHalfWidth * 0.98 / 35)
+                    : perspectiveScale * 1.1;
                 if (signal)
                 {
                     int boundary = Math.Min(obstacle.Lane, 1);
@@ -313,11 +342,11 @@ namespace OOPGames
                 }
 
                 double x = LaneCenter(width, obstacle.Lane, progress);
-                double trackAngle = Math.Atan2((1 - obstacle.Lane) * width * 0.212 * 0.82,
-                    height * 0.50) * 180 / Math.PI;
+                double trackAngle = Math.Atan2((1 - obstacle.Lane) * width * 0.212,
+                    height * (TrackBottomRatio - TrackHorizonRatio)) * 180 / Math.PI;
                 if (obstacle.Moving)
                 {
-                    x += Math.Sin(obstacle.Distance / 9) * width * 0.012;
+                    x += Math.Sin(obstacle.Distance / 9) * laneHalfWidth * 0.08;
                 }
 
                 DrawObstacle(canvas, obstacle.Kind, x, y, scale, trackAngle);
@@ -326,9 +355,13 @@ namespace OOPGames
             foreach (Gruppe2_SubwayReward reward in field.Rewards.OrderByDescending(item => item.Distance))
             {
                 double approach = 1 - Math.Max(0, Math.Min(100, reward.Distance)) / 100;
-                double progress = approach * 0.82;
-                double scale = 0.25 + approach * 0.8;
-                double y = height * 0.34 + approach * height * 0.50;
+                double horizon = height * TrackHorizonRatio;
+                double trackBottom = height * TrackBottomRatio;
+                double rewardY = horizon
+                    + approach * (trackBottom - horizon) * ObjectTrackDepthRatio;
+                double progress = TrackProgressAtY(height, rewardY);
+                double scale = TrackHalfWidth(width, progress) / (width * 0.075) * 1.05;
+                double y = rewardY;
                 double x = LaneCenter(width, reward.Lane, progress);
                 if (reward.Kind == Gruppe2_SubwayRewardKind.Coin)
                 {
@@ -1291,7 +1324,7 @@ namespace OOPGames
         {
             double x = LaneCenter(width, field.Lane, 0.82);
             double baseY = height * 0.84;
-            double scale = guard ? 0.72 : 1;
+            double scale = guard ? 0.79 : 1.08;
 
             if (field.Level == Gruppe2_SubwayLevel.Air && field.JumpHeight > 0)
             {
