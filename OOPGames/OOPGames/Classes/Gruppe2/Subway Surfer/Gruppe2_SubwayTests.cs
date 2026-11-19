@@ -205,10 +205,13 @@ namespace OOPGames
                 ModelVisual3D skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
                 Model3DGroup skaterModel = skaterVisual.Content as Model3DGroup;
                 Vector3D forward = GetRunnerTransform(skaterVisual).Transform(new Vector3D(0, 0, 1));
+                forward.Normalize();
                 AssertTrue(forward.Z < -0.99,
                     "the skater faces away from the camera toward the track");
                 AssertTrue(Math.Abs(GetRunnerX(skaterVisual)) < 0.001,
                     "the skater starts centered in the middle track");
+                AssertTrue(Math.Abs(GetRunnerScale(skaterVisual) - 0.72) < 0.001,
+                    "the skater and skateboard are scaled down");
 
                 Rect3D runnerBounds = skaterModel.Bounds;
                 AssertTrue(runnerBounds.X >= -0.55
@@ -227,7 +230,6 @@ namespace OOPGames
                     "the skateboard has four wheels and reuses its box and sphere meshes");
                 AssertTrue(skateboardModel.Bounds.SizeZ > skateboardModel.Bounds.SizeX,
                     "the skateboard's long axis follows the track direction");
-                double restingHeight = GetRunnerHeight(skaterVisual);
 
                 string[] labels = canvas.Children.OfType<TextBlock>()
                     .Select(block => block.Text).ToArray();
@@ -239,6 +241,7 @@ namespace OOPGames
                     && labels.Any(text => text == "TRAIN RUN"),
                     "the HUD displays controls and the game title");
 
+                double restingHeight = GetRunnerHeight(skaterVisual);
                 int paintedChildCount = canvas.Children.Count;
                 painter.TickPaintGameField(canvas, rules.CurrentField);
                 AssertTrue(canvas.Children.Count == paintedChildCount,
@@ -250,14 +253,34 @@ namespace OOPGames
                     "redrawing reuses the cached skateboard model");
 
                 rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
-                field.Distance = Math.PI / (2 * 0.48);
+                field.Distance = 0;
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
-                AssertTrue(GetRunnerHeight(skaterVisual) > restingHeight + 0.02,
-                    "the skater bobs as the run progresses");
                 AssertTrue(Math.Abs(GetRunnerX(skaterVisual) - 1.55) < 0.001,
-                    "the skater stays centered when moving to the right track");
+                    "the skater starts centered when moving to the right track");
+
+                field.Distance = Math.PI / (2 * 0.32);
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                skaterModel = skaterVisual.Content as Model3DGroup;
+                AssertTrue(GetRunnerX(skaterVisual) > 1.62
+                    && GetRunnerX(skaterVisual) < 1.64,
+                    "the skater carves to one side while riding");
+                AssertTrue(Math.Abs(GetRunnerHeight(skaterVisual) - restingHeight) < 0.001,
+                    "side-to-side skating replaces the previous vertical bob");
+                AssertRunnerFitsTrack(skaterVisual, skaterModel, 1.55);
+
+                field.Distance = 3 * Math.PI / (2 * 0.32);
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                skaterModel = skaterVisual.Content as Model3DGroup;
+                AssertTrue(GetRunnerX(skaterVisual) > 1.46
+                    && GetRunnerX(skaterVisual) < 1.48,
+                    "the skater carves back across the lane");
+                AssertRunnerFitsTrack(skaterVisual, skaterModel, 1.55);
             }
             finally
             {
@@ -273,7 +296,6 @@ namespace OOPGames
             }
 
             return skaterModel.Children.OfType<Model3DGroup>()
-                .SelectMany(component => component.Children.OfType<Model3DGroup>())
                 .FirstOrDefault(component =>
                     component.Children.OfType<GeometryModel3D>().Count() == 8);
         }
@@ -290,6 +312,26 @@ namespace OOPGames
         {
             Transform3DGroup transform = GetRunnerTransform(skaterVisual);
             return transform.Children.OfType<TranslateTransform3D>().Single().OffsetX;
+        }
+
+        private static double GetRunnerScale(ModelVisual3D skaterVisual)
+        {
+            Transform3DGroup transform = GetRunnerTransform(skaterVisual);
+            return transform.Children.OfType<ScaleTransform3D>().First().ScaleX;
+        }
+
+        private static void AssertRunnerFitsTrack(
+            ModelVisual3D skaterVisual, Model3DGroup skaterModel, double laneCenter)
+        {
+            Rect3D bounds = skaterModel.Bounds;
+            double halfWidth = Math.Max(Math.Abs(bounds.X), Math.Abs(bounds.X + bounds.SizeX))
+                * GetRunnerScale(skaterVisual);
+            double centerOffset = GetRunnerX(skaterVisual) - laneCenter;
+            double leftEdge = centerOffset - halfWidth;
+            double rightEdge = centerOffset + halfWidth;
+            AssertTrue(leftEdge >= -0.55 && rightEdge <= 0.55,
+                "the skater stays within the selected track rails while carving ("
+                + leftEdge + " to " + rightEdge + ")");
         }
 
         private static Transform3DGroup GetRunnerTransform(ModelVisual3D skaterVisual)

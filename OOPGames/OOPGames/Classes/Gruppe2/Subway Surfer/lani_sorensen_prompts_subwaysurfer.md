@@ -369,3 +369,14 @@ User prompt:
 Assistant answer:
 - I reoriented the skateboard deck and wheelbase along the track direction, with the axles across the lane, and staggered the rider's feet into a forward-facing riding stance.
 - I added a regression check that the board's long axis follows the track. The full Subway Surfer suite passed.
+
+### Prompt 28
+Timestamp: 2026-11-19T09:28:31+01:00
+
+User prompt:
+> the player and their skateboard should be smaller. please remove the wiggling animation that the player does and replace it with a "side to side" motion that is caused by the character using the skateboard
+
+Assistant answer:
+- I scaled down the rider and board, removed the bounce and individual limb/hair wiggles, and replaced them with a bounded side-to-side carving motion and a matching rider lean. The board remains aligned with the lane.
+- I added tests for the reduced scale, both sides of the carving motion, the lack of vertical bob, and staying between the rails.
+- The full Subway Surfer test suite passed.

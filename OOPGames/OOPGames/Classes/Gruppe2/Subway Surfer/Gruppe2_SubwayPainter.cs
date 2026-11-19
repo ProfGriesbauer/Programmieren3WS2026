@@ -261,7 +261,7 @@ namespace OOPGames
             double movement = skating
                 ? Math.Sin(field.Distance * 0.32)
                 : Math.Sin(field.Distance * 0.48);
-            double sideToSide = skating ? movement * 0.12 : 0;
+            double sideToSide = skating ? movement * 0.08 : 0;
             Model3DGroup runner = CreateRunnerModel(guard, skating ? movement : 0);
             Transform3DGroup transform = new Transform3DGroup();
             if (!guard)
@@ -495,77 +495,76 @@ namespace OOPGames
         private static Model3DGroup CreateRunnerModel(bool guard, double run)
         {
             Model3DGroup runner = new Model3DGroup();
+            Model3DGroup rider = new Model3DGroup();
             Material outfit = guard ? GuardOutfitMaterial : RunnerOutfitMaterial;
             Material hair = guard ? GuardHairMaterial : RunnerHairMaterial;
+            double characterMovement = guard ? run : 0;
 
             if (!guard)
             {
-                Model3DGroup skateboardPose = new Model3DGroup
-                {
-                    Transform = new RotateTransform3D(
-                        new AxisAngleRotation3D(new Vector3D(0, 0, 1), run * 4),
-                        new Point3D(0, 0.12, 0))
-                };
-                skateboardPose.Children.Add(SkateboardModel);
-                runner.Children.Add(skateboardPose);
+                runner.Children.Add(SkateboardModel);
             }
-            AddBox(runner, -0.34, 0.91, -0.18, 0.34, 1.70, 0.18, outfit);
-            AddScaledSphere(runner, 0, 1.98, 0, 0.25, 0.31, 0.24, SkinMaterial);
-            AddScaledSphere(runner, 0, 2.20, 0, 0.30, 0.12, 0.29, hair);
+            AddBox(rider, -0.34, 0.91, -0.18, 0.34, 1.70, 0.18, outfit);
+            AddScaledSphere(rider, 0, 1.98, 0, 0.25, 0.31, 0.24, SkinMaterial);
+            AddScaledSphere(rider, 0, 2.20, 0, 0.30, 0.12, 0.29, hair);
 
-            AddScaledSphere(runner, -0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
-            AddScaledSphere(runner, 0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
+            AddScaledSphere(rider, -0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
+            AddScaledSphere(rider, 0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
 
             Model3DGroup looseHair = new Model3DGroup();
             AddScaledSphere(looseHair, -0.25, 2.11, -0.08, 0.12, 0.20, 0.14, hair);
             AddScaledSphere(looseHair, -0.20, 1.99, -0.06, 0.09, 0.16, 0.11, hair);
             looseHair.Transform = new RotateTransform3D(
-                new AxisAngleRotation3D(new Vector3D(0, 0, 1), run * 4),
+                new AxisAngleRotation3D(new Vector3D(0, 0, 1), characterMovement * 4),
                 new Point3D(-0.2, 2.2, 0));
-            runner.Children.Add(looseHair);
+            rider.Children.Add(looseHair);
 
             if (guard)
             {
-                AddRunnerLimb(runner, -0.22, 1.57, -0.01, -0.55, 1.01, 0.03,
+                AddRunnerLimb(rider, -0.22, 1.57, -0.01, -0.55, 1.01, 0.03,
                     0.17 * run, outfit);
-                AddRunnerLimb(runner, 0.22, 1.57, -0.01, 0.55, 1.01, 0.03,
+                AddRunnerLimb(rider, 0.22, 1.57, -0.01, 0.55, 1.01, 0.03,
                     -0.17 * run, outfit);
-                AddRunnerLimb(runner, -0.16, 0.97, 0, -0.20, 0.08, 0.06,
+                AddRunnerLimb(rider, -0.16, 0.97, 0, -0.20, 0.08, 0.06,
                     -0.24 * run, PantsMaterial);
-                AddRunnerLimb(runner, 0.16, 0.97, 0, 0.20, 0.08, 0.06,
+                AddRunnerLimb(rider, 0.16, 0.97, 0, 0.20, 0.08, 0.06,
                     0.24 * run, PantsMaterial);
             }
             else
             {
-                AddBox(runner, -0.035, 1.08, 0.181, 0.035, 1.57, 0.205, RunnerAccentMaterial);
-                AddBox(runner, -0.27, 1.12, 0.181, -0.09, 1.30, 0.205, RunnerAccentMaterial);
+                AddBox(rider, -0.035, 1.08, 0.181, 0.035, 1.57, 0.205, RunnerAccentMaterial);
+                AddBox(rider, -0.27, 1.12, 0.181, -0.09, 1.30, 0.205, RunnerAccentMaterial);
 
-                AddRunnerLimb(runner, -0.22, 1.57, -0.01, -0.31, 1.69, 0.03,
-                    -0.18 * run, outfit);
-                AddRunnerLimb(runner, -0.31, 1.69, 0.03, -0.40, 1.55, 0.08,
-                    -0.12 * run, outfit);
-                AddRunnerLimb(runner, 0.22, 1.57, -0.01, 0.31, 1.69, 0.03,
-                    0.18 * run, outfit);
-                AddRunnerLimb(runner, 0.31, 1.69, 0.03, 0.40, 1.55, 0.08,
-                    0.12 * run, outfit);
-                AddScaledSphere(runner, -0.40, 1.55, 0.08, 0.06, 0.06, 0.06, SkinMaterial);
-                AddScaledSphere(runner, 0.40, 1.55, 0.08, 0.06, 0.06, 0.06, SkinMaterial);
+                AddRunnerLimb(rider, -0.22, 1.57, -0.01, -0.31, 1.69, 0.03,
+                    0, outfit);
+                AddRunnerLimb(rider, -0.31, 1.69, 0.03, -0.40, 1.55, 0.08,
+                    0, outfit);
+                AddRunnerLimb(rider, 0.22, 1.57, -0.01, 0.31, 1.69, 0.03,
+                    0, outfit);
+                AddRunnerLimb(rider, 0.31, 1.69, 0.03, 0.40, 1.55, 0.08,
+                    0, outfit);
+                AddScaledSphere(rider, -0.40, 1.55, 0.08, 0.06, 0.06, 0.06, SkinMaterial);
+                AddScaledSphere(rider, 0.40, 1.55, 0.08, 0.06, 0.06, 0.06, SkinMaterial);
 
-                AddRunnerLimb(runner, -0.16, 0.97, 0, -0.12, 0.61, 0.12,
-                    -0.14 * run, PantsMaterial);
-                AddRunnerLimb(runner, -0.12, 0.61, 0.12, -0.07, 0.27, 0.24,
-                    -0.10 * run, PantsMaterial);
-                AddRunnerLimb(runner, 0.16, 0.97, 0, 0.12, 0.61, -0.12,
-                    0.14 * run, PantsMaterial);
-                AddRunnerLimb(runner, 0.12, 0.61, -0.12, 0.07, 0.27, -0.24,
-                    0.10 * run, PantsMaterial);
+                AddRunnerLimb(rider, -0.16, 0.97, 0, -0.12, 0.61, 0.12,
+                    0, PantsMaterial);
+                AddRunnerLimb(rider, -0.12, 0.61, 0.12, -0.07, 0.27, 0.24,
+                    0, PantsMaterial);
+                AddRunnerLimb(rider, 0.16, 0.97, 0, 0.12, 0.61, -0.12,
+                    0, PantsMaterial);
+                AddRunnerLimb(rider, 0.12, 0.61, -0.12, 0.07, 0.27, -0.24,
+                    0, PantsMaterial);
 
-                AddBox(runner, -0.18, 0.17, 0.13, 0.04, 0.22, 0.35, PantsMaterial);
-                AddBox(runner, -0.18, 0.22, 0.14, 0.04, 0.30, 0.35, RunnerShoeMaterial);
-                AddBox(runner, -0.04, 0.17, -0.35, 0.18, 0.22, -0.13, PantsMaterial);
-                AddBox(runner, -0.04, 0.22, -0.35, 0.18, 0.30, -0.14, RunnerShoeMaterial);
+                AddBox(rider, -0.18, 0.17, 0.13, 0.04, 0.22, 0.35, PantsMaterial);
+                AddBox(rider, -0.18, 0.22, 0.14, 0.04, 0.30, 0.35, RunnerShoeMaterial);
+                AddBox(rider, -0.04, 0.17, -0.35, 0.18, 0.22, -0.13, PantsMaterial);
+                AddBox(rider, -0.04, 0.22, -0.35, 0.18, 0.30, -0.14, RunnerShoeMaterial);
+                rider.Transform = new RotateTransform3D(
+                    new AxisAngleRotation3D(new Vector3D(0, 0, 1), -run * 5),
+                    new Point3D(0, 1, 0));
             }
 
+            runner.Children.Add(rider);
             runner.Freeze();
             return runner;
         }
