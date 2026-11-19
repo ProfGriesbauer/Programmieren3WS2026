@@ -14,6 +14,7 @@ Der vorhandene Stand enthält bereits das 50x100-Raster, isometrische Zeichnung,
 - Geplante Produktzuordnung: Hühner → Eier, Kühe → Milch, Schweine → Fleisch als abstraktes Spielprodukt ohne Tierverlust, Schafe → Wolle, Ziegen → Ziegenmilch.
 - Rechtsklick auf ein Feld öffnet die Saatgutwahl; ein Feld wird nach der Auswahl mit Linksklick bepflanzt. Reife Pflanzen werden geerntet.
 - Saatgut für zusätzliche Pflanzenarten soll im Markt günstig erhältlich sein. Pflanzen werden als Futterzutaten für die Futtermühle verwendet.
+- Weizen wächst in 2 Minuten, Mais in 3 Minuten bis zur Ernte.
 - Pfeiltasten bewegen die Kamera, Plus/Minus verändern den Zoom, Links-/Rechtsklick dienen der Interaktion. Der Spielstand speichert Bestände, Fortschritt und Zeitstempel; beim Laden wird die vergangene Zeit berücksichtigt.
 
 ## Arbeitspakete
@@ -21,6 +22,7 @@ Der vorhandene Stand enthält bereits das 50x100-Raster, isometrische Zeichnung,
 1. **Bestehende Hay-Day-Implementierung prüfen:** Framework-Nutzung, Klickabläufe, Shop, Preisstaffelung, Startzustand und Save-/Load-Verhalten anhand der aktuellen Klassen abgleichen. Bereits passende Funktionen beibehalten; nur Lücken und widersprüchliche Regeln ändern.
 2. **Grundspiel- und Shopablauf vervollständigen:** Kaufbare Felder und Gebäude, inklusive weiterer Futtermühlen und Tierställe, über den bestehenden Shop auswählen und auf gültigen Rasterplätzen platzieren. Kosten mit jedem Kauf derselben Art erhöhen, unzureichende Münzen und belegte Plätze sauber behandeln.
 3. **Felder und Saatgut ergänzen:** Rechtsklick-Saatmenü pro Feld, günstige Saatgutkäufe im Markt und zusätzliche Pflanzenarten ergänzen. Pflanzen, Wachstumsdauer, Ernteertrag und Verwendung der Ernte als Futterzutaten konsistent halten.
+7. **Wachstumsanzeige ergänzen:** Jedes bepflanzte Feld erhält einen Countdown bis zur Ernte. Nach Ablauf wird `Ernten!` angezeigt und die Pflanzenköpfe werden goldfarben dargestellt.
 4. **Tiere, Gehege und Futterkreislauf ausbauen:** Ställe mit umzäunten Gehegen und sichtbaren Tieren für Hühner, Kühe, Schweine, Schafe und Ziegen ergänzen. Tierzahlen und passende Futterarten speichern; gefütterte Tiere erzeugen ihre Produkte fortlaufend, ohne zu sterben oder entfernt zu werden. Mehrere Mühlen ermöglichen passende Futterrezepte aus geernteten Pflanzen.
 5. **Markt und Speicherung integrieren:** Verkaufsangebote, Preisentwicklung, Bestellanfragen/Lieferwagen sowie Kauf von Saatgut und Weizen/Mais in die Gebäudemenüs integrieren. Alle neuen Bestände, Tiere, Gebäudetypen und Produktionszeiten rückwärtskompatibel speichern und beim Laden die verstrichene Zeit kontrolliert anwenden.
 6. **Validieren:** Projekt im vorhandenen Ziel-Framework bauen. Kauf-/Preisstaffelung, Platzierung, Rechtsklick-Saatwahl, Kapazitätsgrenzen, Futterverbrauch, nicht-tödliche Tierproduktion und Save-/Load-Fortsetzung gezielt prüfen. Änderungen auf Hay-Day-Klassen beschränken.

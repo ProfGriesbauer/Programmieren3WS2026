@@ -188,7 +188,11 @@ namespace OOPGames
 
             if (SelectedPlotRow >= 0)
             {
-                return new[] { "Saatgut für das nächste Pflanzen wählen." };
+                return new[]
+                {
+                    "Saatgut für dieses Feld wählen:",
+                    "Weizen: " + Inventory[Wheat] + " | Mais: " + Inventory[Corn]
+                };
             }
 
             FarmBuilding building = OpenBuilding;
@@ -400,8 +404,29 @@ namespace OOPGames
                 if (option == 0 || option == 1)
                 {
                     SelectedCropIndex = option;
+                    FarmPlot plot = Plots.FirstOrDefault(value =>
+                        value.Row == SelectedPlotRow && value.Column == SelectedPlotColumn);
                     CloseOpenMenu();
-                    SetStatus("Ausgewählt: " + SelectedCrop + ".");
+                    if (plot != null)
+                    {
+                        if (plot.Crop == null)
+                        {
+                            if (RemoveInventory(SelectedCrop, 1))
+                            {
+                                plot.Plant(SelectedCrop, DateTime.UtcNow);
+                                SetStatus(SelectedCrop + " gepflanzt. Reif nach " +
+                                    FarmPlot.GrowthDuration(SelectedCrop).TotalMinutes.ToString("0") + " Minuten.");
+                            }
+                            else
+                            {
+                                SetStatus("Nicht genug " + SelectedCrop + " im Silo.");
+                            }
+                        }
+                        else
+                        {
+                            SetStatus("Dieses Feld ist bereits bepflanzt.");
+                        }
+                    }
                 }
                 return;
             }
@@ -662,33 +687,22 @@ namespace OOPGames
             bool rightClick = button == 1;
             if (plot != null)
             {
-                if (rightClick)
+                if (plot.Crop == null)
                 {
                     SelectedPlotRow = plot.Row;
                     SelectedPlotColumn = plot.Column;
                     SetStatus("Saatgut auswählen.");
                     return;
                 }
-
-                if (plot.Crop == null)
-                {
-                    if (RemoveInventory(SelectedCrop, 1))
-                    {
-                        plot.Plant(SelectedCrop, DateTime.UtcNow);
-                        SetStatus(SelectedCrop + " gepflanzt. Reif nach 2 Minuten.");
-                    }
-                    else
-                    {
-                        SetStatus("Nicht genug " + SelectedCrop + " im Silo.");
-                    }
-                }
-                else if (plot.IsRipe(DateTime.UtcNow))
+                
+                if (plot.IsRipe(DateTime.UtcNow))
                 {
                     Harvest(plot);
                 }
                 else
                 {
-                    SetStatus(plot.Crop + " wächst noch.");
+                    SetStatus(plot.Crop + " wächst noch - reif in " +
+                        plot.RemainingGrowthText(DateTime.UtcNow) + ".");
                 }
 
                 return;
@@ -1245,7 +1259,26 @@ namespace OOPGames
 
         public bool IsRipe(DateTime now)
         {
-            return Crop != null && now - PlantedAtUtc >= TimeSpan.FromMinutes(2);
+            return Crop != null && now - PlantedAtUtc >= GrowthDuration(Crop);
+        }
+
+        public static TimeSpan GrowthDuration(string crop)
+        {
+            return crop == HayDayField.Corn
+                ? TimeSpan.FromMinutes(3)
+                : TimeSpan.FromMinutes(2);
+        }
+
+        public string RemainingGrowthText(DateTime now)
+        {
+            if (IsRipe(now))
+            {
+                return "Reife";
+            }
+
+            TimeSpan remaining = GrowthDuration(Crop) - (now - PlantedAtUtc);
+            int seconds = Math.Max(1, (int)Math.Ceiling(remaining.TotalSeconds));
+            return (seconds / 60).ToString("00") + ":" + (seconds % 60).ToString("00");
         }
 
         public bool MarkRipeIfNeeded(DateTime now)

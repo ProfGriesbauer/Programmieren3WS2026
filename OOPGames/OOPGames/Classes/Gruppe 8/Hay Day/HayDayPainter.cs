@@ -304,6 +304,7 @@ namespace OOPGames
             double tileHeight, FarmPlot plot)
         {
             bool wheat = plot.Crop == HayDayField.Wheat;
+            bool ripe = plot.IsRipe(DateTime.UtcNow);
             Brush stem = wheat ? new SolidColorBrush(Color.FromRgb(213, 174, 64))
                 : new SolidColorBrush(Color.FromRgb(42, 133, 57));
             Brush leaf = wheat ? new SolidColorBrush(Color.FromRgb(244, 208, 91))
@@ -320,7 +321,7 @@ namespace OOPGames
                 {
                     Width = Math.Max(3, tileWidth * 0.12),
                     Height = Math.Max(3, tileWidth * 0.12),
-                    Fill = plot.Ripe ? Brushes.Gold : leaf,
+                    Fill = ripe ? Brushes.Gold : leaf,
                     Stroke = stem,
                     StrokeThickness = 0.6,
                     IsHitTestVisible = false
@@ -329,6 +330,29 @@ namespace OOPGames
                 Canvas.SetTop(cropHead, center.Y - stemHeight * 0.52);
                 canvas.Children.Add(cropHead);
             }
+
+            string label = ripe ? "Ernten!" : plot.RemainingGrowthText(DateTime.UtcNow);
+            double labelWidth = Math.Max(42, tileWidth * 0.72);
+            Rectangle labelBackground = new Rectangle
+            {
+                Width = labelWidth,
+                Height = 18,
+                Fill = ripe
+                    ? new SolidColorBrush(Color.FromArgb(235, 255, 220, 95))
+                    : new SolidColorBrush(Color.FromArgb(220, 255, 255, 255)),
+                Stroke = ripe ? Brushes.DarkGoldenrod : Brushes.SaddleBrown,
+                StrokeThickness = 1,
+                RadiusX = 5,
+                RadiusY = 5,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(labelBackground, center.X - labelWidth / 2);
+            Canvas.SetTop(labelBackground, center.Y - stemHeight - 24);
+            canvas.Children.Add(labelBackground);
+
+            AddText(canvas, label, center.X - labelWidth / 2 + 4,
+                center.Y - stemHeight - 20, 10,
+                ripe ? Brushes.DarkRed : Brushes.DarkSlateGray, true, labelWidth - 8);
         }
 
         private void DrawCoopPens(Canvas canvas, HayDayField field, double tileWidth, double tileHeight)
