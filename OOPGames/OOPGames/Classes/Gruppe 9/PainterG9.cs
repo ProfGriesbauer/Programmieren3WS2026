@@ -14,6 +14,7 @@ namespace OOPGames
     // Draws the arena every frame and keeps the player's world position at screen center.
     public sealed class PainterG9 : IPaintGame2
     {
+        private const double PlayerSpriteScale = 2.0;
         private readonly ArenaHudRenderer _hudRenderer = new ArenaHudRenderer();
         private readonly ArenaDebugRenderer _debugRenderer = new ArenaDebugRenderer();
         private readonly ArenaProgressionMenuRenderer _progressionMenuRenderer =
@@ -23,10 +24,10 @@ namespace OOPGames
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
         private Canvas _zoomInputCanvas;
+        private BitmapSource _arenaBackground;
 
         // Reusable brushes avoid creating new colors for every frame.
         private static readonly Brush FloorBrush = new SolidColorBrush(Color.FromRgb(55, 93, 65));
-        private static readonly Brush GridBrush = new SolidColorBrush(Color.FromRgb(68, 108, 78));
         private static readonly Brush WallBrush = new SolidColorBrush(Color.FromRgb(55, 57, 62));
         private static readonly object StartMenuTag = new object();
         private static readonly object PauseMenuTag = new object();
@@ -135,25 +136,27 @@ namespace OOPGames
             double mapLeft = -left;
             double mapTop = -top;
 
-            // Draw the walkable area first so grid lines and walls appear above it.
+            // Draw the walkable area before the walls.
             AddRectangle(worldCanvas, FloorBrush,
                 mapLeft + ArenaField.WallThickness,
                 mapTop + ArenaField.WallThickness,
                 ArenaField.MapWidth - 2 * ArenaField.WallThickness,
                 ArenaField.MapHeight - 2 * ArenaField.WallThickness);
-
-            double gridSpacing = 64;
-            // Add a subtle grid as a visual reference for movement through the world.
-            for (double x = ArenaField.WallThickness; x < ArenaField.MapWidth - ArenaField.WallThickness; x += gridSpacing)
+            if (_arenaBackground == null)
             {
-                AddLine(worldCanvas, GridBrush, mapLeft + x, mapTop + ArenaField.WallThickness,
-                    mapLeft + x, mapTop + ArenaField.MapHeight - ArenaField.WallThickness);
+                _arenaBackground = LoadArenaBackground();
             }
-            for (double y = ArenaField.WallThickness; y < ArenaField.MapHeight - ArenaField.WallThickness; y += gridSpacing)
+            Image backgroundImage = new Image
             {
-                AddLine(worldCanvas, GridBrush, mapLeft + ArenaField.WallThickness, mapTop + y,
-                    mapLeft + ArenaField.MapWidth - ArenaField.WallThickness, mapTop + y);
-            }
+                Source = _arenaBackground,
+                Width = ArenaField.MapWidth - 2 * ArenaField.WallThickness,
+                Height = ArenaField.MapHeight - 2 * ArenaField.WallThickness,
+                Stretch = Stretch.Fill,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(backgroundImage, mapLeft + ArenaField.WallThickness);
+            Canvas.SetTop(backgroundImage, mapTop + ArenaField.WallThickness);
+            worldCanvas.Children.Add(backgroundImage);
 
             // Draw the four wall segments over the floor to frame the playable area.
             AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop, ArenaField.MapWidth, ArenaField.WallThickness);
@@ -180,7 +183,7 @@ namespace OOPGames
             }
             BitmapSource sprite = _playerAnimator.GetFrame(
                 animationName, field.GameTimeScale);
-            double spriteHeight = field.Player.Size * 2;
+            double spriteHeight = field.Player.Size * 2 * PlayerSpriteScale;
             double spriteWidth = spriteHeight * sprite.PixelWidth / sprite.PixelHeight;
             Image player = new Image
             {
@@ -536,7 +539,7 @@ namespace OOPGames
                 switch (attackFacing)
                 {
                     case PlayerFacing.Back:
-                        return isMoving ? "WalkAttackBackwards" : "IdleAttackBackwards";
+                        return isMoving ? "WalkAttackBack" : "IdleAttackBack";
                     case PlayerFacing.Left:
                         return "IdleAttackLeft";
                     case PlayerFacing.Right:
@@ -593,6 +596,18 @@ namespace OOPGames
                 FindAssetPath(profile.AnimationMetadataPath));
         }
 
+        private static BitmapSource LoadArenaBackground()
+        {
+            BitmapImage background = new BitmapImage();
+            background.BeginInit();
+            background.UriSource = new Uri(
+                FindAssetPath("Background", "Background1.png"), UriKind.Absolute);
+            background.CacheOption = BitmapCacheOption.OnLoad;
+            background.EndInit();
+            background.Freeze();
+            return background;
+        }
+
         // Locate project assets both when launched from the project and from its build output.
         private static string FindAssetPath(params string[] relativePath)
         {
@@ -627,7 +642,7 @@ namespace OOPGames
             }
 
             throw new FileNotFoundException(
-                "Could not locate an animation asset under Classes\\Gruppe 9\\Assets.",
+                "Could not locate an asset under Classes\\Gruppe 9\\Assets.",
                 String.Join(System.IO.Path.DirectorySeparatorChar.ToString(), relativePath));
         }
 
@@ -1020,19 +1035,5 @@ namespace OOPGames
             canvas.Children.Add(rectangle);
         }
 
-        private static void AddLine(Canvas canvas, Brush brush, double x1, double y1, double x2, double y2)
-        {
-            // Grid lines are drawn as separate canvas elements.
-            Line line = new Line
-            {
-                X1 = x1,
-                Y1 = y1,
-                X2 = x2,
-                Y2 = y2,
-                Stroke = brush,
-                StrokeThickness = 1
-            };
-            canvas.Children.Add(line);
-        }
     }
 }
