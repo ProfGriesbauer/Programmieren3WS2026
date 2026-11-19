@@ -82,6 +82,11 @@ namespace OOPGames
             ((IG5_KartenansichtSteuerung)_welt).Zoomieren(faktor, fokusX, fokusY);
         }
 
+        void IG5_KartenansichtSteuerung.SetzeAnsicht(double zoom, double verschiebungX, double verschiebungY)
+        {
+            ((IG5_KartenansichtSteuerung)_welt).SetzeAnsicht(zoom, verschiebungX, verschiebungY);
+        }
+
         internal bool TryGetKachel(int x, int y, out G5_Kachel kachel)
         {
             return _welt.TryGetKachel(x, y, out kachel);

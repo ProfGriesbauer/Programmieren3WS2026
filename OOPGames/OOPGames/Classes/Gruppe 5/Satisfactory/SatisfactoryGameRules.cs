@@ -6,9 +6,9 @@ namespace OOPGames
 {
     public sealed class SatisfactoryGameRules : IGameRules2
     {
-        private const int MapWidth = 24;
-        private const int MapHeight = 14;
-        private const int HudHeight = 36;
+        private const int MapWidth = 50;
+        private const int MapHeight = 30;
+        private const int HudHeight = 56;
         private const int BuildingWidth = 2;
         private const int BuildingHeight = 2;
         private int _resourceAmount = 300;
