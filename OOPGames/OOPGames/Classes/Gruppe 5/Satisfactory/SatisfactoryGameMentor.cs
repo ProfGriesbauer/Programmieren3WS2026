@@ -16,6 +16,12 @@ namespace OOPGames
             WaitForMining,
             SelectSmelterTool,
             PlaceSmelter,
+            SelectMoveTool,
+            SelectMoveSource,
+            MoveSmelter,
+            SelectConveyorTool,
+            PlaceConveyor,
+            WaitForTransport,
             InspectHub,
             Complete
         }
@@ -27,6 +33,10 @@ namespace OOPGames
 
         private TutorialStep _step = TutorialStep.Inactive;
         private long _initialDeposit;
+        private int _conveyorIndex;
+
+        private static readonly int[] ConveyorX = { 7, 8, 9 };
+        private const int ConveyorY = 2;
 
         internal bool IsActive
         {
@@ -41,6 +51,7 @@ namespace OOPGames
         internal void Begin(long initialDeposit)
         {
             _initialDeposit = initialDeposit;
+            _conveyorIndex = 0;
             _step = TutorialStep.SelectMinerTool;
             Message = "Willkommen! Ich begleite dich durch deine ersten Fabrikschritte.";
         }
@@ -75,12 +86,35 @@ namespace OOPGames
                 return true;
             }
 
+            if (_step == TutorialStep.SelectMoveTool &&
+                tool == G5_Bauwerkzeug.GebaeudeVerschieben)
+            {
+                _step = TutorialStep.SelectMoveSource;
+                Message = "Klicke jetzt auf die Schmelze, die du verschieben möchtest.";
+                message = Message;
+                return true;
+            }
+
+            if (_step == TutorialStep.SelectConveyorTool &&
+                tool == G5_Bauwerkzeug.Foerderband)
+            {
+                _conveyorIndex = 0;
+                _step = TutorialStep.PlaceConveyor;
+                Message = "Platziere das erste Förderband auf dem markierten Feld neben dem Förderer.";
+                message = Message;
+                return true;
+            }
+
             message = _step == TutorialStep.SelectMinerTool
                 ? "Wähle zuerst mit F den Förderer aus."
                 : _step == TutorialStep.WaitForMining
                     ? "Lass den Förderer zuerst ein Erz abbauen. Danach geht es weiter."
                     : _step == TutorialStep.SelectSmelterTool
                         ? "Wähle jetzt mit S eine Schmelze aus."
+                        : _step == TutorialStep.SelectMoveTool
+                            ? "Drücke M, um das Verschieben zu lernen."
+                            : _step == TutorialStep.SelectConveyorTool
+                                ? "Drücke B, um ein Förderband auszuwählen."
                         : "Folge dem markierten Lernschritt, bevor du fortfährst.";
             return false;
         }
@@ -111,11 +145,21 @@ namespace OOPGames
                 return true;
             }
 
+            if (_step == TutorialStep.PlaceConveyor &&
+                tool == G5_Bauwerkzeug.Foerderband &&
+                _conveyorIndex < ConveyorX.Length &&
+                x == ConveyorX[_conveyorIndex] && y == ConveyorY)
+            {
+                return true;
+            }
+
             message = _step == TutorialStep.PlaceMiner
                 ? "Platziere den Förderer auf dem markierten Eisenerzfeld."
                 : _step == TutorialStep.PlaceSmelter
                     ? "Platziere die Schmelze auf dem markierten freien Feld."
-                    : "Folge dem markierten Lernschritt. Die Anleitung lässt sich anfangs nicht überspringen.";
+                    : _step == TutorialStep.PlaceConveyor
+                        ? "Setze das Förderband auf das vom Mentor markierte Feld."
+                        : "Folge dem markierten Lernschritt. Die Anleitung lässt sich anfangs nicht überspringen.";
             return false;
         }
 
@@ -133,9 +177,77 @@ namespace OOPGames
                 tool == G5_Bauwerkzeug.Schmelze &&
                 x == 20 && y == 14)
             {
-                _step = TutorialStep.InspectHub;
-                Message = "Schmelze gebaut! Klicke jetzt auf das markierte Hub, um Lager und Transport zu sehen.";
+                _step = TutorialStep.SelectMoveTool;
+                Message = "Schmelze gebaut! Drücke M und klicke sie an, damit du sie versetzen kannst.";
             }
+            else if (_step == TutorialStep.PlaceConveyor &&
+                tool == G5_Bauwerkzeug.Foerderband &&
+                _conveyorIndex < ConveyorX.Length &&
+                x == ConveyorX[_conveyorIndex] && y == ConveyorY)
+            {
+                _conveyorIndex++;
+                if (_conveyorIndex == ConveyorX.Length)
+                {
+                    _step = TutorialStep.WaitForTransport;
+                    Message = "Förderbänder verbunden! Beobachte, wie Erz auf dem Band zur Schmelze transportiert wird.";
+                }
+                else
+                {
+                    Message = "Gut! Setze das nächste Förderband direkt an das vorherige, auf das markierte Feld.";
+                }
+            }
+        }
+
+        internal bool TrySelectBuildingToMove(int x, int y, out string message)
+        {
+            message = Message;
+            if (!IsActive)
+            {
+                return true;
+            }
+
+            if (_step == TutorialStep.SelectMoveSource && x == 20 && y == 14)
+            {
+                _step = TutorialStep.MoveSmelter;
+                Message = "Jetzt klicke auf das markierte freie Feld, um die Schmelze dorthin zu versetzen.";
+                message = Message;
+                return true;
+            }
+
+            message = _step == TutorialStep.SelectMoveSource
+                ? "Klicke auf die markierte Schmelze, nicht auf ein anderes Gebäude."
+                : "Folge zuerst der aktuellen Anleitung.";
+            return false;
+        }
+
+        internal bool CanMoveBuilding(int x, int y, out string message)
+        {
+            message = Message;
+            if (!IsActive)
+            {
+                return true;
+            }
+
+            if (_step == TutorialStep.MoveSmelter && x == 22 && y == 14)
+            {
+                return true;
+            }
+
+            message = _step == TutorialStep.MoveSmelter
+                ? "Versetze die Schmelze auf das markierte Zielfeld."
+                : "Folge zuerst der aktuellen Anleitung.";
+            return false;
+        }
+
+        internal void BuildingMoved()
+        {
+            if (_step != TutorialStep.MoveSmelter)
+            {
+                return;
+            }
+
+            _step = TutorialStep.SelectConveyorTool;
+            Message = "Schmelze verschoben! Drücke B, um jetzt Förderbänder auszuwählen.";
         }
 
         internal bool ObserveMining(long remainingDeposit)
@@ -151,6 +263,18 @@ namespace OOPGames
             return true;
         }
 
+        internal bool ObserveConveyorTransport(bool transportOccurred)
+        {
+            if (_step != TutorialStep.WaitForTransport || !transportOccurred)
+            {
+                return false;
+            }
+
+            _step = TutorialStep.InspectHub;
+            Message = "Prima! Erz wird über die Förderbänder transportiert. Klicke jetzt auf das markierte Hub.";
+            return true;
+        }
+
         internal bool TryInspectHub(int x, int y)
         {
             if (_step != TutorialStep.InspectHub ||
@@ -160,7 +284,7 @@ namespace OOPGames
             }
 
             _step = TutorialStep.Complete;
-            Message = "Geschafft! Du hast einen Förderer gebaut, Erz abgebaut und die Fabrik erweitert. Ab jetzt kannst du frei spielen.";
+            Message = "Geschafft! Du hast gebaut, ein Gebäude versetzt und Rohstoffe über Förderbänder transportiert. Ab jetzt kannst du frei spielen.";
             return true;
         }
 
@@ -219,12 +343,27 @@ namespace OOPGames
                     targetY = 2;
                     break;
                 case TutorialStep.SelectSmelterTool:
-                    targetX = 20;
-                    targetY = 14;
-                    break;
                 case TutorialStep.PlaceSmelter:
                     targetX = 20;
                     targetY = 14;
+                    break;
+                case TutorialStep.SelectMoveTool:
+                case TutorialStep.SelectMoveSource:
+                    targetX = 20;
+                    targetY = 14;
+                    break;
+                case TutorialStep.MoveSmelter:
+                    targetX = 22;
+                    targetY = 14;
+                    break;
+                case TutorialStep.SelectConveyorTool:
+                case TutorialStep.PlaceConveyor:
+                    targetX = ConveyorX[Math.Min(_conveyorIndex, ConveyorX.Length - 1)];
+                    targetY = ConveyorY;
+                    break;
+                case TutorialStep.WaitForTransport:
+                    targetX = 8;
+                    targetY = ConveyorY;
                     break;
                 case TutorialStep.InspectHub:
                     targetX = 1;
@@ -252,35 +391,107 @@ namespace OOPGames
                 tileHeight = nextRow.Y - target.Y;
             }
 
+            Point start = new Point(panelX, panelY - 5);
             target = new Point(target.X + tileWidth / 2, target.Y + tileHeight / 2);
-            Line pointer = new Line
+            Vector direction = target - start;
+            if (direction.Length == 0)
             {
-                X1 = panelX,
-                Y1 = panelY,
-                X2 = target.X,
-                Y2 = target.Y,
+                return;
+            }
+            direction.Normalize();
+            Vector curve = new Vector(-direction.Y, direction.X);
+            Vector distance = target - start;
+            Point control1 = start + distance * 0.34 + curve * 46;
+            Point control2 = start + distance * 0.72 + curve * 25;
+            PathGeometry arrowPath = new PathGeometry(new[]
+            {
+                new PathFigure(start, new PathSegment[]
+                {
+                    new BezierSegment(control1, control2, target, true)
+                }, false)
+            });
+            Path glow = new Path
+            {
+                Data = arrowPath,
+                Stroke = BrushFromRgb(130, 229, 107, 90),
+                StrokeThickness = 10,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            };
+            canvas.Children.Add(glow);
+
+            Path pointer = new Path
+            {
+                Data = arrowPath,
                 Stroke = AccentBrush,
-                StrokeThickness = 3,
-                Opacity = 0.85,
+                StrokeThickness = 4,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = Colors.Black,
+                    BlurRadius = 9,
+                    ShadowDepth = 2,
+                    Opacity = 0.45
+                },
                 IsHitTestVisible = false
             };
             canvas.Children.Add(pointer);
-            AddCircle(canvas, AccentBrush, target.X - 18, target.Y - 18, 36, 0.22);
-            AddCircle(canvas, AccentBrush, target.X - 5, target.Y - 5, 10, 0.95);
+
+            Point headBase = target - direction * 19;
+            Vector headSide = curve * 9;
+            Polygon arrowHead = new Polygon
+            {
+                Points = new PointCollection
+                {
+                    target,
+                    headBase + headSide,
+                    headBase - headSide
+                },
+                Fill = AccentBrush,
+                Stroke = Brushes.White,
+                StrokeThickness = 1.5,
+                IsHitTestVisible = false
+            };
+            canvas.Children.Add(arrowHead);
+
+            Ellipse targetRing = new Ellipse
+            {
+                Width = 38,
+                Height = 38,
+                Fill = BrushFromRgb(130, 229, 107, 42),
+                Stroke = AccentBrush,
+                StrokeThickness = 2,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(targetRing, target.X - targetRing.Width / 2);
+            Canvas.SetTop(targetRing, target.Y - targetRing.Height / 2);
+            canvas.Children.Add(targetRing);
+            AddCircle(canvas, Brushes.White, target.X - 5, target.Y - 5, 10, 0.95);
         }
 
         private string StepLabel()
         {
+            int number;
             switch (_step)
             {
-                case TutorialStep.SelectMinerTool: return "1 / 6";
-                case TutorialStep.PlaceMiner: return "2 / 6";
-                case TutorialStep.WaitForMining: return "3 / 6";
-                case TutorialStep.SelectSmelterTool: return "4 / 6";
-                case TutorialStep.PlaceSmelter: return "5 / 6";
-                case TutorialStep.InspectHub: return "6 / 6";
+                case TutorialStep.SelectMinerTool: number = 1; break;
+                case TutorialStep.PlaceMiner: number = 2; break;
+                case TutorialStep.WaitForMining: number = 3; break;
+                case TutorialStep.SelectSmelterTool: number = 4; break;
+                case TutorialStep.PlaceSmelter: number = 5; break;
+                case TutorialStep.SelectMoveTool: number = 6; break;
+                case TutorialStep.SelectMoveSource: number = 7; break;
+                case TutorialStep.MoveSmelter: number = 8; break;
+                case TutorialStep.SelectConveyorTool: number = 9; break;
+                case TutorialStep.PlaceConveyor: number = 10 + _conveyorIndex; break;
+                case TutorialStep.WaitForTransport: number = 13; break;
+                case TutorialStep.InspectHub: number = 14; break;
                 default: return string.Empty;
             }
+
+            return number + " / 14";
         }
 
         private string StepTitle()
@@ -292,6 +503,12 @@ namespace OOPGames
                 case TutorialStep.WaitForMining: return "Dein Förderer arbeitet";
                 case TutorialStep.SelectSmelterTool: return "Erweitere die Produktion";
                 case TutorialStep.PlaceSmelter: return "Baue eine Schmelze";
+                case TutorialStep.SelectMoveTool: return "Lerne Gebäude zu versetzen";
+                case TutorialStep.SelectMoveSource: return "Wähle die Schmelze aus";
+                case TutorialStep.MoveSmelter: return "Versetze die Schmelze";
+                case TutorialStep.SelectConveyorTool: return "Wähle ein Förderband";
+                case TutorialStep.PlaceConveyor: return "Förderband " + (_conveyorIndex + 1) + " von 3 platzieren";
+                case TutorialStep.WaitForTransport: return "Rohstoffe auf dem Band";
                 case TutorialStep.InspectHub: return "Sieh dir das Hub an";
                 default: return string.Empty;
             }

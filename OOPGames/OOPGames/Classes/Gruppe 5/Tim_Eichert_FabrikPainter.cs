@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
@@ -13,11 +15,21 @@ namespace OOPGames
         private const double HudHoehe = HudZeilenHoehe * 2;
         private const double VollbildSeitenverhaeltnis = 1.3;
 
+        private static readonly Brush HoverPanelBrush = CreateBrush(245, 20, 30, 31);
+        private static readonly Brush HoverAccentBrush = CreateBrush(255, 142, 230, 120);
+
         private readonly G5_WieseHintergrund _wieseHintergrund = new G5_WieseHintergrund();
         private IG5_WeltSpielfeld _hintergrundWelt;
         private Canvas _hintergrundEbene;
         private Canvas _dynamischeEbene;
+        private Canvas _hoverEbene;
         private Canvas _zielCanvas;
+        private IG5_WeltSpielfeld _hoverWelt;
+        private IReadOnlyList<IG5_GebaeudeInfo> _hoverGebaeude;
+        private Border _hoverKarte;
+        private string _hoverName;
+        private Point _letzteMausposition;
+        private bool _hatMausposition;
         private double _hintergrundViewportBreite = -1;
         private double _hintergrundViewportHoehe = -1;
 
@@ -33,6 +45,10 @@ namespace OOPGames
             if (currentField is SatisfactoryFieldView satisfactoryField &&
                 !satisfactoryField.IsGameStarted)
             {
+                _hoverWelt = null;
+                _hoverGebaeude = null;
+                _hatMausposition = false;
+                ClearGebaeudeHover();
                 satisfactoryField.StartScreen.Paint(canvas);
                 return;
             }
@@ -87,15 +103,24 @@ namespace OOPGames
             PasseAnsichtAn(canvas, currentField);
             StelleHintergrundSicher(canvas, currentField);
             _dynamischeEbene.Children.Clear();
+            _hoverWelt = currentField;
+            _hoverGebaeude = fabrikInfo.Gebaeude;
+            long animationTick = currentField is SatisfactoryFieldView satisfactoryField
+                ? satisfactoryField.SimulationTickNumber
+                : 0;
 
             ZeichneVorkommen(_dynamischeEbene, currentField);
 
-            foreach (IG5_GebaeudeInfo gebaeude in fabrikInfo.Gebaeude)
+            foreach (IG5_GebaeudeInfo gebaeude in _hoverGebaeude)
             {
-                ZeichneGebaeude(_dynamischeEbene, currentField, gebaeude);
+                ZeichneGebaeude(_dynamischeEbene, currentField, gebaeude, animationTick);
             }
 
             ZeichneHud(_dynamischeEbene, canvas.ActualWidth, fabrikInfo);
+            if (_hatMausposition)
+            {
+                AktualisiereGebaeudeHover(_letzteMausposition);
+            }
         }
 
         private void StelleHintergrundSicher(Canvas canvas, IG5_WeltSpielfeld welt)
@@ -121,7 +146,6 @@ namespace OOPGames
             }
 
             canvas.Children.Clear();
-            _zielCanvas = canvas;
             _hintergrundViewportBreite = canvas.ActualWidth;
             _hintergrundViewportHoehe = canvas.ActualHeight;
 
@@ -129,6 +153,10 @@ namespace OOPGames
             _dynamischeEbene = ErzeugeEbene(canvas);
             canvas.Children.Add(_hintergrundEbene);
             canvas.Children.Add(_dynamischeEbene);
+            _hoverEbene = ErzeugeEbene(canvas);
+            Canvas.SetZIndex(_hoverEbene, 20);
+            canvas.Children.Add(_hoverEbene);
+            VerbindeMausereignisse(canvas);
 
             if (!welt.TryRasterZuBildschirm(0, 0, out Point ursprung) ||
                 !TryGetKachelGroesse(welt, 0, 0, out double kachelBreite, out double kachelHoehe))
@@ -158,6 +186,167 @@ namespace OOPGames
                 ClipToBounds = true,
                 IsHitTestVisible = false
             };
+        }
+
+        private void VerbindeMausereignisse(Canvas canvas)
+        {
+            if (ReferenceEquals(_zielCanvas, canvas))
+            {
+                return;
+            }
+
+            if (_zielCanvas != null)
+            {
+                _zielCanvas.MouseMove -= Canvas_MouseMove;
+                _zielCanvas.MouseLeave -= Canvas_MouseLeave;
+            }
+
+            _zielCanvas = canvas;
+            _zielCanvas.MouseMove += Canvas_MouseMove;
+            _zielCanvas.MouseLeave += Canvas_MouseLeave;
+        }
+
+        private void Canvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!ReferenceEquals(sender, _zielCanvas))
+            {
+                return;
+            }
+
+            _letzteMausposition = e.GetPosition(_zielCanvas);
+            _hatMausposition = true;
+            AktualisiereGebaeudeHover(_letzteMausposition);
+        }
+
+        private void Canvas_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (!ReferenceEquals(sender, _zielCanvas))
+            {
+                return;
+            }
+
+            _hatMausposition = false;
+            ClearGebaeudeHover();
+        }
+
+        private void AktualisiereGebaeudeHover(Point mausposition)
+        {
+            if (_hoverWelt == null || _hoverGebaeude == null || _hoverEbene == null ||
+                !_hoverWelt.TryBildschirmZuRaster(
+                    (int)mausposition.X,
+                    (int)mausposition.Y,
+                    out int x,
+                    out int y))
+            {
+                ClearGebaeudeHover();
+                return;
+            }
+
+            IG5_GebaeudeInfo gebaeude = null;
+            foreach (IG5_GebaeudeInfo kandidat in _hoverGebaeude)
+            {
+                if (x >= kandidat.X && x < kandidat.X + kandidat.Breite &&
+                    y >= kandidat.Y && y < kandidat.Y + kandidat.Hoehe)
+                {
+                    gebaeude = kandidat;
+                    break;
+                }
+            }
+
+            if (gebaeude == null || string.IsNullOrWhiteSpace(gebaeude.Name))
+            {
+                ClearGebaeudeHover();
+                return;
+            }
+
+            string name = GebaeudeName(gebaeude.Typ);
+            if (_hoverKarte == null || !string.Equals(_hoverName, name, StringComparison.Ordinal))
+            {
+                _hoverName = name;
+                _hoverKarte = ErzeugeHoverKarte(_hoverName);
+                _hoverEbene.Children.Clear();
+                _hoverEbene.Children.Add(_hoverKarte);
+            }
+
+            PlatziereHoverKarte(mausposition);
+        }
+
+        private Border ErzeugeHoverKarte(string name)
+        {
+            double width = Math.Max(140, Math.Min(280, _zielCanvas.ActualWidth - 16));
+            StackPanel content = new StackPanel();
+            content.Children.Add(new TextBlock
+            {
+                Text = "GEBÄUDE",
+                Foreground = HoverAccentBrush,
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 3)
+            });
+            content.Children.Add(new TextBlock
+            {
+                Text = name,
+                Foreground = Brushes.White,
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 20,
+                FontWeight = FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap
+            });
+
+            Border card = new Border
+            {
+                Width = width,
+                Padding = new Thickness(15, 11, 15, 11),
+                Background = HoverPanelBrush,
+                BorderBrush = HoverAccentBrush,
+                BorderThickness = new Thickness(1.5),
+                CornerRadius = new CornerRadius(12),
+                Child = content,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = Colors.Black,
+                    BlurRadius = 16,
+                    ShadowDepth = 3,
+                    Opacity = 0.45
+                },
+                IsHitTestVisible = false
+            };
+            card.Measure(new Size(width, double.PositiveInfinity));
+            card.Arrange(new Rect(new Point(0, 0), card.DesiredSize));
+            return card;
+        }
+
+        private void PlatziereHoverKarte(Point mausposition)
+        {
+            double width = _hoverKarte.DesiredSize.Width;
+            double height = _hoverKarte.DesiredSize.Height;
+            double left = mausposition.X + 18;
+            double top = mausposition.Y + 18;
+            if (left + width > _zielCanvas.ActualWidth - 8)
+            {
+                left = mausposition.X - width - 18;
+            }
+            if (top + height > _zielCanvas.ActualHeight - 8)
+            {
+                top = mausposition.Y - height - 14;
+            }
+
+            left = Math.Max(8, Math.Min(left, _zielCanvas.ActualWidth - width - 8));
+            top = Math.Max(8, Math.Min(top, _zielCanvas.ActualHeight - height - 8));
+            Canvas.SetLeft(_hoverKarte, left);
+            Canvas.SetTop(_hoverKarte, top);
+        }
+
+        private void ClearGebaeudeHover()
+        {
+            if (_hoverEbene != null)
+            {
+                _hoverEbene.Children.Clear();
+            }
+
+            _hoverKarte = null;
+            _hoverName = null;
         }
 
         private static bool TryGetKachelGroesse(
@@ -254,7 +443,8 @@ namespace OOPGames
         private static void ZeichneGebaeude(
             Canvas canvas,
             IG5_WeltSpielfeld welt,
-            IG5_GebaeudeInfo gebaeude)
+            IG5_GebaeudeInfo gebaeude,
+            long animationTick)
         {
             if (!welt.TryRasterZuBildschirm(gebaeude.X, gebaeude.Y, out Point position) ||
                 !TryGetKachelGroesse(welt, gebaeude.X, gebaeude.Y, out double kachelBreite, out double kachelHoehe))
@@ -269,13 +459,43 @@ namespace OOPGames
                 gebaeude.Level,
                 breite,
                 hoehe);
+            bool conveyorVertical = false;
+            bool conveyorReversed = false;
+            if (gebaeude.Typ == G5_FabrikGebaeudeTyp.Laufband &&
+                welt is SatisfactoryFieldView satisfactoryField &&
+                satisfactoryField.TryGetConveyorFlow(
+                    gebaeude.X,
+                    gebaeude.Y,
+                    out conveyorVertical,
+                    out conveyorReversed) &&
+                conveyorVertical)
+            {
+                abbildung.RenderTransform = new RotateTransform(90, breite / 2, hoehe / 2);
+            }
+
             Canvas.SetLeft(abbildung, position.X);
             Canvas.SetTop(abbildung, position.Y);
             canvas.Children.Add(abbildung);
 
+            if (gebaeude.Typ == G5_FabrikGebaeudeTyp.Laufband &&
+                gebaeude.Status == G5_BuildingStatus.Working)
+            {
+                ZeichneTransportgut(
+                    canvas,
+                    position,
+                    breite,
+                    hoehe,
+                    animationTick,
+                    conveyorVertical,
+                    conveyorReversed);
+            }
+
             string status = gebaeude.Typ == G5_FabrikGebaeudeTyp.Hub
                 ? "Lager"
-                : StatusText(gebaeude.Status);
+                : gebaeude.Typ == G5_FabrikGebaeudeTyp.Laufband &&
+                    gebaeude.Status == G5_BuildingStatus.Working
+                    ? "Transport"
+                    : StatusText(gebaeude.Status);
             double statusHoehe = Math.Min(15, hoehe * 0.24);
             Rectangle statusHintergrund = new Rectangle
             {
@@ -290,7 +510,7 @@ namespace OOPGames
 
             TextBlock text = new TextBlock
             {
-                Text = GebaeudeKurzname(gebaeude.Typ) + " · " + status,
+                Text = status,
                 Foreground = Brushes.White,
                 FontWeight = FontWeights.Bold,
                 FontSize = Math.Max(6, Math.Min(9, statusHoehe * 0.65)),
@@ -333,32 +553,70 @@ namespace OOPGames
             canvas.Children.Add(levelText);
         }
 
-        private static string GebaeudeKurzname(G5_FabrikGebaeudeTyp typ)
+        private static void ZeichneTransportgut(
+            Canvas canvas,
+            Point position,
+            double width,
+            double height,
+            long animationTick,
+            bool isVertical,
+            bool isReversed)
+        {
+            double itemSize = Math.Max(3, Math.Min(8, Math.Min(width, height) * 0.28));
+            double fraction = (animationTick % 8) / 7.0;
+            if (isReversed)
+            {
+                fraction = 1 - fraction;
+            }
+
+            Rectangle item = new Rectangle
+            {
+                Width = itemSize,
+                Height = itemSize * 0.7,
+                Fill = new SolidColorBrush(Color.FromRgb(255, 205, 76)),
+                Stroke = Brushes.White,
+                StrokeThickness = 0.6,
+                RadiusX = 1.5,
+                RadiusY = 1.5,
+                IsHitTestVisible = false
+            };
+            double itemX = isVertical
+                ? position.X + width * 0.43
+                : position.X + 2 + fraction * Math.Max(0, width - itemSize - 4);
+            double itemY = isVertical
+                ? position.Y + 2 + fraction * Math.Max(0, height - itemSize - 4)
+                : position.Y + height * 0.43;
+            Canvas.SetLeft(item, itemX);
+            Canvas.SetTop(item, itemY);
+            canvas.Children.Add(item);
+        }
+
+        private static string GebaeudeName(G5_FabrikGebaeudeTyp typ)
         {
             switch (typ)
             {
                 case G5_FabrikGebaeudeTyp.Hub:
-                    return "HUB";
+                    return "Hub";
                 case G5_FabrikGebaeudeTyp.Foerderer:
-                    return "MINER";
+                    return "Förderer";
                 case G5_FabrikGebaeudeTyp.Schmelze:
-                    return "SCHMELZE";
+                    return "Schmelze";
                 case G5_FabrikGebaeudeTyp.Konstruktor:
-                    return "KONSTR.";
+                    return "Konstruktor";
                 case G5_FabrikGebaeudeTyp.Assembler:
-                    return "ASSEMB.";
+                    return "Assembler";
                 case G5_FabrikGebaeudeTyp.Verbrennungsgenerator:
-                    return "GENERATOR";
+                    return "Verbrennungsgenerator";
                 case G5_FabrikGebaeudeTyp.Strommast:
-                    return "STROMMAST";
+                    return "Strommast";
                 case G5_FabrikGebaeudeTyp.Laufband:
-                    return "LAUFBAND";
+                    return "Förderband";
                 case G5_FabrikGebaeudeTyp.Splitter:
-                    return "SPLITTER";
+                    return "Splitter";
                 case G5_FabrikGebaeudeTyp.Merger:
-                    return "MERGER";
+                    return "Merger";
                 default:
-                    throw new InvalidOperationException("Unbekannter Gebäudetyp in der Beschriftung.");
+                    throw new InvalidOperationException("Unbekannter Gebäudetyp in der Bezeichnung.");
             }
         }
 
@@ -378,16 +636,33 @@ namespace OOPGames
                     return "Vorkommen leer";
                 case G5_BuildingStatus.WaitingForRecipe:
                     return "Kein Rezept";
+                case G5_BuildingStatus.WaitingForConnection:
+                    return "Wartet auf Verbindung";
                 default:
                     return "Bereit";
             }
         }
 
+        private static string WerkzeugName(G5_Bauwerkzeug werkzeug)
+        {
+            switch (werkzeug)
+            {
+                case G5_Bauwerkzeug.Foerderer:
+                    return "Förderer";
+                case G5_Bauwerkzeug.Schmelze:
+                    return "Schmelze";
+                case G5_Bauwerkzeug.Foerderband:
+                    return "Förderband";
+                case G5_Bauwerkzeug.GebaeudeVerschieben:
+                    return "Verschieben";
+                default:
+                    return "Keines";
+            }
+        }
+
         private static void ZeichneHud(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)
         {
-            string werkzeug = info.AktuellesWerkzeug == G5_Bauwerkzeug.Keines
-                ? "Keines"
-                : info.AktuellesWerkzeug.ToString();
+            string werkzeug = WerkzeugName(info.AktuellesWerkzeug);
             Rectangle hintergrund = new Rectangle
             {
                 Width = Math.Max(0, viewportBreite),
@@ -398,11 +673,10 @@ namespace OOPGames
             Canvas.SetTop(hintergrund, 0);
             canvas.Children.Add(hintergrund);
 
-            ZeichneHudZeile(
-                canvas,
-                viewportBreite,
-                "F: Förderer platzieren    S: Schmelze platzieren    Esc: Werkzeug abwählen    Mausklick: Gebäude platzieren",
-                0);
+            string steuerung = info is SatisfactoryFieldView
+                ? "F: Förderer    S: Schmelze    B: Förderband    M: Gebäude verschieben    Esc: Werkzeug abwählen"
+                : "F: Förderer platzieren    S: Schmelze platzieren    Esc: Werkzeug abwählen    Mausklick: Gebäude platzieren";
+            ZeichneHudZeile(canvas, viewportBreite, steuerung, 0);
             ZeichneHudZeile(
                 canvas,
                 viewportBreite,
@@ -428,6 +702,13 @@ namespace OOPGames
             Canvas.SetLeft(zeile, 0);
             Canvas.SetTop(zeile, y);
             canvas.Children.Add(zeile);
+        }
+
+        private static Brush CreateBrush(byte alpha, byte red, byte green, byte blue)
+        {
+            SolidColorBrush brush = new SolidColorBrush(Color.FromArgb(alpha, red, green, blue));
+            brush.Freeze();
+            return brush;
         }
     }
 }

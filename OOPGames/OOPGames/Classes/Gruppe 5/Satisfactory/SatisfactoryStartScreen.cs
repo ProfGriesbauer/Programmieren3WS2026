@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -179,16 +180,16 @@ namespace OOPGames
             AddText(canvas, "Rohstoffe rein.\nProduktion an.", Brushes.White,
                 left + 26, top + 70, width - 52, 100, 35, FontWeights.Bold);
             AddText(canvas,
-                "Setze Förderer auf Erzvorkommen, errichte Schmelzen und lass deine Produktion automatisch laufen.",
+                "Baue Förderer und Schmelzen, verbinde sie mit Förderbändern und beobachte den Rohstofftransport.",
                 MutedBrush, left + 28, top + 185, width - 206, 68, 13);
             DrawFactoryArt(canvas, left + width - 166, top + 170);
 
             DrawStep(canvas, left + 28, top + 280, "01", "Förderer",
                 "F drücken und auf ein Erzvorkommen klicken.");
-            DrawStep(canvas, left + 28, top + 350, "02", "Schmelze",
-                "S drücken und auf freies Gelände klicken.");
-            DrawStep(canvas, left + 28, top + 420, "03", "Automatische Produktion",
-                "Erz und Barren werden über das Hub transportiert.");
+            DrawStep(canvas, left + 28, top + 350, "02", "Förderband",
+                "B drücken und eine Verbindung zur Schmelze bauen.");
+            DrawStep(canvas, left + 28, top + 420, "03", "Transport & Umbau",
+                "Rohstoffe bewegen sich sichtbar; mit M versetzt du Gebäude.");
         }
 
         private void DrawControlPanel(
@@ -274,16 +275,18 @@ namespace OOPGames
             AddText(canvas, "Diese Einführung ist verpflichtend und nicht überspringbar:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
-            DrawStep(canvas, left + 30, top + 170, "01", "Förderer bauen",
+            DrawStep(canvas, left + 30, top + 155, "01", "Förderer bauen",
                 "Drücke F und platziere ihn auf dem markierten Eisenerzvorkommen.");
-            DrawStep(canvas, left + 30, top + 250, "02", "Erz abbauen",
-                "Warte, bis der Förderer automatisch Erz abgebaut hat.");
-            DrawStep(canvas, left + 30, top + 330, "03", "Schmelze bauen",
+            DrawStep(canvas, left + 30, top + 225, "02", "Schmelze bauen",
                 "Drücke S und platziere sie auf dem markierten freien Feld.");
-            DrawStep(canvas, left + 30, top + 425, "04", "Hub ansehen",
-                "Klicke auf das markierte Hub. Danach ist freies Bauen möglich.");
+            DrawStep(canvas, left + 30, top + 295, "03", "Gebäude versetzen",
+                "Drücke M, klicke das Gebäude und danach das Ziel.");
+            DrawStep(canvas, left + 30, top + 365, "04", "Förderbänder",
+                "Drücke B und verbinde Förderer und Schmelze über freie Nachbarfelder.");
+            AddText(canvas, "Der Mentor zeigt dir alle Schritte. Bei aktivem Transport siehst du die Rohstoffe auf dem Band.",
+                MutedBrush, left + 30, top + 440, width - 60, 40, 10);
 
-            DrawButton(canvas, left + 28, top + height - 78, width - 56, 48,
+            DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
                 "SPIEL STARTEN", " ", AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
         }
 
@@ -371,7 +374,7 @@ namespace OOPGames
 
         private void DrawFooter(Canvas canvas, double left, double top, double width)
         {
-            AddText(canvas, "BEDIENUNG IM SPIEL:  F Förderer   ·   S Schmelze   ·   Esc Werkzeug abwählen",
+            AddText(canvas, "BEDIENUNG IM SPIEL:  F Förderer   ·   S Schmelze   ·   B Förderband   ·   M Gebäude versetzen",
                 MutedBrush, left, top, width, 16, 10, FontWeights.Normal, TextAlignment.Center);
         }
 
@@ -522,6 +525,29 @@ namespace OOPGames
         internal SatisfactoryStartScreen StartScreen { get { return _startScreen; } }
         internal SatisfactoryGameMentor Mentor { get { return _mentor; } }
         internal Canvas MentorOverlay { get; }
+        internal long SimulationTickNumber { get { return _field.Simulation.TickNumber; } }
+
+        internal bool TryGetConveyorFlow(int x, int y, out bool isVertical, out bool isReversed)
+        {
+            foreach (G5_Conveyor conveyor in _field.InterneGebaeude.OfType<G5_Conveyor>())
+            {
+                if (conveyor.Position.X != x || conveyor.Position.Y != y ||
+                    !(conveyor.Destination is G5_Building destination))
+                {
+                    continue;
+                }
+
+                int deltaX = destination.Position.X - conveyor.Position.X;
+                int deltaY = destination.Position.Y - conveyor.Position.Y;
+                isVertical = Math.Abs(deltaY) > Math.Abs(deltaX);
+                isReversed = isVertical ? deltaY < 0 : deltaX < 0;
+                return true;
+            }
+
+            isVertical = false;
+            isReversed = false;
+            return false;
+        }
 
         int IG5_WeltSpielfeld.Breite => ((IG5_WeltSpielfeld)_field).Breite;
         int IG5_WeltSpielfeld.Hoehe => ((IG5_WeltSpielfeld)_field).Hoehe;

@@ -134,7 +134,7 @@ namespace OOPGames
         }
 
         public abstract string Name { get; }
-        public G5_GridPosition Position { get; }
+        public G5_GridPosition Position { get; private set; }
         public int Width { get; }
         public int Height { get; }
         public int Level { get; private set; } = 1;
@@ -168,6 +168,11 @@ namespace OOPGames
         public virtual int CountOf(G5_Item item)
         {
             return 0;
+        }
+
+        internal void MoveTo(G5_GridPosition position)
+        {
+            Position = position;
         }
 
         public void Upgrade(G5_BuildingUpgrade upgrade)
@@ -262,7 +267,7 @@ namespace OOPGames
     }
     public sealed class G5_Miner : G5_Building
     {
-        private readonly G5_ResourceDeposit _deposit;
+        private G5_ResourceDeposit _deposit;
         private readonly G5_ItemBuffer _output;
         private int _cycleTicks;
         private int _ticksRemaining;
@@ -292,6 +297,11 @@ namespace OOPGames
         public long? RemainingDeposit => _deposit.RemainingAmount;
         public IReadOnlyDictionary<G5_Item, int> OutputContents => _output.Contents;
         public override IReadOnlyDictionary<G5_Item, int> TransferableContents => _output.Contents;
+
+        internal void SetDeposit(G5_ResourceDeposit deposit)
+        {
+            _deposit = deposit ?? throw new ArgumentNullException(nameof(deposit));
+        }
 
         public void Tick()
         {
