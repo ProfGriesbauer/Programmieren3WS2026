@@ -18,6 +18,8 @@ namespace OOPGames
         private readonly ArenaDebugRenderer _debugRenderer = new ArenaDebugRenderer();
         private readonly ArenaProgressionMenuRenderer _progressionMenuRenderer =
             new ArenaProgressionMenuRenderer();
+        private readonly ArenaWeaponWheelRenderer _weaponWheelRenderer =
+            new ArenaWeaponWheelRenderer();
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
         private Canvas _zoomInputCanvas;
@@ -176,7 +178,8 @@ namespace OOPGames
                 _playerAnimator = CreateAnimator(_selectedAnimationProfile);
                 _playerAnimatorProfile = _selectedAnimationProfile;
             }
-            BitmapSource sprite = _playerAnimator.GetFrame(animationName);
+            BitmapSource sprite = _playerAnimator.GetFrame(
+                animationName, field.GameTimeScale);
             double spriteHeight = field.Player.Size * 2;
             double spriteWidth = spriteHeight * sprite.PixelWidth / sprite.PixelHeight;
             Image player = new Image
@@ -208,7 +211,7 @@ namespace OOPGames
                 }
 
                 BitmapSource enemyFrame = _enemyAnimator.GetFrame(
-                    GetEnemyAnimationName(enemy));
+                    GetEnemyAnimationName(enemy), field.GameTimeScale);
                 double enemyHeight = enemy.Size * 2;
                 double enemyWidth = enemyHeight * enemyFrame.PixelWidth / enemyFrame.PixelHeight;
                 Image enemyImage = new Image
@@ -242,6 +245,10 @@ namespace OOPGames
                 field.GetAttackCooldownRemaining(field.Player),
                 field.Progression, field.KeyBindings);
             _debugRenderer.PaintPanels(canvas, field, width, height);
+            if (field.IsWeaponWheelOpen)
+            {
+                _weaponWheelRenderer.Paint(canvas, field, width, height);
+            }
             if (!field.IsGameStarted)
             {
                 PaintStartMenu(canvas, field, width, height, true, field.IsGameOver);
@@ -306,8 +313,10 @@ namespace OOPGames
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
+                _zoomInputWindow.PreviewKeyUp -= OnZoomKeyUp;
                 _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
                 _zoomInputWindow.PreviewMouseMove -= OnAimMouseMove;
+                _zoomInputWindow.Deactivated -= OnZoomWindowDeactivated;
                 _zoomInputWindow.Closed -= OnZoomWindowClosed;
             }
 
@@ -318,8 +327,10 @@ namespace OOPGames
             {
                 _zoomInputCanvas.PreviewMouseDown += OnAttackMouseDown;
                 _zoomInputWindow.PreviewKeyDown += OnZoomKeyDown;
+                _zoomInputWindow.PreviewKeyUp += OnZoomKeyUp;
                 _zoomInputWindow.PreviewMouseWheel += OnZoomMouseWheel;
                 _zoomInputWindow.PreviewMouseMove += OnAimMouseMove;
+                _zoomInputWindow.Deactivated += OnZoomWindowDeactivated;
                 _zoomInputWindow.Closed += OnZoomWindowClosed;
             }
         }
@@ -360,6 +371,11 @@ namespace OOPGames
             if (_zoomInputField == null || !_zoomInputField.IsGameStarted
                 || !_zoomInputField.Player.IsAlive || _zoomInputCanvas == null)
             {
+                return;
+            }
+            if (_zoomInputField.IsWeaponWheelOpen)
+            {
+                e.Handled = true;
                 return;
             }
 
@@ -466,6 +482,19 @@ namespace OOPGames
             }
         }
 
+        private void OnZoomKeyUp(object sender, KeyEventArgs e)
+        {
+            if (_zoomInputField != null
+                && _zoomInputField.HandleKeyUp(e.Key))
+            {
+                if (_zoomInputCanvas != null)
+                {
+                    _zoomInputCanvas.Tag = null;
+                }
+                e.Handled = true;
+            }
+        }
+
         private void OnZoomWindowClosed(object sender, EventArgs e)
         {
             if (_zoomInputCanvas != null)
@@ -475,12 +504,26 @@ namespace OOPGames
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
+                _zoomInputWindow.PreviewKeyUp -= OnZoomKeyUp;
                 _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
                 _zoomInputWindow.PreviewMouseMove -= OnAimMouseMove;
+                _zoomInputWindow.Deactivated -= OnZoomWindowDeactivated;
                 _zoomInputWindow.Closed -= OnZoomWindowClosed;
                 _zoomInputWindow = null;
                 _zoomInputField = null;
                 _zoomInputCanvas = null;
+            }
+        }
+
+        private void OnZoomWindowDeactivated(object sender, EventArgs e)
+        {
+            if (_zoomInputField != null && _zoomInputField.IsWeaponWheelOpen)
+            {
+                _zoomInputField.CancelWeaponWheel();
+                if (_zoomInputCanvas != null)
+                {
+                    _zoomInputCanvas.Tag = null;
+                }
             }
         }
 

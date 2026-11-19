@@ -19,6 +19,7 @@ namespace OOPGames
         public const double PlayerAttackRange = 80;
         public const double PlayerAttackHalfAngleRadians = Math.PI / 6;
         public const int PlayerAttackDamage = 10;
+        public const double WeaponWheelSlowMotionScale = 0.15;
         private const double EnemySpawnVisibilityMargin = 50;
         private const int EnemySpawnPositionAttemptLimit = 10000;
         private readonly List<PursuerEnemy> _enemies = new List<PursuerEnemy>();
@@ -42,6 +43,22 @@ namespace OOPGames
             get { return _combatSystem.GetActiveVisuals(); }
         }
         public bool IsGameStarted { get; private set; }
+        public bool IsWeaponWheelOpen { get; private set; }
+        public int WeaponWheelSelectionIndex
+        {
+            get
+            {
+                return ArenaWeaponWheel.GetSelectionIndex(
+                    AimDirectionX, AimDirectionY);
+            }
+        }
+        public double GameTimeScale
+        {
+            get
+            {
+                return IsWeaponWheelOpen ? WeaponWheelSlowMotionScale : 1;
+            }
+        }
         public bool HasActiveGame { get; private set; }
         public bool IsGameOver { get { return HasActiveGame && !Player.IsAlive; } }
         public bool ShowDamageRanges { get; private set; }
@@ -159,6 +176,7 @@ namespace OOPGames
             AimDirectionX = 0;
             AimDirectionY = 1;
             IsGameStarted = false;
+            IsWeaponWheelOpen = false;
             HasActiveGame = false;
         }
 
@@ -183,6 +201,7 @@ namespace OOPGames
 
         public void StartGame()
         {
+            IsWeaponWheelOpen = false;
             IsGameStarted = true;
             HasActiveGame = true;
         }
@@ -222,6 +241,7 @@ namespace OOPGames
 
         public void ReturnToStartMenu()
         {
+            IsWeaponWheelOpen = false;
             IsGameStarted = false;
         }
 
@@ -231,7 +251,7 @@ namespace OOPGames
             return painter is PainterG9;
         }
 
-        public void UpdatePlayerPosition()
+        public void UpdatePlayerPosition(double speedScale = 1)
         {
             if (!IsGameStarted)
             {
@@ -249,7 +269,7 @@ namespace OOPGames
             if (_keyBindings.IsDown(ArenaAction.MoveRight) || Keyboard.IsKeyDown(Key.Right)) directionX += 1;
 
             Rect movementBounds = MovementBounds;
-            Player.Move(directionX, directionY, movementBounds);
+            Player.Move(directionX, directionY, movementBounds, speedScale);
             if (OverlapsAnotherEntity(Player))
             {
                 Player.PositionX = previousX;
@@ -258,7 +278,7 @@ namespace OOPGames
             }
         }
 
-        public void UpdateEnemyPositions()
+        public void UpdateEnemyPositions(double speedScale = 1)
         {
             if (!IsGameStarted)
             {
@@ -275,7 +295,7 @@ namespace OOPGames
 
                 double previousX = enemy.PositionX;
                 double previousY = enemy.PositionY;
-                enemy.UpdateBehavior(this);
+                enemy.UpdateBehavior(this, speedScale);
                 if (OverlapsAnotherEntity(enemy))
                 {
                     enemy.PositionX = previousX;
@@ -287,6 +307,7 @@ namespace OOPGames
 
             if (!Player.IsAlive)
             {
+                IsWeaponWheelOpen = false;
                 IsGameStarted = false;
             }
         }
@@ -301,6 +322,7 @@ namespace OOPGames
             _combatSystem.Update(deltaSeconds, GetCombatEntities());
             if (!Player.IsAlive)
             {
+                IsWeaponWheelOpen = false;
                 IsGameStarted = false;
             }
         }
@@ -598,8 +620,20 @@ namespace OOPGames
                 return false;
             }
 
+            if (IsGameStarted && Player.IsAlive
+                && _keyBindings.MatchesKey(ArenaAction.WeaponWheel, key))
+            {
+                IsWeaponWheelOpen = true;
+                return true;
+            }
+
             if (key == _keyBindings.GetKey(ArenaAction.Pause))
             {
+                if (IsWeaponWheelOpen)
+                {
+                    IsWeaponWheelOpen = false;
+                    return true;
+                }
                 if (IsGameStarted)
                 {
                     ReturnToStartMenu();
@@ -610,6 +644,11 @@ namespace OOPGames
                     ContinueGame();
                     return true;
                 }
+            }
+
+            if (IsWeaponWheelOpen)
+            {
+                return true;
             }
 
             if (IsGameStarted)
@@ -675,6 +714,25 @@ namespace OOPGames
                 return true;
             }
             return false;
+        }
+
+        public bool HandleKeyUp(Key key)
+        {
+            if (!IsWeaponWheelOpen
+                || !_keyBindings.MatchesKey(ArenaAction.WeaponWheel, key))
+            {
+                return false;
+            }
+
+            int selectedIndex = WeaponWheelSelectionIndex;
+            SelectPlayerWeapon(ArenaWeaponWheel.Weapons[selectedIndex]);
+            IsWeaponWheelOpen = false;
+            return true;
+        }
+
+        public void CancelWeaponWheel()
+        {
+            IsWeaponWheelOpen = false;
         }
 
         // Handle zoom from the routed key event so short key presses are not missed between ticks.

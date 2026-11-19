@@ -145,8 +145,21 @@ namespace OOPGames
 
         public void Move(double directionX, double directionY, Rect movementBounds)
         {
+            Move(directionX, directionY, movementBounds, 1);
+        }
+
+        public void Move(
+            double directionX, double directionY, Rect movementBounds,
+            double speedScale)
+        {
+            if (double.IsNaN(speedScale) || double.IsInfinity(speedScale)
+                || speedScale < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(speedScale));
+            }
+
             double length = Math.Sqrt(directionX * directionX + directionY * directionY);
-            double speed = EffectiveSpeed;
+            double speed = EffectiveSpeed * speedScale;
             if (length == 0 || speed == 0 || !IsAlive)
             {
                 IsMoving = false;

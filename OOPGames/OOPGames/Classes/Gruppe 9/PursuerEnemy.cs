@@ -81,7 +81,8 @@ namespace OOPGames
 
             double remainingSeconds = (double)remainingTicks / Stopwatch.Frequency;
             double travel = EffectiveSpeed * WanderSpeedMultiplier
-                * remainingSeconds / GameTickDurationSeconds;
+                * remainingSeconds / GameTickDurationSeconds
+                * field.GameTimeScale;
             return ClampToMovementBounds(currentPosition,
                 _wanderDirectionX, _wanderDirectionY, travel);
         }
@@ -113,6 +114,11 @@ namespace OOPGames
 
         public override void UpdateBehavior(ArenaField field)
         {
+            UpdateBehavior(field, 1);
+        }
+
+        public override void UpdateBehavior(ArenaField field, double speedScale)
+        {
             if (field == null)
             {
                 throw new ArgumentNullException(nameof(field));
@@ -121,7 +127,7 @@ namespace OOPGames
             PlayerCharacter player = field.Player;
             if (!IsAlive || !player.IsAlive)
             {
-                Move(0, 0, ArenaField.MovementBounds);
+                Move(0, 0, ArenaField.MovementBounds, speedScale);
                 return;
             }
 
@@ -133,7 +139,7 @@ namespace OOPGames
             if (distance > CurrentSightRange)
             {
                 _hasSeenPlayer = false;
-                UpdateWanderBehavior(movementBounds);
+                UpdateWanderBehavior(movementBounds, speedScale);
                 return;
             }
 
@@ -141,28 +147,30 @@ namespace OOPGames
             FacePlayer(offsetX, offsetY);
             if (EffectiveSpeed == 0)
             {
-                Move(0, 0, movementBounds);
+                Move(0, 0, movementBounds, speedScale);
                 return;
             }
 
             double stoppingDistance = GetMinimumSeparation(player);
             if (distance <= stoppingDistance)
             {
-                Move(0, 0, movementBounds);
+                Move(0, 0, movementBounds, speedScale);
                 return;
             }
 
             double travel = Math.Min(currentSpeed, distance - stoppingDistance);
             Move(offsetX / distance * travel / currentSpeed,
-                offsetY / distance * travel / currentSpeed, movementBounds);
+                offsetY / distance * travel / currentSpeed, movementBounds,
+                speedScale);
             FacePlayer(offsetX, offsetY);
         }
 
-        private void UpdateWanderBehavior(System.Windows.Rect movementBounds)
+        private void UpdateWanderBehavior(
+            System.Windows.Rect movementBounds, double speedScale)
         {
             if (EffectiveSpeed == 0)
             {
-                Move(0, 0, movementBounds);
+                Move(0, 0, movementBounds, speedScale);
                 return;
             }
 
@@ -174,12 +182,14 @@ namespace OOPGames
             double previousX = PositionX;
             double previousY = PositionY;
             Move(_wanderDirectionX * WanderSpeedMultiplier,
-                _wanderDirectionY * WanderSpeedMultiplier, movementBounds);
+                _wanderDirectionY * WanderSpeedMultiplier, movementBounds,
+                speedScale);
             if (PositionX == previousX && PositionY == previousY)
             {
                 TurnTowardArenaCenter();
                 Move(_wanderDirectionX * WanderSpeedMultiplier,
-                    _wanderDirectionY * WanderSpeedMultiplier, movementBounds);
+                    _wanderDirectionY * WanderSpeedMultiplier, movementBounds,
+                    speedScale);
             }
         }
 
