@@ -33,6 +33,10 @@ namespace OOPGames
         private const double TrackBottomRatio = 0.94;
         private const double ObjectTrackDepthRatio = 0.82;
         private const double ObstaclePreviewDistance = 520;
+        private const double RunnerWorldZ = 0.55;
+        private const double WorldUnitsPerDistance = 0.1;
+        private const double CarWorldWidth = 1.84;
+        private const double CarRoofHeight = 2.42;
 
         public string Name { get { return "Gruppe 2 - Subway Surfer Painter"; } }
 
@@ -86,7 +90,7 @@ namespace OOPGames
                 ClipToBounds = true,
                 IsHitTestVisible = false,
                 Camera = new PerspectiveCamera(
-                    new Point3D(0, 2.2, 7),
+                    new Point3D(0, 2.2 + RunnerGroundHeight(field), 7),
                     new Vector3D(0, -0.10, -1),
                     new Vector3D(0, 1, 0),
                     55)
@@ -119,7 +123,7 @@ namespace OOPGames
                 else
                 {
                     AddWorldModel(viewport, CreateUpgradeBoxModel(reward.Upgrade),
-                        LaneWorldX(reward.Lane), 0.55, -reward.Distance * 0.1, 0.65);
+                        LaneWorldX(reward.Lane), 0.55, WorldZ(reward.Distance), 0.65);
                 }
             }
 
@@ -178,17 +182,18 @@ namespace OOPGames
             Viewport3D viewport, Gruppe2_SubwayObstacle obstacle)
         {
             double x = LaneWorldX(obstacle.Lane);
-            double z = -obstacle.Distance * 0.1;
+            double z = WorldZ(obstacle.Distance);
             switch (obstacle.Kind)
             {
                 case Gruppe2_SubwayObstacleKind.Train:
-                    AddWorldModel(viewport, TrainModel, x, 0, z, 1);
+                    AddTrainPart(viewport, TrainModel, obstacle, false);
                     break;
                 case Gruppe2_SubwayObstacleKind.CargoWagon:
-                    AddWorldModel(viewport, CargoWagonModel, x, 0.78, z, 0.82);
+                    AddTrainPart(viewport, CargoWagonModel, obstacle, false);
                     break;
                 case Gruppe2_SubwayObstacleKind.CargoRamp:
-                    AddWorldModel(viewport, CargoRampModel, x, 0, z, 1);
+                    // The ramp model rises towards +z; mirrored it rises away from the runner.
+                    AddTrainPart(viewport, CargoRampModel, obstacle, true);
                     break;
                 case Gruppe2_SubwayObstacleKind.Bush:
                     AddWorldModel(viewport, BushModel, x, 0.78, z, 1.05);
@@ -204,6 +209,40 @@ namespace OOPGames
                         x, 0, z, 1);
                     break;
             }
+        }
+
+        /// <summary>
+        /// Fits a train model exactly into the space the rules reserve for it:
+        /// centred between the rails of its lane, standing on the track, from its near end
+        /// to its far end (Gruppe2_SubwayTrainLayout). All cars share one roof height,
+        /// so the runner can walk from wagon to locomotive.
+        /// </summary>
+        private static void AddTrainPart(
+            Viewport3D viewport, Model3D model, Gruppe2_SubwayObstacle obstacle, bool mirrorDepth)
+        {
+            double nearZ = WorldZ(Gruppe2_SubwayTrainLayout.NearEnd(obstacle));
+            double farZ = WorldZ(Gruppe2_SubwayTrainLayout.FarEnd(obstacle));
+            Rect3D bounds = model.Bounds;
+            Transform3DGroup transform = new Transform3DGroup();
+            transform.Children.Add(new TranslateTransform3D(
+                -(bounds.X + bounds.SizeX / 2), -bounds.Y, -(bounds.Z + bounds.SizeZ / 2)));
+            transform.Children.Add(new ScaleTransform3D(
+                CarWorldWidth / bounds.SizeX,
+                CarRoofHeight / bounds.SizeY,
+                (nearZ - farZ) / bounds.SizeZ * (mirrorDepth ? -1 : 1)));
+            transform.Children.Add(new TranslateTransform3D(
+                LaneWorldX(obstacle.Lane), 0, (nearZ + farZ) / 2));
+            viewport.Children.Add(new ModelVisual3D { Content = model, Transform = transform });
+        }
+
+        private static double WorldZ(double distance)
+        {
+            return RunnerWorldZ - distance * WorldUnitsPerDistance;
+        }
+
+        private static double RunnerGroundHeight(IGruppe2_SubwayField field)
+        {
+            return field.Level == Gruppe2_SubwayLevel.TrainRoof ? CarRoofHeight : 0;
         }
 
         private static Dictionary<Gruppe2_SubwayObstacleKind, Model3DGroup> CreateObstacleModels()
@@ -226,7 +265,7 @@ namespace OOPGames
             transform.Children.Add(new RotateTransform3D(
                 new AxisAngleRotation3D(new Vector3D(0, 1, 0), distance * 11)));
             transform.Children.Add(new TranslateTransform3D(
-                LaneWorldX(reward.Lane), 0.82, -reward.Distance * 0.1));
+                LaneWorldX(reward.Lane), 0.82, WorldZ(reward.Distance)));
             viewport.Children.Add(new ModelVisual3D
             {
                 Content = CoinModel,
@@ -238,10 +277,10 @@ namespace OOPGames
             Viewport3D viewport, IGruppe2_SubwayField field, bool guard)
         {
             double x = LaneWorldX(field.Lane) - (guard ? 0.35 : 0);
-            double z = guard ? 2.5 : 0.55;
-            double jump = !guard && field.Level == Gruppe2_SubwayLevel.Air
-                ? 1.15 * field.JumpHeight
-                : 0;
+            double z = guard ? 2.5 : RunnerWorldZ;
+            double jump = guard ? 0
+                : field.Level == Gruppe2_SubwayLevel.Air ? 1.15 * field.JumpHeight
+                : RunnerGroundHeight(field);
             double run = Math.Sin(field.Distance * 0.48);
             Model3DGroup runner = CreateRunnerModel(guard, run);
             Transform3DGroup transform = new Transform3DGroup();

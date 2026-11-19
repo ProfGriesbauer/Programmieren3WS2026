@@ -8,7 +8,6 @@ namespace OOPGames
     public sealed class Gruppe2_SubwayRules : IGameRules2
     {
         private const double SignalLaneChangeCollisionDistance = 8;
-        private const double TrainSpawnDistance = 520;
         private readonly Random _random = new Random();
         private static readonly Gruppe2_SubwayObstacleKind[] SpawnableObstacleKinds =
         {
@@ -20,7 +19,12 @@ namespace OOPGames
             Gruppe2_SubwayObstacleKind.Curb,
             Gruppe2_SubwayObstacleKind.CargoWagon
         };
+        // Trains appear near the horizon of the 3D scene; the longest convoy ends before 520.
+        private const double TrainRampSpawnDistance = 420;
+        private const double ObstacleSpawnDistance = 82;
         private Gruppe2_SubwayField _field = new Gruppe2_SubwayField();
+        private readonly HashSet<Gruppe2_SubwayObstacle> _passedTrainParts =
+            new HashSet<Gruppe2_SubwayObstacle>();
         private double _nextWaveAt;
 
         public string Name { get { return "Gruppe 2 - Subway Surfer Regeln"; } }
@@ -34,6 +38,7 @@ namespace OOPGames
         public void ClearField()
         {
             _field.Reset();
+            _passedTrainParts.Clear();
             _nextWaveAt = 25;
         }
 
@@ -50,15 +55,11 @@ namespace OOPGames
             {
                 case Key.Left:
                 case Key.A:
-                    int previousLane = _field.Lane;
-                    _field.Lane = Math.Max(0, _field.Lane - 1);
-                    ResolveSignalLaneChange(previousLane, _field.Lane);
+                    ChangeLane(-1);
                     break;
                 case Key.Right:
                 case Key.D:
-                    previousLane = _field.Lane;
-                    _field.Lane = Math.Min(2, _field.Lane + 1);
-                    ResolveSignalLaneChange(previousLane, _field.Lane);
+                    ChangeLane(1);
                     break;
                 case Key.Up:
                 case Key.W:
@@ -75,9 +76,9 @@ namespace OOPGames
                     _field.RollTicks = 24;
                     if (_field.Level == Gruppe2_SubwayLevel.Air)
                     {
-                        _field.Level = Gruppe2_SubwayLevel.Track;
                         _field.JumpTicks = 0;
                         _field.JumpDurationTicks = 0;
+                        Land();
                     }
                     break;
                 default:
@@ -106,6 +107,7 @@ namespace OOPGames
             AdvanceObjects();
             CollectRewards();
             ResolveObstacles();
+            UpdateTrainRoof();
 
             if (_field.GuardGap < 100)
             {
@@ -128,7 +130,7 @@ namespace OOPGames
                 if (_field.JumpTicks == 0 && _field.JetpackTicks == 0
                     && _field.Level == Gruppe2_SubwayLevel.Air)
                 {
-                    _field.Level = Gruppe2_SubwayLevel.Track;
+                    Land();
                 }
             }
 
@@ -137,24 +139,31 @@ namespace OOPGames
                 _field.RollTicks--;
             }
 
-            if (_field.RoofTicks > 0)
-            {
-                _field.RoofTicks--;
-                if (_field.RoofTicks == 0 && _field.Level == Gruppe2_SubwayLevel.TrainRoof)
-                {
-                    _field.Level = Gruppe2_SubwayLevel.Track;
-                    SetMessage("Das Zugdach endet - zurueck auf die Gleise!");
-                }
-            }
-
             if (_field.JetpackTicks > 0)
             {
                 _field.JetpackTicks--;
                 if (_field.JetpackTicks == 0 && _field.JumpTicks == 0
                     && _field.Level == Gruppe2_SubwayLevel.Air)
                 {
-                    _field.Level = Gruppe2_SubwayLevel.Track;
+                    Land();
                 }
+            }
+        }
+
+        private void Land()
+        {
+            _field.Level = Gruppe2_SubwayTrainLayout.IsCarUnderRunner(_field.Obstacles, _field.Lane)
+                ? Gruppe2_SubwayLevel.TrainRoof
+                : Gruppe2_SubwayLevel.Track;
+        }
+
+        private void UpdateTrainRoof()
+        {
+            if (_field.Level == Gruppe2_SubwayLevel.TrainRoof
+                && !Gruppe2_SubwayTrainLayout.IsCarUnderRunner(_field.Obstacles, _field.Lane))
+            {
+                _field.Level = Gruppe2_SubwayLevel.Track;
+                SetMessage("Das Zugdach endet - zurueck auf die Gleise!");
             }
         }
 
@@ -174,8 +183,13 @@ namespace OOPGames
         {
             while (_field.Distance >= _nextWaveAt)
             {
-                int safeLane = _random.Next(0, 3);
-                List<int> blockedLanes = Enumerable.Range(0, 3)
+                List<int> trainFreeLanes = Enumerable.Range(0, 3)
+                    .Where(lane => !Gruppe2_SubwayTrainLayout.HasTrainAhead(_field.Obstacles, lane))
+                    .ToList();
+                int safeLane = trainFreeLanes.Count > 0
+                    ? trainFreeLanes[_random.Next(trainFreeLanes.Count)]
+                    : _random.Next(0, 3);
+                List<int> blockedLanes = trainFreeLanes
                     .Where(lane => lane != safeLane)
                     .OrderBy(_ => _random.Next())
                     .Take(_random.Next(1, 3))
@@ -185,38 +199,19 @@ namespace OOPGames
                 {
                     Gruppe2_SubwayObstacleKind kind =
                         SpawnableObstacleKinds[_random.Next(SpawnableObstacleKinds.Length)];
-                    bool laneHasTrain = _field.MutableObstacles.Any(obstacle =>
-                        obstacle.Lane == lane
-                        && obstacle.Distance > 0
-                        && obstacle.Distance < TrainSpawnDistance + 80
-                        && (obstacle.Kind == Gruppe2_SubwayObstacleKind.Train
-                            || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoRamp
-                            || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoWagon));
-                    if (kind == Gruppe2_SubwayObstacleKind.Train && laneHasTrain)
+                    bool startsConvoy = kind == Gruppe2_SubwayObstacleKind.Train
+                        || kind == Gruppe2_SubwayObstacleKind.CargoRamp;
+                    if (startsConvoy)
                     {
-                        kind = Gruppe2_SubwayObstacleKind.LargeBarrier;
-                    }
-
-                    if (kind == Gruppe2_SubwayObstacleKind.Train)
-                    {
-                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoRamp, lane, TrainSpawnDistance));
-                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, TrainSpawnDistance - 25));
-                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, TrainSpawnDistance - 50));
-                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, TrainSpawnDistance - 75));
-                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            kind, lane, TrainSpawnDistance - 100, _random.Next(0, 2) == 0));
+                        SpawnTrainConvoy(lane);
                     }
                     else
                     {
-                        double spawnDistance = kind == Gruppe2_SubwayObstacleKind.CargoRamp
-                            || kind == Gruppe2_SubwayObstacleKind.CargoWagon
-                            ? TrainSpawnDistance
-                            : 82;
-                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, lane, spawnDistance));
+                        double spawnDistance = kind == Gruppe2_SubwayObstacleKind.CargoWagon
+                            ? TrainRampSpawnDistance
+                            : ObstacleSpawnDistance;
+                        _field.MutableObstacles.Add(
+                            new Gruppe2_SubwayObstacle(kind, lane, spawnDistance));
                     }
                 }
 
@@ -246,6 +241,28 @@ namespace OOPGames
             }
         }
 
+        /// <summary>
+        /// A convoy always starts with the ramp; right behind the ramp follow one to three
+        /// cargo wagons and a locomotive, so the runner always lands on a walkable roof.
+        /// </summary>
+        private void SpawnTrainConvoy(int lane)
+        {
+            _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                Gruppe2_SubwayObstacleKind.CargoRamp, lane, TrainRampSpawnDistance));
+
+            int wagonCount = _random.Next(1, 4);
+            for (int wagon = 0; wagon < wagonCount; wagon++)
+            {
+                _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                    Gruppe2_SubwayObstacleKind.CargoWagon, lane,
+                    TrainRampSpawnDistance + wagon * Gruppe2_SubwayTrainLayout.CarSpacing));
+            }
+
+            _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
+                Gruppe2_SubwayObstacleKind.Train, lane,
+                TrainRampSpawnDistance + wagonCount * Gruppe2_SubwayTrainLayout.CarSpacing));
+        }
+
         private void AdvanceObjects()
         {
             foreach (Gruppe2_SubwayObstacle obstacle in _field.MutableObstacles)
@@ -258,7 +275,8 @@ namespace OOPGames
                 reward.Distance -= _field.Speed;
             }
 
-            _field.MutableObstacles.RemoveAll(obstacle => obstacle.Distance < -10);
+            _passedTrainParts.RemoveWhere(Gruppe2_SubwayTrainLayout.IsBehindRunner);
+            _field.MutableObstacles.RemoveAll(Gruppe2_SubwayTrainLayout.IsBehindRunner);
             _field.MutableRewards.RemoveAll(reward => reward.Distance < -4);
         }
 
@@ -315,9 +333,23 @@ namespace OOPGames
         {
             foreach (Gruppe2_SubwayObstacle obstacle in _field.MutableObstacles
                 .Where(item => item.Kind != Gruppe2_SubwayObstacleKind.Signal
-                    && item.Distance <= 0.5 && item.Lane == _field.Lane)
+                    && item.Distance <= Gruppe2_SubwayTrainLayout.CollisionDistance
+                    && !_passedTrainParts.Contains(item))
                 .ToArray())
             {
+                bool trainPart = Gruppe2_SubwayTrainLayout.IsTrainPart(obstacle.Kind);
+                if (trainPart)
+                {
+                    // Train parts stay in the list until their far end has passed,
+                    // so they are drawn under the runner; they only collide once.
+                    _passedTrainParts.Add(obstacle);
+                }
+
+                if (obstacle.Lane != _field.Lane)
+                {
+                    continue;
+                }
+
                 bool airborne = _field.Level == Gruppe2_SubwayLevel.Air;
                 bool onRoof = _field.Level == Gruppe2_SubwayLevel.TrainRoof;
                 bool rolling = _field.RollTicks > 0;
@@ -329,21 +361,16 @@ namespace OOPGames
                         {
                             HitOrEnd(true, "Zug! Weiche rechtzeitig aus oder springe ueber die Rampe aufs Dach.");
                         }
-                        else if (onRoof)
-                        {
-                            _field.Level = Gruppe2_SubwayLevel.Track;
-                            _field.RoofTicks = 0;
-                            SetMessage("Das Zugdach endet - zurueck auf die Gleise!");
-                        }
                         break;
                     case Gruppe2_SubwayObstacleKind.CargoRamp:
                         if (_field.JumpTicks > 0)
                         {
+                            _field.JumpTicks = 0;
+                            _field.JumpDurationTicks = 0;
                             _field.Level = Gruppe2_SubwayLevel.TrainRoof;
-                            _field.RoofTicks = 120;
                             SetMessage("Auf dem Zugdach!");
                         }
-                        else
+                        else if (!airborne)
                         {
                             HitOrEnd(false, "Rampe beruehrt - der Bahnbaer kommt naeher!");
                         }
@@ -352,10 +379,6 @@ namespace OOPGames
                         if (!airborne && !onRoof)
                         {
                             HitOrEnd(true, "Gueterwagen! Springe auf die Rampe und laufe ueber die Wagen.");
-                        }
-                        else if (onRoof)
-                        {
-                            _field.RoofTicks = 42;
                         }
                         break;
                     case Gruppe2_SubwayObstacleKind.LargeBarrier:
@@ -384,12 +407,36 @@ namespace OOPGames
                         break;
                 }
 
-                _field.MutableObstacles.Remove(obstacle);
+                if (!trainPart)
+                {
+                    _field.MutableObstacles.Remove(obstacle);
+                }
+
                 if (_field.GameOver)
                 {
                     break;
                 }
             }
+        }
+
+        private void ChangeLane(int direction)
+        {
+            int previousLane = _field.Lane;
+            int targetLane = Math.Max(0, Math.Min(2, previousLane + direction));
+            if (targetLane == previousLane)
+            {
+                return;
+            }
+
+            if (_field.Level == Gruppe2_SubwayLevel.Track
+                && Gruppe2_SubwayTrainLayout.IsCarUnderRunner(_field.Obstacles, targetLane))
+            {
+                HitOrEnd(false, "Seitlich gegen den Zug - der Bahnbaer kommt naeher!");
+                return;
+            }
+
+            _field.Lane = targetLane;
+            ResolveSignalLaneChange(previousLane, targetLane);
         }
 
         private void ResolveSignalLaneChange(int previousLane, int currentLane)

@@ -42,7 +42,6 @@ namespace OOPGames
         internal int JumpTicks { get; set; }
         internal int JumpDurationTicks { get; set; }
         public int RollTicks { get; internal set; }
-        internal int RoofTicks { get; set; }
         internal int JetpackTicks { get; set; }
         public int MessageTicks { get; internal set; }
 
@@ -73,7 +72,6 @@ namespace OOPGames
             JumpTicks = 0;
             JumpDurationTicks = 0;
             RollTicks = 0;
-            RoofTicks = 0;
             JetpackTicks = 0;
             MessageTicks = 100;
         }
