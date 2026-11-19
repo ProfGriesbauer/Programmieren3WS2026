@@ -380,3 +380,12 @@ Assistant answer:
 - I scaled down the rider and board, removed the bounce and individual limb/hair wiggles, and replaced them with a bounded side-to-side carving motion and a matching rider lean. The board remains aligned with the lane.
 - I added tests for the reduced scale, both sides of the carving motion, the lack of vertical bob, and staying between the rails.
 - The full Subway Surfer test suite passed.
+
+### Prompt 29
+User prompt:
+> can you resolve the merge conflict?
+
+Assistant answer:
+- I combined the train-roof and ramp/drop runner positioning with the smaller skater scale, away-facing orientation, and lane-constrained skateboard carving.
+- I updated the visual regression test for the merged scale and added a check that the skater is elevated while on a train roof.
+- The Subway Surfer test suite passed.

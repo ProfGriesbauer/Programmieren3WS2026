@@ -396,7 +396,7 @@ namespace OOPGames
                     "the skater faces away from the camera toward the track");
                 AssertTrue(Math.Abs(GetRunnerX(skaterVisual)) < 0.001,
                     "the skater starts centered in the middle track");
-                AssertTrue(Math.Abs(GetRunnerScale(skaterVisual) - 0.72) < 0.001,
+                AssertTrue(Math.Abs(GetRunnerScale(skaterVisual) - 0.55) < 0.001,
                     "the skater and skateboard are scaled down");
 
                 Rect3D runnerBounds = skaterModel.Bounds;
@@ -467,6 +467,13 @@ namespace OOPGames
                     && GetRunnerX(skaterVisual) < 1.48,
                     "the skater carves back across the lane");
                 AssertRunnerFitsTrack(skaterVisual, skaterModel, 1.55);
+
+                field.Level = Gruppe2_SubwayLevel.TrainRoof;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                AssertTrue(GetRunnerHeight(skaterVisual) > 2.4,
+                    "the skater is elevated onto train roofs");
             }
             finally
             {
