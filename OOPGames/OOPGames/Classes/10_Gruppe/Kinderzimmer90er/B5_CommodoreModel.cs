@@ -11,7 +11,9 @@ namespace OOPGames
         const double MonitorX = 3.3, MonitorY = 2.06, FrontZ = -1.975;
         const double KeyboardX = 2.1, KeyboardZ = -2.025, KeyboardTop = 1.70;
         const double KeyHeight = 0.014;
-        const double DriveX = 4.04, DriveZ = -2.5;
+        const double DriveX = 4.04, DriveZ = -2.5, DriveSlotY = 1.67;
+        // Millimetres of the floppy disk animation: a 5.25" disk (133 mm) just fits the 0.2 wide slot.
+        internal const double DiskScale = 0.0014;
 
         static readonly Color _Monitor = Color.FromRgb(235, 232, 224);
         static readonly Color _MonitorRear = Color.FromRgb(222, 219, 208);
@@ -32,6 +34,19 @@ namespace OOPGames
         public static Point3D ScreenCenter { get { return new Point3D(MonitorX, MonitorY, FrontZ + 0.022); } }
         public static double ScreenWidth { get { return 0.6; } }
         public static double ScreenHeight { get { return 0.46; } }
+
+        // Millimetre space for the disk animation: origin in the middle of the drive slot on the front face,
+        // x to the right, y up, z out of the front.
+        internal static Matrix3D MediaPlacement
+        {
+            get
+            {
+                Matrix3D place = Matrix3D.Identity;
+                place.Scale(new Vector3D(DiskScale, DiskScale, DiskScale));
+                place.Translate(new Vector3D(DriveX, DriveSlotY, DriveZ + 0.2));
+                return place;
+            }
+        }
 
         public static void Build(Model3DGroup parent)
         {
@@ -123,13 +138,16 @@ namespace OOPGames
         {
             Box(p, DriveX, DeskTop + 0.05, DriveZ, 0.28, 0.10, 0.40, _Case);
             double front = DriveZ + 0.2 + 0.001;
-            Box(p, DriveX, 1.67, front, 0.20, 0.012, 0.004, _Badge);        // disk slot
+            Box(p, DriveX, DriveSlotY, front, 0.20, 0.012, 0.004, _Badge);  // disk slot
             Box(p, DriveX + 0.09, 1.625, front, 0.012, 0.012, 0.004, _Red);   // activity LED
             Box(p, DriveX - 0.04, 1.625, front, 0.16, 0.012, 0.004, _Navy);   // brand stripe
 
-            // Two floppy disks lying on top.
-            Box(p, DriveX, 1.703, DriveZ, 0.09, 0.006, 0.09, _Navy);
-            Box(p, DriveX + 0.01, 1.709, DriveZ, 0.09, 0.006, 0.09, _Red);
+            // Two 5.25" floppy disks lying on top: dark sleeve with a label sticker near the front edge.
+            Color sleeve = Color.FromRgb(30, 30, 33);
+            Box(p, DriveX, 1.7013, DriveZ + 0.03, 0.186, 0.0025, 0.186, sleeve);
+            Box(p, DriveX - 0.015, 1.7027, DriveZ + 0.09, 0.13, 0.0004, 0.03, _Navy);
+            Box(p, DriveX + 0.012, 1.7038, DriveZ - 0.03, 0.186, 0.0025, 0.186, sleeve);
+            Box(p, DriveX - 0.003, 1.7052, DriveZ + 0.045, 0.13, 0.0004, 0.03, _Red);
         }
 
         static void BuildCable(Model3DGroup p)

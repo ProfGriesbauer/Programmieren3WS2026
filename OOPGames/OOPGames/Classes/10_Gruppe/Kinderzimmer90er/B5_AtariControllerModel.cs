@@ -8,7 +8,7 @@ namespace OOPGames
     // It lies on the shelf next to the console and is connected to it by a short cable.
     public static class B5AtariControllerModel
     {
-        const double ShelfTop = 0.485;
+        const double ShelfTop = B5AtariConsoleModel.ShelfTop;
         const double X = -2.88, Z = -1.65;
         const double BaseHeight = 0.045, PlateHeight = 0.01;
 

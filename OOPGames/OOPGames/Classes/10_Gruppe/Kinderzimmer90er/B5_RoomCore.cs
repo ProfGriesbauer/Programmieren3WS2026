@@ -91,6 +91,7 @@ namespace OOPGames
             get { return _InsertedGames[SelectedDevice]; }
             internal set { _InsertedGames[SelectedDevice] = value; }
         }
+        public int GetInsertedGame(int device) { return _InsertedGames[device]; }
         public int PendingGame { get; internal set; }
         public double TransitionProgress { get { return Math.Min(1.0, _TransitionTime / (Phase == B5RoomPhase.Ejecting ? 0.5 : 1.6)); } }
         public bool ShowTitle { get { return _ShowTitle; } }

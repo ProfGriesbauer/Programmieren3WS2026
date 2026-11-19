@@ -17,7 +17,8 @@ namespace OOPGames
         const double LcdLeft = 21.5, LcdTop = 22, LcdWidth = 47, LcdHeight = 43, LcdLayer = 2;
         const double ButtonAngle = 26.57;
 
-        static readonly Point3D _FrontTopLeft = new Point3D(0.8 - BodyWidth * Scale / 2, 1.6 + BodyHeight * Scale, -2.44);
+        // Far enough in front of the wall shelf that a cartridge can go into the slot on top.
+        static readonly Point3D _FrontTopLeft = new Point3D(0.8 - BodyWidth * Scale / 2, 1.6 + BodyHeight * Scale, -2.3);
 
         static readonly Color _Body = Color.FromRgb(201, 198, 184);
         static readonly Color _Recess = Color.FromRgb(184, 181, 168);
@@ -36,6 +37,22 @@ namespace OOPGames
         public static Point3D ScreenCenter { get { return ToRoom(LcdLeft + LcdWidth / 2, LcdTop + LcdHeight / 2, LcdLayer); } }
         public static double ScreenWidth { get { return LcdWidth * Scale; } }
         public static double ScreenHeight { get { return LcdHeight * Scale; } }
+
+        // Millimetre space for the cartridge animation: origin in the middle of the top edge of the front face,
+        // x to the right, y up, z out of the front face.
+        internal static Matrix3D MediaPlacement
+        {
+            get
+            {
+                Matrix3D place = Matrix3D.Identity;
+                place.Scale(new Vector3D(Scale, Scale, Scale));
+                Point3D origin = ToRoom(BodyWidth / 2, 0, 0);
+                place.Translate(new Vector3D(origin.X, origin.Y, origin.Z));
+                return place;
+            }
+        }
+
+        internal const double Depth = BodyDepth;
 
         public static void Build(Model3DGroup parent)
         {
