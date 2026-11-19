@@ -25,6 +25,9 @@ namespace OOPGames
     {
         /// <summary>Startet eine Datei. Schleife: am Ende wird keepGoing gefragt, sonst endet sie und ended wird gerufen.</summary>
         IG1C_AudioVoice Start(string file, double volume, bool loop, Func<bool> keepGoing, Action ended);
+
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Startpunkt (0..1 der Länge) für den nächsten Start (Musik beginnt zufällig mittendrin)
+        double StartFraction { get { return 0; } set { } }
     }
 
     // =====================================================
@@ -36,12 +39,23 @@ namespace OOPGames
     // =====================================================
     public sealed class G1C_MediaBackend : IG1C_AudioBackend
     {
+        public double StartFraction { get; set; }
+
         public IG1C_AudioVoice Start(string file, double volume, bool loop, Func<bool> keepGoing, Action ended)
         {
             MediaVoice voice = new MediaVoice(new MediaPlayer());
             MediaPlayer player = voice.Player;
             player.Open(new Uri(file, UriKind.Absolute));
             player.Volume = Math.Max(0, Math.Min(1, volume));
+            double startFraction = Math.Max(0, Math.Min(0.95, StartFraction));
+            StartFraction = 0;
+            if (startFraction > 0)
+                player.MediaOpened += (s, e) =>
+                {
+                    if (startFraction > 0 && player.NaturalDuration.HasTimeSpan && !voice.Stopped)
+                        player.Position = TimeSpan.FromSeconds(player.NaturalDuration.TimeSpan.TotalSeconds * startFraction);
+                    startFraction = 0;   // spätere Wiederholungen beginnen vorn
+                };
             player.MediaEnded += (s, e) =>
             {
                 if (voice.Stopped) return;
@@ -311,6 +325,7 @@ namespace OOPGames
             string startedTheme = CurrentMusic;
             try
             {
+                Backend.StartFraction = Random.NextDouble() * 0.9;   // jede Musik beginnt an einer zufälligen Stelle
                 // Einzelne Datei: der Player wiederholt sie selbst; mehrere Dateien: nach dem Ende kommt die nächste
                 bool single = files.Length <= 1;
                 voice.Handle = Backend.Start(file, VolumeFor(def), single, HeartbeatAlive, () =>
@@ -333,7 +348,8 @@ namespace OOPGames
                 return def.Fallback == null ? null : GeneratedFile(def.Fallback);
             int index;
             if (!_variant.TryGetValue(def.Id, out index)) index = -1;
-            if (def.Sequential || files.Length == 1) index = (index + 1) % files.Length;
+            if (index < 0 && !def.Sequential && files.Length > 1) index = Random.Next(files.Length);   // erstes Stück zufällig
+            else if (def.Sequential || files.Length == 1) index = (index + 1) % files.Length;
             else index = (index + 1 + Random.Next(files.Length - 1)) % files.Length;   // nie dieselbe Datei zweimal hintereinander
             _variant[def.Id] = index;
             return files[index];
