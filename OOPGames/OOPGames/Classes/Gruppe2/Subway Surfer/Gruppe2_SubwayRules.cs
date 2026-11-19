@@ -8,6 +8,7 @@ namespace OOPGames
     public sealed class Gruppe2_SubwayRules : IGameRules2
     {
         private const double SignalLaneChangeCollisionDistance = 8;
+        private const double TrainSpawnDistance = 520;
         private readonly Random _random = new Random();
         private static readonly Gruppe2_SubwayObstacleKind[] SpawnableObstacleKinds =
         {
@@ -187,7 +188,7 @@ namespace OOPGames
                     bool laneHasTrain = _field.MutableObstacles.Any(obstacle =>
                         obstacle.Lane == lane
                         && obstacle.Distance > 0
-                        && obstacle.Distance < 300
+                        && obstacle.Distance < TrainSpawnDistance + 80
                         && (obstacle.Kind == Gruppe2_SubwayObstacleKind.Train
                             || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoRamp
                             || obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoWagon));
@@ -199,19 +200,23 @@ namespace OOPGames
                     if (kind == Gruppe2_SubwayObstacleKind.Train)
                     {
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoRamp, lane, 230));
+                            Gruppe2_SubwayObstacleKind.CargoRamp, lane, TrainSpawnDistance));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 205));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, TrainSpawnDistance - 25));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 180));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, TrainSpawnDistance - 50));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, 155));
+                            Gruppe2_SubwayObstacleKind.CargoWagon, lane, TrainSpawnDistance - 75));
                         _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                            kind, lane, 130, _random.Next(0, 2) == 0));
+                            kind, lane, TrainSpawnDistance - 100, _random.Next(0, 2) == 0));
                     }
                     else
                     {
-                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, lane, 82));
+                        double spawnDistance = kind == Gruppe2_SubwayObstacleKind.CargoRamp
+                            || kind == Gruppe2_SubwayObstacleKind.CargoWagon
+                            ? TrainSpawnDistance
+                            : 82;
+                        _field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, lane, spawnDistance));
                     }
                 }
 

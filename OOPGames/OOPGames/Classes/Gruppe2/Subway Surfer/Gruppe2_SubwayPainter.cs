@@ -17,6 +17,13 @@ namespace OOPGames
         private static readonly Brush RailBrush = Brush(Color.FromRgb(203, 210, 216));
         private static readonly Brush PinkBrush = Brush(Color.FromRgb(231, 49, 135));
         private static readonly Model3DGroup CargoWagonModel = CreateCargoWagonModel();
+        private static readonly Model3DGroup TrainModel = CreateTrainModel();
+        private static readonly Model3DGroup CargoRampModel = CreateCargoRampModel();
+        private static readonly Model3DGroup CoinModel = CreateCoinModel();
+        private static readonly Model3DGroup TrackModel = CreateTrackModel();
+        private static readonly Model3DGroup SleeperModel = CreateSleeperModel();
+        private static readonly Dictionary<Gruppe2_SubwayObstacleKind, Model3DGroup> ObstacleModels =
+            CreateObstacleModels();
         private static readonly Model3DGroup CityModel = CreateCityModel();
         private static readonly Model3DGroup BushModel = CreateBushModel();
         private static readonly Model3DGroup SignalModel = CreateSignalModel();
@@ -25,7 +32,7 @@ namespace OOPGames
         private const double TrackHorizonRatio = 0.40;
         private const double TrackBottomRatio = 0.94;
         private const double ObjectTrackDepthRatio = 0.82;
-        private const double ObstaclePreviewDistance = 280;
+        private const double ObstaclePreviewDistance = 520;
 
         public string Name { get { return "Gruppe 2 - Subway Surfer Painter"; } }
 
@@ -61,20 +68,203 @@ namespace OOPGames
             double height = Math.Max(260, canvas.ActualHeight);
             canvas.Background = SkyBrush;
 
-            DrawBackground(canvas, width, height, field.Distance);
-            DrawTrack(canvas, width, height, field);
-            DrawWorldObjects(canvas, width, height, field);
-            DrawRunner(canvas, width, height, field, false);
-            if (field.GuardVisible)
-            {
-                DrawRunner(canvas, width, height, field, true);
-            }
-
+            DrawThreeDimensionalScene(canvas, width, height, field);
             DrawHud(canvas, width, height, field);
             if (field.GameOver)
             {
                 DrawGameOver(canvas, width, height);
             }
+        }
+
+        private static void DrawThreeDimensionalScene(
+            Canvas canvas, double width, double height, IGruppe2_SubwayField field)
+        {
+            Viewport3D viewport = new Viewport3D
+            {
+                Width = width,
+                Height = height,
+                ClipToBounds = true,
+                IsHitTestVisible = false,
+                Camera = new PerspectiveCamera(
+                    new Point3D(0, 2.2, 7),
+                    new Vector3D(0, -0.10, -1),
+                    new Vector3D(0, 1, 0),
+                    55)
+            };
+
+            Model3DGroup scene = new Model3DGroup();
+            scene.Children.Add(new AmbientLight(Color.FromRgb(145, 145, 145)));
+            scene.Children.Add(new DirectionalLight(Colors.White, new Vector3D(-1, -2, -3)));
+            AddBox(scene, -18, -0.45, -70, 18, -0.08, 12,
+                Material(Color.FromRgb(148, 112, 78)));
+            viewport.Children.Add(new ModelVisual3D { Content = scene });
+            AddThreeDimensionalTrack(viewport, field.Distance);
+
+            double cityScroll = (field.Distance * 0.1 % CityRepeatDistance) * CityModelScale;
+            viewport.Children.Add(CreateCityVisual(cityScroll));
+            viewport.Children.Add(CreateCityVisual(cityScroll - CityRepeatDistance * CityModelScale));
+            viewport.Children.Add(CreateCityVisual(cityScroll + CityRepeatDistance * CityModelScale));
+
+            foreach (Gruppe2_SubwayObstacle obstacle in field.Obstacles)
+            {
+                AddThreeDimensionalObstacle(viewport, obstacle);
+            }
+
+            foreach (Gruppe2_SubwayReward reward in field.Rewards)
+            {
+                if (reward.Kind == Gruppe2_SubwayRewardKind.Coin)
+                {
+                    AddThreeDimensionalCoin(viewport, reward, field.Distance);
+                }
+                else
+                {
+                    AddWorldModel(viewport, CreateUpgradeBoxModel(reward.Upgrade),
+                        LaneWorldX(reward.Lane), 0.55, -reward.Distance * 0.1, 0.65);
+                }
+            }
+
+            AddThreeDimensionalRunner(viewport, field, false);
+            if (field.GuardVisible)
+            {
+                AddThreeDimensionalRunner(viewport, field, true);
+            }
+
+            canvas.Children.Add(viewport);
+        }
+
+        private static void AddThreeDimensionalTrack(Viewport3D viewport, double distance)
+        {
+            viewport.Children.Add(new ModelVisual3D { Content = TrackModel });
+            double sleeperOffset = distance * 0.1 % 1.6;
+            for (double z = -64 + sleeperOffset; z < 5; z += 1.6)
+            {
+                AddWorldModel(viewport, SleeperModel, 0, 0, z, 1);
+            }
+        }
+
+        private static Model3DGroup CreateTrackModel()
+        {
+            Material ballast = Material(Color.FromRgb(82, 78, 72));
+            Material rail = Material(Color.FromRgb(183, 190, 195));
+            Model3DGroup track = new Model3DGroup();
+
+            for (int lane = 0; lane < 3; lane++)
+            {
+                double laneX = LaneWorldX(lane);
+                AddBox(track, laneX - 0.77, -0.09, -64, laneX + 0.77, 0.01, 5, ballast);
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    double railX = laneX + side * 0.55;
+                    AddBox(track, railX - 0.055, 0.01, -64, railX + 0.055, 0.15, 5, rail);
+                    AddBox(track, railX - 0.08, 0.0, -64, railX + 0.08, 0.035, 5,
+                        Material(Color.FromRgb(111, 77, 50)));
+                }
+            }
+
+            track.Freeze();
+            return track;
+        }
+
+        private static Model3DGroup CreateSleeperModel()
+        {
+            Model3DGroup sleeper = new Model3DGroup();
+            AddBox(sleeper, -2.45, -0.01, -0.10, 2.45, 0.04, 0.10,
+                Material(Color.FromRgb(105, 69, 46)));
+            sleeper.Freeze();
+            return sleeper;
+        }
+
+        private static void AddThreeDimensionalObstacle(
+            Viewport3D viewport, Gruppe2_SubwayObstacle obstacle)
+        {
+            double x = LaneWorldX(obstacle.Lane);
+            double z = -obstacle.Distance * 0.1;
+            switch (obstacle.Kind)
+            {
+                case Gruppe2_SubwayObstacleKind.Train:
+                    AddWorldModel(viewport, TrainModel, x, 0, z, 1);
+                    break;
+                case Gruppe2_SubwayObstacleKind.CargoWagon:
+                    AddWorldModel(viewport, CargoWagonModel, x, 0.78, z, 0.82);
+                    break;
+                case Gruppe2_SubwayObstacleKind.CargoRamp:
+                    AddWorldModel(viewport, CargoRampModel, x, 0, z, 1);
+                    break;
+                case Gruppe2_SubwayObstacleKind.Bush:
+                    AddWorldModel(viewport, BushModel, x, 0.78, z, 1.05);
+                    break;
+                case Gruppe2_SubwayObstacleKind.Signal:
+                    AddWorldModel(viewport, SignalModel,
+                        (LaneWorldX(Math.Min(obstacle.Lane, 1))
+                            + LaneWorldX(Math.Min(obstacle.Lane, 1) + 1)) / 2,
+                        0, z, 0.75);
+                    break;
+                default:
+                    AddWorldModel(viewport, ObstacleModels[obstacle.Kind],
+                        x, 0, z, 1);
+                    break;
+            }
+        }
+
+        private static Dictionary<Gruppe2_SubwayObstacleKind, Model3DGroup> CreateObstacleModels()
+        {
+            return new Dictionary<Gruppe2_SubwayObstacleKind, Model3DGroup>
+            {
+                { Gruppe2_SubwayObstacleKind.SmallBarrier, CreateObstacleModel(Gruppe2_SubwayObstacleKind.SmallBarrier) },
+                { Gruppe2_SubwayObstacleKind.LargeBarrier, CreateObstacleModel(Gruppe2_SubwayObstacleKind.LargeBarrier) },
+                { Gruppe2_SubwayObstacleKind.PlantPot, CreateObstacleModel(Gruppe2_SubwayObstacleKind.PlantPot) },
+                { Gruppe2_SubwayObstacleKind.Curb, CreateObstacleModel(Gruppe2_SubwayObstacleKind.Curb) },
+                { Gruppe2_SubwayObstacleKind.CenterPillar, CreateObstacleModel(Gruppe2_SubwayObstacleKind.CenterPillar) }
+            };
+        }
+
+        private static void AddThreeDimensionalCoin(
+            Viewport3D viewport, Gruppe2_SubwayReward reward, double distance)
+        {
+            Transform3DGroup transform = new Transform3DGroup();
+            transform.Children.Add(new ScaleTransform3D(0.34, 0.34, 0.10));
+            transform.Children.Add(new RotateTransform3D(
+                new AxisAngleRotation3D(new Vector3D(0, 1, 0), distance * 11)));
+            transform.Children.Add(new TranslateTransform3D(
+                LaneWorldX(reward.Lane), 0.82, -reward.Distance * 0.1));
+            viewport.Children.Add(new ModelVisual3D
+            {
+                Content = CoinModel,
+                Transform = transform
+            });
+        }
+
+        private static void AddThreeDimensionalRunner(
+            Viewport3D viewport, IGruppe2_SubwayField field, bool guard)
+        {
+            double x = LaneWorldX(field.Lane) - (guard ? 0.35 : 0);
+            double z = guard ? 2.5 : 0.55;
+            double jump = !guard && field.Level == Gruppe2_SubwayLevel.Air
+                ? 1.15 * field.JumpHeight
+                : 0;
+            double run = Math.Sin(field.Distance * 0.48);
+            Model3DGroup runner = CreateRunnerModel(guard, run);
+            Transform3DGroup transform = new Transform3DGroup();
+            if (!guard && field.RollTicks > 0)
+            {
+                transform.Children.Add(new ScaleTransform3D(1, 0.55, 1));
+            }
+            transform.Children.Add(new TranslateTransform3D(x, jump, z));
+            viewport.Children.Add(new ModelVisual3D { Content = runner, Transform = transform });
+        }
+
+        private static double LaneWorldX(int lane)
+        {
+            return (lane - 1) * 1.55;
+        }
+
+        private static void AddWorldModel(
+            Viewport3D viewport, Model3D model, double x, double y, double z, double scale)
+        {
+            Transform3DGroup transform = new Transform3DGroup();
+            transform.Children.Add(new ScaleTransform3D(scale, scale, scale));
+            transform.Children.Add(new TranslateTransform3D(x, y, z));
+            viewport.Children.Add(new ModelVisual3D { Content = model, Transform = transform });
         }
 
         private static void DrawBackground(Canvas canvas, double width, double height, double distance)
@@ -120,6 +310,221 @@ namespace OOPGames
                     CityModelScale, CityModelScale, CityModelScale)
             });
             return visual;
+        }
+
+        private static Model3DGroup CreateTrainModel()
+        {
+            Model3DGroup train = new Model3DGroup();
+            Material red = Material(Color.FromRgb(188, 47, 39));
+            Material brightRed = Material(Color.FromRgb(221, 68, 54));
+            Material dark = Material(Color.FromRgb(41, 52, 57));
+            Material glass = Material(Color.FromRgb(77, 161, 181));
+            Material trim = Material(Color.FromRgb(208, 211, 199));
+            Material lamp = Material(Color.FromRgb(255, 213, 82));
+
+            AddBox(train, -0.88, 0.38, -2.6, 0.88, 2.25, 2.35, red);
+            AddBox(train, -0.92, 0.35, 1.65, 0.92, 0.72, 2.42, brightRed);
+            AddBox(train, -0.78, 2.22, -2.55, 0.78, 2.42, 2.08, dark);
+            AddBox(train, -0.70, 1.16, 2.36, 0.70, 2.02, 2.40, glass);
+            AddBox(train, -0.89, 0.98, 2.34, 0.89, 1.08, 2.42, trim);
+            AddBox(train, -0.72, 0.65, 2.40, -0.40, 0.83, 2.46, lamp);
+            AddBox(train, 0.40, 0.65, 2.40, 0.72, 0.83, 2.46, lamp);
+
+            for (int window = 0; window < 5; window++)
+            {
+                double z = -1.95 + window * 0.77;
+                AddBox(train, -0.91, 1.20, z, -0.88, 1.78, z + 0.48, glass);
+                AddBox(train, 0.88, 1.20, z, 0.91, 1.78, z + 0.48, glass);
+            }
+
+            for (int wheel = 0; wheel < 4; wheel++)
+            {
+                double z = -1.95 + wheel * 1.25;
+                AddScaledSphere(train, -0.82, 0.36, z, 0.20, 0.28, 0.30,
+                    Material(Color.FromRgb(35, 37, 39)));
+                AddScaledSphere(train, 0.82, 0.36, z, 0.20, 0.28, 0.30,
+                    Material(Color.FromRgb(35, 37, 39)));
+            }
+
+            train.Freeze();
+            return train;
+        }
+
+        private static Model3DGroup CreateCargoRampModel()
+        {
+            Model3DGroup ramp = new Model3DGroup();
+            Material red = Material(Color.FromRgb(207, 57, 45));
+            Material dark = Material(Color.FromRgb(63, 66, 63));
+            AddBox(ramp, -0.66, 0, -0.75, 0.66, 0.18, 0.75, dark);
+            AddTriangle(ramp, new Point3D(-0.66, 0.18, -0.75),
+                new Point3D(0.66, 0.18, -0.75), new Point3D(0.66, 0.85, 0.75), red);
+            AddTriangle(ramp, new Point3D(-0.66, 0.18, -0.75),
+                new Point3D(0.66, 0.85, 0.75), new Point3D(-0.66, 0.85, 0.75), red);
+            AddQuad(ramp, new Point3D(-0.66, 0.18, -0.75),
+                new Point3D(-0.66, 0.85, 0.75), new Point3D(0.66, 0.85, 0.75),
+                new Point3D(0.66, 0.18, -0.75), dark);
+            ramp.Freeze();
+            return ramp;
+        }
+
+        private static Model3DGroup CreateObstacleModel(Gruppe2_SubwayObstacleKind kind)
+        {
+            Model3DGroup model = new Model3DGroup();
+            Material dark = Material(Color.FromRgb(70, 68, 62));
+            switch (kind)
+            {
+                case Gruppe2_SubwayObstacleKind.LargeBarrier:
+                    AddBox(model, -0.78, 0.25, -0.16, 0.78, 0.78, 0.16,
+                        Material(Color.FromRgb(211, 47, 39)));
+                    AddBox(model, -0.70, 0.33, 0.17, 0.70, 0.57, 0.20,
+                        Material(Color.FromRgb(237, 232, 210)));
+                    AddBox(model, -0.64, 0, -0.10, -0.54, 0.42, 0.10, dark);
+                    AddBox(model, 0.54, 0, -0.10, 0.64, 0.42, 0.10, dark);
+                    break;
+                case Gruppe2_SubwayObstacleKind.SmallBarrier:
+                    AddBox(model, -0.55, 0.18, -0.12, 0.55, 0.50, 0.12,
+                        Material(Color.FromRgb(232, 177, 42)));
+                    AddBox(model, -0.49, 0.25, 0.13, -0.18, 0.42, 0.16,
+                        Material(Colors.White));
+                    AddBox(model, 0.18, 0.25, 0.13, 0.49, 0.42, 0.16,
+                        Material(Colors.White));
+                    break;
+                case Gruppe2_SubwayObstacleKind.PlantPot:
+                    AddBox(model, -0.32, 0, -0.32, 0.32, 0.42, 0.32,
+                        Material(Color.FromRgb(166, 83, 48)));
+                    AddScaledSphere(model, 0, 0.70, 0, 0.54, 0.48, 0.50,
+                        Material(Color.FromRgb(58, 143, 62)));
+                    break;
+                case Gruppe2_SubwayObstacleKind.Curb:
+                    AddBox(model, -0.80, 0, -0.26, 0.80, 0.34, 0.26,
+                        Material(Color.FromRgb(163, 165, 160)));
+                    break;
+                default:
+                    AddBox(model, -0.34, 0, -0.34, 0.34, 1.12, 0.34, dark);
+                    break;
+            }
+
+            model.Freeze();
+            return model;
+        }
+
+        private static Model3DGroup CreateUpgradeBoxModel(Gruppe2_SubwayUpgradeKind upgrade)
+        {
+            Color color;
+            switch (upgrade)
+            {
+                case Gruppe2_SubwayUpgradeKind.Magnet:
+                    color = Color.FromRgb(205, 30, 12);
+                    break;
+                case Gruppe2_SubwayUpgradeKind.DoubleCoins:
+                    color = Color.FromRgb(226, 173, 35);
+                    break;
+                case Gruppe2_SubwayUpgradeKind.Surfboard:
+                    color = Color.FromRgb(73, 178, 191);
+                    break;
+                case Gruppe2_SubwayUpgradeKind.JumpStick:
+                    color = Color.FromRgb(94, 171, 83);
+                    break;
+                default:
+                    color = Color.FromRgb(65, 105, 176);
+                    break;
+            }
+
+            Model3DGroup box = new Model3DGroup();
+            AddBox(box, -0.48, -0.48, -0.48, 0.48, 0.48, 0.48, Material(color));
+            AddBox(box, -0.50, 0.12, 0.49, 0.50, 0.25, 0.53, Material(Colors.White));
+            box.Freeze();
+            return box;
+        }
+
+        private static Model3DGroup CreateCoinModel()
+        {
+            Model3DGroup coin = new Model3DGroup();
+            Material gold = Material(Color.FromRgb(255, 203, 32));
+            Material edge = Material(Color.FromRgb(179, 126, 16));
+            const int segments = 20;
+            const double radius = 0.5;
+            const double depth = 0.10;
+
+            for (int segment = 0; segment < segments; segment++)
+            {
+                double first = 2 * Math.PI * segment / segments;
+                double second = 2 * Math.PI * (segment + 1) / segments;
+                Point3D a = new Point3D(radius * Math.Cos(first), radius * Math.Sin(first), -depth);
+                Point3D b = new Point3D(radius * Math.Cos(second), radius * Math.Sin(second), -depth);
+                Point3D c = new Point3D(radius * Math.Cos(second), radius * Math.Sin(second), depth);
+                Point3D d = new Point3D(radius * Math.Cos(first), radius * Math.Sin(first), depth);
+                AddQuad(coin, a, b, c, d, edge);
+                AddTriangle(coin, new Point3D(0, 0, depth),
+                    new Point3D(radius * Math.Cos(first), radius * Math.Sin(first), depth),
+                    new Point3D(radius * Math.Cos(second), radius * Math.Sin(second), depth), gold);
+                AddTriangle(coin, new Point3D(0, 0, -depth),
+                    new Point3D(radius * Math.Cos(second), radius * Math.Sin(second), -depth),
+                    new Point3D(radius * Math.Cos(first), radius * Math.Sin(first), -depth), gold);
+            }
+
+            coin.Freeze();
+            return coin;
+        }
+
+        private static Model3DGroup CreateRunnerModel(bool guard, double run)
+        {
+            Model3DGroup runner = new Model3DGroup();
+            Material outfit = Material(guard
+                ? Color.FromRgb(43, 74, 112)
+                : Color.FromRgb(231, 49, 135));
+            Material skin = Material(Color.FromRgb(245, 194, 157));
+            Material hair = Material(guard
+                ? Color.FromRgb(105, 67, 38)
+                : Color.FromRgb(111, 0, 110));
+            Material pants = Material(Color.FromRgb(35, 37, 41));
+
+            AddBox(runner, -0.34, 0.91, -0.18, 0.34, 1.70, 0.18, outfit);
+            AddScaledSphere(runner, 0, 1.98, 0, 0.25, 0.31, 0.24, skin);
+            AddScaledSphere(runner, 0, 2.20, 0, 0.30, 0.12, 0.29, hair);
+            AddRunnerLimb(runner, -0.22, 1.57, -0.01, -0.55, 1.01, 0.03,
+                0.17 * run, outfit);
+            AddRunnerLimb(runner, 0.22, 1.57, -0.01, 0.55, 1.01, 0.03,
+                -0.17 * run, outfit);
+            AddRunnerLimb(runner, -0.16, 0.97, 0, -0.20, 0.08, 0.06,
+                -0.24 * run, pants);
+            AddRunnerLimb(runner, 0.16, 0.97, 0, 0.20, 0.08, 0.06,
+                0.24 * run, pants);
+            runner.Freeze();
+            return runner;
+        }
+
+        private static void AddRunnerLimb(
+            Model3DGroup runner, double x1, double y1, double z1,
+            double x2, double y2, double z2, double angle, Material material)
+        {
+            double thickness = 0.12;
+            Model3DGroup limb = new Model3DGroup();
+            AddBox(limb,
+                Math.Min(x1, x2) - thickness, Math.Min(y1, y2), -0.10,
+                Math.Max(x1, x2) + thickness, Math.Max(y1, y2) + 0.08, 0.10, material);
+            limb.Transform = new RotateTransform3D(
+                new AxisAngleRotation3D(new Vector3D(0, 0, 1), angle * 20),
+                new Point3D(x1, y1, z1));
+            runner.Children.Add(limb);
+        }
+
+        private static void AddScaledSphere(
+            Model3DGroup model, double x, double y, double z,
+            double radiusX, double radiusY, double radiusZ, Material material)
+        {
+            model.Children.Add(new GeometryModel3D(CreateSphereMesh(), material)
+            {
+                BackMaterial = material,
+                Transform = new Transform3DGroup
+                {
+                    Children = new Transform3DCollection
+                    {
+                        new ScaleTransform3D(radiusX, radiusY, radiusZ),
+                        new TranslateTransform3D(x, y, z)
+                    }
+                }
+            });
         }
 
         private static Model3DGroup CreateCityModel()
@@ -341,7 +746,14 @@ namespace OOPGames
                     continue;
                 }
 
-                double x = LaneCenter(width, obstacle.Lane, progress);
+                double centerOffset = obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoWagon
+                    ? 1.3
+                    : obstacle.Kind == Gruppe2_SubwayObstacleKind.CargoRamp
+                        ? 0.8
+                        : obstacle.Kind == Gruppe2_SubwayObstacleKind.Train ? 0.74 : 0;
+                double objectCenterY = y - 42 * scale * centerOffset;
+                double objectProgress = TrackProgressAtY(height, objectCenterY);
+                double x = LaneCenter(width, obstacle.Lane, objectProgress);
                 double trackAngle = Math.Atan2((1 - obstacle.Lane) * width * 0.212,
                     height * (TrackBottomRatio - TrackHorizonRatio)) * 180 / Math.PI;
                 if (obstacle.Moving)
