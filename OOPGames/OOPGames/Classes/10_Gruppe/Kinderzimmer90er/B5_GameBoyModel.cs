@@ -224,6 +224,7 @@ namespace OOPGames
             foreach (Point corner in corners) AddVertex(mesh, corner, anchor, new Vector3D(0, 0, 1));
 
             DrawingBrush brush = new DrawingBrush(new GeometryDrawing(new SolidColorBrush(color), null, geometry));
+            B5RoomTextures.CacheAsBitmap(brush);
             brush.Freeze();
             parent.Children.Add(new GeometryModel3D(mesh, new DiffuseMaterial(brush)));
         }

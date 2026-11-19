@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -22,10 +23,15 @@ namespace OOPGames
     // Adapter between the Kinderzimmer hub and the game: translates keys, saves the highscore,
     // and hands the game state to the renderer and the audio. The only Pac-Man class that knows
     // about keys.
+    // The hub creates and starts the game at the end of the cartridge animation, exactly when its
+    // camera zoom begins. Start therefore stays cheap: it only begins a background warm-up of
+    // everything that needs no WPF. The game, the bitmap and the media players are created when
+    // the game is first shown and the 3D room is already hidden.
     public sealed class G10_PacManGame : IB5RoomMiniGame
     {
-        // The hub creates a new game object for every start; all of them share one sound output.
+        // One per process: all game objects share the sound output and the warm-up.
         static G10_MediaSoundOutput _SharedOutput;
+        static Task _WarmUp;
 
         readonly G10_PacManRenderer _Renderer = new G10_PacManRenderer();
         G10_PacManSession _Session;
@@ -39,19 +45,13 @@ namespace OOPGames
 
         public void Start()
         {
-            _Session = new G10_PacManSession(B5RoomHighscores.Get(Title), Environment.TickCount);
-            _HighscoreSaved = false;
-            // Loading the sounds takes a moment; the hub calls Start already during the cartridge
-            // animation, so they are ready when the game begins. Nothing is played here.
-            if (_SharedOutput == null) _SharedOutput = new G10_MediaSoundOutput();
+            _Session = null;
+            if (_WarmUp == null) _WarmUp = Task.Run(new Action(WarmUp));
         }
 
         public void Update(IReadOnlyCollection<Key> keys)
         {
-            if (_Session == null) Start();
-            // Created on the first update, not in Start: the hub also starts a game for the
-            // cartridge animation, which must stay silent.
-            if (_Audio == null) _Audio = new G10_PacManAudio(_SharedOutput);
+            EnsureSession();
             G10_PacManInput input = ReadInput(keys);
             foreach (Key key in keys)
             {
@@ -66,7 +66,7 @@ namespace OOPGames
                     _HighscoreSaved = true;
                 }
                 if (!input.Confirm) return;
-                Start();
+                NewSession();
             }
             _Session.Update(input);
             _Audio.Update(_Session);
@@ -74,8 +74,35 @@ namespace OOPGames
 
         public void Draw(Canvas canvas)
         {
-            if (_Session == null) Start();
+            EnsureSession();
             _Renderer.Draw(canvas, _Session);
+        }
+
+        void EnsureSession()
+        {
+            if (_Session != null) return;
+            // Usually long finished; waiting makes sure no shared cache is built twice at once.
+            if (_WarmUp != null) _WarmUp.Wait();
+            NewSession();
+            if (_SharedOutput == null) _SharedOutput = new G10_MediaSoundOutput();
+            if (_Audio == null) _Audio = new G10_PacManAudio(_SharedOutput);
+        }
+
+        void NewSession()
+        {
+            _Session = new G10_PacManSession(B5RoomHighscores.Get(Title), Environment.TickCount);
+            _HighscoreSaved = false;
+        }
+
+        // Runs everything once that needs no WPF, so it is compiled and its caches are filled:
+        // game logic, sprites, maze background, HUD, sounds and the highscore file.
+        static void WarmUp()
+        {
+            G10_PacManSession session = new G10_PacManSession(B5RoomHighscores.Get("Pac-Man"), 0);
+            G10_PacManInput none = new G10_PacManInput(G10_Direction.None, false);
+            for (int i = 0; i <= G10_PacManSession.ReadyTicks; i++) session.Update(none);
+            new G10_PacManRenderer().Compose(session);
+            foreach (G10_Sound sound in Enum.GetValues(typeof(G10_Sound))) G10_SoundSynth.Clip(sound);
         }
 
         // The framework only reports key presses, so the last direction key of the tick wins

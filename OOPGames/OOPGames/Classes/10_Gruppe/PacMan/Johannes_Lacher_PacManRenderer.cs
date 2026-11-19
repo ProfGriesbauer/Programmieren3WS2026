@@ -290,8 +290,10 @@ namespace OOPGames
             "..1111.."
         };
 
-        private readonly WriteableBitmap _Bitmap;
-        private readonly Image _Image;
+        // Created on the first Draw: the first WriteableBitmap of a process costs about 0.1 s,
+        // which must not fall into the hub's camera animation.
+        private WriteableBitmap _Bitmap;
+        private Image _Image;
         private readonly G10_PixelBuffer _Buffer;
         private readonly G10_PacManHud _Hud;
         private readonly Int32Rect _FullRect;
@@ -305,13 +307,6 @@ namespace OOPGames
 
         public G10_PacManRenderer()
         {
-            _Bitmap = new WriteableBitmap(ScreenWidth, ScreenHeight, 96, 96, PixelFormats.Pbgra32, null);
-            _Image = new Image();
-            _Image.Width = ScreenWidth;
-            _Image.Height = ScreenHeight;
-            _Image.Stretch = Stretch.Fill;
-            _Image.Source = _Bitmap;
-            RenderOptions.SetBitmapScalingMode(_Image, BitmapScalingMode.NearestNeighbor);
             _Buffer = new G10_PixelBuffer(ScreenWidth, ScreenHeight);
             _Hud = new G10_PacManHud();
             _FullRect = new Int32Rect(0, 0, ScreenWidth, ScreenHeight);
@@ -321,6 +316,14 @@ namespace OOPGames
         public void Draw(Canvas canvas, IG10_PacManView view)
         {
             AttachImage(canvas);
+            Compose(view);
+            _Bitmap.WritePixels(_FullRect, _Buffer.Pixels, ScreenWidth * 4, 0);
+        }
+
+        // Draws the frame into the pixel buffer only. Uses no WPF objects, so it also runs on a
+        // background thread (warm-up).
+        public void Compose(IG10_PacManView view)
+        {
             _FrameCounter++;
             UpdateBackground(view.Maze);
 
@@ -341,12 +344,20 @@ namespace OOPGames
             DrawPopups(view);
             DrawMessage(view);
             _Hud.Draw(_Buffer, view);
-
-            _Bitmap.WritePixels(_FullRect, _Buffer.Pixels, ScreenWidth * 4, 0);
         }
 
         private void AttachImage(Canvas canvas)
         {
+            if (_Image == null)
+            {
+                _Bitmap = new WriteableBitmap(ScreenWidth, ScreenHeight, 96, 96, PixelFormats.Pbgra32, null);
+                _Image = new Image();
+                _Image.Width = ScreenWidth;
+                _Image.Height = ScreenHeight;
+                _Image.Stretch = Stretch.Fill;
+                _Image.Source = _Bitmap;
+                RenderOptions.SetBitmapScalingMode(_Image, BitmapScalingMode.NearestNeighbor);
+            }
             if (canvas.Children.Count != 1 || !ReferenceEquals(canvas.Children[0], _Image))
             {
                 canvas.Children.Clear();

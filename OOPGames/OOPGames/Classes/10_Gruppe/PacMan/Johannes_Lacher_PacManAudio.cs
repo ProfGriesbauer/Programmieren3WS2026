@@ -13,6 +13,9 @@ namespace OOPGames
     {
         // The death sound starts when the death animation starts (see the renderer).
         const int DeathSoundDelayTicks = 15;
+        // The sounds are loaded when the first game is shown; the start tune may wait this long
+        // for its file, otherwise it is skipped.
+        const int StartJingleWaitTicks = 12;
         const int NoTick = -1;
 
         readonly IG10_SoundOutput _Output;
@@ -23,6 +26,7 @@ namespace OOPGames
         int _ChompEndsAt;
         bool _NextChompIsB;
         int _DeathAt = NoTick;
+        int _JingleWaitTicks;
 
         public G10_PacManAudio(IG10_SoundOutput output)
         {
@@ -39,6 +43,7 @@ namespace OOPGames
             _Output.StopAll();
             _HasLoop = false;
             _DeathAt = NoTick;
+            _JingleWaitTicks = 0;
         }
 
         public void Update(IG10_PacManView view)
@@ -46,8 +51,21 @@ namespace OOPGames
             _Tick++;
             if (Muted) return;
             foreach (G10_SoundCue cue in view.SoundCues) PlayCue(cue);
+            PlayStartJingleWhenReady();
             if (_Tick == _DeathAt) _Output.Play(G10_Sound.Death);
             UpdateLoop(view);
+        }
+
+        void PlayStartJingleWhenReady()
+        {
+            if (_JingleWaitTicks == 0) return;
+            if (_Output.IsReady(G10_Sound.StartJingle))
+            {
+                _Output.Play(G10_Sound.StartJingle);
+                _JingleWaitTicks = 0;
+                return;
+            }
+            _JingleWaitTicks--;
         }
 
         void PlayCue(G10_SoundCue cue)
@@ -55,7 +73,7 @@ namespace OOPGames
             switch (cue)
             {
                 case G10_SoundCue.GameStart:
-                    _Output.Play(G10_Sound.StartJingle);
+                    _JingleWaitTicks = StartJingleWaitTicks;
                     break;
                 case G10_SoundCue.Chomp:
                     // While Pac-Man keeps eating, the two halves of the chomp alternate without overlapping.
@@ -155,10 +173,15 @@ namespace OOPGames
             }
         }
 
+        public bool IsReady(G10_Sound sound)
+        {
+            return _Opened.Contains(sound);
+        }
+
         public void Play(G10_Sound sound)
         {
             MediaPlayer player;
-            if (!_Opened.Contains(sound) || !_Players.TryGetValue(sound, out player)) return;
+            if (!IsReady(sound) || !_Players.TryGetValue(sound, out player)) return;
             player.Position = TimeSpan.Zero;
             player.Play();
         }

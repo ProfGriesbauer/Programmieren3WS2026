@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 
@@ -56,6 +57,11 @@ namespace OOPGames
         bool _LastOverlayMonitor;
         Grid _ScreenEffect;
         bool _CameraInitialized;
+        Point3D _CameraPosition;
+        Vector3D _CameraLook;
+        // Close to the old feel: the camera covered about 9 % of the remaining way per 40 ms tick.
+        static readonly Duration CameraMove = new Duration(TimeSpan.FromSeconds(1.2));
+        static readonly IEasingFunction CameraEase = CreateCameraEase();
         double _LastWidth = -1;
 
         static readonly Brush WoodTexture = CreateWoodTexture();
@@ -690,6 +696,7 @@ namespace OOPGames
                 context.DrawText(authorText, new Point(4, 438));
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
+            B5RoomTextures.CacheAsBitmap(brush);
             brush.Freeze();
             return brush;
         }
@@ -713,6 +720,7 @@ namespace OOPGames
                 context.DrawText(text, new Point((64 - text.Width) / 2, (64 - text.Height) / 2));
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
+            B5RoomTextures.CacheAsBitmap(brush);
             brush.Freeze();
             return brush;
         }
@@ -918,6 +926,7 @@ namespace OOPGames
             DrawingGroup drawing = new DrawingGroup();
             drawing.Children.Add(new GeometryDrawing(gradient, null, new EllipseGeometry(new Rect(0, 0, 1, 1))));
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
+            B5RoomTextures.CacheAsBitmap(brush);
             brush.Freeze();
             return brush;
         }
@@ -1054,6 +1063,7 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.38, 0.62),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
+            B5RoomTextures.CacheAsBitmap(brush);
             brush.Freeze();
             return brush;
         }
@@ -1085,6 +1095,7 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.06, 0.12),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
+            B5RoomTextures.CacheAsBitmap(brush);
             brush.Freeze();
             return brush;
         }
@@ -1114,6 +1125,7 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.18, 0.18),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
+            B5RoomTextures.CacheAsBitmap(brush);
             brush.Freeze();
             return brush;
         }
@@ -1138,6 +1150,7 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.7, 0.45),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
+            B5RoomTextures.CacheAsBitmap(brush);
             brush.Freeze();
             return brush;
         }
@@ -1650,37 +1663,48 @@ namespace OOPGames
                 target.X + distance * Math.Sin(azimuth) * Math.Sin(polar),
                 target.Y + distance * Math.Cos(polar),
                 target.Z + distance * Math.Cos(azimuth) * Math.Sin(polar));
-            Point3D current = _Camera.Position;
-            Vector3D look = _Camera.LookDirection;
-            if (!_CameraInitialized || look.Length < 0.01)
+            Vector3D desiredLook = target - desiredPosition;
+            if (!_CameraInitialized || amount >= 1)
             {
-                _Camera.Position = desiredPosition;
-                _Camera.LookDirection = target - desiredPosition;
+                SetCamera(desiredPosition, desiredLook);
                 _Camera.UpDirection = new Vector3D(0, 1, 0);
                 _CameraInitialized = true;
                 return;
             }
 
-            Point3D currentTarget = current + look;
-            if (IsClose(current, desiredPosition) && IsClose(currentTarget, target)) return;
-            if (amount >= 1 || (IsClose(current, desiredPosition, 0.001) &&
-                IsClose(currentTarget, target, 0.001)))
-            {
-                _Camera.Position = desiredPosition;
-                _Camera.LookDirection = target - desiredPosition;
-                return;
-            }
+            // Already moving there (or there): the running animation continues on its own.
+            if (IsClose(_CameraPosition, desiredPosition) && (_CameraLook - desiredLook).Length <= 0.00001) return;
+            AnimateCamera(desiredPosition, desiredLook);
+        }
 
-            Point3D nextPosition = new Point3D(
-                current.X + (desiredPosition.X - current.X) * amount,
-                current.Y + (desiredPosition.Y - current.Y) * amount,
-                current.Z + (desiredPosition.Z - current.Z) * amount);
-            Point3D nextTarget = new Point3D(
-                currentTarget.X + (target.X - currentTarget.X) * amount,
-                currentTarget.Y + (target.Y - currentTarget.Y) * amount,
-                currentTarget.Z + (target.Z - currentTarget.Z) * amount);
-            _Camera.Position = nextPosition;
-            _Camera.LookDirection = nextTarget - nextPosition;
+        // The framework only ticks every 40 ms, so moving the camera a step per tick looks jerky.
+        // Instead, one WPF animation is started whenever the camera gets a new goal; WPF then
+        // moves the camera on every screen frame. _CameraPosition / _CameraLook hold the goal.
+        void AnimateCamera(Point3D position, Vector3D look)
+        {
+            _CameraPosition = position;
+            _CameraLook = look;
+            _Camera.BeginAnimation(ProjectionCamera.PositionProperty,
+                new Point3DAnimation(position, CameraMove) { EasingFunction = CameraEase });
+            _Camera.BeginAnimation(ProjectionCamera.LookDirectionProperty,
+                new Vector3DAnimation(look, CameraMove) { EasingFunction = CameraEase });
+        }
+
+        static IEasingFunction CreateCameraEase()
+        {
+            ExponentialEase ease = new ExponentialEase { EasingMode = EasingMode.EaseOut, Exponent = 5 };
+            ease.Freeze();
+            return ease;
+        }
+
+        void SetCamera(Point3D position, Vector3D look)
+        {
+            _CameraPosition = position;
+            _CameraLook = look;
+            _Camera.BeginAnimation(ProjectionCamera.PositionProperty, null);
+            _Camera.BeginAnimation(ProjectionCamera.LookDirectionProperty, null);
+            _Camera.Position = position;
+            _Camera.LookDirection = look;
         }
 
         static bool IsClose(Point3D first, Point3D second, double tolerance = 0.00001)
@@ -1689,6 +1713,19 @@ namespace OOPGames
             double dy = first.Y - second.Y;
             double dz = first.Z - second.Z;
             return dx * dx + dy * dy + dz * dz <= tolerance * tolerance;
+        }
+    }
+
+    static class B5RoomTextures
+    {
+        // Vector textures (DrawingBrush) on 3D surfaces are otherwise rasterized again for every
+        // frame in which the camera moves. With this hint WPF keeps the rasterized bitmap and only
+        // redraws it when the texture appears at less than half or more than twice the size.
+        public static void CacheAsBitmap(TileBrush brush)
+        {
+            RenderOptions.SetCachingHint(brush, CachingHint.Cache);
+            RenderOptions.SetCacheInvalidationThresholdMinimum(brush, 0.5);
+            RenderOptions.SetCacheInvalidationThresholdMaximum(brush, 2.0);
         }
     }
 }

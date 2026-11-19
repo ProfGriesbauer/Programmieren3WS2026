@@ -79,6 +79,8 @@ namespace OOPGames
     // playing a sound again restarts it.
     public interface IG10_SoundOutput
     {
+        // False while a sound is still being loaded; playing it then has no effect.
+        bool IsReady(G10_Sound sound);
         void Play(G10_Sound sound);
         void Stop(G10_Sound sound);
         void StopAll();

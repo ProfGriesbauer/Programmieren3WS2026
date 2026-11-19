@@ -620,3 +620,15 @@ Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Reb
 > add sound effects to pac man
 
 **Ergebnis:** übernommen – Soundeffekte ohne Framework- oder Hub-Änderung: Die Session meldet nur Ereignisse (`G10_SoundCue` in der nur lesenden Ansicht), `G10_PacManAudio` entscheidet, was zu hören ist (Einmal-Sounds plus eine Hintergrundschleife je nach Spielzustand: Sirene, verängstigte Geister, heimkehrende Augen), `IG10_SoundOutput`/`G10_MediaSoundOutput` spielt mit WPF-`MediaPlayer` ab, `G10_SoundSynth` erzeugt alle Klänge im Code (eigene Entwürfe inklusive eigener Startmelodie). Taste M schaltet den Ton um (Hinweis im HUD). Schleifen werden von den Ticks neu gestartet, enden also nach Esc von selbst. Gemessen: Das erste Öffnen einer Mediendatei dauert ca. 6,6 s; deshalb werden die Sounds schon während der Kassetten-Animation geladen und noch nicht geladene Sounds übersprungen statt verspätet gespielt. Build ohne Fehler/Warnungen, Testprogramm 120/120 bestanden; Plan (Abschnitt 10) und README ergänzt. Hörbarkeit und Klang im laufenden Programm noch nicht von Hand geprüft; nicht committet.
+
+### 101
+**Prompt:**
+> can we improve the performance of the 3d scene without editing the framework? the 3d screen is a bit laggy since the last additions
+
+**Ergebnis:** übernommen – ohne Framework-Änderung. Zuerst gemessen (Benchmark im Scratchpad mit echtem Painter in einem 1600×900-Fenster, Vergleich mit dem committeten Stand): (1) Beim Einlegen einer Kassette fror die UI 190–220 ms ein, genau beim Start des Kamera-Zooms – Ursache waren meine Pac-Man-Ergänzungen (MediaPlayer, WriteableBitmap und JIT im `Start()`); (2) die Kamera bewegte sich nur in 25 Schritten pro Sekunde; (3) die Nahansicht kostet ca. 22 ms Renderzeit pro Bild, u. a. weil die 45 `DrawingBrush`-Texturen (Holz, Tapete, Buchrücken, Tasten …) bei jeder Kamerabewegung neu gerastert werden. Änderungen: Pac-Man startet billig (Hintergrund-Warm-up ohne WPF, Bitmap/MediaPlayer erst beim ersten Anzeigen, Startmelodie wartet bis 0,5 s auf das Laden) → Hänger beim Einlegen 4–20 ms; Renderer in `Compose` (ohne WPF) und Anzeige getrennt; `B5RoomTextures.CacheAsBitmap` (CachingHint) für alle Vektor-Texturen in `B5_RoomPaint.cs` und `B5_GameBoyModel.cs`; Kamera fährt per WPF-Animation mit Ease-out (1,2 s) statt in Tick-Schritten → Kamera ändert sich in jedem Bild (ca. 40/s statt 21/s), Zoom 33–36 → 42–45 fps. Getestet: Punktlichter und Glanzlichter kosten nichts Messbares, bleiben also. Pac-Man-Tests 120/120 bestanden. Im laufenden Programm noch nicht von Hand geprüft; nicht committet.
+
+### 102
+**Prompt:**
+> performance looks good now. come to an end soon
+
+**Ergebnis:** Zwischennachricht während Eintrag 101; Arbeit abgeschlossen.
