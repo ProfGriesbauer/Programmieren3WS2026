@@ -125,7 +125,7 @@ namespace OOPGames
                 case B5RoomPhase.Room:
                     return new[] { new[] { "← → / A D", "Geraet waehlen" }, new[] { "ENTER / Z", "oeffnen" } };
                 case B5RoomPhase.Device:
-                    return new[] { new[] { "1 / 2", "Spiel waehlen" }, new[] { "ENTER / Z", "Modul" }, new[] { "ESC / X", "zurueck" } };
+                    return new[] { new[] { "↑ ↓ / W S / 1-3", "Spiel waehlen" }, new[] { "ENTER / Z", "Modul" }, new[] { "ESC / X", "zurueck" } };
                 case B5RoomPhase.Playing:
                     return new[] { new[] { "PFEILE / WASD", "steuern" }, new[] { "ESC / X", "zurueck zur Geraeteauswahl" } };
                 case B5RoomPhase.Ejecting:

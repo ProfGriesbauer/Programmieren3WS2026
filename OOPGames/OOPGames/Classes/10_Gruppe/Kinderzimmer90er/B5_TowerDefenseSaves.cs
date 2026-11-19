@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -160,7 +160,7 @@ namespace OOPGames
             {
                 TowerDefenseSaveSlot[] stored = JsonSerializer.Deserialize<TowerDefenseSaveSlot[]>(File.ReadAllText(FilePath));
                 if (stored == null || stored.Length != SlotCount)
-                    throw new InvalidDataException("Die Tower-Defense-Spielstaende sind ungueltig: " + FilePath);
+                    throw new InvalidDataException("Die Tower-Defense-Spielstände sind ungültig: " + FilePath);
                 for (int i = 0; i < SlotCount; i++)
                 {
                     if (stored[i] == null) continue;

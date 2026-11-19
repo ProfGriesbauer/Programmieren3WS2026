@@ -61,8 +61,8 @@ namespace OOPGames
             new B5RoomDevice(B5RoomDeviceKind.Commodore, "HEIMCOMPUTER", Color.FromRgb(124, 112, 218), Color.FromRgb(53, 40, 121),
                 new List<B5RoomGameEntry>
                 {
-                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132))),
-                    new B5RoomGameEntry("Tower Defense", Color.FromRgb(82, 105, 190), () => new B5RoomTowerDefenseGame())
+                    new B5RoomGameEntry("Tower Defense", Color.FromRgb(82, 105, 190), () => new B5RoomTowerDefenseGame()),
+                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132)))
                 })
         };
 
@@ -207,6 +207,12 @@ namespace OOPGames
                     if (gameIndex >= 0 && gameIndex < Device.Games.Count)
                     {
                         SelectedGame = gameIndex;
+                    }
+                    else if (B5RoomKeys.IsUp(key) || B5RoomKeys.IsLeft(key) || B5RoomKeys.IsDown(key) || B5RoomKeys.IsRight(key))
+                    {
+                        int direction = B5RoomKeys.IsDown(key) || B5RoomKeys.IsRight(key) ? 1 : -1;
+                        int count = Device.Games.Count;
+                        SelectedGame = (SelectedGame + direction + count) % count;
                     }
                     else if (IsConfirmKey(key))
                     {
