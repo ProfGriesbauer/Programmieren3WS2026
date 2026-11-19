@@ -398,12 +398,58 @@ namespace OOPGames
                     "the skater starts centered in the middle track");
                 AssertTrue(Math.Abs(GetRunnerScale(skaterVisual) - 0.55) < 0.001,
                     "the skater and skateboard are scaled down");
+                AssertTrue(GetSkateboardModel(skaterModel) == null,
+                    "the player starts without a skateboard");
 
                 Rect3D runnerBounds = skaterModel.Bounds;
                 AssertTrue(runnerBounds.X >= -0.55
                     && runnerBounds.X + runnerBounds.SizeX <= 0.55,
                     "the skater and skateboard fit between the track rails");
 
+                string[] labels = canvas.Children.OfType<TextBlock>()
+                    .Select(block => block.Text).ToArray();
+                AssertTrue(labels.Any(text => text.StartsWith("TEMPO  ", StringComparison.Ordinal))
+                    && labels.Any(text => text.StartsWith("SCORE  0", StringComparison.Ordinal))
+                    && labels.Any(text => text.Contains("M\u00dcNZEN  0", StringComparison.Ordinal)),
+                    "the HUD displays speed, score, and coins");
+                AssertTrue(labels.Any(text => text.Contains("A/D Spur wechseln", StringComparison.Ordinal))
+                    && labels.Any(text => text == "TRAIN RUN"),
+                    "the HUD displays controls and the game title");
+
+                int paintedChildCount = canvas.Children.Count;
+                painter.TickPaintGameField(canvas, rules.CurrentField);
+                AssertTrue(canvas.Children.Count == paintedChildCount,
+                    "redrawing the scene does not accumulate canvas elements");
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                AssertTrue(GetSkateboardModel(skaterVisual.Content as Model3DGroup) == null,
+                    "redrawing keeps the skateboard hidden before unlocking it");
+
+                field.Distance = Math.PI / (2 * 0.48);
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                skaterModel = skaterVisual.Content as Model3DGroup;
+                AssertRunnerHasRunningAnimation(skaterModel);
+                AssertTrue(GetRunnerHeight(skaterVisual) < 0,
+                    "the runner's feet stay on the track without a skateboard");
+
+                rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
+                field.Distance = 0;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                AssertTrue(Math.Abs(GetRunnerX(skaterVisual) - 1.55) < 0.001,
+                    "the skater starts centered when moving to the right track");
+                AssertTrue(GetSkateboardModel(skaterVisual.Content as Model3DGroup) == null,
+                    "lane changes do not unlock the skateboard");
+
+                field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.Surfboard] = 50;
+                field.Distance = Math.PI / (2 * 0.32);
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                skaterModel = skaterVisual.Content as Model3DGroup;
                 Model3DGroup skateboardModel = GetSkateboardModel(skaterModel);
                 GeometryModel3D[] skateboardParts = skateboardModel == null
                     ? new GeometryModel3D[0]
@@ -416,46 +462,13 @@ namespace OOPGames
                     "the skateboard has four wheels and reuses its box and sphere meshes");
                 AssertTrue(skateboardModel.Bounds.SizeZ > skateboardModel.Bounds.SizeX,
                     "the skateboard's long axis follows the track direction");
-
-                string[] labels = canvas.Children.OfType<TextBlock>()
-                    .Select(block => block.Text).ToArray();
-                AssertTrue(labels.Any(text => text.StartsWith("TEMPO  ", StringComparison.Ordinal))
-                    && labels.Any(text => text.StartsWith("SCORE  0", StringComparison.Ordinal))
-                    && labels.Any(text => text.Contains("M\u00dcNZEN  0", StringComparison.Ordinal)),
-                    "the HUD displays speed, score, and coins");
-                AssertTrue(labels.Any(text => text.Contains("A/D Spur wechseln", StringComparison.Ordinal))
-                    && labels.Any(text => text == "TRAIN RUN"),
-                    "the HUD displays controls and the game title");
-
-                double restingHeight = GetRunnerHeight(skaterVisual);
-                int paintedChildCount = canvas.Children.Count;
-                painter.TickPaintGameField(canvas, rules.CurrentField);
-                AssertTrue(canvas.Children.Count == paintedChildCount,
-                    "redrawing the scene does not accumulate canvas elements");
-                viewport = canvas.Children.OfType<Viewport3D>().First();
-                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
-                AssertTrue(ReferenceEquals(skateboardModel,
-                        GetSkateboardModel(skaterVisual.Content as Model3DGroup)),
-                    "redrawing reuses the cached skateboard model");
-
-                rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
-                field.Distance = 0;
-                painter.TickPaintGameField(canvas, field);
-                viewport = canvas.Children.OfType<Viewport3D>().First();
-                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
-                AssertTrue(Math.Abs(GetRunnerX(skaterVisual) - 1.55) < 0.001,
-                    "the skater starts centered when moving to the right track");
-
-                field.Distance = Math.PI / (2 * 0.32);
-                painter.TickPaintGameField(canvas, field);
-                viewport = canvas.Children.OfType<Viewport3D>().First();
-                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
-                skaterModel = skaterVisual.Content as Model3DGroup;
+                AssertTrue(ReferenceEquals(skateboardModel, GetSkateboardModel(skaterModel)),
+                    "the unlocked skateboard uses the cached model");
                 AssertTrue(GetRunnerX(skaterVisual) > 1.62
                     && GetRunnerX(skaterVisual) < 1.64,
                     "the skater carves to one side while riding");
-                AssertTrue(Math.Abs(GetRunnerHeight(skaterVisual) - restingHeight) < 0.001,
-                    "side-to-side skating replaces the previous vertical bob");
+                AssertTrue(Math.Abs(GetRunnerHeight(skaterVisual)) < 0.001,
+                    "side-to-side skating does not add a vertical bob");
                 AssertRunnerFitsTrack(skaterVisual, skaterModel, 1.55);
                 AssertFeetStayPlanted(skaterModel);
 
@@ -464,6 +477,8 @@ namespace OOPGames
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
                 skaterModel = skaterVisual.Content as Model3DGroup;
+                AssertTrue(ReferenceEquals(skateboardModel, GetSkateboardModel(skaterModel)),
+                    "redrawing the unlocked skateboard reuses its cached model");
                 AssertTrue(GetRunnerX(skaterVisual) > 1.46
                     && GetRunnerX(skaterVisual) < 1.48,
                     "the skater carves back across the lane");
@@ -476,6 +491,22 @@ namespace OOPGames
                 skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
                 AssertTrue(GetRunnerHeight(skaterVisual) > 2.4,
                     "the skater is elevated onto train roofs");
+
+                field.MutableUpgrades.Remove(Gruppe2_SubwayUpgradeKind.Surfboard);
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                AssertTrue(GetSkateboardModel(skaterVisual.Content as Model3DGroup) == null,
+                    "the skateboard disappears when the unlock ends");
+
+                field.GuardGap = 90;
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                ModelVisual3D guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                Vector3D guardForward = GetRunnerTransform(guardVisual).Transform(new Vector3D(0, 0, 1));
+                guardForward.Normalize();
+                AssertTrue(guardForward.Z < -0.99,
+                    "the Bahnrichter faces away from the camera down the tracks");
             }
             finally
             {
@@ -495,11 +526,45 @@ namespace OOPGames
                     component.Children.OfType<GeometryModel3D>().Count() == 8);
         }
 
-        private static void AssertFeetStayPlanted(Model3DGroup skaterModel)
+        private static Model3DGroup GetRiderModel(Model3DGroup skaterModel)
         {
             Model3DGroup skateboard = GetSkateboardModel(skaterModel);
-            Model3DGroup rider = skaterModel.Children.OfType<Model3DGroup>()
+            return skaterModel.Children.OfType<Model3DGroup>()
                 .FirstOrDefault(component => !ReferenceEquals(component, skateboard));
+        }
+
+        private static void AssertRunnerHasRunningAnimation(Model3DGroup skaterModel)
+        {
+            Model3DGroup rider = GetRiderModel(skaterModel);
+            AssertTrue(rider != null,
+                "the player model contains the runner");
+
+            Rect3D[] feet = rider.Children.OfType<Model3DGroup>()
+                .Where(part => part.Children.OfType<GeometryModel3D>().Count() == 2
+                    && part.Bounds.Y < 1)
+                .OrderBy(part => part.Bounds.X)
+                .Select(part => part.Bounds)
+                .ToArray();
+            AssertTrue(feet.Length == 2,
+                "the running pose contains two articulated feet");
+            AssertTrue(feet[0].Z > 0 && feet[1].Z + feet[1].SizeZ < 0,
+                "the feet stride in opposite directions");
+            AssertTrue(feet[0].Y > feet[1].Y + 0.15,
+                "one foot lifts while the other supports the run");
+
+            Rect3D[] legSegments = rider.Children.OfType<Model3DGroup>()
+                .Where(part => part.Children.OfType<GeometryModel3D>().Count() == 1
+                    && part.Bounds.Y < 0.95)
+                .Select(part => part.Bounds)
+                .ToArray();
+            AssertTrue(legSegments.Length == 4
+                && legSegments.All(segment => segment.Y + segment.SizeY <= 0.91),
+                "running legs stay below the shirt hem");
+        }
+
+        private static void AssertFeetStayPlanted(Model3DGroup skaterModel)
+        {
+            Model3DGroup rider = GetRiderModel(skaterModel);
             AssertTrue(rider != null && rider.Transform is RotateTransform3D,
                 "the rider has a controlled carving lean");
 
@@ -603,6 +668,24 @@ namespace OOPGames
             rules.TickGameCall();
             AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Magnet),
                 "upgrade box grants the expected upgrade");
+
+            rules.ClearField();
+            field = (Gruppe2_SubwayField)rules.CurrentField;
+            field.MutableRewards.Add(new Gruppe2_SubwayReward(
+                Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5,
+                Gruppe2_SubwayUpgradeKind.Surfboard));
+            rules.TickGameCall();
+            AssertTrue(field.ActiveUpgrades.TryGetValue(
+                    Gruppe2_SubwayUpgradeKind.Surfboard, out int surfboardTicks)
+                && surfboardTicks == 500,
+                "the skateboard item unlocks the surfboard for 500 ticks");
+
+            rules.ClearField();
+            field = (Gruppe2_SubwayField)rules.CurrentField;
+            field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.Surfboard] = 1;
+            rules.TickGameCall();
+            AssertTrue(!field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Surfboard),
+                "the skateboard unlock expires when its timer runs out");
         }
 
         private static void TestWaveSpawningKeepsOneSafeLane()

@@ -397,3 +397,51 @@ User prompt:
 Assistant answer:
 - I moved the rider's carving pivot down to the foot/deck contact height so the feet no longer drift sideways relative to the skateboard.
 - I added visual regression checks at both sway extremes. The Subway Surfer tests passed, and the application build passed using a temporary output directory because the running game had locked the normal executable.
+
+### Prompt 31
+User prompt:
+> great. can you give the character a better outfit that still stands out against the background?
+
+Assistant answer:
+- I kept the bright magenta jacket and added a deep-purple backpack with cyan and gold details, plus matching shoulder accents on the camera-facing side.
+- I added a visual regression check for the colorful rear-facing outfit. The Subway Surfer tests passed, and the application built successfully in a temporary output directory.
+
+### Prompt 32
+User prompt:
+> ah, thats not really better. please revert the changes.
+
+Assistant answer:
+- I reverted the outfit additions and their visual regression check, preserving the earlier skateboard animation and foot-synchronization changes.
+- The Subway Surfer test suite passed after the revert.
+
+### Prompt 33
+User prompt:
+> the character should only get the skateboard when the player runs into the skateboard item that unlocks it for a certain amount of time, can you implement the change using the premade skateboard unlock item?
+
+Assistant answer:
+- I connected skateboard rendering and carving to the existing Surfboard upgrade. The board now appears only while that timed upgrade is active and disappears when it expires or is consumed.
+- I added tests for collecting the Surfboard item, its 500-tick duration, and board visibility before, during, and after the unlock. The Subway Surfer tests passed, and the application build succeeded.
+
+### Prompt 34
+User prompt:
+> when the character doesnt have the skateboard then it should have a running animation
+
+Assistant answer:
+- I added an on-foot run cycle with alternating arm and leg swings and moving feet, while keeping the skateboard riding pose and carving animation exclusive to the active Surfboard upgrade.
+- I added a regression check for the off-board run cycle and grounded feet. The Subway Surfer tests passed, and the application build succeeded.
+
+### Prompt 35
+User prompt:
+> the feet and legs dont work properly with the running animation. please make it more dynamic
+
+Assistant answer:
+- I replaced independently rotated leg pieces with connected, stride-driven hip, knee, ankle, and foot positions. The feet now alternate forward/backward and lift in sync with the legs, while the arms counter-swing.
+- I strengthened the visual regression checks to verify opposite foot strides and alternating foot lift. The Subway Surfer tests passed, and the application build succeeded.
+
+### Prompt 36
+User prompt:
+> the legs sometimes clip through the shirt, can you fix that? also the bahnrichter should also be facing away from the camera
+
+Assistant answer:
+- I lowered the running-leg attachment below the shirt hem and added a regression check that the leg geometry stays under it.
+- I rotated the Bahnrichter to face away from the camera and added a direction check. The Subway Surfer tests passed, and the application build succeeded.
