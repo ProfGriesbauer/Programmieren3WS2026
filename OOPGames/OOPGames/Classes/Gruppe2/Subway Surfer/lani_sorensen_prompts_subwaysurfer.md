@@ -359,3 +359,13 @@ Assistant answer:
 - I turned the skater toward the track direction and strengthened the riding animation with more visible board tilt, body lean, and bounce.
 - I narrowed the pose to keep the rider within the selected track rails and added tests for facing, lane centering, track bounds, and animation.
 - The test runner now uses an isolated output directory so tests can run while the game is open. The Subway Surfer suite passed.
+
+### Prompt 27
+Timestamp: 2026-11-19T09:25:16+01:00
+
+User prompt:
+> want the wheels of the skateboard to align with the direction of the lane so that the character is "driving" away from the camera
+
+Assistant answer:
+- I reoriented the skateboard deck and wheelbase along the track direction, with the axles across the lane, and staggered the rider's feet into a forward-facing riding stance.
+- I added a regression check that the board's long axis follows the track. The full Subway Surfer suite passed.

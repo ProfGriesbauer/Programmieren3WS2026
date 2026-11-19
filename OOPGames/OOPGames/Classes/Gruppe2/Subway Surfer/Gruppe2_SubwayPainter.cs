@@ -257,25 +257,24 @@ namespace OOPGames
             double jump = !guard && field.Level == Gruppe2_SubwayLevel.Air
                 ? 1.15 * field.JumpHeight
                 : 0;
-            double movement = Math.Sin(field.Distance * 0.48);
-            double bob = !guard && field.Level == Gruppe2_SubwayLevel.Track
-                ? 0.06 * (1 - Math.Cos(field.Distance * 0.48))
-                : 0;
-            Model3DGroup runner = CreateRunnerModel(guard, movement);
+            bool skating = !guard && field.Level != Gruppe2_SubwayLevel.Air;
+            double movement = skating
+                ? Math.Sin(field.Distance * 0.32)
+                : Math.Sin(field.Distance * 0.48);
+            double sideToSide = skating ? movement * 0.12 : 0;
+            Model3DGroup runner = CreateRunnerModel(guard, skating ? movement : 0);
             Transform3DGroup transform = new Transform3DGroup();
-            if (!guard && field.RollTicks > 0)
-            {
-                transform.Children.Add(new ScaleTransform3D(1, 0.55, 1));
-            }
             if (!guard)
             {
+                transform.Children.Add(new ScaleTransform3D(0.72, 0.72, 0.72));
                 transform.Children.Add(new RotateTransform3D(
                     new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180)));
-                transform.Children.Add(new RotateTransform3D(
-                    new AxisAngleRotation3D(new Vector3D(0, 0, 1), movement * 3),
-                    new Point3D(0, 1, 0)));
+                if (field.RollTicks > 0)
+                {
+                    transform.Children.Add(new ScaleTransform3D(1, 0.55, 1));
+                }
             }
-            transform.Children.Add(new TranslateTransform3D(x, jump + bob, z));
+            transform.Children.Add(new TranslateTransform3D(x + sideToSide, jump, z));
             viewport.Children.Add(new ModelVisual3D { Content = runner, Transform = transform });
         }
 

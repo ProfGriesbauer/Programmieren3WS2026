@@ -225,6 +225,8 @@ namespace OOPGames
                     && skateboardParts.Skip(4)
                         .All(part => ReferenceEquals(part.Geometry, skateboardParts[4].Geometry)),
                     "the skateboard has four wheels and reuses its box and sphere meshes");
+                AssertTrue(skateboardModel.Bounds.SizeZ > skateboardModel.Bounds.SizeX,
+                    "the skateboard's long axis follows the track direction");
                 double restingHeight = GetRunnerHeight(skaterVisual);
 
                 string[] labels = canvas.Children.OfType<TextBlock>()
