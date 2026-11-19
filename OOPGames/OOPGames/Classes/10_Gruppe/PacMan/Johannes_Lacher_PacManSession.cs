@@ -34,10 +34,12 @@ namespace OOPGames
         readonly List<G10_FruitKind> _FruitHistory = new List<G10_FruitKind>();
         readonly List<G10_PointsPopup> _Popups = new List<G10_PointsPopup>();
         readonly List<int> _PopupTicks = new List<int>();
+        readonly List<G10_SoundCue> _SoundCues = new List<G10_SoundCue>();
         IG10_PacManPhase _Phase;
         G10_LevelSettings _Settings;
         G10_BonusFruit _Fruit;
         int _FreezeTicks;
+        int _UpdateCount;
 
         public G10_PacManSession(int highScore, int randomSeed) : this(G10_MazeLayouts.Classic, highScore, randomSeed)
         {
@@ -74,9 +76,12 @@ namespace OOPGames
         public IReadOnlyList<G10_FruitKind> FruitHistory { get { return _FruitHistory; } }
         public bool FrightenedFlashing { get { return _Scheduler.IsFlashing; } }
         public IReadOnlyList<G10_PointsPopup> Popups { get { return _Popups; } }
+        public IReadOnlyList<G10_SoundCue> SoundCues { get { return _SoundCues; } }
 
         public void Update(G10_PacManInput input)
         {
+            _SoundCues.Clear();
+            if (_UpdateCount++ == 0) _SoundCues.Add(G10_SoundCue.GameStart);
             IG10_PacManPhase next = _Phase.Update(this, input);
             TickPopups();
             if (next == _Phase)
@@ -126,6 +131,7 @@ namespace OOPGames
                 return G10_PlayResult.Continue;
             }
 
+            int livesBefore = _Score.Lives;
             _PacMan.BeginTick();
             foreach (G10_Ghost ghost in _Ghosts) ghost.BeginTick();
 
@@ -139,8 +145,10 @@ namespace OOPGames
             _House.Tick();
             foreach (G10_Ghost ghost in _Ghosts) ghost.Update(_Context);
 
-            if (CheckCollisions()) return G10_PlayResult.PacManDied;
-            return _Maze.DotsLeft == 0 ? G10_PlayResult.LevelCleared : G10_PlayResult.Continue;
+            G10_PlayResult result = CheckCollisions() ? G10_PlayResult.PacManDied
+                : _Maze.DotsLeft == 0 ? G10_PlayResult.LevelCleared : G10_PlayResult.Continue;
+            if (_Score.Lives > livesBefore) _SoundCues.Add(G10_SoundCue.ExtraLife);
+            return result;
         }
 
         void ResetActors()
@@ -167,6 +175,7 @@ namespace OOPGames
         {
             if (result.IsNothing) return;
             _Score.Add(result.Points);
+            _SoundCues.Add(G10_SoundCue.Chomp);
             _House.OnDotEaten();
             if (result.Effect == G10_CollectEffect.FrightenGhosts) FrightenGhosts();
             if (Array.IndexOf(FruitDotCounts, _Maze.DotsEaten) >= 0)
@@ -193,6 +202,7 @@ namespace OOPGames
             {
                 G10_CollectResult result = _Fruit.Collect();
                 _Score.Add(result.Points);
+                _SoundCues.Add(G10_SoundCue.FruitEaten);
                 AddPopup(new G10_PointsPopup(_Fruit.PixelX, _Fruit.PixelY, result.Points), FruitPopupTicks);
                 _Fruit = null;
                 return;
@@ -226,9 +236,14 @@ namespace OOPGames
             {
                 if (!Touches(_PacMan, ghost)) continue;
                 G10_CollisionOutcome outcome = ghost.Mode.OnCollision(ghost, _PacMan);
-                if (outcome == G10_CollisionOutcome.PacManDies) return true;
+                if (outcome == G10_CollisionOutcome.PacManDies)
+                {
+                    _SoundCues.Add(G10_SoundCue.Death);
+                    return true;
+                }
                 if (outcome == G10_CollisionOutcome.GhostEaten)
                 {
+                    _SoundCues.Add(G10_SoundCue.GhostEaten);
                     int points = _Score.AwardGhost();
                     AddPopup(new G10_PointsPopup(ghost.PixelX, ghost.PixelY, points), GhostEatenFreezeTicks);
                     StartFreeze(ghost);

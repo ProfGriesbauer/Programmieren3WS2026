@@ -25,7 +25,11 @@ die unabhängig von WPF ist und sich einzeln testen lässt.
 
 **Optional (Kür)**: „Cruise Elroy“-Modus für Blinky, zweites Labyrinth ab Level 3, Zwischensequenzen.
 
-**Nicht enthalten**: Sound (das Framework hat kein Audio), Original-Sprites oder ROM-Daten.
+**Soundeffekte** (später ergänzt, siehe Abschnitt 10): Startmelodie, Fressgeräusch, Sirene,
+verängstigte Geister, heimkehrende Augen, gefressener Geist, Frucht, Extraleben, Tod. Alle im Code
+erzeugt.
+
+**Nicht enthalten**: Original-Sprites, -Sounds oder ROM-Daten.
 
 ## 2. Rahmenbedingungen
 
@@ -278,6 +282,8 @@ new B5RoomGameEntry("Pac-Man", Color.FromRgb(240, 200, 40), () => new G10_PacMan
 | `PacMan/Johannes_Lacher_PacManSession.cs` | `G10_PacManSession`, Spielphasen |
 | `PacMan/Johannes_Lacher_PacManRenderer.cs` | `G10_PacManRenderer`, `G10_PixelBuffer`, `G10_MazeBackground`, `G10_PacManHud` |
 | `PacMan/Johannes_Lacher_PacManSprites.cs` | `G10_Sprite`, `G10_PacManSprites`, `G10_PixelFont` |
+| `PacMan/Johannes_Lacher_PacManSoundSynth.cs` | `G10_SoundSynth`, `G10_SoundClip`, `G10_ToneWriter` (Klänge im Code erzeugt) |
+| `PacMan/Johannes_Lacher_PacManAudio.cs` | `G10_PacManAudio` (was wann zu hören ist), `G10_MediaSoundOutput` (Wiedergabe) |
 | `PacMan/README.md` | Kurzbeschreibung, Steuerung, Klassenübersicht |
 
 `PacMan/` steht für `Classes/10_Gruppe/PacMan/`. Grober Richtwert: keine Klasse über ca. 250 Zeilen;
@@ -356,3 +362,40 @@ Ergebnisse kommen als „Stand (Datum)“ in diesen Plan.
   echter Fenstergröße, Esc zurück zur Geräteansicht und Weiterspielen, Highscore nach GAME OVER
   gespeichert.
 - Offen: Schritt 6 (optional), E2–E4, Konzept (F7) nachtragen.
+
+## 10. Soundeffekte (2026-11-19)
+
+Das Framework hat kein Audio, aber WPF kann mit `MediaPlayer` Sounddateien abspielen. Am Framework
+und am Hub musste nichts geändert werden.
+
+| Teil | Aufgabe |
+|---|---|
+| `G10_SoundCue` (Modell) | Die Session meldet nur, was in einem Tick passiert ist: `GameStart`, `Chomp`, `GhostEaten`, `FruitEaten`, `ExtraLife`, `Death`. Die Meldungen gehören zur nur lesenden Ansicht, wie die Punkte-Einblendungen |
+| `G10_PacManAudio` | Entscheidet, was zu hören ist. Einmal-Sounds für die Meldungen; die beiden Hälften des Fressgeräuschs wechseln sich ab, ohne sich zu überlagern; der Todessound startet mit der Sterbeanimation (15 Ticks später). Eine Hintergrundschleife folgt dem Spielzustand: heimkehrende Augen → `Retreat`, verängstigte Geister → `Frightened`, sonst `Siren`; außerhalb von `Playing` keine Schleife. M schaltet den Ton an und aus |
+| `IG10_SoundOutput` | Interface für die Wiedergabe. Die Audio-Logik lässt sich dadurch mit einer Attrappe testen |
+| `G10_MediaSoundOutput` | Ein `MediaPlayer` je Sound (Sounds können sich überlagern). Die Clips werden einmal als WAV-Dateien nach `%LOCALAPPDATA%\Programmieren3WS2026\Kinderzimmer90er\PacManSounds` geschrieben; ein Hash im Dateinamen sorgt dafür, dass geänderte Sounds neue Dateien bekommen. Von allen Spielobjekten gemeinsam genutzt |
+| `G10_SoundSynth` | Erzeugt alle Sounds als 16-Bit-WAV-Daten (Rechteck-, Dreieck- und Sinustöne mit Tonhöhen-Gleiten). Eigene Entwürfe, auch die Startmelodie, keine Aufnahmen des Originals |
+
+Entscheidungen:
+
+- **Schleifen werden von den Ticks neu gestartet**, nicht von einem Timer oder dem
+  `MediaEnded`-Event. Wenn der Hub das Spiel nicht mehr aktualisiert (Esc), endet die Schleife nach
+  höchstens 0,4 s. Ein eigener Timer oder eine eigene Hauptschleife ist nicht nötig.
+- **Das allererste Öffnen einer Mediendatei in einem Prozess dauert Sekunden** (gemessen: ca. 6,6 s;
+  danach ca. 0,3–0,5 s je Datei). Die Ausgabe wird deshalb schon in `Start()` erzeugt, das der Hub
+  während der Kassetten-Animation aufruft, und ein noch nicht geöffneter Sound wird übersprungen statt
+  verspätet abgespielt.
+- Die Startmeldung kommt mit dem ersten Update, nicht in `Start()`, weil der Hub auch für die
+  Kassetten-Animation ein Spielobjekt startet, das stumm bleiben muss.
+
+Tests (temporäres Testprogramm, nicht committet): **120 von 120 bestanden** (die 70 bisherigen Prüfungen
+plus 50 neue). Neu: Jeder Clip ist eine gültige WAV-Datei, hörbar und nicht übersteuert; Schleifen
+dauern 10/5/4 Ticks; die Startmelodie passt in READY. Mit Attrappe und echtem Spiel: Startmelodie nur
+beim ersten Update, Sirene alle 10 Ticks, Fresshälften wechseln sich ab, Pause stoppt die Sirene,
+Angst-Schleife ersetzt sie, Todessound genau 15 Ticks nach dem Tod und keine Schleife beim Sterben,
+Stummschalten stoppt alles. Mit dem echten `MediaPlayer`: Windows öffnet alle zehn Dateien mit der
+erwarteten Länge.
+
+**Noch von Hand zu prüfen:** ob die Sounds im laufenden Programm wirklich hörbar sind und gut
+klingen, Verzögerung der ersten Sounds nach Programmstart, Lautstärke im Vergleich zu anderen
+Spielen, Taste M.

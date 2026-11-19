@@ -26,7 +26,10 @@ logic that is independent of WPF and can be tested on its own.
 **Optional (stretch)**: Blinky's "Cruise Elroy" mode, a second maze layout from level 3 onwards,
 intermissions.
 
-**Not included**: sound (the framework has no audio), original sprites or ROM data.
+**Sound effects** (added later, see section 10): start tune, chomping, siren, frightened ghosts,
+eyes returning home, eaten ghost, fruit, extra life, death. All generated in code.
+
+**Not included**: original sprites, sounds or ROM data.
 
 ## 2. Constraints
 
@@ -277,6 +280,8 @@ new B5RoomGameEntry("Pac-Man", Color.FromRgb(240, 200, 40), () => new G10_PacMan
 | `PacMan/Johannes_Lacher_PacManSession.cs` | `G10_PacManSession`, game phases |
 | `PacMan/Johannes_Lacher_PacManRenderer.cs` | `G10_PacManRenderer`, `G10_PixelBuffer`, `G10_MazeBackground`, `G10_PacManHud` |
 | `PacMan/Johannes_Lacher_PacManSprites.cs` | `G10_Sprite`, `G10_PacManSprites`, `G10_PixelFont` |
+| `PacMan/Johannes_Lacher_PacManSoundSynth.cs` | `G10_SoundSynth`, `G10_SoundClip`, `G10_ToneWriter` (sounds generated in code) |
+| `PacMan/Johannes_Lacher_PacManAudio.cs` | `G10_PacManAudio` (what is heard when), `G10_MediaSoundOutput` (playback) |
 | `PacMan/README.md` | Short description, controls, class overview |
 
 `PacMan/` stands for `Classes/10_Gruppe/PacMan/`. Rough target: no class over ~250 lines; the session
@@ -353,3 +358,36 @@ Results are written into this plan as "Stand (date)".
   at the real window size, Esc back to the device view and continuing the game, highscore saved after
   GAME OVER.
 - Open: step 6 (optional), D2–D4, update the concept (F7).
+
+## 10. Sound effects (2026-11-19)
+
+The framework has no audio, but WPF can play sound files with `MediaPlayer`. Nothing in the
+framework or hub had to change.
+
+| Part | Responsibility |
+|---|---|
+| `G10_SoundCue` (model) | The session only reports what happened in a tick: `GameStart`, `Chomp`, `GhostEaten`, `FruitEaten`, `ExtraLife`, `Death`. The cues are part of the read-only view, like the score popups |
+| `G10_PacManAudio` | Decides what is heard. One-shot sounds for the cues; the two chomp halves alternate without overlapping; the death sound starts with the death animation (15 ticks later). One background loop follows the game state: eyes returning → `Retreat`, frightened ghosts → `Frightened`, otherwise `Siren`; no loop outside `Playing`. M switches sound on and off |
+| `IG10_SoundOutput` | Interface for playback. The audio logic can therefore be tested with a fake output |
+| `G10_MediaSoundOutput` | One `MediaPlayer` per sound (sounds can overlap). The clips are written once as WAV files to `%LOCALAPPDATA%\Programmieren3WS2026\Kinderzimmer90er\PacManSounds`; a hash in the file name means changed sounds get new files. Shared by all game objects |
+| `G10_SoundSynth` | Generates all sounds as 16-bit WAV data (square, triangle and sine tones with pitch glides). Our own designs, including our own start tune, no recordings of the original |
+
+Decisions:
+
+- **Loops are restarted by the ticks**, not by a timer or the `MediaEnded` event. When the hub stops
+  updating the game (Esc), the loop ends after at most 0.4 s. No own timer or main loop is needed.
+- **The very first media open in a process takes seconds** (measured: about 6.6 s; later opens about
+  0.3–0.5 s). The output is therefore created in `Start()`, which the hub calls during the cartridge
+  animation, and a sound that is not open yet is skipped instead of being played late.
+- The start cue comes with the first update, not in `Start()`, because the hub also starts a game
+  object for the cartridge animation, which must stay silent.
+
+Tests (temporary test program, not committed): **120 of 120 passed** (the 70 earlier checks plus
+50 new ones). New: every clip is a valid WAV, audible and not clipped; loop lengths are 10/5/4 ticks; the
+start tune fits into READY. With a fake output and a real game: start tune only on the first update,
+siren every 10 ticks, chomp halves alternate, pause stops the siren, frightened loop replaces it,
+death sound exactly 15 ticks after the death with no loop while dying, mute stops everything. With
+the real `MediaPlayer`: Windows opens all ten files with the expected length.
+
+**Still to check by hand:** whether the sounds are really audible in the running program and sound
+good, delay of the first sounds after starting the program, volume compared with other games, M key.

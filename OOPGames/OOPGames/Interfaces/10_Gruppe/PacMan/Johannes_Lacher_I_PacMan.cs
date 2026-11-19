@@ -48,6 +48,42 @@ namespace OOPGames
         GameOver
     }
 
+    // Things that happened during one tick and can be heard. The game only reports them;
+    // the audio decides what to play.
+    public enum G10_SoundCue
+    {
+        GameStart,
+        Chomp,
+        GhostEaten,
+        FruitEaten,
+        ExtraLife,
+        Death
+    }
+
+    public enum G10_Sound
+    {
+        StartJingle,
+        ChompA,
+        ChompB,
+        GhostEaten,
+        FruitEaten,
+        ExtraLife,
+        Death,
+        // Loops while playing; only one of them runs at a time.
+        Siren,
+        Frightened,
+        Retreat
+    }
+
+    // Plays sound clips. Several different sounds may play at the same time;
+    // playing a sound again restarts it.
+    public interface IG10_SoundOutput
+    {
+        void Play(G10_Sound sound);
+        void Stop(G10_Sound sound);
+        void StopAll();
+    }
+
     // Read-only view of the game for the renderer. The renderer must not change the game,
     // so it only ever sees these interfaces, never the model classes.
     public interface IG10_PacManView
@@ -71,6 +107,8 @@ namespace OOPGames
         bool FrightenedFlashing { get; }
         // Score popups (eaten ghost, eaten fruit) that are currently visible.
         IReadOnlyList<G10_PointsPopup> Popups { get; }
+        // Sound cues raised since the previous update.
+        IReadOnlyList<G10_SoundCue> SoundCues { get; }
     }
 
     public interface IG10_MazeView

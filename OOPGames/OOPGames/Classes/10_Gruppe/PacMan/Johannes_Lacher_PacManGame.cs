@@ -20,11 +20,16 @@ namespace OOPGames
     }
 
     // Adapter between the Kinderzimmer hub and the game: translates keys, saves the highscore,
-    // and hands the game state to the renderer. The only Pac-Man class that knows about keys.
+    // and hands the game state to the renderer and the audio. The only Pac-Man class that knows
+    // about keys.
     public sealed class G10_PacManGame : IB5RoomMiniGame
     {
+        // The hub creates a new game object for every start; all of them share one sound output.
+        static G10_MediaSoundOutput _SharedOutput;
+
         readonly G10_PacManRenderer _Renderer = new G10_PacManRenderer();
         G10_PacManSession _Session;
+        G10_PacManAudio _Audio;
         bool _HighscoreSaved;
 
         public string Title { get { return "Pac-Man"; } }
@@ -36,12 +41,22 @@ namespace OOPGames
         {
             _Session = new G10_PacManSession(B5RoomHighscores.Get(Title), Environment.TickCount);
             _HighscoreSaved = false;
+            // Loading the sounds takes a moment; the hub calls Start already during the cartridge
+            // animation, so they are ready when the game begins. Nothing is played here.
+            if (_SharedOutput == null) _SharedOutput = new G10_MediaSoundOutput();
         }
 
         public void Update(IReadOnlyCollection<Key> keys)
         {
             if (_Session == null) Start();
+            // Created on the first update, not in Start: the hub also starts a game for the
+            // cartridge animation, which must stay silent.
+            if (_Audio == null) _Audio = new G10_PacManAudio(_SharedOutput);
             G10_PacManInput input = ReadInput(keys);
+            foreach (Key key in keys)
+            {
+                if (key == Key.M) _Audio.ToggleMute();
+            }
 
             if (_Session.Phase == G10_PacManPhaseKind.GameOver)
             {
@@ -50,10 +65,11 @@ namespace OOPGames
                     B5RoomHighscores.Save(Title, _Session.Score);
                     _HighscoreSaved = true;
                 }
-                if (input.Confirm) Start();
-                return;
+                if (!input.Confirm) return;
+                Start();
             }
             _Session.Update(input);
+            _Audio.Update(_Session);
         }
 
         public void Draw(Canvas canvas)
