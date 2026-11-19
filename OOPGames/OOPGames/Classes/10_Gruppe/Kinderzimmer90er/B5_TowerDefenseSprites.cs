@@ -1,27 +1,54 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace OOPGames
 {
-    // Loads a PNG from Assets/TowerDefense. All sheets store their pixel art with a 4x scale,
+    // Loads a PNG from "Classes/10_Gruppe/Tower Defense/Assets". All sheets store their pixel art with a 4x scale,
     // so coordinates passed to Region are in art pixels (the same unit the game draws in).
     sealed class TowerDefenseSpriteSheet
     {
         const int SourceScale = 4;
+        static readonly string AssetFolder = FindAssetFolder();
         readonly BitmapImage _Image;
         readonly Dictionary<Int32Rect, BitmapSource> _Regions = new Dictionary<Int32Rect, BitmapSource>();
 
         public TowerDefenseSpriteSheet(string fileName)
         {
+            string path = Path.Combine(AssetFolder, fileName);
+            if (!File.Exists(path))
+                throw new FileNotFoundException("Tower Defense graphic not found. Expected in " + AssetFolder, path);
+
             BitmapImage image = new BitmapImage();
             image.BeginInit();
-            image.UriSource = new Uri("pack://application:,,,/OOPGames;component/Assets/TowerDefense/" + fileName, UriKind.Absolute);
+            image.UriSource = new Uri(path, UriKind.Absolute);
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.EndInit();
             image.Freeze();
             _Image = image;
+        }
+
+        // The PNGs are plain files in our group folder (no Resource entry in OOPGames.csproj, which belongs to all
+        // groups). The compiler puts the path of this source file into sourceFile, so the folder is found next to it.
+        // Fallback, e.g. when the source path is not available: search upwards from the program folder.
+        static string FindAssetFolder([CallerFilePath] string sourceFile = "")
+        {
+            string relative = Path.Combine("Classes", "10_Gruppe", "Tower Defense", "Assets");
+            if (!string.IsNullOrEmpty(sourceFile))
+            {
+                string folder = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourceFile), "..", "..", "..", relative));
+                if (Directory.Exists(folder)) return folder;
+            }
+
+            for (DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
+            {
+                string folder = Path.Combine(directory.FullName, relative);
+                if (Directory.Exists(folder)) return folder;
+            }
+            return Path.Combine(AppContext.BaseDirectory, relative);
         }
 
         public BitmapSource Region(int x, int y, int width, int height)

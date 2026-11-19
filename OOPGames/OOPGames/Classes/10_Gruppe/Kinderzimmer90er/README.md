@@ -39,7 +39,7 @@ Minispiele verwenden weiterhin ihre unveraenderten Canvas-Zeichenroutinen.
 Wiederverwendete Farbpinsel und Nearest-Neighbor-Skalierung reduzieren dabei
 unnoetige Frame-Allocations.
 Die gesamte Tower-Defense-Grafik stammt aus Spritesheets in
-`Assets/TowerDefense` (Tower, Kartenhintergrund, Hauptgebaeude, Gegner, Bosse,
+`Tower Defense/Assets` (Tower, Kartenhintergrund, Hauptgebaeude, Gegner, Bosse,
 UI-Icons). `B5_TowerDefenseSprites.cs` laedt die Sheets einmalig und schneidet
 die einzelnen Frames zu; die Pixel-Oberflaeche zeichnet sie mit
 Nearest-Neighbor-Skalierung. Layouts und Generator sind in

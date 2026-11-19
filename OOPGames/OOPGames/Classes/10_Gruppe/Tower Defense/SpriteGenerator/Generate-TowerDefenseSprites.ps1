@@ -7,11 +7,11 @@
     im Stil von tower_spritesheet.png (1 Kunstpixel = 4x4 Bildpixel, dunkler Umriss).
     tower_spritesheet.png wird NICHT veraendert, nur fuer die Vorschau gelesen.
 
-    Achtung: Alle anderen Sheets in Assets/TowerDefense werden ueberschrieben. Wer ein Sheet
+    Achtung: Alle anderen Sheets in "Tower Defense/Assets" werden ueberschrieben. Wer ein Sheet
     von Hand nachbearbeitet, sollte es danach nicht erneut generieren.
 
 .PARAMETER AssetDir
-    Zielordner der PNG-Dateien. Standard: OOPGames/Assets/TowerDefense.
+    Zielordner der PNG-Dateien. Standard: Classes/10_Gruppe/Tower Defense/Assets.
 
 .PARAMETER PreviewDir
     Optionaler Ordner fuer vergroesserte Vorschaubilder (Szene, Gegner, Bosse, Icons).
@@ -20,7 +20,7 @@
     powershell -ExecutionPolicy Bypass -File .\Generate-TowerDefenseSprites.ps1
 #>
 param(
-    [string]$AssetDir = (Join-Path $PSScriptRoot "..\..\..\..\Assets\TowerDefense"),
+    [string]$AssetDir = (Join-Path $PSScriptRoot "..\Assets"),
     [string]$PreviewDir = $null
 )
 

@@ -51,7 +51,7 @@ und `ElderDragon`. Mini-Bosse sind `FireDragon`, `SkeletonMage`, `DarkElfKing`,
 
 ## Grafik
 
-Alle Grafiken kommen aus Spritesheets in `Assets/TowerDefense` im Stil des
+Alle Grafiken kommen aus Spritesheets in `Tower Defense/Assets` im Stil des
 Tower-Spritesheets (Pixel-Art, 4-fach skaliert, dunkler Umriss). Die Karte
 `Gruene Wiese` ist ein vorgerendertes Hintergrundbild mit Weg, Pflasterstein-Podesten
 und Deko; Tower und Hauptgebaeude (intakt, beschaedigt, zerstoert je nach Leben) werden

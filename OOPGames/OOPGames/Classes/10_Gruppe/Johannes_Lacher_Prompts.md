@@ -662,3 +662,15 @@ Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Reb
 > (Stacktrace eingefügt: `System.InvalidOperationException: The pixel surface is not drawing.` aus `TowerDefensePixelSurface.EnsureDrawing` über `B5RoomDraw.Text` ← `B5RoomPaint.AddScreenText` ← `B5RoomPaint.DrawGame` ← `TickPaintGameField`)
 
 **Ergebnis:** übernommen – Ursache: Tower Defense legt seine Pixelfläche in `_GameCanvas.Tag` ab; `B5RoomDraw` zeichnet in diese Fläche, solange sie dort liegt. Nach dem Verlassen von Tower Defense räumte `DrawGame` beim Titelbildschirm des nächsten Spiels zwar die Leinwand ab, ließ die alte Fläche aber im `Tag` – der Titeltext ging dann an eine Fläche, die nicht zeichnet. Fehler bestand schon vor den heutigen Änderungen. Im Testprogramm nachgestellt (Commodore: Tower Defense spielen, verlassen, „Muenzen sammeln“ einlegen → gleicher Stacktrace). Behebung in `B5_RoomPaint.cs`: neue Methode `ClearGameCanvas()` leert die Leinwand und entfernt die alte Fläche aus dem `Tag`; Tower Defense legt beim nächsten Anzeigen ohnehin eine neue an. Danach läuft die nachgestellte Folge ohne Fehler durch. Build ohne Fehler/Warnungen; im laufenden Programm noch nicht von Hand geprüft; nicht committet.
+
+### 108
+**Prompt:**
+> pull the changes and merge them with mine (i think lukas changed the cartdrige animation as well)
+
+**Ergebnis:** übernommen – `origin/gruppe10` per Merge (kein Rebase) übernommen, keine Konflikte. Lukas' Commit fügt Tetris als neues Game-Boy-Spiel hinzu (Ordner `Tetris/`, ein Eintrag in `B5_RoomCore.cs`), die Modul-Animation hatte er nicht geändert; der Commit von Skeletnking ändert Tower Defense (Türme, Gegner, Grafiken). Geprüft: Build ohne Fehler, Tetris bekommt automatisch ein eigenes Modul mit blauem Etikett, Absturz-Fix aus Eintrag 107 greift weiter, echte Tick-Folgen laufen durch. Merge-Commit lokal, nicht gepusht.
+
+### 109
+**Prompt:**
+> can we move the tower defense assets into our folder and avoid the registrastion in the project file?
+
+**Ergebnis:** übernommen (nach Rückfrage: Laden aus unserem Ordner statt Einbetten als Base64) – die 11 PNGs per `git mv` von `OOPGames/Assets/TowerDefense` nach `Classes/10_Gruppe/Tower Defense/Assets` verschoben, `<Resource Include="Assets\TowerDefense\*.png" />` aus `OOPGames.csproj` entfernt (die Datei entspricht damit wieder `master`). `B5_TowerDefenseSprites.cs` lädt die Bilder jetzt als Dateien: den Ordner findet es über den Pfad der eigenen Quelldatei (`CallerFilePath`), ersatzweise durch Suche aufwärts vom Programmordner (wie Gruppe 3); fehlt eine Datei, gibt es eine klare Fehlermeldung mit dem erwarteten Ordner. Standard-Zielordner des Sprite-Generators und die drei READMEs angepasst. Geprüft: sauberer Neubau ohne Fehler, Tower Defense im Testprogramm gespielt – Karte, Burg, Gegner und Menü-Icons werden geladen. Einschränkung: Das Spiel muss aus dem Repository gebaut werden; eine kopierte exe ohne Quellordner findet die Grafiken nicht. Nicht committet.

@@ -1,8 +1,11 @@
 # Tower Defense Spritesheets
 
-Alle Grafiken liegen in `OOPGames/Assets/TowerDefense` und werden ueber
-`<Resource Include="Assets\TowerDefense\*.png" />` in das Spiel eingebunden. Neue
-PNG-Dateien in diesem Ordner sind dadurch automatisch verfuegbar.
+Alle Grafiken liegen in `Classes/10_Gruppe/Tower Defense/Assets` (also in unserem
+Gruppenordner, ohne Eintrag in `OOPGames.csproj`). `B5_TowerDefenseSprites.cs` laedt
+sie zur Laufzeit direkt aus diesem Ordner; den Ordner findet es ueber den Pfad der
+eigenen Quelldatei (`CallerFilePath`). Neue PNG-Dateien in diesem Ordner sind dadurch
+automatisch verfuegbar. Das Spiel muss dafuer aus dem Repository gebaut werden (wie
+ueblich); eine kopierte exe ohne den Quellordner findet die Grafiken nicht.
 
 ## Gemeinsames Format
 
@@ -69,7 +72,7 @@ Baukasten `Chibi` (Kopf, Koerper, Arme, Beine, Augen, Mund, Ohren) plus Ausruest
 Burg (`Art.Castle`), Deko je Karten-Theme (`Art.Scenery`) und der Boden (`Art.Terrain`) sind
 im selben Stil gezeichnet.
 
-**Achtung:** Der Generator ueberschreibt von Hand bearbeitete Sheets in `Assets/TowerDefense`.
+**Achtung:** Der Generator ueberschreibt von Hand bearbeitete Sheets in `Tower Defense/Assets`.
 
 ## Karten
 
