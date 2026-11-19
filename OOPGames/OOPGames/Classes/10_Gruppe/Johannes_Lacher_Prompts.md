@@ -674,3 +674,27 @@ Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Reb
 > can we move the tower defense assets into our folder and avoid the registrastion in the project file?
 
 **Ergebnis:** übernommen (nach Rückfrage: Laden aus unserem Ordner statt Einbetten als Base64) – die 11 PNGs per `git mv` von `OOPGames/Assets/TowerDefense` nach `Classes/10_Gruppe/Tower Defense/Assets` verschoben, `<Resource Include="Assets\TowerDefense\*.png" />` aus `OOPGames.csproj` entfernt (die Datei entspricht damit wieder `master`). `B5_TowerDefenseSprites.cs` lädt die Bilder jetzt als Dateien: den Ordner findet es über den Pfad der eigenen Quelldatei (`CallerFilePath`), ersatzweise durch Suche aufwärts vom Programmordner (wie Gruppe 3); fehlt eine Datei, gibt es eine klare Fehlermeldung mit dem erwarteten Ordner. Standard-Zielordner des Sprite-Generators und die drei READMEs angepasst. Geprüft: sauberer Neubau ohne Fehler, Tower Defense im Testprogramm gespielt – Karte, Burg, Gegner und Menü-Icons werden geladen. Einschränkung: Das Spiel muss aus dem Repository gebaut werden; eine kopierte exe ohne Quellordner findet die Grafiken nicht. Nicht committet.
+
+### 110
+**Prompt:**
+> finish up the placeholder games in a new work tree (snake, münzen sammeln). remove münzen sammeln from one of the consoles we need it only once
+
+**Ergebnis:** übernommen – im eigenen Worktree auf dem lokalen Branch `gruppe10-minigames` (von `gruppe10`). Snake und Muenzen sammeln neu geschrieben, aufgebaut wie Pac-Man (Spiellogik ohne WPF/Tasten, nur lesende Sicht als Interface, Renderer, Adapter mit Tasten und Highscore); Ordner `Kinderzimmer90er/Snake/` und `Kinderzimmer90er/Muenzen/`, Interfaces in `Interfaces/10_Gruppe/Kinderzimmer90er/`. Snake: Start nach erster Richtung, Puffer für zwei schnelle Wendungen ohne Umkehr in den Hals, Level/Tempo, Käfer als Bonus mit Zeitbalken, Pause, Sterbeanimation, Game Over/Sieg, Game-Boy-Grün. Muenzen sammeln: Level-Ziel mit Zeitlimit und Zeitbonus, vier Raumaufteilungen, diagonal springende Wollmäuse, drei Leben, Diamant, Pause, C64-Farben; gehaltene Tasten laufen weiter (Adapter liest dafür den Tastaturzustand). Muenzen sammeln steht nur noch am Commodore (Atari hat schon Pac-Man), Diskettenfarbe gold; alte Platzhalterklassen entfernt. Build ohne Fehler/Warnungen; Testprogramm im Scratchpad (47.960 Prüfungen inkl. Bots, nachgebauter Tastatur, Hub mit echtem Painter, Bildschirmfotos) bestanden. Dabei gefunden und behoben: Wollmäuse blieben auf einer Schachbrettfarbe, pendelten an Ecken und mieden Gänge der Breite 1 (Seitschritt, zufälliges Abprallen, zwei Aufteilungen geändert). Plan mit Stand: `Plans/2026-11-19_Johannes_Lacher_Snake_Muenzen.md`. Im laufenden Programm noch nicht von Hand gespielt; nicht committet.
+
+### 111
+**Prompt:**
+> apply them to the main worktree
+
+**Ergebnis:** übernommen – Änderungen aus Eintrag 110 als Patch (3-Wege) in den Haupt-Worktree übertragen, der inzwischen die Commits „improve tetris“ und „add bomberman“ enthält. Einziger Konflikt in der Spieleliste des Commodore (`B5_RoomCore.cs`): beide Einträge behalten, Reihenfolge Tower Defense, Muenzen sammeln, Bomberman. `G10_Direction` liegt jetzt in `Shared/`, gleiche Schnittstelle, kein Anpassungsbedarf. Build ohne Fehler/Warnungen; Testprogramm gegen den Haupt-Worktree erneut 47.960/47.960 bestanden. Nicht committet.
+
+### 112
+**Prompt:**
+> how does pong work? is it multiplayer?
+
+**Ergebnis:** Erklärung im Chat – Pong war ein Platzhalter für einen Spieler: rechter Schläger steht still, verpasste Bälle kosten nichts, kein Gegner, kein Menü, kein Spielende, fester Winkel. Mehrspieler an einer Tastatur wäre mit eigener Tastenbelegung möglich; Ausbau vorgeschlagen.
+
+### 113
+**Prompt:**
+> finish pong
+
+**Ergebnis:** übernommen – Pong neu geschrieben, Aufbau wie Snake/Muenzen sammeln (Ordner `Kinderzimmer90er/Pong/`, Interface `Johannes_Lacher_I_Pong.cs`): Menü für 1 oder 2 Spieler, Computergegner und Spieler über das Strategy-Interface `IG10_PaddleControl`, zu zweit W/S gegen Pfeiltasten, gehaltene Tasten bewegen weiter, Abprallwinkel nach Trefferpunkt, Ball wird schneller, Trefferprüfung über die Bahn (kein Durchrutschen), Aufschlag zum Verlierer, Spiel bis 7, Pause, Highscore = längster Ballwechsel gegen den Computer. Game-Boy-Farben nach `Shared/Johannes_Lacher_GameBoyColors.cs` verschoben und von Snake mitbenutzt; alte Klasse `B5RoomPongGame` entfernt. Build ohne Fehler/Warnungen; Testprogramm 48.065/48.065 bestanden (u. a. Physik, 20 Partien Bot gegen Computer, Eingabeleser, Hub, Bildschirmfotos). Plan mit Stand: `Plans/2026-11-19_Johannes_Lacher_Pong.md`. Im laufenden Programm noch nicht von Hand gespielt; nicht committet.

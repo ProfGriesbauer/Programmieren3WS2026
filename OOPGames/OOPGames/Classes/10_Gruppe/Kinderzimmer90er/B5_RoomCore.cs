@@ -48,14 +48,13 @@ namespace OOPGames
             new B5RoomDevice(B5RoomDeviceKind.Atari, "ATARI-KONSOLE", Color.FromRgb(206, 117, 55), Color.FromRgb(13, 26, 36),
                 new List<B5RoomGameEntry>
                 {
-                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(224, 89, 49), () => new B5RoomCoinGame("Muenzen sammeln", Color.FromRgb(13, 26, 36), Color.FromRgb(242, 151, 65))),
                     new B5RoomGameEntry("Pac-Man", Color.FromRgb(240, 200, 40), () => new G10_PacManGame())
                 }),
             new B5RoomDevice(B5RoomDeviceKind.Gameboy, "HANDHELD", Color.FromRgb(145, 190, 96), Color.FromRgb(107, 138, 18),
                 new List<B5RoomGameEntry>
                 {
-                    new B5RoomGameEntry("Snake", Color.FromRgb(116, 158, 70), () => new B5RoomSnakeGame()),
-                    new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new B5RoomPongGame()),
+                    new B5RoomGameEntry("Snake", Color.FromRgb(116, 158, 70), () => new G10_SnakeGame()),
+                    new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new G10_PongGame()),
                     new B5RoomGameEntry("Void Courier", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame()),
                     new B5RoomGameEntry("Tetris", Color.FromRgb(112, 165, 201), () => new G10_TetrisGame())
                 }),
@@ -63,7 +62,7 @@ namespace OOPGames
                 new List<B5RoomGameEntry>
                 {
                     new B5RoomGameEntry("Tower Defense", Color.FromRgb(82, 105, 190), () => new B5RoomTowerDefenseGame()),
-                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(124, 112, 218), () => new B5RoomCoinGame("READY. / Muenzen sammeln", Color.FromRgb(53, 40, 121), Color.FromRgb(216, 205, 132))),
+                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(226, 180, 60), () => new G10_CoinGame()),
                     new B5RoomGameEntry("Bomberman", Color.FromRgb(159, 78, 68), () => new G10_BombermanGame())
                 })
         };

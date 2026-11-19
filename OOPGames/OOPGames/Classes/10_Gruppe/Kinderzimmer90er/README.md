@@ -75,20 +75,55 @@ erhalten.
 ## Steuerung
 
 - Im Zimmer: Pfeiltasten links/rechts oder A/D waehlen ein Geraet, Enter oder Z oeffnet es.
-- In der Geraeteansicht: 1/2 waehlt ein Spiel, Enter oder Z startet es.
+- In der Geraeteansicht: 1-9 oder die Pfeiltasten waehlen ein Spiel, Enter oder Z startet es.
 - Im Spiel: Pfeiltasten oder WASD steuern; Esc oder X geht zur Geraeteansicht zurueck.
   Ausnahme: Spiele mit `IB5RoomOwnBackKey` (Tower Defense) erhalten Esc/X selbst und
   oeffnen damit ein eigenes Menue; sie werden ueber `ExitRequested` verlassen.
 - Void Courier: Pfeiltasten oder WASD bewegen das Schiff; Z oder Leertaste feuert.
   Nach Game Over oder dem Sieg startet Enter oder Z eine neue Runde. Dauerfeuer
   und Bewegung puffern Tastatureingaben kurz, da das Framework kein KeyUp liefert.
+- Snake (Game Boy): Eine Pfeiltaste oder WASD startet und lenkt; Enter, Z, Leertaste
+  oder P pausiert. Zwei schnell hintereinander gedrueckte Richtungen werden fuer die
+  naechsten zwei Schritte gemerkt. Nach Game Over startet Enter eine neue Runde.
+- Muenzen sammeln (Commodore): Pfeiltasten oder WASD bewegen das Kind um ein Feld;
+  gehaltene Tasten laufen weiter. Enter, Z, Leertaste oder P pausiert, nach Game Over
+  startet Enter eine neue Runde.
+- Pong (Game Boy): Im Menue waehlen Pfeiltasten/WS oder 1/2 einen oder zwei Spieler,
+  Enter startet. Allein bewegen W/S oder die Pfeiltasten den linken Schlaeger, zu zweit
+  W/S den linken und die Pfeiltasten den rechten. Gehaltene Tasten bewegen weiter.
+  Enter, Z, Leertaste oder P pausiert, nach dem Spiel geht Enter zurueck ins Menue.
 - Esc oder X in der Geraeteansicht geht zurueck ins Zimmer.
 
 Die Gameboy- und Atari-Quellen aus der Aufgabenbeschreibung waren in diesem
-Repository nicht vorhanden. Snake und Pong sowie das Atari-Spiel sind daher
-eigenstaendige Minispiele; Atari und Commodore verwenden eine Variante des
-Muenzen-Sammelspiels. Highscores liegen unter
+Repository nicht vorhanden. Alle Spiele sind daher eigenstaendige Minispiele.
+Highscores liegen unter
 `%LOCALAPPDATA%\\Programmieren3WS2026\\Kinderzimmer90er\\highscores.json`.
+
+Snake (`Snake/`), Muenzen sammeln (`Muenzen/`) und Pong (`Pong/`) sind wie
+Pac-Man aufgebaut: Spiellogik ohne WPF und ohne Tasten (`G10_SnakeSession`,
+`G10_CoinSession`, `G10_PongSession`), nur lesende Sicht fuer den Renderer
+(`IG10_SnakeView`, `IG10_CoinView`, `IG10_PongView` in
+`Interfaces/10_Gruppe/Kinderzimmer90er/`) und ein Adapter als einzige Klasse
+mit Tasten und Highscore-Datei (`G10_SnakeGame`, `G10_CoinGame`, `G10_PongGame`).
+Die vier Game-Boy-Gruentoene liegen gemeinsam in `Shared/` (`G10_GameBoyColors`).
+
+- **Snake**: 19 x 15 Felder, alle fuenf Aepfel ein Level schneller (bis Level 9).
+  Nach jedem vierten Apfel krabbelt fuer sechs Sekunden ein Kaefer herum; je
+  schneller er gefressen wird, desto mehr Punkte. Grafik in den vier Gruentoenen
+  des ersten Game Boy.
+- **Muenzen sammeln**: In jedem Level muessen innerhalb von 45 Sekunden 10 bis 20
+  Muenzen eingesammelt werden; uebrige Sekunden gibt es als Bonus. Wollmaeuse
+  springen diagonal durchs Zimmer und kosten bei Beruehrung ein Leben (drei Leben),
+  ebenso das Ablaufen der Zeit. Ab und zu liegt fuer fuenf Sekunden ein Diamant
+  (100 Punkte) herum. Vier Raumaufteilungen wechseln sich ab; mit jedem Level
+  kommen mehr und schnellere Wollmaeuse. Grafik in den Farben des Commodore 64.
+- **Pong**: Allein gegen den Computer oder zu zweit an einer Tastatur, wer zuerst
+  sieben Punkte hat, gewinnt. Wo der Ball den Schlaeger trifft, bestimmt den
+  Abprallwinkel (bis 55 Grad); jeder Treffer macht ihn etwas schneller. Der
+  Computer (`G10_CpuPaddleControl`) folgt dem Ball langsamer als ein Spieler und
+  zielt auf zufaellige Stellen seines Schlaegers; Spieler und Computer steuern ueber
+  dasselbe Interface `IG10_PaddleControl` (Strategy). Als Highscore zaehlt der
+  laengste Ballwechsel gegen den Computer.
 
 Void Courier ist ein eigenstaendiger Shoot-'em-up mit einer farbigen,
 vektorbasierten 2.5D-Darstellung. WPF zeichnet die Szene in einem 160x144-
