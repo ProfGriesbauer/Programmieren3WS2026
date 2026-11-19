@@ -1552,10 +1552,14 @@ namespace OOPGames
             List<G1C_GuestGameEntry> found = DiscoverAllInAssembly();
             Check(found.Count >= 2, "Zu wenige Gastspiele gefunden: " + found.Count);
             Check(found.Any(e => e.Name.ToLower().Contains("gewinnt") || e.Name.ToLower().Contains("connect") || e.Name.Contains("4")), "Kein 4-gewinnt-Spiel gefunden");
+            // Änderung durch: Patrick Lupierz – 19.11.2026 – nach dem Merge gibt es auch Spiele ohne KI (Hay Day, Fabrikspiel):
+            // Spiele mit KI müssen Painter, Spieler und KI aus der eigenen Gruppe bekommen; die 4-gewinnt-Spiele immer eine KI.
             foreach (G1C_GuestGameEntry e in found)
             {
-                Check(e.AllFromOwnGroup, e.Name + ": fremde Teile (" + e.PainterType + ", " + e.HumanType + ", " + e.ComputerType + ")");
-                Check(e.HasComputerOpponent, e.Name + ": KI der Gruppe nicht gefunden");
+                Check(e.AllFromOwnGroup || !e.HasComputerOpponent, e.Name + ": fremde Teile (" + e.PainterType + ", " + e.HumanType + ", " + e.ComputerType + ")");
+                bool fourInARow = e.Name.ToLower().Contains("gewinnt") || e.Name.ToLower().Contains("connect") || e.Name.ToLower().Contains("4g");
+                if (fourInARow) Check(e.HasComputerOpponent, e.Name + ": KI der Gruppe nicht gefunden");
+                Check(e.PainterType != null && e.HumanType != null, e.Name + ": Painter oder Spieler fehlt");
             }
             Check(found.All(e => e.Group == G1C_GuestGameCatalog.GroupOf(e.CreateRules())), "Gruppe passt nicht zu den Rules");
         }
@@ -1563,13 +1567,26 @@ namespace OOPGames
         private static void ArcadeGuestFullGames()
         {
             List<string> problems = new List<string>();
-            int played = 0;
+            int played = 0, smoke = 0;
             foreach (G1C_GuestGameEntry entry in DiscoverAllInAssembly())
             {
                 G1C_MoneyManager money = new G1C_MoneyManager(100);
                 G1C_GuestGameHost host = new G1C_GuestGameHost(money, new Random(1), entry);
                 if (!host.Start()) { problems.Add(entry.Name + ": Start – " + host.LastError); continue; }
                 if (OOPGamesManager.Singleton.ActivePainter != host.Painter) problems.Add(entry.Name + ": Painter nicht aktiv angemeldet");
+                if (!entry.HasComputerOpponent)
+                {
+                    // Echtzeit-/Aufbauspiele ohne KI und ohne Spielende (Hay Day, Fabrikspiel): starten, laufen, zeichnen, Esc
+                    for (int t = 0; t < 120 && host.Running; t++) host.Update();
+                    host.Forward(new KeySelection(Key.D1));
+                    host.Forward(new ClickSelection(100, 100, (int)MouseButton.Left));
+                    if (host.LastError != null) problems.Add(entry.Name + ": Absturz " + host.LastError);
+                    else if (host.Frame == null) problems.Add(entry.Name + ": nicht gezeichnet");
+                    else smoke++;
+                    host.Leave();
+                    if (!host.WantsExit) problems.Add(entry.Name + ": Esc verlässt den Automaten nicht");
+                    continue;
+                }
                 string stuck = PlayToEnd(host);
                 if (stuck != null) problems.Add(entry.Name + ": " + stuck);
                 else if (host.LastError != null) problems.Add(entry.Name + ": Absturz " + host.LastError);
