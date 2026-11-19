@@ -194,7 +194,10 @@ namespace OOPGames
                         _CurrentRules.DoMove(pm);
                         _CurrentPainter.PaintGameField(PaintCanvas, _CurrentRules.CurrentField);
                         _CurrentPlayer = _CurrentPlayer == _CurrentPlayer1 ? _CurrentPlayer2 : _CurrentPlayer1;
-                        Status.Text = "Player " + _CurrentPlayer.PlayerNumber + "'s turn!";
+                        HayDayField hayDayField = _CurrentRules.CurrentField as HayDayField;
+                        Status.Text = hayDayField != null
+                            ? hayDayField.StatusMessage
+                            : "Player " + _CurrentPlayer.PlayerNumber + "'s turn!";
                     }
 
                     winner = _CurrentRules.CheckIfPLayerWon();
@@ -237,8 +240,23 @@ namespace OOPGames
                 if (_CurrentRules.MovesPossible &&
                     _CurrentPlayer is IHumanGamePlayer)
                 {
+                    int frameworkMouseButton;
+                    switch (e.ChangedButton)
+                    {
+                        case MouseButton.Left:
+                            frameworkMouseButton = 0;
+                            break;
+                        case MouseButton.Right:
+                            frameworkMouseButton = 1;
+                            break;
+                        case MouseButton.Middle:
+                            frameworkMouseButton = 2;
+                            break;
+                        default:
+                            return;
+                    }
                     IPlayMove pm = ((IHumanGamePlayer)_CurrentPlayer).GetMove(new ClickSelection((int)e.GetPosition(PaintCanvas).X, 
-                        (int)e.GetPosition(PaintCanvas).Y, (int)e.ChangedButton), _CurrentRules.CurrentField);
+                        (int)e.GetPosition(PaintCanvas).Y, frameworkMouseButton), _CurrentRules.CurrentField);
                     if (pm != null)
                     {
                         _CurrentRules.DoMove(pm);

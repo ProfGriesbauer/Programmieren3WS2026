@@ -811,34 +811,15 @@ namespace OOPGames
             bool rightClick = button == 1;
             if (plot != null)
             {
-                if (rightClick)
+                if (plot.Crop == null)
                 {
-                    if (plot.Crop != null)
-                    {
-                        SetStatus("Reife Pflanzen werden geerntet. Nur leere Felder wählen Saatgut.");
-                        return;
-                    }
-
                     SelectedPlotRow = plot.Row;
                     SelectedPlotColumn = plot.Column;
                     SetStatus("Saatgut auswählen.");
                     return;
                 }
 
-                if (plot.Crop == null)
-                {
-                    if (RemoveInventory(SelectedCrop, 1))
-                    {
-                        plot.Plant(SelectedCrop, DateTime.UtcNow);
-                        SetStatus(SelectedCrop + " gepflanzt. Reif nach " +
-                            FarmPlot.GrowthDuration(SelectedCrop).TotalMinutes.ToString("0") + " Minuten.");
-                    }
-                    else
-                    {
-                        SetStatus("Nicht genug " + SelectedCrop + " im Silo.");
-                    }
-                }
-                else if (plot.IsRipe(DateTime.UtcNow))
+                if (plot.IsRipe(DateTime.UtcNow))
                 {
                     Harvest(plot);
                 }
@@ -1155,16 +1136,120 @@ namespace OOPGames
                 return false;
             }
 
-            if (Inventory[feedItem] <= 0)
+            int remainingFeedSeconds;
+            switch (kind)
             {
-                SetStatus("Zuerst in der Futtermühle " + feedItem + " herstellen.");
+                case "Coop": remainingFeedSeconds = _feedProgressSeconds; break;
+                case "CowBarn": remainingFeedSeconds = _cowFeedProgressSeconds; break;
+                case "PigBarn": remainingFeedSeconds = _pigFeedProgressSeconds; break;
+                case "SheepBarn": remainingFeedSeconds = _sheepFeedProgressSeconds; break;
+                case "GoatBarn": remainingFeedSeconds = _goatFeedProgressSeconds; break;
+                default: remainingFeedSeconds = 0; break;
+            }
+            if (remainingFeedSeconds > 0)
+            {
+                SetStatus("Die Tiere sind noch gefüttert.");
                 return false;
             }
 
-            RemoveInventory(feedItem, 1);
-            SetStatus(feedItem + " verteilt. Die Tiere produzieren für 5 Minuten.");
+            if (Inventory[feedItem] < animalCount)
+            {
+                SetStatus("Für " + animalCount + " Tiere werden " + animalCount +
+                    " " + feedItem + " benötigt. Es sind nur " + Inventory[feedItem] + " vorhanden.");
+                return false;
+            }
+
+            RemoveInventory(feedItem, animalCount);
+            switch (kind)
+            {
+                case "Coop":
+                    _feedProgressSeconds = 300;
+                    break;
+                case "CowBarn":
+                    _cowFeedProgressSeconds = 300;
+                    break;
+                case "PigBarn":
+                    _pigFeedProgressSeconds = 300;
+                    break;
+                case "SheepBarn":
+                    _sheepFeedProgressSeconds = 300;
+                    break;
+                case "GoatBarn":
+                    _goatFeedProgressSeconds = 300;
+                    break;
+            }
+            SetStatus(animalCount + " " + feedItem + " für " + animalCount +
+                " Tiere verteilt.");
             IsDirty = true;
             return true;
+        }
+
+        public string GetAnimalProductionStatus(string kind)
+        {
+            int animalCount;
+            string productLabel;
+            int ready;
+            int feedProgressSeconds;
+
+            switch (kind)
+            {
+                case "Coop":
+                    animalCount = ChickenCount;
+                    productLabel = "Eier";
+                    ready = _eggReady;
+                    feedProgressSeconds = _feedProgressSeconds;
+                    break;
+                case "CowBarn":
+                    animalCount = CowCount;
+                    productLabel = "Milch";
+                    ready = _milkReady;
+                    feedProgressSeconds = _cowFeedProgressSeconds;
+                    break;
+                case "PigBarn":
+                    animalCount = PigCount;
+                    productLabel = "Fleisch";
+                    ready = _porkReady;
+                    feedProgressSeconds = _pigFeedProgressSeconds;
+                    break;
+                case "SheepBarn":
+                    animalCount = SheepCount;
+                    productLabel = "Wolle";
+                    ready = _woolReady;
+                    feedProgressSeconds = _sheepFeedProgressSeconds;
+                    break;
+                case "GoatBarn":
+                    animalCount = GoatCount;
+                    productLabel = "Ziegenmilch";
+                    ready = _goatMilkReady;
+                    feedProgressSeconds = _goatFeedProgressSeconds;
+                    break;
+                default:
+                    return "";
+            }
+
+            if (animalCount <= 0)
+            {
+                return "Keine Tiere";
+            }
+
+            string productStatus = ready > 0
+                ? ready + " " + productLabel + " bereit"
+                : "";
+            if (feedProgressSeconds <= 0)
+            {
+                return productStatus.Length > 0
+                    ? productStatus + " | Hungrig"
+                    : "Hungrig";
+            }
+
+            int remainingSeconds = feedProgressSeconds;
+            int minutes = remainingSeconds / 60;
+            int seconds = remainingSeconds % 60;
+            string fedStatus = "Gefüttert " + minutes.ToString("0") + ":" +
+                seconds.ToString("00");
+            return productStatus.Length > 0
+                ? productStatus + " | " + fedStatus
+                : fedStatus;
         }
 
         public bool CollectAnimalProduct(string productItem, string label)
@@ -1210,7 +1295,7 @@ namespace OOPGames
             string productItem, int productIntervalSeconds, ref int feedProgressSeconds,
             int productProgressSeconds)
         {
-            if (animalCount == 0)
+            if (animalCount == 0 || feedProgressSeconds <= 0)
             {
                 return productProgressSeconds;
             }
@@ -1222,8 +1307,7 @@ namespace OOPGames
                 return productProgressSeconds;
             }
 
-            long availableFeedSeconds = Math.Max(0L,
-                (long)Inventory[feedItem] * 300 - feedProgressSeconds);
+            long availableFeedSeconds = feedProgressSeconds;
             long productCapacitySeconds = (long)Math.Ceiling(space / (double)animalCount) * productIntervalSeconds
                 - productProgressSeconds;
             productCapacitySeconds = Math.Max(0L, productCapacitySeconds);
@@ -1245,12 +1329,9 @@ namespace OOPGames
                 IsDirty = true;
             }
 
-            long totalFeedSeconds = feedProgressSeconds + (long)activeSeconds;
-            int feedUsed = (int)Math.Min(Inventory[feedItem], totalFeedSeconds / 300);
-            feedProgressSeconds = (int)(totalFeedSeconds % 300);
-            if (feedUsed > 0)
+            feedProgressSeconds = (int)Math.Max(0L, feedProgressSeconds - activeSeconds);
+            if (activeSeconds > 0)
             {
-                Inventory[feedItem] -= feedUsed;
                 IsDirty = true;
             }
 
@@ -1632,7 +1713,9 @@ namespace OOPGames
 
         public static TimeSpan GrowthDuration(string crop)
         {
-            return TimeSpan.FromMinutes(2);
+            return crop == HayDayField.Corn
+                ? TimeSpan.FromMinutes(3)
+                : TimeSpan.FromMinutes(2);
         }
 
         public string RemainingGrowthText(DateTime now)

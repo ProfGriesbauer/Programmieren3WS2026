@@ -414,6 +414,9 @@ namespace OOPGames
                         tileWidth);
                 }
 
+                DrawAnimalStatus(canvas, center, tileWidth, tileHeight,
+                    field.GetAnimalProductionStatus("Coop"));
+
                 Point left = new Point(center.X - tileWidth * 1.6, center.Y);
                 Point right = new Point(center.X + tileWidth * 1.6, center.Y);
                 Point bottom = new Point(center.X, center.Y + tileHeight * 1.6);
@@ -452,6 +455,9 @@ namespace OOPGames
                                 center.Y + (0.55 + i * 0.25) * tileHeight),
                             tileWidth, kind);
                     }
+
+                    DrawAnimalStatus(canvas, center, tileWidth, tileHeight,
+                        field.GetAnimalProductionStatus(kind));
                 }
             }
         }
@@ -555,6 +561,33 @@ namespace OOPGames
                     new Point(ground.X + i * bodyWidth * 0.3, ground.Y),
                     outline, Math.Max(1, tileWidth * 0.025));
             }
+        }
+
+        private static void DrawAnimalStatus(Canvas canvas, Point center, double tileWidth,
+            double tileHeight, string status)
+        {
+            double width = Math.Max(70, tileWidth * 1.15);
+            double height = 18;
+            bool ready = status.Contains("bereit") || status.Contains("Gefüttert");
+            Rectangle background = new Rectangle
+            {
+                Width = width,
+                Height = height,
+                Fill = ready
+                    ? new SolidColorBrush(Color.FromArgb(235, 255, 220, 95))
+                    : new SolidColorBrush(Color.FromArgb(225, 255, 255, 255)),
+                Stroke = ready ? Brushes.DarkGoldenrod : Brushes.SaddleBrown,
+                StrokeThickness = 1,
+                RadiusX = 5,
+                RadiusY = 5,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(background, center.X - width / 2);
+            Canvas.SetTop(background, center.Y - tileHeight * 2.05);
+            canvas.Children.Add(background);
+            AddText(canvas, status, center.X - width / 2 + 4,
+                center.Y - tileHeight * 2.01, 9,
+                ready ? Brushes.DarkRed : Brushes.DarkSlateGray, true, width - 8);
         }
 
         private static void DrawFenceSegment(Canvas canvas, Point start, Point end,

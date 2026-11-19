@@ -36,7 +36,7 @@ namespace OOPGames
             }
 
             IClickSelection click = selection as IClickSelection;
-            if (click != null && (click.ChangedButton == 0 || click.ChangedButton == 1))
+            if (click != null && (click.ChangedButton == 0 || click.ChangedButton == 1 || click.ChangedButton == 2))
             {
                 HayDayPainter painter = OOPGamesManager.Singleton.ActivePainter as HayDayPainter;
                 if (painter == null)
@@ -45,10 +45,11 @@ namespace OOPGames
                 }
 
                 int menuHit = painter.MenuHitTest(click.XClickPos, click.YClickPos, field);
-                bool menuClick = menuHit != -1;
+                bool menuClick = menuHit >= 0 || menuHit == HayDayField.ShopMenuOption;
                 PointOnFarm position = painter.FarmPosition(click.XClickPos, click.YClickPos, field);
+                int button = click.ChangedButton == 2 ? 0 : click.ChangedButton;
                 return new HayDayMove(_playerNumber, HayDayMoveKind.Click, position.Row,
-                    position.Column, click.ChangedButton, Key.None, menuClick,
+                    position.Column, button, Key.None, menuClick,
                     menuHit == HayDayField.ShopMenuOption
                         ? HayDayField.ShopMenuOption
                         : menuHit >= 0 ? menuHit : -1);
