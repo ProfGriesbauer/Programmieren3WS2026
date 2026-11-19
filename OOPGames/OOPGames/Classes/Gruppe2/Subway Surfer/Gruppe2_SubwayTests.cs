@@ -388,8 +388,21 @@ namespace OOPGames
                     .Any(visual => visual.Content is Model3DGroup),
                     "the 3D scene contains rendered world models");
 
+                field.MutableRewards.Add(new Gruppe2_SubwayReward(
+                    Gruppe2_SubwayRewardKind.UpgradeBox, 1, 25,
+                    Gruppe2_SubwayUpgradeKind.Surfboard));
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+                ModelVisual3D upgradeCoin = GetPinkUpgradeCoinVisual(viewport);
+                AssertTrue(upgradeCoin != null,
+                    "upgrade rewards render as large pink coins");
+                field.MutableRewards.Clear();
+                painter.TickPaintGameField(canvas, field);
+                viewport = canvas.Children.OfType<Viewport3D>().First();
+
                 ModelVisual3D skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
                 Model3DGroup skaterModel = skaterVisual.Content as Model3DGroup;
+                AssertRearHair(skaterModel, true);
                 Vector3D forward = GetRunnerTransform(skaterVisual).Transform(new Vector3D(0, 0, 1));
                 forward.Normalize();
                 AssertTrue(forward.Z < -0.99,
@@ -503,10 +516,12 @@ namespace OOPGames
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 ModelVisual3D guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
+                Model3DGroup guardModel = guardVisual.Content as Model3DGroup;
                 Vector3D guardForward = GetRunnerTransform(guardVisual).Transform(new Vector3D(0, 0, 1));
                 guardForward.Normalize();
                 AssertTrue(guardForward.Z < -0.99,
                     "the Bahnrichter faces away from the camera down the tracks");
+                AssertRearHair(guardModel, false);
             }
             finally
             {
@@ -531,6 +546,38 @@ namespace OOPGames
             Model3DGroup skateboard = GetSkateboardModel(skaterModel);
             return skaterModel.Children.OfType<Model3DGroup>()
                 .FirstOrDefault(component => !ReferenceEquals(component, skateboard));
+        }
+
+        private static void AssertRearHair(Model3DGroup character, bool hasPonytail)
+        {
+            Model3DGroup rider = GetRiderModel(character);
+            int minimumHairParts = hasPonytail ? 3 : 2;
+            double rearExtent = hasPonytail ? -0.34 : -0.30;
+            AssertTrue(rider.Children.OfType<Model3DGroup>().Any(hair =>
+                    hair.Children.OfType<GeometryModel3D>().Count() >= minimumHairParts
+                    && hair.Bounds.Z < rearExtent),
+                "hair clearly covers the back of the " + (hasPonytail ? "runner's" : "Bahnrichter's")
+                + " head");
+        }
+
+        private static ModelVisual3D GetPinkUpgradeCoinVisual(Viewport3D viewport)
+        {
+            Color pink = Color.FromRgb(255, 72, 170);
+            return viewport.Children.OfType<ModelVisual3D>().FirstOrDefault(visual =>
+            {
+                Model3DGroup model = visual.Content as Model3DGroup;
+                Transform3DGroup transform = visual.Transform as Transform3DGroup;
+                ScaleTransform3D scale = transform == null
+                    ? null
+                    : transform.Children.OfType<ScaleTransform3D>().FirstOrDefault();
+                return scale != null && scale.ScaleX > 0.5
+                    && model != null && model.Children.OfType<GeometryModel3D>().Any(part =>
+                    {
+                        DiffuseMaterial diffuse = part.Material as DiffuseMaterial;
+                        SolidColorBrush brush = diffuse == null ? null : diffuse.Brush as SolidColorBrush;
+                        return brush != null && brush.Color == pink;
+                    });
+            });
         }
 
         private static void AssertRunnerHasRunningAnimation(Model3DGroup skaterModel)

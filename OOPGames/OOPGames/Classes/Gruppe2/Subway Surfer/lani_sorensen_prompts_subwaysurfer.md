@@ -445,3 +445,12 @@ User prompt:
 Assistant answer:
 - I lowered the running-leg attachment below the shirt hem and added a regression check that the leg geometry stays under it.
 - I rotated the Bahnrichter to face away from the camera and added a direction check. The Subway Surfer tests passed, and the application build succeeded.
+
+### Prompt 37
+User prompt:
+> please change the hair of the character and bahnrichter so that the face is obviously facing away from camera. please also change the upgrades into large pink coins
+
+Assistant answer:
+- I gave both characters camera-facing rear hair silhouettes, with a longer ponytail for the player, to make their away-facing orientation clearer.
+- I replaced 3D upgrade boxes with larger pink spinning coins and updated the 2D upgrade-reward rendering to use pink coins as well.
+- I added visual regression checks for the rear hair and pink upgrade coin appearance. The Subway Surfer tests passed, and the application build succeeded.

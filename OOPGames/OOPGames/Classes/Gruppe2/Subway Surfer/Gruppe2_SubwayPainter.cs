@@ -34,7 +34,10 @@ namespace OOPGames
         private static readonly Model3DGroup CargoWagonModel = CreateCargoWagonModel();
         private static readonly Model3DGroup TrainModel = CreateTrainModel();
         private static readonly Model3DGroup CargoRampModel = CreateCargoRampModel();
-        private static readonly Model3DGroup CoinModel = CreateCoinModel();
+        private static readonly Model3DGroup CoinModel = CreateCoinModel(
+            Color.FromRgb(255, 203, 32), Color.FromRgb(179, 126, 16));
+        private static readonly Model3DGroup UpgradeCoinModel = CreateCoinModel(
+            Color.FromRgb(255, 72, 170), Color.FromRgb(160, 18, 92));
         private static readonly Model3DGroup TrackModel = CreateTrackModel();
         private static readonly Model3DGroup SleeperModel = CreateSleeperModel();
         private static readonly Dictionary<Gruppe2_SubwayObstacleKind, Model3DGroup> ObstacleModels =
@@ -140,8 +143,7 @@ namespace OOPGames
                 }
                 else
                 {
-                    AddWorldModel(viewport, CreateUpgradeBoxModel(reward.Upgrade),
-                        LaneWorldX(reward.Lane), 0.55, WorldZ(reward.Distance), 0.65);
+                    AddThreeDimensionalUpgradeCoin(viewport, reward, field.Distance);
                 }
             }
 
@@ -297,6 +299,22 @@ namespace OOPGames
             viewport.Children.Add(new ModelVisual3D
             {
                 Content = CoinModel,
+                Transform = transform
+            });
+        }
+
+        private static void AddThreeDimensionalUpgradeCoin(
+            Viewport3D viewport, Gruppe2_SubwayReward reward, double distance)
+        {
+            Transform3DGroup transform = new Transform3DGroup();
+            transform.Children.Add(new ScaleTransform3D(0.62, 0.62, 0.16));
+            transform.Children.Add(new RotateTransform3D(
+                new AxisAngleRotation3D(new Vector3D(0, 1, 0), distance * 11)));
+            transform.Children.Add(new TranslateTransform3D(
+                LaneWorldX(reward.Lane), 0.82, WorldZ(reward.Distance)));
+            viewport.Children.Add(new ModelVisual3D
+            {
+                Content = UpgradeCoinModel,
                 Transform = transform
             });
         }
@@ -531,40 +549,11 @@ namespace OOPGames
             return model;
         }
 
-        private static Model3DGroup CreateUpgradeBoxModel(Gruppe2_SubwayUpgradeKind upgrade)
-        {
-            Color color;
-            switch (upgrade)
-            {
-                case Gruppe2_SubwayUpgradeKind.Magnet:
-                    color = Color.FromRgb(205, 30, 12);
-                    break;
-                case Gruppe2_SubwayUpgradeKind.DoubleCoins:
-                    color = Color.FromRgb(226, 173, 35);
-                    break;
-                case Gruppe2_SubwayUpgradeKind.Surfboard:
-                    color = Color.FromRgb(73, 178, 191);
-                    break;
-                case Gruppe2_SubwayUpgradeKind.JumpStick:
-                    color = Color.FromRgb(94, 171, 83);
-                    break;
-                default:
-                    color = Color.FromRgb(65, 105, 176);
-                    break;
-            }
-
-            Model3DGroup box = new Model3DGroup();
-            AddBox(box, -0.48, -0.48, -0.48, 0.48, 0.48, 0.48, Material(color));
-            AddBox(box, -0.50, 0.12, 0.49, 0.50, 0.25, 0.53, Material(Colors.White));
-            box.Freeze();
-            return box;
-        }
-
-        private static Model3DGroup CreateCoinModel()
+        private static Model3DGroup CreateCoinModel(Color faceColor, Color edgeColor)
         {
             Model3DGroup coin = new Model3DGroup();
-            Material gold = Material(Color.FromRgb(255, 203, 32));
-            Material edge = Material(Color.FromRgb(179, 126, 16));
+            Material face = Material(faceColor);
+            Material edge = Material(edgeColor);
             const int segments = 20;
             const double radius = 0.5;
             const double depth = 0.10;
@@ -580,10 +569,10 @@ namespace OOPGames
                 AddQuad(coin, a, b, c, d, edge);
                 AddTriangle(coin, new Point3D(0, 0, depth),
                     new Point3D(radius * Math.Cos(first), radius * Math.Sin(first), depth),
-                    new Point3D(radius * Math.Cos(second), radius * Math.Sin(second), depth), gold);
+                    new Point3D(radius * Math.Cos(second), radius * Math.Sin(second), depth), face);
                 AddTriangle(coin, new Point3D(0, 0, -depth),
                     new Point3D(radius * Math.Cos(second), radius * Math.Sin(second), -depth),
-                    new Point3D(radius * Math.Cos(first), radius * Math.Sin(first), -depth), gold);
+                    new Point3D(radius * Math.Cos(first), radius * Math.Sin(first), -depth), face);
             }
 
             coin.Freeze();
@@ -609,13 +598,21 @@ namespace OOPGames
             AddScaledSphere(rider, -0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
             AddScaledSphere(rider, 0.085, 2.02, 0.218, 0.027, 0.035, 0.02, RunnerEyeMaterial);
 
-            Model3DGroup looseHair = new Model3DGroup();
-            AddScaledSphere(looseHair, -0.25, 2.11, -0.08, 0.12, 0.20, 0.14, hair);
-            AddScaledSphere(looseHair, -0.20, 1.99, -0.06, 0.09, 0.16, 0.11, hair);
-            looseHair.Transform = new RotateTransform3D(
-                new AxisAngleRotation3D(new Vector3D(0, 0, 1), characterMovement * 4),
-                new Point3D(-0.2, 2.2, 0));
-            rider.Children.Add(looseHair);
+            Model3DGroup rearHair = new Model3DGroup();
+            AddScaledSphere(rearHair, 0, 2.04, -0.15, 0.27, 0.24, 0.16, hair);
+            if (guard)
+            {
+                AddScaledSphere(rearHair, 0, 1.88, -0.15, 0.20, 0.16, 0.14, hair);
+            }
+            else
+            {
+                AddScaledSphere(rearHair, -0.10, 1.90, -0.20, 0.12, 0.19, 0.14, hair);
+                AddScaledSphere(rearHair, -0.13, 1.73, -0.24, 0.09, 0.16, 0.11, hair);
+            }
+            rearHair.Transform = new RotateTransform3D(
+                new AxisAngleRotation3D(new Vector3D(0, 0, 1), characterMovement * 3),
+                new Point3D(0, 2.0, -0.15));
+            rider.Children.Add(rearHair);
 
             if (guard)
             {
@@ -1026,23 +1023,10 @@ namespace OOPGames
                 }
                 else
                 {
-                    AddRectangle(canvas, x - 16 * scale, y - 38 * scale, 32 * scale, 30 * scale,
-                        UpgradeColor(reward.Upgrade), Brushes.White, 2 * scale);
-                    DrawUpgradeIcon(canvas, reward.Upgrade, x, y - 23 * scale, scale);
+                    AddEllipse(canvas, x - 16 * scale, y - 39 * scale, 32 * scale, 32 * scale,
+                        PinkBrush, Brush(Color.FromRgb(160, 18, 92)), 2 * scale);
+                    DrawUpgradeIcon(canvas, reward.Upgrade, x, y - 23 * scale, 0.75 * scale);
                 }
-            }
-        }
-
-        private static Brush UpgradeColor(Gruppe2_SubwayUpgradeKind upgrade)
-        {
-            switch (upgrade)
-            {
-                case Gruppe2_SubwayUpgradeKind.Magnet: return Brush(Color.FromRgb(190, 65, 77));
-                case Gruppe2_SubwayUpgradeKind.DoubleCoins: return Brush(Color.FromRgb(196, 137, 27));
-                case Gruppe2_SubwayUpgradeKind.Surfboard: return Brush(Color.FromRgb(25, 143, 157));
-                case Gruppe2_SubwayUpgradeKind.JumpStick: return Brush(Color.FromRgb(78, 140, 72));
-                case Gruppe2_SubwayUpgradeKind.Jetpack: return Brush(Color.FromRgb(65, 105, 176));
-                default: return Brush(Color.FromRgb(147, 63, 209));
             }
         }
 
