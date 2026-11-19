@@ -184,3 +184,38 @@ Nicht ausführbar für den Agenten: Hörprobe der Musik/Geräusche und Bedienung
 - [ ] Angeln: [A]/[D] gedrückt halten steuert den grünen Bereich flüssig
 - [ ] Fahrrad: in ein Haus fahren, wieder hinausgehen – man fährt direkt weiter
 - [ ] Im Spielautomaten ADMIN tippen: Hinweis erscheint, nächste Drehung 7-7-7 mit Münzregen
+
+## 8. Nachtrag 18.11.2026 – offene Issues (Gast-Automat, Tagesablauf, Geldhai, Flussfische)
+
+Build: 0 Fehler, 0 Warnungen (in separaten Ordner gebaut, da das Spiel lief). Selbsttest: **70/70 BESTANDEN**, Laufzeit 17 s.
+Erster Lauf mit echten Spielen: Gruppe 10 nahm ab dem 2. Zug keine Eingabe an – echter Fehler im Host (KI liefert während
+der Stein-Animation keinen Zug und wurde nicht erneut gefragt). Behoben. Außerdem lief der Test zuerst > 10 Minuten, weil der
+Host bei jeder abgelehnten Eingabe neu zeichnete; jetzt nur bei echten Zügen. Poker-Test auf "größer als 1" umgestellt, weil
+die Skalierung im Team auf 1,5 geändert wurde.
+
+Gerendert: Gruppe-10-4-gewinnt im Gast-Automaten (Painter und KI von G10), Flussfische, Stadt in 16:10 und 4:3.
+Checkliste Hauptfenster: Gast-Automat → 4 gewinnt einer Gruppe wählen, mit Klick und Zifferntasten spielen, mitten in der
+Partie [Esc] → Spielauswahl erscheint, anderes Spiel wählen.
+
+## 9. Nachtrag 19.11.2026 – Klangpaket und Handy-Mixer
+
+Build: 0 Fehler, 0 Warnungen (in separaten Ordner gebaut, da das Spiel lief). Selbsttest: **80/80 BESTANDEN** (dreimal hintereinander).
+Neue Tests (10): Katalog und Dateien · gleichzeitige Töne und Priorität · Häufigkeit (Chance, Abstand, Ein/Aus, Vorhören) ·
+Lautstärkerechnung live/stumm · Schritte und Fahrrad im Spiel · Tiere nur beim Streicheln und Vögel im Radius · Musik
+(Wechsel, Rotation, Heartbeat, Ersatzmelodie) · Casino-Töne · Einstellungen/JSON · Handy-Server (Seite, PIN, Regler,
+Probehören, Stumm, Zurücksetzen, Sperre) inkl. F11 im Menü.
+
+Fehler beim ersten Lauf (alle im Test, nicht im Spiel): Ersatzmelodie „click“ kürzer als meine Mindestgröße; Mindestabstand aus
+dem vorigen Versuch blockierte den nächsten; Sprechblase des Vogels war nach 80 Ticks schon abgelaufen; der Stadtmusik-Titel
+wurde als Schritt mitgezählt. Außerdem schlug der Gast-Automaten-Test mit „FG Vier gewinnt“ plötzlich fehl: deren Eingabe ist
+bis zum Ende einer Echtzeit-Animation gesperrt (ca. 90 Ticks); Test wartet jetzt mit kleinen Pausen.
+
+Zusätzlich geprüft: alle 49 Audiodateien öffnet der echte WPF-MediaPlayer (Lautstärke 0) mit gültiger Dauer; Ende-Rückruf und
+Schleife des Abspielers funktionieren. Handy-Seite mit Headless-Chrome in Handybreite gerendert.
+
+Checkliste für das Team (nicht vom Agenten prüfbar):
+- [ ] Hören: Stadt-Ambiente, Casino, Spielhalle, Titelbild; Schritte auf Gras/Weg/Brücke/innen; Fahrrad; Münzen/Jackpot
+- [ ] Menü B → F11: Adresse/PIN erscheinen; Handy im WLAN öffnet die Seite; Regler wirken sofort; ▶ spielt am PC
+- [ ] Windows-Firewall-Frage beim ersten Start bestätigen (privates Netz)
+- [ ] Lautstärken nach Gehör anpassen und die gewünschten Werte als neue Standardwerte im Katalog eintragen
+- [ ] Fahrrad-/Walzen-Schleife: stört die kleine Pause beim Wiederholen?

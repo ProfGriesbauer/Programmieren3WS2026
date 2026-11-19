@@ -97,6 +97,7 @@ namespace OOPGames
                 return;
             }
 
+            Sfx("shuffle"); // Patrick Lupierz – 19.11.2026: Karten austeilen
             _ai.EnsureBankroll(required);
             Money.TryWithdraw(_unit);
             _ai.TryPay(_unit);

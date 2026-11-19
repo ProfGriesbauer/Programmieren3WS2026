@@ -107,3 +107,12 @@ unverändert; Statusänderungen stehen hier. Doppelte Wünsche wurden zusammenge
 | 55 | Als Spieler möchte ich beim Poker meine Karten wie in der Hand gehalten sehen. | erledigt |
 | 56 | Als Admin möchte ich per Tastenfolge (ADMIN) einen garantierten Jackpot (mit Münzregen) auslösen können. | erledigt |
 | 57 | Pavillon von allen Seiten betretbar; Umzugsschild des Greifautomaten entfernt. | erledigt |
+
+## Ergänzung 5 – 19.11.2026 (Patrick Lupierz, KI-gestützt)
+
+| ID | Story | Stand |
+|----|-------|-------|
+| 58 | Als Spieler möchte ich Musik, Ambiente und Geräusche aus dem Klangpaket hören (Stadt, Casino, Spielhalle, Schritte, Fahrrad, Casino-Töne). | erledigt (Hörprobe offen) |
+| 59 | Als Spieler möchte ich Schritte passend zum Untergrund hören (Gras, Weg, Brücke, innen). | erledigt |
+| 60 | Als Spieler möchte ich, dass Tiere nur beim Streicheln Geräusche machen und Vögel nur in meiner Nähe zwitschern. | erledigt |
+| 61 | Als Spieler möchte ich Lautstärke, Häufigkeit und die Zahl gleichzeitiger Töne am Handy einstellen. | erledigt (Web-App, Handy-Test offen) |

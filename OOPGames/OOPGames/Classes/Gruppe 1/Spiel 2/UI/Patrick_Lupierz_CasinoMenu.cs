@@ -29,7 +29,7 @@ namespace OOPGames
                 "  M                      Stadtkarte (im Freien)",
                 "  B                      Menü (pausiert die Uhr)",
                 "  P / I                  Handy / Inventar",
-                "  T (im Menü)            Ton an/aus",   // Patrick Lupierz – 16.11.2026
+                "  T / F11 (im Menü)      Ton an-aus / Handy-Mixer",   // Patrick Lupierz – 16.11.2026/19.11.2026
                 "In den Spielen: Tasten oder Knöpfe anklicken.",
                 "Wenig Chips? Jobs an der Bar, Pfand im Laden.",
                 "Hinweis: Leertaste/Enter nicht benutzen",

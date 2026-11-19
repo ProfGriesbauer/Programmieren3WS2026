@@ -140,6 +140,8 @@ namespace OOPGames
                 return;
             }
 
+            Sfx("slot_lever"); // Patrick Lupierz – 19.11.2026: Hebel und Walzenschleife
+            Sfx("slots_spin");
             _spinBet = Bet.Amount;
             for (int i = 0; i < ReelCount; i++)
             {
@@ -180,6 +182,7 @@ namespace OOPGames
             G1C_SlotSymbol[] line = new G1C_SlotSymbol[ReelCount];
             for (int i = 0; i < ReelCount; i++) line[i] = SymbolAt(i, 0);
 
+            Sfx("slots_spin:stop");
             int multiplier = GetMultiplier(line);
             _lastWin = _spinBet * multiplier;
             LastWasJackpot = multiplier == 100; // Patrick Lupierz – 16.11.2026
@@ -187,11 +190,16 @@ namespace OOPGames
             if (_lastWin > 0)
             {
                 Money.Deposit(_lastWin);
-                Sfx(LastWasJackpot ? "jackpot" : "win");
+                // Änderung durch: Patrick Lupierz – 19.11.2026 – Gewinnsounds nach Höhe: Jackpot, groß (ab 20x), mittel, klein
+                if (LastWasJackpot) { Sfx("jackpot"); Sfx("jackpot_alarm"); }
+                else if (multiplier >= 20) { Sfx("slot_win_big"); Sfx("coins_big"); }
+                else if (multiplier >= 8) { Sfx("slot_win_small"); Sfx("coins_mid"); }
+                else { Sfx("slot_win_small"); Sfx("coins_small"); }
                 Message = (LastWasJackpot ? "JACKPOT! " : "Gewinn! ") + "x" + multiplier + " = " + _lastWin + " Chips (Netto +" + (_lastWin - _spinBet) + "). [E] Nochmal";
             }
             else
             {
+                Sfx("lose");
                 Message = "Leider nichts. -" + _spinBet + " Chips. [E] Nochmal, [Q] Verlassen";
             }
         }

@@ -41,9 +41,12 @@ namespace OOPGames
 
         public int Amount { get { return Steps[_index]; } }
 
-        public void Increase() { if (_index < Steps.Length - 1) _index++; }
+        /// <summary>Änderung durch: Patrick Lupierz – 19.11.2026 – wird gerufen, wenn sich der Einsatz wirklich ändert (Klick-Ton).</summary>
+        public Action Changed { get; set; }
 
-        public void Decrease() { if (_index > 0) _index--; }
+        public void Increase() { if (_index < Steps.Length - 1) { _index++; if (Changed != null) Changed(); } }
+
+        public void Decrease() { if (_index > 0) { _index--; if (Changed != null) Changed(); } }
 
         /// <summary>W/Hoch = mehr, S/Runter = weniger. Gibt true zurück, wenn die Taste verarbeitet wurde.</summary>
         public bool HandleKey(Key key)
@@ -67,6 +70,7 @@ namespace OOPGames
         {
             Money = money ?? throw new ArgumentNullException(nameof(money));
             Random = random ?? new Random();
+            Bet.Changed = () => Sfx("bet"); // Patrick Lupierz – 19.11.2026
         }
 
         protected G1C_MoneyManager Money { get; }

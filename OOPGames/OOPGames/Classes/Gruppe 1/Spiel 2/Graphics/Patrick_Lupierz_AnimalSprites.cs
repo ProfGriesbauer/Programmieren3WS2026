@@ -25,6 +25,16 @@ namespace OOPGames
             if (string.IsNullOrEmpty(id)) return null;
             if (id == "obj_fishing_rod") return FishingRod().ToBitmap();
             if (id == "tile_city_plaza") return Plaza().ToBitmap();
+            // Änderung durch: Patrick Lupierz – 18.11.2026 – Flussfische: river_fish_<art>_<bild>, Grafik aus dem Angelspiel,
+            // leicht wasserblau eingefärbt (unter Wasser); Bild 1 ist um ein Pixel versetzt (Schwimmbewegung).
+            if (id.StartsWith("river_fish_", StringComparison.Ordinal))
+            {
+                int cut = id.LastIndexOf('_');
+                int riverFrame;
+                if (!int.TryParse(id.Substring(cut + 1), out riverFrame)) riverFrame = 0;
+                G1C_PixelCanvas fish = G1C_FishSprites.Get(id.Substring("river_".Length, cut - "river_".Length));
+                return fish == null ? null : RiverFish(fish, riverFrame).ToBitmap();
+            }
             string[] parts = id.Split('_');
             if (parts.Length == 5 && parts[0] == "pet")
             {
@@ -50,6 +60,23 @@ namespace OOPGames
         private static Color Shade(Color c, double f)
         {
             return Color.FromRgb((byte)Math.Min(255, c.R * f), (byte)Math.Min(255, c.G * f), (byte)Math.Min(255, c.B * f));
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 18.11.2026 – Fisch im Wasser: 35 % Wasserblau, Bild 1 versetzt
+        private static G1C_PixelCanvas RiverFish(G1C_PixelCanvas fish, int frame)
+        {
+            Color water = Rgb(0x3878C8);
+            G1C_PixelCanvas c = new G1C_PixelCanvas(fish.Width, fish.Height);
+            int dx = frame == 1 ? 1 : 0, dy = frame == 1 ? 1 : 0;
+            for (int y = 0; y < fish.Height; y++)
+                for (int x = 0; x < fish.Width; x++)
+                {
+                    Color p = fish.Get(x, y);
+                    if (p.A == 0) continue;
+                    c.Set(x + dx, y + dy, Color.FromRgb((byte)(p.R * 0.65 + water.R * 0.35), (byte)(p.G * 0.65 + water.G * 0.35),
+                                                        (byte)(p.B * 0.65 + water.B * 0.35)));
+                }
+            return c;
         }
 
         // ------------------------------------------------------------------ Katzen

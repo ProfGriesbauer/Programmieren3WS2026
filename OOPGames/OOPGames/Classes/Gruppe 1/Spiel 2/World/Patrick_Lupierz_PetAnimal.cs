@@ -138,7 +138,7 @@ namespace OOPGames
             string sprite = animal != null ? animal.SpriteId ?? "" : "";
             if (sprite.StartsWith("animal_duck")) return new[] { "Quak!", "Quak quak!", "Quaaak?" }[pick];
             if (sprite.StartsWith("animal_bird")) return new[] { "Tschilp!", "Piep piep!", "Tirili!" }[pick];
-            if (sprite.StartsWith("animal_fish")) return "Blubb";
+            if (sprite.StartsWith("animal_fish") || sprite.StartsWith("river_fish")) return "Blubb"; // 18.11.2026: Flussfische
             if (sprite.StartsWith("animal_cat")) return "Miau!";
             return null;
         }

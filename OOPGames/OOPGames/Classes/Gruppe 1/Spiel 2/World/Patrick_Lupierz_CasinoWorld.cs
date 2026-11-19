@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 
 namespace OOPGames
@@ -12,6 +13,26 @@ namespace OOPGames
 
         public G1C_CasinoMap Map { get; } = new G1C_CasinoMap();
         public IReadOnlyList<G1C_WorldObject> Objects { get { return _objects; } }
+
+        // Änderung durch: Patrick Lupierz – Datum: 18.11.2026 – Tagesablauf: Gäste kommen abends und gehen nachts
+        private readonly List<G1C_Npc> _absent = new List<G1C_Npc>();
+
+        public G1C_Npc FindNpc(string name)
+        {
+            return _objects.OfType<G1C_Npc>().FirstOrDefault(n => n.Name == name) ?? _absent.FirstOrDefault(n => n.Name == name);
+        }
+
+        public bool IsPresent(G1C_WorldObject obj)
+        {
+            return _objects.Contains(obj);
+        }
+
+        public void SetNpcPresent(G1C_Npc npc, bool present)
+        {
+            if (npc == null || IsPresent(npc) == present) return;
+            if (present) { _absent.Remove(npc); _objects.Add(npc); }
+            else if (_objects.Remove(npc)) _absent.Add(npc);
+        }
         // Ergänzt durch Denis Mock: Die Casino-Karte wird als aktive Szene bereitgestellt.
         IG1C_WorldMap IG1C_WorldScene.Grid { get { return Map; } }
         public int TileSize { get { return 24; } }

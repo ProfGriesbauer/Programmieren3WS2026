@@ -63,11 +63,20 @@ Die rote **Tankstelle** hat zwei Zapfsäulen und ein Verkaufsfenster: dort mit [
 CLOSED-Schild (die Tankstelle hat immer offen). Das Bankguthaben wächst pro Spieltag um 2 %. Schilder, Poster und Sticker
 lassen sich mit **E** ansehen.
 
+**Gast-Automat (Spielhalle, Mitte):** Spiele der anderen Gruppen laufen mit deren eigenen Regeln, Painter und KI. **Esc**
+führt jederzeit zurück zur Spielauswahl. Stadtbewohner haben einen Tagesablauf (nachts zu Hause, Lena abends im Casino);
+der Geldhai vor der Bank spricht dich beim Vorbeilaufen an.
+
 **Neu (16.11.2026):** Katzen und Hunde laufen herum und lassen sich mit **E** streicheln. Auf jeder Flussbrücke steht eine
 **Angel**: [E] auswerfen, beim Zucken [E] anhauen, dann den Fisch mit **A**/**D** im grünen Bereich halten; 20 Fischarten und
 Fundstücke verkauft man in jedem Laden. Admin-Cheat: im Spielautomaten das Wort ADMIN tippen (Jackpot-Garantie und dauerhaftes Turbo-Tempo an/aus). Am **Einrichtungsplan** stellt man Möbel per Mausklick in der Hausansicht auf und
 verschiebt sie (höchstens 3 Stück je Möbel). Musik und Geräusche: im Menü **B** mit **T** an/aus. Wer mit dem Fahrrad in ein
 Haus geht, fährt beim Hinausgehen automatisch weiter.
+
+**Sound:** Musik je Ort (Stadt-Ambiente, Casino, Spielhalle, Titelbild), Schritte je Untergrund (Gras, Weg, Brücke, innen),
+Fahrradschleife, Casino-Töne (Hebel, Walzen, Jackpot, Karten, Chips), Katzen und Hunde nur beim Streicheln, Vögel nur im
+4-Kacheln-Radius. **Handy-Mixer:** Menü **B**, dann **F11** zeigt Adresse und PIN; im selben WLAN im Handy-Browser öffnen und
+Lautstärke, Häufigkeit und die Zahl gleichzeitiger Töne einstellen (siehe `Assets/SoundMixer/README.md`). **T** im Menü = Ton aus/an.
 
 **Selbsttest (nur auf Aufruf):** Menü **B** öffnen, dann **F12**. Die Ergebnisse erscheinen als Liste und in
 `G1Casino_SelfTest.txt` neben der `OOPGames.exe`.

@@ -2038,3 +2038,34 @@ zum cheat auch das durch speed unendlich lang geschwindigkeit erhöht its
 
 Ergebnisvermerk (so verstanden: der Cheat gibt zusätzlich dauerhaft erhöhte Geschwindigkeit, wie ein endloser Speed-Effekt):
 ADMIN schaltet Jackpot-Garantie und Turbo-Tempo (2 Ticks pro Feld, schneller als Fahrrad mit 3) zusammen an/aus. Test ergänzt.
+
+### Prompt 15
+
+Datum: 18.11.2026 · Werkzeug: Claude Code · Modell: Claude Opus 5.5
+
+```text
+implementiere die offenen issues
+```
+
+Ergebnisvermerk: Gast-Automat wählt Regeln, Painter und KI derselben Gruppe, meldet sie beim Framework als aktiv an
+(Ursache hängender fremder Spiele), spielt ganze Partien, [Esc] zurück zur Spielauswahl; Tagesablauf der Stadt-NPCs;
+Geldhai spricht beim Vorbeilaufen an; Flussfische mit Angelspiel-Grafiken; SprintPlanning-Status nachgezogen.
+Selbsttest 70/70, Renderings geprüft. Zwischen-Prompts (Sound-Ordner, Pokerkarten-Koordinaten, Issue-Schema) siehe Verlauf.
+Kein Commit.
+
+### Prompt 16
+
+Datum: 19.11.2026 · Werkzeug: Claude Code · Modell: Claude Sonnet 5.5
+
+```text
+C:\Users\Patrick\Downloads\SoundsGame\CasinoAdventureSounds nimm alle sounds und implementiere die erstell auch eine app für
+handy wo man alle sounds einstellen kann da die lautstärke noch nicht angepasst ist auch die häufigkeit soals auch das mehrere
+sounds nicht gleichzeitig gehört weren können tiere sollen zb nur wenn man diese streichelt sounds machen vögel sollen nur ein
+einem 4 block radius geräusche machen die step sounds sollen mit deren namen passend geloopt werden und auch abhängig vom boden
+andere haben erstelle die code dateien in den jeweiligen ordnern unter Assets
+```
+
+Ergebnisvermerk: 49 Dateien umgewandelt (OGG nicht abspielbar, 291 MB zu groß) und in `Assets/Sounds` abgelegt; Sound-System neu
+(Katalog, Einstellungen, Prioritäten, Schleifen, Backend-Trennung); Handy-Web-App mit Server (Menü B → F11, PIN); Schritte nach
+Untergrund, Tiere nur beim Streicheln, Vögel im Radius; Casino-Töne. Selbsttest 80/80, alle Dateien im MediaPlayer geöffnet.
+Nicht möglich: Hörprobe und Bedienung auf einem echten Handy. Kein Commit.

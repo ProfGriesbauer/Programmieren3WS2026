@@ -1,123 +1,510 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Media;
 
 namespace OOPGames
 {
     // =====================================================
+    // Schnittstellen: IG1C_AudioVoice, IG1C_AudioBackend
+    // Entwickler: Patrick Lupierz
+    // Erstellt: 19.11.2026
+    // Beschreibung: Trennung zwischen Klanglogik (G1C_SoundSystem: was, wann, wie laut, wie viele gleichzeitig) und dem
+    //               eigentlichen Abspielen. Das Spiel benutzt WPF-MediaPlayer (G1C_MediaBackend); der Selbsttest ein
+    //               Testgerät ohne Ton. So lässt sich die Logik prüfen, ohne dass etwas zu hören sein muss.
+    // =====================================================
+    public interface IG1C_AudioVoice
+    {
+        void Stop();
+        void SetVolume(double volume);
+    }
+
+    public interface IG1C_AudioBackend
+    {
+        /// <summary>Startet eine Datei. Schleife: am Ende wird keepGoing gefragt, sonst endet sie und ended wird gerufen.</summary>
+        IG1C_AudioVoice Start(string file, double volume, bool loop, Func<bool> keepGoing, Action ended);
+    }
+
+    // =====================================================
+    // Klasse: G1C_MediaBackend
+    // Entwickler: Patrick Lupierz
+    // Erstellt: 19.11.2026
+    // Beschreibung: Spielt Dateien mit WPF-MediaPlayer ab (wav, mp3; ogg kann WPF ohne Zusatzbibliothek nicht).
+    //               Muss auf dem UI-Thread benutzt werden – das Spiel ruft es nur aus dem Framework-Tick auf.
+    // =====================================================
+    public sealed class G1C_MediaBackend : IG1C_AudioBackend
+    {
+        public IG1C_AudioVoice Start(string file, double volume, bool loop, Func<bool> keepGoing, Action ended)
+        {
+            MediaVoice voice = new MediaVoice(new MediaPlayer());
+            MediaPlayer player = voice.Player;
+            player.Open(new Uri(file, UriKind.Absolute));
+            player.Volume = Math.Max(0, Math.Min(1, volume));
+            player.MediaEnded += (s, e) =>
+            {
+                if (voice.Stopped) return;
+                if (loop && (keepGoing == null || keepGoing()))
+                {
+                    player.Position = TimeSpan.Zero;
+                    player.Play();
+                    return;
+                }
+                voice.Stop();
+                if (ended != null) ended();
+            };
+            player.MediaFailed += (s, e) =>
+            {
+                if (voice.Stopped) return;
+                voice.Stop();
+                if (ended != null) ended();
+            };
+            player.Play();
+            return voice;
+        }
+
+        private sealed class MediaVoice : IG1C_AudioVoice
+        {
+            public MediaVoice(MediaPlayer player) { Player = player; }
+            public MediaPlayer Player { get; }
+            public bool Stopped { get; private set; }
+
+            public void Stop()
+            {
+                if (Stopped) return;
+                Stopped = true;
+                try { Player.Stop(); Player.Close(); } catch (Exception) { }
+            }
+
+            public void SetVolume(double volume)
+            {
+                if (!Stopped) Player.Volume = Math.Max(0, Math.Min(1, volume));
+            }
+        }
+    }
+
+    // =====================================================
+    // Klasse: G1C_StepSurface
+    // Entwickler: Patrick Lupierz
+    // Erstellt: 19.11.2026
+    // Beschreibung: Untergrund für die Schrittgeräusche. Der Untergrund folgt der Kachelgrafik der Stadt
+    //               (Brücke, Weg/Straße/Steinplatten, sonst Gras); in jedem Gebäude ist es der Innenboden.
+    // =====================================================
+    public static class G1C_StepSurface
+    {
+        public static string SoundIdFor(string tileSpriteId, G1C_WorldLocation location)
+        {
+            if (location != G1C_WorldLocation.Exterior) return "step_indoor";
+            string id = tileSpriteId ?? "";
+            if (id.Contains("bridge")) return "step_bridge";
+            if (id.Contains("_road") || id.Contains("_path") || id.Contains("plaza")) return "step_path";
+            return "step_grass";
+        }
+
+        /// <summary>Liegt ein Tier innerhalb des Radius (Kacheln, Luftlinie)? Für die Vogelstimmen.</summary>
+        public static bool InRadius(int dx, int dy, int radius)
+        {
+            return dx * dx + dy * dy <= radius * radius;
+        }
+    }
+
+    // =====================================================
     // Klasse: G1C_SoundSystem
     // Entwickler: Patrick Lupierz
     // Erstellt: 16.11.2026
-    // Beschreibung: Hintergrundmusik je Ort (Stadt, Zuhause, Läden, Casino, Spielhalle, Angeln, Titel) und
-    //               Geräusche (Gewinn, Jackpot, Verlust, Münze, Tür, Miau, Wuff, Platschen, Fang).
-    //               Keine Audiodateien im Projekt und keine externe Bibliothek: Die Stücke werden beim ersten
-    //               Gebrauch als 8-Bit-Chiptune (G1C_ChipTune) erzeugt, als WAV in den Temp-Ordner geschrieben und
-    //               mit WPF-MediaPlayer abgespielt. Ohne Enable() (z. B. im Selbsttest) bleibt alles stumm; die
-    //               Logik (welche Musik, welches Geräusch) ist trotzdem prüfbar. Fehler schalten den Ton ab.
+    // Beschreibung: Hintergrundmusik je Ort und Geräusche (Katalog: G1C_SoundCatalog, Dateien: Assets\Sounds).
+    //               Ohne Audiogerät (Backend == null, z. B. im Selbsttest) bleibt alles stumm; die Logik läuft trotzdem.
+    //               Regeln: Musik läuft immer nur als ein Stück. Effekte unterliegen drei Grenzen aus den Einstellungen:
+    //               Wahrscheinlichkeit (Chance), Mindestabstand (Cooldown) und "höchstens N gleichzeitig" – ist die
+    //               Grenze erreicht, verdrängt ein wichtigerer Effekt den unwichtigsten, sonst entfällt der neue.
+    //               Derselbe Sound überlagert sich nie selbst (Schritte!). Fehler beim Abspielen schalten den Ton ab.
+    // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Neufassung: Klangpaket, Mixer-Einstellungen,
+    //               Lautstärke-/Häufigkeitsregeln, Schleifen, Backend-Trennung.
     // =====================================================
     public sealed class G1C_SoundSystem
     {
-        public const double MusicVolume = 0.30;
-        public const double EffectVolume = 0.55;
+        private sealed class Voice
+        {
+            public G1C_SoundDef Def;
+            public IG1C_AudioVoice Handle;
+            public long StartedMs;
+            public bool Ended;
+        }
 
-        private readonly Dictionary<string, string> _files = new Dictionary<string, string>();
-        private readonly List<MediaPlayer> _effects = new List<MediaPlayer>();
-        private MediaPlayer _music;
-        private DateTime _lastHeartbeat = DateTime.MinValue;
+        private readonly Dictionary<string, string> _generated = new Dictionary<string, string>();
+        private readonly Dictionary<string, long> _lastPlay = new Dictionary<string, long>();
+        private readonly Dictionary<string, int> _variant = new Dictionary<string, int>();
+        private readonly List<Voice> _voices = new List<Voice>();
+        private readonly ConcurrentQueue<Action> _commands = new ConcurrentQueue<Action>();
+        private readonly Dictionary<string, long> _stopAt = new Dictionary<string, long>();
+        private Voice _music;
+        private long _lastHeartbeatMs;
+        private long _previewMusicUntilMs;
+        private int _savedRevision;
+        private int _appliedRevision;
+        private long _savedAtMs;
 
-        public bool Enabled { get; private set; }
+        public G1C_SoundSystem()
+        {
+            Settings = new G1C_SoundSettings();
+            Settings.Sanitize();
+            NowMs = () => Environment.TickCount64;
+            Random = new Random();
+        }
+
+        public G1C_SoundSettings Settings { get; }
+        public IG1C_AudioBackend Backend { get; set; }
+        public Func<long> NowMs { get; set; }
+        public Random Random { get; set; }
+        public string PersistPath { get; set; }
+        public G1C_SoundMixerServer Mixer { get; set; }
+        public bool MixerLoopbackOnly { get; set; } // Tests: Handy-Server nur für diesen Rechner (keine Firewall-Frage)
+
+        public bool Enabled { get { return Backend != null; } }
         public bool Muted { get; private set; }
         public string CurrentMusic { get; private set; }
         public string LastEffect { get; private set; }
         public int EffectCount { get; private set; }
         public string LastError { get; private set; }
+        public string CurrentMusicFile { get; private set; }
+
+        /// <summary>Ids der gerade laufenden Effekte (ohne Musik).</summary>
+        public IList<string> ActiveEffects
+        {
+            get { lock (_voices) { return _voices.Select(v => v.Def.Id).ToList(); } }
+        }
 
         /// <summary>Nur das echte Spiel (G1C_CasinoRules) schaltet den Ton ein; Tests bleiben stumm.</summary>
         public void Enable()
         {
-            Enabled = true;
+            Backend = new G1C_MediaBackend();
+            PersistPath = G1C_SoundSettings.DefaultPath;
+            Settings.LoadFrom(PersistPath);
+            _savedRevision = Settings.Revision;
+            _appliedRevision = Settings.Revision;
+        }
+
+        // ------------------------------------------------------------------ Lautstärke
+
+        // Entwickler: Patrick Lupierz – Endlautstärke 0..1 = Gesamt x (Musik|Effekte) x Einzelwert; stumm = 0
+        public double VolumeFor(G1C_SoundDef def)
+        {
+            if (Muted || def == null) return 0;
+            G1C_SoundEntrySettings entry = Settings.Get(def.Id);
+            double group = def.IsMusic ? Settings.Music : Settings.Effects;
+            return Settings.Master / 100.0 * group / 100.0 * entry.Volume / 100.0;
+        }
+
+        /// <summary>Wendet geänderte Lautstärken sofort auf laufende Töne an.</summary>
+        public void RefreshVolumes()
+        {
+            try
+            {
+                lock (_voices)
+                {
+                    foreach (Voice v in _voices) v.Handle.SetVolume(VolumeFor(v.Def));
+                }
+                if (_music != null) _music.Handle.SetVolume(VolumeFor(_music.Def));
+            }
+            catch (Exception ex) { Fail(ex); }
         }
 
         public string ToggleMute()
         {
-            Muted = !Muted;
-            try
-            {
-                if (_music != null) _music.Volume = Muted ? 0 : MusicVolume;
-            }
-            catch (Exception ex) { Fail(ex); }
+            SetMuted(!Muted);
             return Muted ? "Ton aus." : "Ton an.";
+        }
+
+        public void SetMuted(bool muted)
+        {
+            Muted = muted;
+            RefreshVolumes();
+        }
+
+        // ------------------------------------------------------------------ Takt (UI-Thread)
+
+        /// <summary>Befehle vom Handy-Mixer ausführen, laufende Töne anpassen, Einstellungen speichern.
+        /// Wird bei jedem Spiel-Tick aufgerufen.</summary>
+        public void Pump()
+        {
+            Action command;
+            while (_commands.TryDequeue(out command))
+            {
+                try { command(); } catch (Exception ex) { LastError = ex.Message; }
+            }
+            long now = NowMs();
+            if (_stopAt.Count > 0)
+            {
+                foreach (string id in _stopAt.Where(p => now >= p.Value).Select(p => p.Key).ToList())
+                {
+                    _stopAt.Remove(id);
+                    StopLoop(id);
+                }
+            }
+            if (Settings.Revision != _appliedRevision)
+            {
+                _appliedRevision = Settings.Revision;
+                RefreshVolumes();
+            }
+            if (PersistPath != null && Settings.Revision != _savedRevision && now - _savedAtMs > 1000)
+            {
+                _savedRevision = Settings.Revision;
+                _savedAtMs = now;
+                Settings.Save(PersistPath);
+            }
+        }
+
+        /// <summary>Vom Server-Thread aus: Befehl für den nächsten Spiel-Tick vormerken.</summary>
+        public void PostCommand(Action command)
+        {
+            if (command != null) _commands.Enqueue(command);
         }
 
         /// <summary>Jeder Spiel-Tick meldet sich hier. Kommt kein Tick mehr (anderes Spiel im Hauptfenster gewählt),
         /// wird die Musik am Ende des Stücks nicht wiederholt – sie läuft also nicht ewig weiter.</summary>
         public void Heartbeat()
         {
-            _lastHeartbeat = DateTime.Now;
+            _lastHeartbeatMs = NowMs();
         }
+
+        private bool HeartbeatAlive()
+        {
+            return NowMs() - _lastHeartbeatMs <= 2000;
+        }
+
+        // ------------------------------------------------------------------ Musik
 
         // Entwickler: Patrick Lupierz – Musik wechseln; gleiche Musik läuft ohne Unterbrechung weiter
         public void SetMusic(string theme)
         {
             Heartbeat();
+            if (NowMs() < _previewMusicUntilMs && theme != null) return;   // Vorhören im Mixer läuft noch
             if (theme == CurrentMusic) return;
             CurrentMusic = theme;
-            if (!Enabled) return;
+            StopMusicVoice();
+            if (theme == null || Backend == null) return;
+            StartMusic();
+        }
+
+        private void StopMusicVoice()
+        {
+            if (_music != null)
+            {
+                Voice old = _music;
+                _music = null;
+                old.Ended = true;
+                try { old.Handle.Stop(); } catch (Exception) { }
+            }
+            CurrentMusicFile = null;
+        }
+
+        private void StartMusic()
+        {
+            G1C_SoundDef def = G1C_SoundCatalog.Find("music_" + CurrentMusic);
+            if (def == null || !Settings.Get(def.Id).Enabled) return;
+            string[] files = G1C_SoundFiles.For(def);
+            string file = Pick(def, files);
+            if (file == null) return;
+            CurrentMusicFile = file;
+            Voice voice = new Voice { Def = def, StartedMs = NowMs() };
+            string startedTheme = CurrentMusic;
             try
             {
-                if (_music != null) { _music.Stop(); _music.Close(); _music = null; }
-                if (theme == null) return;
-                MediaPlayer player = new MediaPlayer();
-                player.Open(new Uri(Resolve(FolderFor(theme), theme) ?? FileFor("music_" + theme), UriKind.Absolute));
-                player.Volume = Muted ? 0 : MusicVolume;
-                player.MediaEnded += (s, e) =>
+                // Einzelne Datei: der Player wiederholt sie selbst; mehrere Dateien: nach dem Ende kommt die nächste
+                bool single = files.Length <= 1;
+                voice.Handle = Backend.Start(file, VolumeFor(def), single, HeartbeatAlive, () =>
                 {
-                    if ((DateTime.Now - _lastHeartbeat).TotalSeconds > 2) { player.Close(); _music = null; CurrentMusic = null; return; }
-                    player.Position = TimeSpan.Zero;
-                    player.Play();
-                };
-                player.Play();
-                _music = player;
+                    if (voice.Ended) return;
+                    voice.Ended = true;
+                    if (_music == voice) _music = null;
+                    if (!HeartbeatAlive()) { CurrentMusic = null; return; }
+                    if (CurrentMusic == startedTheme && _music == null) StartMusic();
+                });
+                _music = voice;
             }
             catch (Exception ex) { Fail(ex); }
         }
 
-        // Entwickler: Patrick Lupierz – Geräusch abspielen (mehrere gleichzeitig möglich, max. 6)
-        public void Play(string effect)
+        // Entwickler: Patrick Lupierz – Datei auswählen: reihum (Schritte) oder zufällig ohne Wiederholung; sonst Chiptune
+        private string Pick(G1C_SoundDef def, string[] files)
         {
-            if (string.IsNullOrEmpty(effect)) return;
-            LastEffect = effect;
+            if (files.Length == 0)
+                return def.Fallback == null ? null : GeneratedFile(def.Fallback);
+            int index;
+            if (!_variant.TryGetValue(def.Id, out index)) index = -1;
+            if (def.Sequential || files.Length == 1) index = (index + 1) % files.Length;
+            else index = (index + 1 + Random.Next(files.Length - 1)) % files.Length;   // nie dieselbe Datei zweimal hintereinander
+            _variant[def.Id] = index;
+            return files[index];
+        }
+
+        // ------------------------------------------------------------------ Effekte
+
+        // Entwickler: Patrick Lupierz
+        // Aufgabe: Auslöser für einen Sound. "<id>:stop" beendet einen laufenden Schleifen-Sound. Gibt true zurück,
+        //          wenn tatsächlich etwas gestartet wurde. LastEffect/EffectCount zählen jede Anfrage (auch bei Stumm).
+        public bool Play(string id)
+        {
+            return Play(id, false);
+        }
+
+        public bool Play(string id, bool force)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            if (id.EndsWith(":stop", StringComparison.Ordinal))
+            {
+                StopLoop(id.Substring(0, id.Length - 5));
+                return false;
+            }
+            LastEffect = id;
             EffectCount++;
-            if (!Enabled || Muted) return;
+            G1C_SoundDef def = G1C_SoundCatalog.Find(id);
+            if (def == null || Backend == null || Muted) return false;
+            if (def.IsMusic) return false;
+            G1C_SoundEntrySettings entry = Settings.Get(id);
+            long now = NowMs();
+            if (!force)
+            {
+                if (!entry.Enabled) return false;
+                if (entry.Chance < 100 && Random.Next(100) >= entry.Chance) return false;
+                long last;
+                if (entry.CooldownMs > 0 && _lastPlay.TryGetValue(id, out last) && now - last < entry.CooldownMs) return false;
+            }
+            if (def.Loop) return StartLoop(id, true);
+            string file = Pick(def, G1C_SoundFiles.For(def));
+            if (file == null) return false;
+            if (!MakeRoom(def)) return false;
+            return Launch(def, file, false, now);
+        }
+
+        /// <summary>Schleifen-Sound starten (tut nichts, wenn er schon läuft).</summary>
+        public bool StartLoop(string id)
+        {
+            return StartLoop(id, false);
+        }
+
+        private bool StartLoop(string id, bool counted)
+        {
+            G1C_SoundDef def = G1C_SoundCatalog.Find(id);
+            if (def == null || Backend == null || Muted || !Settings.Get(id).Enabled) return false;
+            lock (_voices) { if (_voices.Any(v => v.Def.Id == id)) return true; }
+            if (!counted) { LastEffect = id; EffectCount++; }
+            string file = Pick(def, G1C_SoundFiles.For(def));
+            if (file == null || !MakeRoom(def)) return false;
+            return Launch(def, file, true, NowMs());
+        }
+
+        public void StopLoop(string id)
+        {
+            List<Voice> stop;
+            lock (_voices) { stop = _voices.Where(v => v.Def.Id == id).ToList(); _voices.RemoveAll(v => v.Def.Id == id); }
+            foreach (Voice v in stop) { v.Ended = true; try { v.Handle.Stop(); } catch (Exception) { } }
+        }
+
+        public void StopAllEffects()
+        {
+            List<Voice> stop;
+            lock (_voices) { stop = _voices.ToList(); _voices.Clear(); }
+            foreach (Voice v in stop) { v.Ended = true; try { v.Handle.Stop(); } catch (Exception) { } }
+        }
+
+        /// <summary>Alles anhalten (Musik, Effekte, Handy-Server) – beim Neustart des Spiels.</summary>
+        public void StopAll()
+        {
+            StopAllEffects();
+            CurrentMusic = null;
+            StopMusicVoice();
+            if (Mixer != null) { Mixer.Stop(); Mixer = null; }
+        }
+
+        // Entwickler: Patrick Lupierz
+        // Aufgabe: Platz für einen neuen Effekt schaffen. Derselbe Sound überlagert sich nie; ist die Höchstzahl
+        //          gleichzeitiger Effekte erreicht, weicht der unwichtigste (niedrigste Priorität, bei Gleichstand der
+        //          älteste), sofern er nicht wichtiger ist als der neue – sonst entfällt der neue.
+        private bool MakeRoom(G1C_SoundDef def)
+        {
+            List<Voice> stop = new List<Voice>();
+            bool allowed = true;
+            lock (_voices)
+            {
+                foreach (Voice same in _voices.Where(v => v.Def.Id == def.Id).ToList()) { stop.Add(same); _voices.Remove(same); }
+                int max = Settings.MaxSimultaneous;
+                while (_voices.Count >= max)
+                {
+                    Voice weakest = _voices.OrderBy(v => v.Def.Priority).ThenBy(v => v.StartedMs).First();
+                    if (weakest.Def.Priority > def.Priority) { allowed = false; break; }
+                    stop.Add(weakest);
+                    _voices.Remove(weakest);
+                }
+            }
+            foreach (Voice v in stop) { v.Ended = true; try { v.Handle.Stop(); } catch (Exception) { } }
+            return allowed;
+        }
+
+        private bool Launch(G1C_SoundDef def, string file, bool loop, long now)
+        {
+            Voice voice = new Voice { Def = def, StartedMs = now };
             try
             {
-                _effects.RemoveAll(p => p.NaturalDuration.HasTimeSpan && p.Position >= p.NaturalDuration.TimeSpan);
-                if (_effects.Count >= 6) { _effects[0].Close(); _effects.RemoveAt(0); }
-                MediaPlayer player = new MediaPlayer();
-                player.Open(new Uri(Resolve("Soundeffekte", effect) ?? FileFor("sfx_" + effect), UriKind.Absolute));
-                player.Volume = EffectVolume;
-                player.MediaEnded += (s, e) => player.Close();
-                player.Play();
-                _effects.Add(player);
+                voice.Handle = Backend.Start(file, VolumeFor(def), loop, () => !voice.Ended, () =>
+                {
+                    voice.Ended = true;
+                    lock (_voices) { _voices.Remove(voice); }
+                });
             }
-            catch (Exception ex) { Fail(ex); }
+            catch (Exception ex) { Fail(ex); return false; }
+            lock (_voices) { _voices.Add(voice); }
+            _lastPlay[def.Id] = now;
+            return true;
         }
+
+        // ------------------------------------------------------------------ Vorhören (Handy-Mixer)
+
+        /// <summary>Spielt einen Sound zum Probehören, ohne Wahrscheinlichkeit und Mindestabstand. Musik läuft 10 s,
+        /// Schleifen 3 s. Nur auf dem UI-Thread aufrufen (der Mixer benutzt PostCommand).</summary>
+        public void Preview(string id)
+        {
+            G1C_SoundDef def = G1C_SoundCatalog.Find(id);
+            if (def == null || Backend == null) return;
+            long now = NowMs();
+            if (def.IsMusic)
+            {
+                _previewMusicUntilMs = 0;
+                CurrentMusic = null;
+                SetMusic(id.Substring("music_".Length));
+                _previewMusicUntilMs = now + 10000;
+                return;
+            }
+            Play(id, true);
+            if (def.Loop) _stopAt[id] = now + 3000;
+        }
+
+        // ------------------------------------------------------------------ Hilfen
 
         private void Fail(Exception ex)
         {
             LastError = ex.Message;
-            Enabled = false; // ohne Audiogerät o. Ä. läuft das Spiel stumm weiter
+            Backend = null; // ohne Audiogerät o. Ä. läuft das Spiel stumm weiter
         }
 
-        // Entwickler: Patrick Lupierz – Datum: 16.11.2026
-        // Aufgabe: Eigene Audiodateien aus G1Casino_Assets\Sounds\<Ordner> (wav oder mp3) bevorzugen.
-        public const string SoundFolderName = "Sounds";
+        private string GeneratedFile(string name)
+        {
+            string file;
+            if (_generated.TryGetValue(name, out file)) return file;
+            string folder = Path.Combine(Path.GetTempPath(), "G1Casino_Sounds");
+            Directory.CreateDirectory(folder);
+            file = Path.Combine(folder, name + ".wav");
+            File.WriteAllBytes(file, G1C_ChipTune.Render(name));
+            _generated[name] = file;
+            return file;
+        }
 
-        /// <summary>Unterordner für Musik: Außen (Stadt, Angeln) oder Gebäude (alles andere).</summary>
+        // Kompatibilität (Tests und ältere Aufrufer): Musikordner je Thema
         public static string FolderFor(string theme)
         {
-            return theme == "town" || theme == "fishing" ? "Musik_Aussen" : "Musik_Gebaeude";
+            G1C_SoundDef def = G1C_SoundCatalog.Find("music_" + theme);
+            return def != null && def.Folder != null ? def.Folder : "Musik_Gebaeude";
         }
 
         /// <summary>Sucht eine eigene Datei; null, wenn keine vorhanden ist (dann greift die eingebaute Version).</summary>
@@ -125,30 +512,15 @@ namespace OOPGames
         {
             try
             {
-                string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "G1Casino_Assets", SoundFolderName, folder);
-                foreach (string ext in new[] { ".wav", ".mp3" })
-                {
-                    string file = Path.Combine(dir, name + ext);
-                    if (File.Exists(file)) return file;
-                }
+                foreach (string root in G1C_SoundFiles.Roots())
+                    foreach (string ext in G1C_SoundFiles.Extensions)
+                    {
+                        string file = Path.Combine(root, folder.Replace('/', Path.DirectorySeparatorChar), name + ext);
+                        if (File.Exists(file)) return file;
+                    }
             }
-            catch (Exception)
-            {
-                // Zugriffsfehler: eingebaute Version verwenden
-            }
+            catch (Exception) { }
             return null;
-        }
-
-        private string FileFor(string name)
-        {
-            string file;
-            if (_files.TryGetValue(name, out file)) return file;
-            string folder = Path.Combine(Path.GetTempPath(), "G1Casino_Sounds");
-            Directory.CreateDirectory(folder);
-            file = Path.Combine(folder, name + ".wav");
-            File.WriteAllBytes(file, G1C_ChipTune.Render(name));
-            _files[name] = file;
-            return file;
         }
 
         // Entwickler: Patrick Lupierz – welche Musik zu welchem Ort/Zustand gehört (reine Logik, testbar)

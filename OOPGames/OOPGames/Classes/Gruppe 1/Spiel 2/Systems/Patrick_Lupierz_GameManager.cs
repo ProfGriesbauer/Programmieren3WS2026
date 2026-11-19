@@ -92,6 +92,7 @@ namespace OOPGames
             _interactions = new G1C_InteractionManager(World);
             Npcs = new G1C_NpcSystem(World, Money, Finance, _random); // Änderung durch: Eduard Schoenfeld
             Npcs.Clock = Clock; // Änderung durch: Patrick Lupierz – 15.11.2026
+            Npcs.IsPresent = npc => World.IsPresent(npc); // Änderung durch: Patrick Lupierz – 18.11.2026 – Tagesablauf
             _exteriorNpcRoaming = new G1C_ExteriorNpcRoamingSystem(Exterior, Player, _random); // Erweiterung durch Denis Mock
             Phone = new G1C_Phone(Npcs);
             // Änderung durch: Patrick Lupierz – 15.11.2026 – Ständer zeigt das aktive Rad oder ist leer, wenn man fährt
@@ -210,6 +211,7 @@ namespace OOPGames
                     // Änderung durch: Patrick Lupierz – 15.11.2026 – Selbsttest nur auf ausdrücklichen Aufruf (Menü + F12)
                     if (isKey && input.Key == Key.F12) OpenSelfTest();
                     else if (isKey && input.Key == Key.T) NotifySystemMessage(Sound.ToggleMute()); // Patrick Lupierz – 16.11.2026
+                    else if (isKey && input.Key == Key.F11) ToggleSoundMixer(); // Patrick Lupierz – 19.11.2026: Handy-Mixer
                     else if (!isKey || Menu.ShouldClose(input.Key)) State = G1C_GameState.MainGame;
                     break;
 
@@ -444,6 +446,7 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz
         private void SearchTrash(G1C_WorldObject can)
         {
+            Sound.Play("trash_open"); // Patrick Lupierz – 19.11.2026
             string found = _trash.Search(G1C_TrashSystem.KeyOf(CurrentLocation, can), Clock.Day, _random, Money, Inventory);
             if (found == null)
             {
@@ -581,7 +584,9 @@ namespace OOPGames
         private string BuyVendingItem(G1C_Item item, bool extraChance)
         {
             int before = Inventory.Count(item.Id);
+            int balanceBefore = Money.Balance;
             string message = G1C_Shop.Buy(item, Money, Inventory);
+            if (Money.Balance < balanceBefore) Sound.Play("coin"); // Patrick Lupierz – 19.11.2026
             if (extraChance && Inventory.Count(item.Id) > before && _random.NextDouble() < 0.12)
             {
                 Inventory.Add(item.Id);
@@ -641,6 +646,36 @@ namespace OOPGames
                 });
             }
             return rows;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 19.11.2026
+        // Aufgabe: Handy-Mixer (Web-App im WLAN) ein- oder ausschalten. Läuft nur auf ausdrücklichen Wunsch; die
+        //          Adresse und die PIN erscheinen als Dialog, damit sie in Ruhe abgetippt werden können.
+        private void ToggleSoundMixer()
+        {
+            if (Sound.Mixer != null && Sound.Mixer.Running)
+            {
+                Sound.Mixer.Stop();
+                Sound.Mixer = null;
+                State = G1C_GameState.MainGame;
+                NotifySystemMessage("Handy-Mixer beendet.");
+                return;
+            }
+            G1C_SoundMixerServer server = new G1C_SoundMixerServer(Sound);
+            if (!server.Start(Sound.MixerLoopbackOnly))
+            {
+                OpenDialogue("Sound-Mixer", new[] { "Der Handy-Mixer konnte nicht starten.\n" + server.LastError }, null);
+                return;
+            }
+            Sound.Mixer = server;
+            IList<string> urls = server.Urls;
+            string address = urls.Count == 0 ? "(Adresse nicht gefunden – IP des PCs mit :" + server.Port + " eingeben)"
+                                             : string.Join("\n", urls.Take(2));
+            OpenDialogue("Sound-Mixer fürs Handy", new[]
+            {
+                "Handy und PC im selben WLAN.\nÖffne im Handy-Browser:\n" + address,
+                "PIN: " + server.Pin + "\nBeenden: Menü [B], dann [F11].\nTipp: Im Browser 'Zum Startbildschirm hinzufügen'."
+            }, null);
         }
 
         // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – Kauf mit Möbelgrenze; erfolgreicher Kauf klimpert
@@ -813,7 +848,7 @@ namespace OOPGames
                     : Bikes.TryMount(Inventory, item.Id, CurrentLocation);
                 return;
             }
-            if (Inventory.Remove(item.Id)) ListMenu.Message = Buffs.Apply(item, Clock.TotalTicks);
+            if (Inventory.Remove(item.Id)) { ListMenu.Message = Buffs.Apply(item, Clock.TotalTicks); Sound.Play("buff"); } // Patrick Lupierz – 19.11.2026
         }
 
         // Entwickler: Patrick Lupierz – Kleiderschrank/Spiegel: gekaufte Kleidung sichtbar anziehen
@@ -825,6 +860,7 @@ namespace OOPGames
 
         private void OpenFurnishMenu()
         {
+            Sound.Play("furniture_open"); // Patrick Lupierz – 19.11.2026
             ListMenu.Open("Zuhause einrichten", () => Inventory.Items
                 .Where(item => item.Category == G1C_ItemCategory.Moebel)
                 .Select(item =>
@@ -1024,7 +1060,7 @@ namespace OOPGames
                     break;
             }
             // Änderung durch: Patrick Lupierz – 16.11.2026 – Geräusche und Admin-Cheat (Jackpot-Garantie)
-            if (ActiveGame != null) ActiveGame.SoundRequested = Sound.Play;
+            if (ActiveGame != null) ActiveGame.SoundRequested = id => Sound.Play(id);
             G1C_Slots slots = ActiveGame as G1C_Slots;
             if (slots != null) slots.GuaranteedJackpot = () => Cheats.JackpotActive;
         }
@@ -1034,7 +1070,7 @@ namespace OOPGames
         {
             _gameStartBalance = Money.Balance;
             _activeGameType = G1C_InteractionType.Fishing;
-            ActiveGame = new G1C_FishingGame(Money, _random, Inventory) { SoundRequested = Sound.Play };
+            ActiveGame = new G1C_FishingGame(Money, _random, Inventory) { SoundRequested = id => Sound.Play(id) };
             State = G1C_GameState.Fishing;
         }
 
@@ -1052,12 +1088,15 @@ namespace OOPGames
             if (cabinet == null) return;
             if (cabinet.IsGuestCabinet)
             {
-                List<G1C_GuestGameEntry> guests = G1C_GuestGameCatalog.DiscoverRegistered();
+                List<G1C_GuestGameEntry> guests = GuestGameSource();
+                _lastGuestCabinet = target; // Patrick Lupierz – 18.11.2026: nach [Esc] zurück zu dieser Auswahl
                 ListMenu.Open(cabinet.Name + " – Spiele anderer Gruppen", () => guests.Select(entry => new G1C_MenuRow
                 {
                     Text = entry.Name, Right = G1C_GuestGameHost.EntryFee + " Chips",
-                    Detail = entry.HasComputerOpponent ? "Gegen den Computer. Sieg: " + G1C_GuestGameHost.WinReward + " Chips."
-                                                       : "Zu zweit am Automaten (keine Belohnung).",
+                    // Änderung durch: Patrick Lupierz – 18.11.2026 – Regeln, Painter und KI derselben Gruppe
+                    Detail = "Gruppe " + entry.Group + ": Regeln, Painter " + entry.PainterType +
+                             (entry.HasComputerOpponent ? ", KI " + entry.ComputerType + ". Sieg: " + G1C_GuestGameHost.WinReward + " Chips."
+                                                        : ". Zu zweit am Automaten (keine Belohnung)."),
                     Run = () => StartArcadeGame(new G1C_GuestGameHost(Money, _random, entry))
                 }).ToList());
                 if (guests.Count == 0) ListMenu.Message = "Zurzeit sind keine Spiele anderer Gruppen registriert.";
@@ -1080,12 +1119,17 @@ namespace OOPGames
             return string.Join("\n", ArcadeHighscores.OrderByDescending(h => h.Value).Take(4).Select(h => h.Key + ": " + h.Value + " Punkte"));
         }
 
+        private G1C_WorldObject _lastGuestCabinet; // Patrick Lupierz – 18.11.2026
+
+        /// <summary>Quelle der Gastspiele: im Spiel das Framework (registrierte Klassen); Tests setzen eine eigene.</summary>
+        public Func<List<G1C_GuestGameEntry>> GuestGameSource { get; set; } = G1C_GuestGameCatalog.DiscoverRegistered;
+
         private void StartArcadeGame(G1C_CasinoGameBase game)
         {
             _gameStartBalance = Money.Balance;
             _activeGameType = G1C_InteractionType.Arcade;
             ActiveGame = game;
-            game.SoundRequested = Sound.Play; // Patrick Lupierz – 16.11.2026
+            game.SoundRequested = id => Sound.Play(id); // Patrick Lupierz – 16.11.2026
             State = G1C_GameState.Arcade;
         }
 
@@ -1098,6 +1142,19 @@ namespace OOPGames
 
         private void EndMinigame()
         {
+            // Änderung durch: Patrick Lupierz – 18.11.2026 – Gast-Automat: [Esc] führt zurück zur Spielauswahl,
+            // damit direkt ein anderes Spiel einer anderen Gruppe gewählt werden kann.
+            G1C_GuestGameHost guest = ActiveGame as G1C_GuestGameHost;
+            if (guest != null && _lastGuestCabinet != null)
+            {
+                int delta = Money.Balance - _gameStartBalance;
+                Npcs.OnMinigameFinished(_activeGameType, delta);
+                ActiveGame = null;
+                GamesPlayed++;
+                NotifySystemMessage(guest.Name + " beendet: " + (delta >= 0 ? "+" : "") + delta + " Chips.");
+                OpenCabinet(_lastGuestCabinet);
+                return;
+            }
             // Änderung durch: Patrick Lupierz – 16.11.2026 – Angeln endet mit einer Fangübersicht statt Chips-Bilanz
             G1C_FishingGame fishing = ActiveGame as G1C_FishingGame;
             if (fishing != null)
@@ -1108,8 +1165,8 @@ namespace OOPGames
                     : "Dein Fang: " + string.Join(", ", fishing.Caught) + ".\nFische und Fundstücke kannst du in jedem Laden verkaufen." }, null);
                 return;
             }
-            if (!(ActiveGame is G1C_Slots)) // Spielautomat spielt Gewinn/Jackpot schon pro Drehung
-                Sound.Play(Money.Balance > _gameStartBalance ? "win" : Money.Balance < _gameStartBalance ? "lose" : "click");
+            Sound.StopLoop("slots_spin"); // Patrick Lupierz – 19.11.2026: Schleifen beenden
+            PlayResultSound();
             // Änderung durch: Patrick Lupierz – 15.11.2026 – Rekorde der Spielhalle merken
             G1C_ArcadeGame arcade = ActiveGame as G1C_ArcadeGame;
             if (arcade != null && arcade.BestScore > 0)
@@ -1126,17 +1183,93 @@ namespace OOPGames
             State = G1C_GameState.Result;
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 18.11.2026
+        // Aufgabe: SprintPlanning Issue 16 – der Geldhai spricht den Spieler beim Vorbeilaufen an (Sprechblase und
+        //          Hinweis), höchstens einmal pro Vorbeigehen: erst wenn der Spieler sich entfernt hat, wieder.
+        public const int LoanSharkRange = 2;
+        public bool LoanSharkApproached { get; private set; }
+
+        private void UpdateLoanSharkApproach()
+        {
+            G1C_Npc shark = Exterior.TownNpcs.FirstOrDefault(n => n.Interaction == G1C_InteractionType.LoanShark);
+            if (shark == null || !Exterior.IsPresent(shark) || Player.IsMoving) return;
+            int distance = Math.Abs(shark.X - Player.TileX) + Math.Abs(shark.Y - Player.TileY);
+            if (distance > LoanSharkRange + 3) { LoanSharkApproached = false; return; }
+            if (LoanSharkApproached || distance > LoanSharkRange) return;
+            LoanSharkApproached = true;
+            string text = Finance.LoanOwed > 0 ? "Hey! Denk an meine " + Finance.LoanOwed + " Chips!"
+                        : Money.Balance < 50 ? "Psst! Knapp bei Kasse? 250 Chips, sofort!"
+                        : "Psst! Brauchst du Chips? Ich hab ein Angebot ...";
+            Npcs.Bubbles.ShowReaction(shark, text, TickCount);
+            NotifySystemMessage(shark.Name + " spricht dich an: \"" + text + "\" [E] Mit ihm reden");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 19.11.2026
+        // Aufgabe: Ton am Ende eines Minispiels nach dem Ergebnis: Gewinn = Münzen (nach Höhe) + Sieg (Poker: eigener
+        //          Sound), Verlust = Verlust-Ton. Der Spielautomat spielt seine Töne schon pro Drehung.
+        private void PlayResultSound()
+        {
+            if (ActiveGame is G1C_Slots) return;
+            int net = Money.Balance - _gameStartBalance;
+            if (net > 0)
+            {
+                Sound.Play(net >= 500 ? "coins_big" : net >= 100 ? "coins_mid" : "coins_small");
+                Sound.Play(ActiveGame is G1C_Poker ? "poker_win" : "win");
+            }
+            else Sound.Play(net < 0 ? "lose" : "click");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 19.11.2026
+        // Aufgabe: Geräusche der Spielwelt. Schritte: ein Geräusch pro abgeschlossenem Schritt, Untergrund nach Kachel
+        //          (Gras, Weg, Brücke, innen), die Dateivarianten laufen reihum. Fahrrad: Schleife, solange du fährst.
+        //          Vögel: nur im Umkreis (Einstellung Vogel-Radius, Standard 4 Kacheln). Katzen, Hunde und alle anderen
+        //          Tiere machen nur beim Streicheln Geräusche (siehe PetAnimal).
+        private int _lastStepCount;
+        private int _bikeIdleTicks;
+
+        private void UpdateWorldAudio()
+        {
+            bool exploring = State == G1C_GameState.MainGame && !IsSleeping;
+            if (Player.StepCount != _lastStepCount)
+            {
+                _lastStepCount = Player.StepCount;
+                if (exploring && !Bikes.Riding)
+                    Sound.Play(G1C_StepSurface.SoundIdFor(CurrentWorld.Grid.GetTileSpriteId(Player.TileX, Player.TileY), CurrentLocation));
+            }
+            if (exploring && Bikes.Riding && Player.IsMoving) { _bikeIdleTicks = 0; Sound.StartLoop("bicycle"); }
+            else
+            {
+                if (_bikeIdleTicks < 1000) _bikeIdleTicks++;
+                if (_bikeIdleTicks == 4) Sound.StopLoop("bicycle");
+            }
+            if (exploring && CurrentLocation == G1C_WorldLocation.Exterior && TickCount % 25 == 0) UpdateBirdSounds();
+        }
+
+        public bool BirdInRange(G1C_WorldObject bird)
+        {
+            return bird != null && bird.SpriteId != null && bird.SpriteId.StartsWith("animal_bird", StringComparison.Ordinal) &&
+                   G1C_StepSurface.InRadius(bird.X - Player.TileX, bird.Y - Player.TileY, Sound.Settings.BirdRadius);
+        }
+
+        private void UpdateBirdSounds()
+        {
+            G1C_Animal near = Exterior.Animals.FirstOrDefault(BirdInRange);
+            if (near != null && Sound.Play("bird")) AnimalVoices.Say(near, "Tschilp!", TickCount);
+        }
+
         // ------------------------------------------------------------------ Tick (alle 40 ms)
 
         // Erweiterung durch Denis Mock: Außenwelt-NPCs laufen ausschließlich im Framework-Tick.
         public void Update()
         {
+            Sound.Pump(); // Patrick Lupierz – 19.11.2026: Befehle des Handy-Mixers, Lautstärken, Speichern
             Sound.SetMusic(G1C_SoundSystem.MusicFor(State, CurrentLocation, ActiveGame)); // Patrick Lupierz – 16.11.2026
             if (State == G1C_GameState.Title) return; // im Hauptmenü stehen Uhr und Spielzeit
 
             TickCount++;
             _movement.Update(HeldDirection); // Änderung durch: Patrick Lupierz – 15.11.2026 – WASD-Reparatur
             if (State != G1C_GameState.MainGame) _movement.ClearQueue();
+            UpdateWorldAudio(); // Patrick Lupierz – 19.11.2026
             if (ActiveGame != null) ActiveGame.Update();
 
             // Änderung durch: Patrick Lupierz – zentrale Uhr, Effekte und SMS; im Pausenmenü steht die Zeit
@@ -1160,6 +1293,9 @@ namespace OOPGames
             bool exploring = State == G1C_GameState.MainGame;
             Npcs.Update(TickCount, Player, inCasino, exploring);
             if (inCasino && exploring && !Player.IsMoving) Npcs.TryCollectItem(Player.TileX, Player.TileY);
+            // Änderung durch: Patrick Lupierz – 18.11.2026 – Tagesablauf der Stadtbewohner, Geldhai spricht an
+            if (TickCount % 25 == 0) G1C_NpcSchedule.Apply(Clock.Hour, Exterior, World, Player, CurrentLocation);
+            if (CurrentLocation == G1C_WorldLocation.Exterior && exploring) UpdateLoanSharkApproach();
             if (CurrentLocation == G1C_WorldLocation.Exterior)
             {
                 if (exploring) _exteriorNpcRoaming.Update(TickCount);
@@ -1174,8 +1310,11 @@ namespace OOPGames
             // Tiere in der Nähe melden sich ab und zu mit ihrem typischen Laut.
             foreach (G1C_PetAnimal pet in CurrentWorld.Objects.OfType<G1C_PetAnimal>().ToList())
                 pet.Update(TickCount, PetCanEnter, exploring ? _random : null);
+            // Änderung durch: Patrick Lupierz – 19.11.2026 – Vögel melden sich nur im Vogel-Radius (Standard 4 Kacheln)
             AnimalVoices.Update(TickCount, CurrentWorld.Objects.Where(o => (o is G1C_Animal || o is G1C_PetAnimal) &&
-                Math.Abs(o.X - Player.TileX) <= 8 && Math.Abs(o.Y - Player.TileY) <= 5), exploring ? _random : null);
+                Math.Abs(o.X - Player.TileX) <= 8 && Math.Abs(o.Y - Player.TileY) <= 5 &&
+                !(o.SpriteId != null && o.SpriteId.StartsWith("animal_bird", StringComparison.Ordinal) && !BirdInRange(o))),
+                exploring ? _random : null);
         }
     }
 }

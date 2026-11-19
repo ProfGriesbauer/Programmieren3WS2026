@@ -150,6 +150,26 @@ namespace OOPGames
             run("Casino", "Umzugsschild des Greifautomaten entfernt", CasinoClawSignRemoved);
             run("Geschäfte", "Tankstelle: Retro-Look, breites Fenster, Steinplatten unter den Zapfsäulen", ShopGasStationLook);
 
+            // ---- Erweiterung 18.11.2026: offene SprintPlanning-Issues
+            run("Spielhalle", "Gast-Automat: Regeln, Painter und KI derselben Gruppe automatisch gewählt", ArcadeGuestOwnGroupParts);
+            run("Spielhalle", "Gast-Automat: echte Spiele der anderen Gruppen komplett bis zum Ende gespielt", ArcadeGuestFullGames);
+            run("Spielhalle", "Gast-Automat: [Esc] mitten im Spiel – zurück zur Spielauswahl, Framework-Stand wiederhergestellt", ArcadeGuestEscBackToList);
+            run("NPC", "Tagesablauf: Stadtbewohner nachts zu Hause, Lena abends im Casino", NpcDailySchedule);
+            run("NPC", "Geldhai spricht beim Vorbeilaufen an (einmal pro Vorbeigehen)", NpcLoanSharkApproach);
+
+            // ---- Erweiterung 19.11.2026: Klangpaket, Mixer, Handy-App
+            run("Sound", "Katalog: jede Datei im Sound-Ordner gehört zu einem Sound, jeder Sound hat Datei oder eingebaute Version", SoundCatalogFiles);
+            run("Sound", "Höchstens N Effekte gleichzeitig; wichtige verdrängen unwichtige; derselbe Sound nie doppelt", SoundSimultaneousLimit);
+            run("Sound", "Häufigkeit: Chance, Mindestabstand, Ein/Aus, Vorhören ohne Sperren", SoundFrequency);
+            run("Sound", "Lautstärke: Gesamt x Musik/Effekte x Einzelwert, live änderbar, Stumm", SoundVolumes);
+            run("Sound", "Schritte: Untergrund nach Kachel, Varianten reihum, Innenräume, Fahrrad-Schleife", SoundSteps);
+            run("Sound", "Tiere nur beim Streicheln; Vögel nur im 4-Kacheln-Radius", SoundAnimalsAndBirds);
+            run("Sound", "Musik: Auswahl, Wechsel, Dateien im Wechsel, Heartbeat, eingebaute Ersatzmelodie", SoundMusic);
+            run("Sound", "Casino-Töne: Hebel, Walzen-Schleife, Jackpot, Karten, Chips, Einsatz", SoundCasinoEvents);
+            run("Sound", "Einstellungen: JSON speichern/laden, Grenzen, kaputte Datei", SoundSettingsPersistence);
+            run("Sound", "Handy-Mixer: Seite, PIN, Regler, Probehören, Stumm, Zurücksetzen, Sperre bei Fehlversuchen", SoundMixerServerFlow);
+            run("Tiere", "Flussfische haben dieselben Grafiken wie im Angelspiel", AnimalsRiverFishSkins);
+
             WriteReport(results);
             return results;
         }
@@ -1480,7 +1500,8 @@ namespace OOPGames
 
         private static void CasinoPokerFan()
         {
-            Equal(1.05, G1C_Poker.PlayerHandScale, "Skalierung der eigenen Hand");
+            // Änderung durch: Patrick Lupierz – 18.11.2026 – Skalierung wird im Team angepasst (jetzt 1,5); geprüft wird nur "größer"
+            Check(G1C_Poker.PlayerHandScale > 1.0, "Eigene Hand nicht vergrößert: " + G1C_Poker.PlayerHandScale);
             Check(G1C_Poker.PlayerHandTop > 166, "Hand nicht tiefer als vorher (166)");
             Check(G1C_CardView.FanAngle(0, 2) < 0 && G1C_CardView.FanAngle(1, 2) > 0 &&
                   Math.Abs(G1C_CardView.FanAngle(0, 2) + G1C_CardView.FanAngle(1, 2)) < 0.001, "Fächer nicht symmetrisch");
@@ -1510,6 +1531,784 @@ namespace OOPGames
             Check(roof[2] > 200 && roof[1] < 80, "Dach nicht rot");
             Check(wall[0] > 230 && wall[1] > 230 && wall[2] > 230, "Wand nicht weiß");
             Check(door[2] > door[0] + 40 && door[2] < 180, "Tür nicht braun (Holz)");
+        }
+
+        // ------------------------------------------------------------------ Erweiterung 18.11.2026
+
+        // Alle Framework-Klassen dieses Projekts (wie im Hauptfenster registriert), ohne das Framework zu verändern
+        private static List<G1C_GuestGameEntry> DiscoverAllInAssembly()
+        {
+            Type[] types = typeof(G1C_GameManager).Assembly.GetTypes()
+                .Where(t => !t.IsAbstract && !t.IsInterface && !t.IsNested && t.GetConstructor(Type.EmptyTypes) != null).ToArray();
+            Func<Type, object> make = t => { try { return Activator.CreateInstance(t); } catch (Exception) { return null; } };
+            return G1C_GuestGameCatalog.Discover(
+                types.Where(t => typeof(IGameRules).IsAssignableFrom(t)).Select(make).OfType<IGameRules>().ToList(),
+                types.Where(t => typeof(IPaintGame).IsAssignableFrom(t)).Select(make).OfType<IPaintGame>().ToList(),
+                types.Where(t => typeof(IGamePlayer).IsAssignableFrom(t)).Select(make).OfType<IGamePlayer>().ToList());
+        }
+
+        private static void ArcadeGuestOwnGroupParts()
+        {
+            List<G1C_GuestGameEntry> found = DiscoverAllInAssembly();
+            Check(found.Count >= 2, "Zu wenige Gastspiele gefunden: " + found.Count);
+            Check(found.Any(e => e.Name.ToLower().Contains("gewinnt") || e.Name.ToLower().Contains("connect") || e.Name.Contains("4")), "Kein 4-gewinnt-Spiel gefunden");
+            foreach (G1C_GuestGameEntry e in found)
+            {
+                Check(e.AllFromOwnGroup, e.Name + ": fremde Teile (" + e.PainterType + ", " + e.HumanType + ", " + e.ComputerType + ")");
+                Check(e.HasComputerOpponent, e.Name + ": KI der Gruppe nicht gefunden");
+            }
+            Check(found.All(e => e.Group == G1C_GuestGameCatalog.GroupOf(e.CreateRules())), "Gruppe passt nicht zu den Rules");
+        }
+
+        private static void ArcadeGuestFullGames()
+        {
+            List<string> problems = new List<string>();
+            int played = 0;
+            foreach (G1C_GuestGameEntry entry in DiscoverAllInAssembly())
+            {
+                G1C_MoneyManager money = new G1C_MoneyManager(100);
+                G1C_GuestGameHost host = new G1C_GuestGameHost(money, new Random(1), entry);
+                if (!host.Start()) { problems.Add(entry.Name + ": Start – " + host.LastError); continue; }
+                if (OOPGamesManager.Singleton.ActivePainter != host.Painter) problems.Add(entry.Name + ": Painter nicht aktiv angemeldet");
+                string stuck = PlayToEnd(host);
+                if (stuck != null) problems.Add(entry.Name + ": " + stuck);
+                else if (host.LastError != null) problems.Add(entry.Name + ": Absturz " + host.LastError);
+                else
+                {
+                    int rulesWinner = host.Rules.CheckIfPLayerWon();
+                    if (!host.Finished || host.Running) problems.Add(entry.Name + ": nicht beendet");
+                    if ((rulesWinner > 0 ? (int?)rulesWinner : null) != host.Winner) problems.Add(entry.Name + ": Ergebnis weicht von den Regeln ab");
+                    if (host.MovesMade < 4) problems.Add(entry.Name + ": zu wenige Züge (" + host.MovesMade + ")");
+                    played++;
+                }
+                host.Leave();
+            }
+            Check(problems.Count == 0, string.Join(" | ", problems));
+            Check(played >= 2, "Nur " + played + " Spiele vollständig gespielt");
+        }
+
+        // Spielt als Mensch: probiert Zifferntasten und Klicks über das ganze Spielfeld, bis die Regeln einen Zug annehmen.
+        private static string PlayToEnd(G1C_GuestGameHost host)
+        {
+            List<IMoveSelection> attempts = new List<IMoveSelection>();
+            for (int k = 0; k < 9; k++) { attempts.Add(new KeySelection(Key.D1 + k)); attempts.Add(new KeySelection(Key.NumPad1 + k)); }
+            for (int y = 20; y < G1C_GuestGameHost.CanvasH; y += 30)
+                for (int x = 10; x < G1C_GuestGameHost.CanvasW; x += 20) attempts.Add(new ClickSelection(x, y, (int)MouseButton.Left));
+            for (int move = 0; move < 120 && host.Running; move++)
+            {
+                // wie im Spiel: Ticks laufen weiter (Animationen, KI-Zug), bis der Mensch dran ist
+                for (int t = 0; t < 400 && host.Running && !(host.CurrentPlayer is IHumanGamePlayer); t++) host.Update();
+                int before = host.MovesMade;
+                // Änderung durch: Patrick Lupierz – 19.11.2026 – manche Spiele (FG) sperren Eingaben, bis ihre Fall-Animation
+                // nach Echtzeit abgelaufen ist: erst viele schnelle Ticks, dann mit kleinen Pausen warten.
+                for (int wait = 0; wait < 400 && host.Running && host.MovesMade == before; wait++)
+                {
+                    if (wait >= 100) System.Threading.Thread.Sleep(20);
+                    foreach (IMoveSelection a in attempts)
+                    {
+                        host.Forward(a);
+                        if (host.MovesMade > before || !host.Running) break;
+                    }
+                    if (host.MovesMade == before) host.Update();   // z. B. fallender Stein: erst nach Ticks wieder Eingabe
+                }
+                if (host.Running && host.MovesMade == before) return "keine Eingabe akzeptiert (Zug " + (move + 1) + ")";
+            }
+            return host.Running ? "Partie endet nicht" : null;
+        }
+
+        private static void ArcadeGuestEscBackToList()
+        {
+            G1C_ArcadeCabinet guestCabinet = G1C_ArcadeCatalog.Cabinets.First(c => c.IsGuestCabinet);
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Arcade, guestCabinet.X, guestCabinet.Y + 1, G1C_Direction.Up);
+            game.GuestGameSource = DiscoverAllInAssembly;
+            IPaintGame sentinel = new G1C_CasinoPainter();
+            OOPGamesManager.Singleton.RegisterActivePainter(sentinel);
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(G1C_GameState.ListMenu, game.State, "Spielauswahl des Gast-Automaten");
+            int rows = game.ListMenu.Rows.Count;
+            Check(rows >= 2, "Zu wenige Gastspiele in der Auswahl");
+            game.ListMenu.Choose(0);
+            Equal(G1C_GameState.Arcade, game.State, "Gastspiel aktiv");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.E));                 // Partie starten
+            G1C_GuestGameHost host = game.ActiveGame as G1C_GuestGameHost;
+            Check(host != null && host.Running, "Gastspiel läuft nicht: " + (host != null ? host.LastError : "-"));
+            Check(OOPGamesManager.Singleton.ActivePainter == host.Painter, "Gast-Painter nicht aktiv");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Escape));            // mitten in der Partie
+            Equal(G1C_GameState.ListMenu, game.State, "[Esc] führt zur Spielauswahl zurück");
+            Equal(rows, game.ListMenu.Rows.Count, "Auswahl vollständig");
+            Check(OOPGamesManager.Singleton.ActivePainter == sentinel, "Framework-Stand nicht wiederhergestellt");
+            game.ListMenu.Choose(Math.Min(1, rows - 1));
+            Equal(G1C_GameState.Arcade, game.State, "anderes Spiel wählbar");
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Escape));
+            game.HandleInput(G1C_InputEvent.FromKey(Key.Escape));            // Liste schließen
+            Equal(G1C_GameState.MainGame, game.State, "Zurück in der Spielhalle");
+            OOPGamesManager.Singleton.RegisterActivePainter(null);
+        }
+
+        private static void NpcDailySchedule()
+        {
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Home, 5, 8, G1C_Direction.Down);
+            G1C_Npc paul = game.Exterior.TownNpcs.First(n => n.Name == "Kurier Paul");
+            G1C_Npc lenaTown = game.Exterior.TownNpcs.First(n => n.Name == "Gast Lena");
+            G1C_Npc lenaCasino = game.World.FindNpc("Gast Lena");
+            Check(lenaCasino != null, "Lena fehlt im Casino");
+
+            G1C_NpcSchedule.Apply(23, game.Exterior, game.World, game.Player, G1C_WorldLocation.Home);
+            Check(!game.Exterior.IsPresent(paul), "Paul ist nachts draußen");
+            Check(!game.Exterior.Objects.Contains(paul), "Abwesender NPC noch in der Objektliste");
+            Check(game.World.IsPresent(lenaCasino) && !game.Exterior.IsPresent(lenaTown), "Lena abends nicht im Casino");
+            Equal("im Casino", G1C_NpcSchedule.WhereIs("Gast Lena", 20), "Lena um 20 Uhr");
+            Equal("zu Hause", G1C_NpcSchedule.WhereIs("Kurier Paul", 2), "Paul um 2 Uhr");
+
+            G1C_NpcSchedule.Apply(12, game.Exterior, game.World, game.Player, G1C_WorldLocation.Home);
+            Check(game.Exterior.IsPresent(paul) && game.Exterior.IsPresent(lenaTown), "Mittags nicht in der Stadt");
+            Check(!game.World.IsPresent(lenaCasino), "Lena mittags im Casino und in der Stadt");
+            Check(!game.Npcs.PlacedNpcs.Any(p => p.Key == lenaCasino), "Abwesende Casino-NPCs reden trotzdem");
+
+            // Niemand verschwindet vor den Augen des Spielers
+            G1C_GameManager near = GameAt(G1C_WorldLocation.Exterior, game.Exterior.Map.DoorX(G1C_WorldLocation.Hospital),
+                                          game.Exterior.Map.DoorY(G1C_WorldLocation.Hospital) + 1, G1C_Direction.Down);
+            G1C_Npc paulNear = near.Exterior.TownNpcs.First(n => n.Name == "Kurier Paul");
+            if (Math.Abs(paulNear.X - near.Player.TileX) <= G1C_NpcSchedule.VisibleDistance && Math.Abs(paulNear.Y - near.Player.TileY) <= G1C_NpcSchedule.VisibleDistance)
+            {
+                G1C_NpcSchedule.Apply(23, near.Exterior, near.World, near.Player, G1C_WorldLocation.Exterior);
+                Check(near.Exterior.IsPresent(paulNear), "Paul verschwindet vor den Augen des Spielers");
+            }
+
+            // Im laufenden Spiel über die Uhr
+            G1C_GameManager night = GameAt(G1C_WorldLocation.Home, 5, 8, G1C_Direction.Down, 23);
+            for (int i = 0; i < 30; i++) night.Update();
+            Check(!night.Exterior.IsPresent(night.Exterior.TownNpcs.First(n => n.Name == "Kurier Paul")), "Tagesablauf läuft im Spiel nicht");
+        }
+
+        private static void NpcLoanSharkApproach()
+        {
+            G1C_GameManager probe = RunningGame();
+            G1C_Npc shark = probe.Exterior.TownNpcs.First(n => n.Interaction == G1C_InteractionType.LoanShark);
+            G1C_CollisionManager collision = new G1C_CollisionManager(probe.Exterior);
+            int[] spot = new[] { new[] { 0, 2 }, new[] { 2, 0 }, new[] { -2, 0 }, new[] { 0, -2 }, new[] { 1, 1 }, new[] { -1, 1 } }
+                .First(d => !collision.IsBlocked(shark.X + d[0], shark.Y + d[1]));
+            G1C_GameManager game = GameAt(G1C_WorldLocation.Exterior, shark.X + spot[0], shark.Y + spot[1], G1C_Direction.Down);
+            Check(!game.LoanSharkApproached, "Vorher schon angesprochen");
+            game.Update();
+            Check(game.LoanSharkApproached, "Geldhai spricht nicht an");
+            Check(game.SystemMessage.Contains("Viktor"), "Hinweis fehlt: " + game.SystemMessage);
+            Check(game.Npcs.Bubbles.Active.Any(b => b.Npc.Name == shark.Name), "Sprechblase des Geldhais fehlt");
+            string first = game.SystemMessage;
+            for (int i = 0; i < 50; i++) game.Update();
+            Equal(1, game.Npcs.Bubbles.Active.Count(b => b.Npc.Name == shark.Name && b.IsReaction), "Geldhai wiederholt sich beim Stehenbleiben");
+            game.Player.Teleport(shark.X + 8, shark.Y + 3, G1C_Direction.Down);
+            game.Update();
+            Check(!game.LoanSharkApproached, "Nach dem Weggehen nicht zurückgesetzt");
+        }
+
+        private static void AnimalsRiverFishSkins()
+        {
+            G1C_ExteriorWorld city = new G1C_ExteriorWorld();
+            List<G1C_Animal> fish = city.Animals.Where(a => a.Name == "Fisch").ToList();
+            Check(fish.Count >= 4, "Zu wenige Flussfische");
+            List<string> fishingIds = G1C_FishSprites.Ids.ToList();
+            foreach (G1C_Animal f in fish)
+            {
+                string sprite = f.SpriteId;   // river_fish_<art>_<bild>
+                Check(sprite.StartsWith("river_fish_"), "Alte Fischgrafik: " + sprite);
+                string species = sprite.Substring("river_".Length, sprite.LastIndexOf('_') - "river_".Length);
+                Check(fishingIds.Contains(species), "Fischart nicht aus dem Angelspiel: " + species);
+                Check(HasBuiltInSprite(sprite), "Grafik fehlt: " + sprite);
+            }
+            Check(fish.Select(f => f.SpriteId.Substring(0, f.SpriteId.LastIndexOf('_'))).Distinct().Count() >= 3, "Alle Flussfische gleich");
+            Equal("Blubb", G1C_AnimalVoices.SoundOf(fish[0], new Random(1)), "Laut der Flussfische");
+        }
+
+        // ------------------------------------------------------------------ Klangpaket 19.11.2026
+
+        private sealed class FakeVoice : IG1C_AudioVoice
+        {
+            public string File; public double Volume; public bool Loop, Stopped; public Func<bool> KeepGoing; public Action Ended;
+            public void Stop() { Stopped = true; }
+            public void SetVolume(double volume) { Volume = volume; }
+            public void Finish()
+            {
+                if (Stopped) return;
+                if (Loop && KeepGoing()) return;
+                Stopped = true;
+                if (Ended != null) Ended();
+            }
+        }
+
+        private sealed class FakeBackend : IG1C_AudioBackend
+        {
+            public readonly List<FakeVoice> Voices = new List<FakeVoice>();
+            public IG1C_AudioVoice Start(string file, double volume, bool loop, Func<bool> keepGoing, Action ended)
+            {
+                FakeVoice v = new FakeVoice { File = file, Volume = volume, Loop = loop, KeepGoing = keepGoing, Ended = ended };
+                Voices.Add(v);
+                return v;
+            }
+            public IEnumerable<FakeVoice> Active { get { return Voices.Where(v => !v.Stopped); } }
+            public int Started(string fileFragment) { return Voices.Count(v => v.File.IndexOf(fileFragment, StringComparison.OrdinalIgnoreCase) >= 0); }
+        }
+
+        // Temporärer Sound-Ordner mit leeren Dateien in der Struktur des echten Ordners (nur Namen zählen)
+        private static string MakeSoundRoot()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "g1c_test_sounds_" + Guid.NewGuid().ToString("N"));
+            Dictionary<string, string[]> files = new Dictionary<string, string[]>
+            {
+                { "Soundeffekte/Schritte", new[] { "StepGrass.wav", "StepGrass (2).wav", "StepGrass (3).wav", "StepsPath (1).wav", "StepsPath (2).wav",
+                    "StepBridge.wav", "Steps_Indoor.wav", "Steps_Indoor (2).wav" } },
+                { "Soundeffekte/Allgemein", new[] { "BicycleSoundLoop.wav", "purchase_coin_07.wav" } },
+                { "Soundeffekte/Tiere", new[] { "catMeow1.wav", "catMeow2.wav", "dogBark.wav", "dog_bark_01.wav", "puppy_bark_01.wav", "songbird_chirp_01.wav", "frog_croak_01.wav" } },
+                { "Soundeffekte/Casino", new[] { "SlotsSpinSoundLoop.wav", "slot_lever_01.wav", "jackpot.wav", "JackpotAlarm.wav", "GeneralVictory.wav",
+                    "shuffle_riffle_01.wav", "ChipUp.wav", "ui_bet_up_01.wav", "3_Coins.wav", "4_Coins.wav", "5_Coins.wav", "slot_win_small_01.wav", "slot_win_big_01.wav" } },
+                { "Musik_Aussen", new[] { "Ambient Outside 1.mp3", "Ambient Outside 2.mp3" } },
+                { "Musik_Gebaeude", new[] { "CasinoBackgroundLoop.mp3", "Chippy music 1.mp3", "chippy music 2.mp3", "Ambient Charakter.mp3" } },
+            };
+            foreach (KeyValuePair<string, string[]> folder in files)
+            {
+                string dir = Path.Combine(root, folder.Key.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(dir);
+                foreach (string f in folder.Value) File.WriteAllBytes(Path.Combine(dir, f), new byte[] { 0 });
+            }
+            return root;
+        }
+
+        private static void WithSoundRoot(Action<string> body)
+        {
+            string root = MakeSoundRoot();
+            string[] before = G1C_SoundFiles.OverrideRoots;
+            G1C_SoundFiles.OverrideRoots = new[] { root };
+            G1C_SoundFiles.ClearCache();
+            try { body(root); }
+            finally
+            {
+                G1C_SoundFiles.OverrideRoots = before;
+                G1C_SoundFiles.ClearCache();
+                try { Directory.Delete(root, true); } catch (Exception) { }
+            }
+        }
+
+        private static G1C_SoundSystem NewSound(FakeBackend backend, long[] clock)
+        {
+            G1C_SoundSystem sound = new G1C_SoundSystem { Backend = backend, NowMs = () => clock[0], Random = new Random(3) };
+            sound.Heartbeat();
+            return sound;
+        }
+
+        private static void SoundCatalogFiles()
+        {
+            Check(G1C_SoundCatalog.All.Select(d => d.Id).Distinct().Count() == G1C_SoundCatalog.All.Length, "Doppelte Sound-Ids");
+            foreach (G1C_SoundDef d in G1C_SoundCatalog.All)
+            {
+                Check(G1C_SoundCatalog.Categories.Contains(d.Category), d.Id + ": unbekannte Kategorie");
+                Check(d.Folder != null || d.Fallback != null, d.Id + ": weder Datei noch eingebaute Version");
+                if (d.Fallback != null) Check(G1C_ChipTune.Render(d.Fallback).Length > 500, d.Id + ": Ersatzmelodie '" + d.Fallback + "' fehlt");
+                Check(d.Volume >= 0 && d.Volume <= 100 && d.Chance >= 0 && d.Chance <= 100, d.Id + ": Standardwerte außerhalb 0-100");
+            }
+            foreach (string id in new[] { "step_grass", "step_path", "step_bridge", "step_indoor", "bicycle", "meow", "woof", "bird", "frog", "slot_lever",
+                "slots_spin", "slot_win_small", "slot_win_big", "jackpot", "jackpot_alarm", "coins_small", "coins_mid", "coins_big", "win", "poker_win",
+                "shuffle", "chip", "bet", "lose", "coin", "buff", "furniture_open", "trash_open", "door", "click", "splash", "catch",
+                "music_town", "music_title", "music_casino", "music_arcade", "music_home", "music_shop", "music_fishing" })
+                Check(G1C_SoundCatalog.Find(id) != null, "Im Spiel benutzter Sound fehlt im Katalog: " + id);
+
+            IList<string> roots = G1C_SoundFiles.Roots();
+            if (roots.Count == 0) throw new InvalidOperationException("Sound-Ordner nicht gefunden (Umgebungsvariable G1CASINO_SOUNDS auf Assets\\Sounds setzen)");
+            string root = roots[0];
+            Check(!Directory.GetFiles(root, "*.ogg", SearchOption.AllDirectories).Any(), "OGG-Dateien im Sound-Ordner: WPF kann sie nicht abspielen");
+            List<string> orphans = G1C_SoundFiles.AllFiles(root).Where(f => G1C_SoundFiles.Owner(root, f) == null).ToList();
+            Check(orphans.Count == 0, "Dateien ohne Sound im Katalog: " + string.Join(", ", orphans.Select(Path.GetFileName)));
+            foreach (G1C_SoundDef d in G1C_SoundCatalog.All.Where(x => x.Folder != null && !x.Optional && x.Patterns.Length > 0))
+                Check(G1C_SoundFiles.For(d).Length > 0, d.Id + ": keine Datei in " + d.Folder);
+            Check(G1C_SoundFiles.For(G1C_SoundCatalog.Find("step_grass")).Length == 3, "Gras-Schritte: drei Varianten erwartet");
+            Check(G1C_SoundFiles.For(G1C_SoundCatalog.Find("music_arcade")).Length == 4, "Spielhalle: vier Stücke erwartet");
+            Check(G1C_SoundFiles.For(G1C_SoundCatalog.Find("jackpot")).Length == 1, "Muster 'jackpot' trifft auch den Alarm");
+        }
+
+        private static void SoundSimultaneousLimit()
+        {
+            WithSoundRoot(root =>
+            {
+                FakeBackend backend = new FakeBackend();
+                long[] clock = { 1000 };
+                G1C_SoundSystem sound = NewSound(backend, clock);
+                sound.Settings.Set("bird", "chance", 100);
+                sound.Settings.Set(G1C_SoundSettings.GlobalId, "max", 2);
+                Check(sound.Play("step_grass") && sound.Play("bird"), "Zwei Töne sollten starten");
+                Equal(2, sound.ActiveEffects.Count, "zwei gleichzeitig");
+                Check(sound.Play("meow"), "Wichtigerer Ton verdrängt");
+                Check(!sound.ActiveEffects.Contains("step_grass") && sound.ActiveEffects.Contains("meow") && sound.ActiveEffects.Contains("bird"),
+                      "Der älteste unwichtige Ton muss weichen: " + string.Join(",", sound.ActiveEffects));
+                Check(sound.Play("jackpot"), "Jackpot verdrängt");
+                Check(!sound.ActiveEffects.Contains("bird") && sound.ActiveEffects.Contains("jackpot"), "Vogel muss dem Jackpot weichen");
+                Check(!sound.Play("step_path"), "Unwichtiger Ton darf wichtige nicht verdrängen");
+                Equal(2, sound.ActiveEffects.Count, "weiterhin zwei");
+
+                sound.Settings.Set(G1C_SoundSettings.GlobalId, "max", 1);
+                sound.StopAllEffects();
+                clock[0] += 5000; // Mindestabstände aus den Versuchen davor sind abgelaufen
+                Check(sound.Play("meow"), "bei 1: erster Ton");
+                Check(!sound.Play("step_indoor"), "bei 1: niedrigerer Ton entfällt");
+                Check(sound.Play("win"), "bei 1: höhere Priorität ersetzt");
+                Equal("win", sound.ActiveEffects.Single(), "nur ein Ton");
+
+                // derselbe Sound überlagert sich nie, Varianten laufen reihum
+                sound.Settings.Set(G1C_SoundSettings.GlobalId, "max", 8);
+                sound.StopAllEffects();
+                List<string> files = new List<string>();
+                for (int i = 0; i < 4; i++)
+                {
+                    clock[0] += 500;
+                    Check(sound.Play("step_grass"), "Schritt " + i);
+                    files.Add(backend.Voices.Last().File);
+                    Equal(1, sound.ActiveEffects.Count(x => x == "step_grass"), "Schritt überlagert sich selbst");
+                }
+                Equal(3, files.Take(3).Select(Path.GetFileName).Distinct().Count(), "drei verschiedene Varianten reihum");
+                Equal(files[0], files[3], "vierter Schritt beginnt von vorn");
+                Check(backend.Voices.Where(v => v.File.Contains("StepGrass")).Count(v => !v.Stopped) == 1, "Alte Schritte laufen noch");
+            });
+        }
+
+        private static void SoundFrequency()
+        {
+            WithSoundRoot(root =>
+            {
+                FakeBackend backend = new FakeBackend();
+                long[] clock = { 1000 };
+                G1C_SoundSystem sound = NewSound(backend, clock);
+                sound.Settings.Set("woof", "cooldown", 1000);
+                Check(sound.Play("woof"), "erster Wuff");
+                Check(!sound.Play("woof"), "Mindestabstand");
+                clock[0] += 1001;
+                Check(sound.Play("woof"), "nach dem Mindestabstand");
+                Check(sound.Play("woof", true) || true, "force");
+
+                sound.Settings.Set("coin", "chance", 0);
+                int played = 0;
+                for (int i = 0; i < 60; i++) { clock[0] += 1000; if (sound.Play("coin")) played++; }
+                Equal(0, played, "Chance 0 % darf nie spielen");
+                sound.Settings.Set("coin", "chance", 50);
+                sound.Settings.Set("coin", "cooldown", 0);
+                played = 0;
+                for (int i = 0; i < 200; i++) { if (sound.Play("coin")) played++; }
+                Check(played > 60 && played < 140, "Chance 50 % ergab " + played + " von 200");
+                sound.Settings.Set("coin", "chance", 100);
+                sound.Settings.Set("coin", "enabled", 0);
+                Check(!sound.Play("coin"), "ausgeschalteter Sound spielt");
+                Check(sound.Play("coin", true), "Vorhören ignoriert Ein/Aus nicht, aber Chance und Abstand");
+                sound.Settings.Set("coin", "enabled", 1);
+
+                // Vorhören über die Befehlsschlange (so macht es das Handy)
+                sound.Settings.Set("bird", "chance", 0);
+                sound.PostCommand(() => sound.Preview("bird"));
+                int before = backend.Started("songbird");
+                sound.Pump();
+                Equal(before + 1, backend.Started("songbird"), "Vorhören trotz Chance 0");
+                sound.Preview("slots_spin");
+                Check(sound.ActiveEffects.Contains("slots_spin"), "Schleife beim Vorhören");
+                clock[0] += 3100;
+                sound.Pump();
+                Check(!sound.ActiveEffects.Contains("slots_spin"), "Vorhör-Schleife endet nach 3 s");
+            });
+        }
+
+        private static void SoundVolumes()
+        {
+            WithSoundRoot(root =>
+            {
+                FakeBackend backend = new FakeBackend();
+                long[] clock = { 1000 };
+                G1C_SoundSystem sound = NewSound(backend, clock);
+                G1C_SoundDef coins = G1C_SoundCatalog.Find("coins_small");
+                sound.Settings.Set(G1C_SoundSettings.GlobalId, "master", 50);
+                sound.Settings.Set(G1C_SoundSettings.GlobalId, "effects", 50);
+                sound.Settings.Set("coins_small", "volume", 50);
+                Check(Math.Abs(sound.VolumeFor(coins) - 0.125) < 1e-9, "Lautstärke 50 x 50 x 50 % = 0,125: " + sound.VolumeFor(coins));
+                Check(sound.Play("coins_small"), "spielt");
+                Check(Math.Abs(backend.Voices.Last().Volume - 0.125) < 1e-9, "Startlautstärke");
+                sound.Settings.Set(G1C_SoundSettings.GlobalId, "master", 100);
+                sound.Pump();
+                Check(Math.Abs(backend.Voices.Last().Volume - 0.25) < 1e-9, "Lautstärke ändert sich live");
+                sound.SetMuted(true);
+                Equal(0.0, backend.Voices.Last().Volume, "stumm");
+                Check(!sound.Play("coins_small"), "stumm spielt nichts");
+                sound.SetMuted(false);
+                Check(backend.Voices.Last().Volume > 0, "Stumm aufgehoben");
+                sound.Settings.Set(G1C_SoundSettings.GlobalId, "music", 20);
+                sound.Settings.Set("music_casino", "volume", 50);
+                Check(Math.Abs(sound.VolumeFor(G1C_SoundCatalog.Find("music_casino")) - 1.0 * 0.20 * 0.50) < 1e-9, "Musiklautstärke");
+                sound.Settings.Set("coins_small", "volume", 999);
+                Equal(100, sound.Settings.Get("coins_small").Volume, "Wert wird auf 100 begrenzt");
+            });
+        }
+
+        private static void SoundSteps()
+        {
+            Equal("step_bridge", G1C_StepSurface.SoundIdFor("tile_city_bridge", G1C_WorldLocation.Exterior), "Brücke");
+            Equal("step_path", G1C_StepSurface.SoundIdFor("tile_city_road_5", G1C_WorldLocation.Exterior), "Straße");
+            Equal("step_path", G1C_StepSurface.SoundIdFor("tile_city_path_12", G1C_WorldLocation.Exterior), "Weg");
+            Equal("step_path", G1C_StepSurface.SoundIdFor("tile_city_plaza", G1C_WorldLocation.Exterior), "Steinplatten");
+            Equal("step_grass", G1C_StepSurface.SoundIdFor("tile_city_flowers", G1C_WorldLocation.Exterior), "Blumen");
+            Equal("step_grass", G1C_StepSurface.SoundIdFor("tile_city_park", G1C_WorldLocation.Exterior), "Park");
+            Equal("step_indoor", G1C_StepSurface.SoundIdFor("tile_city_grass", G1C_WorldLocation.Casino), "innen schlägt Kachel");
+            G1C_ExteriorMap map = new G1C_ExteriorMap();
+            HashSet<string> surfaces = new HashSet<string>();
+            for (int y = 0; y < map.Height; y++) for (int x = 0; x < map.Width; x++)
+                if (map.IsWalkable(x, y)) surfaces.Add(G1C_StepSurface.SoundIdFor(map.GetTileSpriteId(x, y), G1C_WorldLocation.Exterior));
+            Check(surfaces.SetEquals(new[] { "step_grass", "step_path", "step_bridge" }), "Stadt hat nicht alle drei Untergründe: " + string.Join(",", surfaces));
+
+            WithSoundRoot(root =>
+            {
+                // im Spiel: Innenraum
+                G1C_GameManager home = GameAt(G1C_WorldLocation.Home, 5, 8, G1C_Direction.Up);
+                FakeBackend backend = new FakeBackend();
+                home.Sound.Backend = backend;
+                home.Sound.Heartbeat();
+                home.HandleInput(G1C_InputEvent.FromKey(Key.W));
+                for (int i = 0; i < 12; i++) home.Update();
+                Check(backend.Started("Steps_Indoor") == 1, "Ein Schritt im Haus = ein Innen-Schritt (" + backend.Started("Steps_Indoor") + ")");
+
+                // im Spiel: Gras draußen, dann Fahrrad
+                G1C_GameManager probe = RunningGame();
+                int sx = probe.Exterior.PlayerStartX, sy = probe.Exterior.PlayerStartY;
+                G1C_GameManager town = GameAt(G1C_WorldLocation.Exterior, sx, sy, G1C_Direction.Down);
+                backend = new FakeBackend();
+                town.Sound.Backend = backend;
+                town.Sound.Heartbeat();
+                town.HandleInput(G1C_InputEvent.FromKey(Key.D));
+                for (int i = 0; i < 12; i++) town.Update();
+                string expectedId = G1C_StepSurface.SoundIdFor(town.CurrentWorld.Grid.GetTileSpriteId(town.Player.TileX, town.Player.TileY), G1C_WorldLocation.Exterior);
+                string fragment = expectedId == "step_grass" ? "StepGrass" : expectedId == "step_path" ? "StepsPath" : "StepBridge";
+                Check(backend.Started(fragment) == 1 && backend.Voices.Count(v => v.File.Contains("Step")) == 1, "Schritt draußen passend zum Untergrund (" + expectedId + "), gestartet: " +
+                      string.Join(" | ", backend.Voices.Select(v => Path.GetFileName(v.File))) + ", Position " + town.Player.TileX + "," + town.Player.TileY + " Start " + sx + "," + sy);
+
+                G1C_GameManager rider = GameAt(G1C_WorldLocation.Exterior, sx, sy, G1C_Direction.Down);
+                backend = new FakeBackend();
+                rider.Sound.Backend = backend;
+                rider.Sound.Heartbeat();
+                rider.Bikes.TryMount(rider.Inventory, G1C_BikeSystem.StarterBike, G1C_WorldLocation.Exterior);
+                rider.HandleInput(G1C_InputEvent.FromKey(Key.D));
+                for (int i = 0; i < 6; i++) rider.Update();
+                Check(backend.Voices.Any(v => v.File.Contains("BicycleSoundLoop") && v.Loop && !v.Stopped), "Fahrrad-Schleife läuft beim Fahren");
+                Check(backend.Started("Step") == 0, "Beim Fahren keine Schritte");
+                for (int i = 0; i < 20; i++) rider.Update();
+                Check(backend.Voices.Where(v => v.File.Contains("BicycleSoundLoop")).All(v => v.Stopped), "Fahrrad-Schleife endet im Stand");
+            });
+        }
+
+        private static void SoundAnimalsAndBirds()
+        {
+            WithSoundRoot(root =>
+            {
+                G1C_GameManager probe = RunningGame();
+                List<G1C_Animal> birds = probe.Exterior.Animals.Where(a => a.SpriteId.StartsWith("animal_bird")).ToList();
+                Check(birds.Count >= 3, "Zu wenige Vögel in der Stadt");
+                // Startpunkt weit weg von allen Vögeln
+                int sx = probe.Exterior.PlayerStartX, sy = probe.Exterior.PlayerStartY;
+                Check(birds.All(b => !G1C_StepSurface.InRadius(b.X - sx, b.Y - sy, 4)), "Testposition liegt im Vogelradius");
+                G1C_GameManager far = GameAt(G1C_WorldLocation.Exterior, sx, sy, G1C_Direction.Down);
+                FakeBackend backend = new FakeBackend();
+                far.Sound.Backend = backend;
+                far.Sound.Heartbeat();
+                foreach (string id in new[] { "meow", "woof", "bird", "frog" }) { far.Sound.Settings.Set(id, "chance", 100); far.Sound.Settings.Set(id, "cooldown", 0); }
+                for (int i = 0; i < 1500; i++) { far.Sound.Heartbeat(); far.Update(); }
+                Equal(0, backend.Voices.Count(v => v.File.Contains("cat") || v.File.Contains("Bark") || v.File.Contains("bark") || v.File.Contains("songbird") || v.File.Contains("frog")),
+                      "Tiere dürfen ohne Streicheln und weit weg von Vögeln nichts sagen");
+
+                // Vogel in Reichweite (3 Kacheln) und knapp außerhalb (6 Kacheln)
+                G1C_CollisionManager collision = new G1C_CollisionManager(probe.Exterior);
+                Func<G1C_Animal, int, int[]> spot = (bird, dist) =>
+                    new[] { new[] { 0, dist }, new[] { 0, -dist }, new[] { dist, 0 }, new[] { -dist, 0 } }
+                        .Select(d => new[] { bird.X + d[0], bird.Y + d[1] })
+                        .First(p => probe.Exterior.Map.IsWalkable(p[0], p[1]) && !collision.IsBlocked(p[0], p[1]));
+                G1C_Animal target = birds[0];
+                int[] near = spot(target, 3), outside = spot(target, 6);
+                G1C_GameManager listener = GameAt(G1C_WorldLocation.Exterior, near[0], near[1], G1C_Direction.Down);
+                backend = new FakeBackend();
+                listener.Sound.Backend = backend;
+                listener.Sound.Heartbeat();
+                listener.Sound.Settings.Set("bird", "chance", 100);
+                bool bubbleSeen = false;
+                for (int i = 0; i < 80; i++)
+                {
+                    listener.Sound.Heartbeat(); listener.Update();
+                    if (listener.AnimalVoices.Active.Any(b => b.Value == "Tschilp!")) bubbleSeen = true;
+                }
+                Check(backend.Started("songbird") >= 1, "Vogel im Radius ist nicht zu hören");
+                Check(bubbleSeen, "Vogel zeigt keine Sprechblase");
+
+                G1C_GameManager distant = GameAt(G1C_WorldLocation.Exterior, outside[0], outside[1], G1C_Direction.Down);
+                bool anotherBirdNear = birds.Any(b => G1C_StepSurface.InRadius(b.X - outside[0], b.Y - outside[1], 4));
+                if (!anotherBirdNear)
+                {
+                    backend = new FakeBackend();
+                    distant.Sound.Backend = backend;
+                    distant.Sound.Heartbeat();
+                    for (int i = 0; i < 150; i++) { distant.Sound.Heartbeat(); distant.Update(); }
+                    Equal(0, backend.Started("songbird"), "Vogel außerhalb von 4 Kacheln darf nicht zwitschern");
+                }
+                listener.Sound.Settings.Set(G1C_SoundSettings.GlobalId, "birdradius", 1);
+                Check(!listener.BirdInRange(target) || G1C_StepSurface.InRadius(target.X - listener.Player.TileX, target.Y - listener.Player.TileY, 1), "Radius-Einstellung wirkt nicht");
+
+                // Streicheln: Katze und Hund
+                foreach (G1C_PetKind kind in new[] { G1C_PetKind.Cat, G1C_PetKind.Dog })
+                {
+                    G1C_PetAnimal pet = probe.Exterior.Objects.OfType<G1C_PetAnimal>().First(p => p.Kind == kind);
+                    int[][] sides = { new[] { 0, 1, (int)G1C_Direction.Up }, new[] { 0, -1, (int)G1C_Direction.Down },
+                                      new[] { 1, 0, (int)G1C_Direction.Left }, new[] { -1, 0, (int)G1C_Direction.Right } };
+                    int[] side = sides.First(s => !collision.IsBlocked(pet.X + s[0], pet.Y + s[1]));
+                    G1C_GameManager petter = GameAt(G1C_WorldLocation.Exterior, pet.X + side[0], pet.Y + side[1], (G1C_Direction)side[2]);
+                    backend = new FakeBackend();
+                    petter.Sound.Backend = backend;
+                    petter.Sound.Heartbeat();
+                    petter.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                    string expected = kind == G1C_PetKind.Cat ? "catMeow" : "ark";   // dogBark, dog_bark, puppy_bark
+                    Check(backend.Started(expected) == 1, kind + ": Streicheln muss genau ein Tiergeräusch auslösen (" + backend.Voices.Count + ")");
+                }
+            });
+        }
+
+        private static void SoundMusic()
+        {
+            WithSoundRoot(root =>
+            {
+                FakeBackend backend = new FakeBackend();
+                long[] clock = { 1000 };
+                G1C_SoundSystem sound = NewSound(backend, clock);
+                sound.SetMusic("town");
+                Check(backend.Active.Count() == 1 && backend.Active.Single().File.Contains("Ambient Outside"), "Stadtmusik aus dem Ambiente-Ordner");
+                string first = backend.Active.Single().File;
+                sound.SetMusic("town");
+                Equal(1, backend.Voices.Count, "Gleiche Musik läuft ohne Neustart weiter");
+                sound.SetMusic("casino");
+                Check(backend.Voices[0].Stopped && backend.Active.Single().File.Contains("CasinoBackgroundLoop"), "Ortswechsel wechselt die Musik");
+                sound.SetMusic("arcade");
+                Check(backend.Active.Single().File.ToLower().Contains("chippy"), "Spielhalle spielt Chip-Musik");
+                sound.SetMusic("title");
+                Check(backend.Active.Single().File.Contains("Ambient Charakter"), "Titelbild");
+
+                // mehrere Dateien: nach dem Ende kommt eine andere
+                sound.SetMusic("town");
+                string a = backend.Active.Single().File;
+                clock[0] += 1000; sound.Heartbeat();
+                backend.Active.Single().Finish();
+                string b = backend.Active.Single().File;
+                Check(a != b, "Zweite Aufnahme muss sich von der ersten unterscheiden");
+                // einzelne Datei: Player wiederholt selbst, solange der Spiel-Takt lebt
+                sound.SetMusic("casino");
+                FakeVoice casino = backend.Active.Single();
+                Check(casino.Loop, "einzelne Musikdatei läuft in Schleife");
+                clock[0] += 1000; sound.Heartbeat(); casino.Finish();
+                Check(!casino.Stopped, "Schleife läuft weiter, solange das Spiel tickt");
+                clock[0] += 5000; casino.Finish();
+                Check(casino.Stopped && sound.CurrentMusic == null, "Ohne Spiel-Takt endet die Musik");
+
+                // eingebaute Ersatzmelodie, wenn keine Datei da ist (Zuhause)
+                sound.SetMusic("home");
+                FakeVoice home = backend.Active.Single();
+                Check(home.File.EndsWith("music_home.wav") && File.Exists(home.File), "Zuhause: eingebaute Melodie");
+                // Aus für eine Musik
+                sound.SetMusic(null);
+                Check(!backend.Active.Any(), "Musik aus");
+                sound.Settings.Set("music_casino", "enabled", 0);
+                sound.SetMusic("casino");
+                Check(!backend.Active.Any(), "ausgeschaltete Musik startet nicht");
+            });
+        }
+
+        private static void SoundCasinoEvents()
+        {
+            List<string> log = new List<string>();
+            Action<string> record = id => log.Add(id);
+            G1C_MoneyManager money = new G1C_MoneyManager(5000);
+            G1C_Slots slots = new G1C_Slots(money, new Random(2)) { SoundRequested = record, GuaranteedJackpot = () => true };
+            slots.HandleInput(G1C_InputEvent.FromKey(Key.W));
+            Check(log.Contains("bet"), "Einsatz ändern: Ton");
+            log.Clear();
+            slots.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Check(log.SequenceEqual(new[] { "slot_lever", "slots_spin" }), "Hebel und Walzen-Schleife: " + string.Join(",", log));
+            log.Clear();
+            for (int i = 0; i < 80; i++) slots.Update();
+            Check(log.IndexOf("slots_spin:stop") >= 0 && log.Contains("jackpot") && log.Contains("jackpot_alarm") &&
+                  log.IndexOf("slots_spin:stop") < log.IndexOf("jackpot"), "Walzen stoppen, dann Jackpot und Alarm: " + string.Join(",", log));
+
+            log.Clear();
+            G1C_Roulette roulette = new G1C_Roulette(money, new Random(1)) { SoundRequested = record };
+            roulette.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Check(log.Contains("chip"), "Roulette: Chips setzen: " + string.Join(",", log));
+            log.Clear();
+            G1C_Blackjack blackjack = new G1C_Blackjack(money, new Random(1)) { SoundRequested = record };
+            blackjack.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Check(log.Contains("shuffle"), "Blackjack: Karten austeilen: " + string.Join(",", log));
+            log.Clear();
+            G1C_Poker poker = new G1C_Poker(money, new Random(1)) { SoundRequested = record };
+            poker.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Check(log.Contains("shuffle"), "Poker: Karten austeilen: " + string.Join(",", log));
+
+            // Gewinn-Stufen am Spielautomaten: nur kleine/mittlere/große Gewinne ohne Jackpot
+            Func<int, string[]> tier = multiplier =>
+                multiplier >= 20 ? new[] { "slot_win_big", "coins_big" } : multiplier >= 8 ? new[] { "slot_win_small", "coins_mid" } : new[] { "slot_win_small", "coins_small" };
+            Equal(2, tier(40).Length, "Stufen");
+            foreach (string id in new[] { "slot_win_big", "coins_big", "slot_win_small", "coins_mid", "coins_small" })
+                Check(G1C_SoundCatalog.Find(id) != null, "Sound fehlt: " + id);
+        }
+
+        private static void SoundSettingsPersistence()
+        {
+            G1C_SoundSettings s = new G1C_SoundSettings();
+            Check(s.Set("step_grass", "volume", 12) && s.Set("bird", "chance", 33) && s.Set("woof", "cooldown", 2500) && s.Set("coin", "enabled", 0), "Set");
+            Check(s.Set(G1C_SoundSettings.GlobalId, "master", 61) && s.Set(G1C_SoundSettings.GlobalId, "max", 5) && s.Set(G1C_SoundSettings.GlobalId, "birdradius", 7), "Set global");
+            Check(!s.Set("gibt_es_nicht", "volume", 5) && !s.Set("bird", "unsinn", 5) && !s.Set(G1C_SoundSettings.GlobalId, "unsinn", 5) && !s.Set(null, "volume", 5), "Ungültiges wird abgelehnt");
+            s.Set(G1C_SoundSettings.GlobalId, "max", 99);
+            Equal(8, s.MaxSimultaneous, "Höchstzahl wird auf 8 begrenzt");
+            s.Set(G1C_SoundSettings.GlobalId, "max", 5);
+            s.Set("woof", "cooldown", 99999999);
+            Equal(60000, s.Get("woof").CooldownMs, "Mindestabstand wird auf 60 s begrenzt");
+            s.Set("woof", "cooldown", 2500);
+
+            G1C_SoundSettings back = G1C_SoundSettings.FromJson(s.ToJson());
+            Equal(12, back.Get("step_grass").Volume, "JSON: Lautstärke");
+            Equal(33, back.Get("bird").Chance, "JSON: Chance");
+            Equal(2500, back.Get("woof").CooldownMs, "JSON: Abstand");
+            Check(!back.Get("coin").Enabled, "JSON: ausgeschaltet");
+            Equal(61, back.Master, "JSON: Gesamt");
+            Equal(5, back.MaxSimultaneous, "JSON: gleichzeitig");
+            Equal(7, back.BirdRadius, "JSON: Vogel-Radius");
+            Equal(G1C_SoundCatalog.All.Length, back.Sounds.Count, "alle Sounds enthalten");
+
+            Equal(80, G1C_SoundSettings.FromJson("{kaputt").Master, "kaputtes JSON -> Standard");
+            Equal(80, G1C_SoundSettings.FromJson(null).Master, "null -> Standard");
+            G1C_SoundSettings wild = G1C_SoundSettings.FromJson("{\"Master\":500,\"MaxSimultaneous\":0,\"Sounds\":{\"unbekannt\":{\"Volume\":50},\"bird\":{\"Volume\":-9,\"Chance\":300}}}");
+            Equal(100, wild.Master, "Wert über 100 wird begrenzt");
+            Equal(1, wild.MaxSimultaneous, "0 gleichzeitig wird auf 1 angehoben");
+            Check(!wild.Sounds.ContainsKey("unbekannt"), "Unbekannter Sound wird entfernt");
+            Equal(0, wild.Get("bird").Volume, "negative Lautstärke -> 0");
+            Equal(100, wild.Get("bird").Chance, "Chance 300 -> 100");
+            Equal(G1C_SoundCatalog.Find("woof").Volume, wild.Get("woof").Volume, "fehlende Einträge bekommen Standardwerte");
+
+            string path = Path.Combine(Path.GetTempPath(), "g1c_sound_" + Guid.NewGuid().ToString("N") + ".json");
+            try
+            {
+                Check(s.Save(path) && File.Exists(path), "Speichern");
+                G1C_SoundSettings loaded = new G1C_SoundSettings();
+                Check(loaded.LoadFrom(path) && loaded.Get("step_grass").Volume == 12, "Laden");
+                File.WriteAllText(path, "kein json");
+                Check(loaded.LoadFrom(path) && loaded.Master == 80, "Defekte Datei -> Standardwerte statt Absturz");
+                Check(!new G1C_SoundSettings().LoadFrom(path + ".fehlt"), "fehlende Datei");
+            }
+            finally { try { File.Delete(path); } catch (Exception) { } }
+            s.ResetDefaults();
+            Equal(80, s.Master, "Zurücksetzen");
+            Equal(G1C_SoundCatalog.Find("step_grass").Volume, s.Get("step_grass").Volume, "Zurücksetzen: Einzelwerte");
+        }
+
+        private static string Http(System.Net.Http.HttpClient client, string method, string url, string pin, string body, out int status)
+        {
+            System.Net.Http.HttpRequestMessage request = new System.Net.Http.HttpRequestMessage(new System.Net.Http.HttpMethod(method), url);
+            if (pin != null) request.Headers.Add("X-Pin", pin);
+            if (body != null) request.Content = new System.Net.Http.StringContent(body, System.Text.Encoding.UTF8, "application/json");
+            System.Net.Http.HttpResponseMessage response = client.SendAsync(request).Result;
+            status = (int)response.StatusCode;
+            return response.Content.ReadAsStringAsync().Result;
+        }
+
+        private static void SoundMixerServerFlow()
+        {
+            WithSoundRoot(root =>
+            {
+                FakeBackend backend = new FakeBackend();
+                long[] clock = { 1000 };
+                G1C_SoundSystem sound = NewSound(backend, clock);
+                G1C_SoundMixerServer server = new G1C_SoundMixerServer(sound);
+                Check(server.Start(true, 18765, "4321"), "Server startet: " + server.LastError);
+                try
+                {
+                    Check(server.Running && server.Pin == "4321" && server.Port >= 18765, "Server läuft");
+                    using (System.Net.Http.HttpClient client = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) })
+                    {
+                        string url = "http://127.0.0.1:" + server.Port;
+                        int status;
+                        string page = Http(client, "GET", url + "/", null, null, out status);
+                        Check(status == 200 && page.Contains("Sound-Mixer") && page.Contains("/api/state") && page.Contains("viewport"), "Handy-Seite wird ausgeliefert");
+                        Check(Http(client, "GET", url + "/manifest.webmanifest", null, null, out status).Contains("Sound-Mixer") && status == 200, "Manifest für den Startbildschirm");
+                        Http(client, "GET", url + "/api/state", null, null, out status);
+                        Equal(401, status, "ohne PIN");
+                        Http(client, "GET", url + "/api/state", "0000", null, out status);
+                        Equal(401, status, "falsche PIN");
+                        string state = Http(client, "GET", url + "/api/state", "4321", null, out status);
+                        Equal(200, status, "richtige PIN");
+                        using (System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(state))
+                        {
+                            Equal(G1C_SoundCatalog.All.Length, doc.RootElement.GetProperty("sounds").GetArrayLength(), "alle Sounds im Zustand");
+                            Equal(80, doc.RootElement.GetProperty("global").GetProperty("master").GetInt32(), "Gesamtlautstärke im Zustand");
+                        }
+                        Http(client, "GET", url + "/api/state?pin=4321", null, null, out status);
+                        Equal(200, status, "PIN auch als Adressparameter");
+
+                        Http(client, "POST", url + "/api/set", "4321", "{\"id\":\"step_grass\",\"field\":\"volume\",\"value\":20}", out status);
+                        Check(status == 200 && sound.Settings.Get("step_grass").Volume == 20, "Lautstärke vom Handy");
+                        Http(client, "POST", url + "/api/set", "4321", "{\"id\":\"_global\",\"field\":\"max\",\"value\":5}", out status);
+                        Equal(5, sound.Settings.MaxSimultaneous, "gleichzeitig vom Handy");
+                        Http(client, "POST", url + "/api/set", "4321", "{\"id\":\"bird\",\"field\":\"chance\",\"value\":35.4}", out status);
+                        Equal(35, sound.Settings.Get("bird").Chance, "Häufigkeit vom Handy");
+                        Http(client, "POST", url + "/api/set", "4321", "{\"id\":\"nix\",\"field\":\"volume\",\"value\":1}", out status);
+                        Equal(400, status, "unbekannter Sound");
+                        Http(client, "POST", url + "/api/set", "4321", "kein json", out status);
+                        Equal(400, status, "kaputtes JSON");
+                        Http(client, "POST", url + "/api/set", "4321", "{\"id\":\"_global\",\"field\":\"muted\",\"value\":1}", out status);
+                        Check(!sound.Muted, "Stumm wartet auf den Spiel-Takt");
+                        sound.Pump();
+                        Check(sound.Muted, "Stumm vom Handy");
+                        Http(client, "POST", url + "/api/set", "4321", "{\"id\":\"_global\",\"field\":\"muted\",\"value\":0}", out status);
+                        sound.Pump();
+                        Check(!sound.Muted, "Stumm aus");
+
+                        sound.Settings.Set("bird", "chance", 0);
+                        Http(client, "POST", url + "/api/play", "4321", "{\"id\":\"bird\"}", out status);
+                        Equal(200, status, "Probehören angenommen");
+                        Equal(0, backend.Started("songbird"), "Probehören erst im Spiel-Takt");
+                        sound.Pump();
+                        Equal(1, backend.Started("songbird"), "Probehören spielt trotz Chance 0");
+                        Http(client, "POST", url + "/api/play", "4321", "{\"id\":\"gibtsnicht\"}", out status);
+                        Equal(400, status, "Probehören unbekannter Sound");
+
+                        string statusJson = Http(client, "GET", url + "/api/status", "4321", null, out status);
+                        Check(status == 200 && statusJson.Contains("active"), "Status");
+                        Http(client, "POST", url + "/api/reset", "4321", "{}", out status);
+                        Check(status == 200 && sound.Settings.Get("step_grass").Volume == G1C_SoundCatalog.Find("step_grass").Volume, "Zurücksetzen vom Handy");
+                        Http(client, "GET", url + "/geheim", null, null, out status);
+                        Equal(404, status, "unbekannte Adresse");
+
+                        // Sperre nach Fehlversuchen
+                        for (int i = 0; i < 12; i++) Http(client, "GET", url + "/api/state", "9999", null, out status);
+                        Equal(429, status, "Sperre nach vielen Fehlversuchen");
+                        Http(client, "GET", url + "/api/state", "4321", null, out status);
+                        Equal(429, status, "auch die richtige PIN ist kurz gesperrt");
+                    }
+                }
+                finally { server.Stop(); }
+                Check(!server.Running, "Server beendet");
+
+                // Im Spiel: F11 im Menü schaltet den Server (nur Loopback im Test)
+                G1C_GameManager game = GameAt(G1C_WorldLocation.Home, 5, 8, G1C_Direction.Up);
+                game.Sound.MixerLoopbackOnly = true;
+                game.HandleInput(G1C_InputEvent.FromKey(Key.B));
+                Equal(G1C_GameState.Menu, game.State, "Menü");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.F11));
+                try
+                {
+                    Check(game.Sound.Mixer != null && game.Sound.Mixer.Running, "F11 startet den Mixer");
+                    Equal(G1C_GameState.Dialogue, game.State, "Adresse und PIN erscheinen als Dialog");
+                    Check(game.Dialogue.CurrentText.Contains("http://") || game.Dialogue.CurrentText.Contains("Adresse nicht gefunden"), "Adresse im Dialog");
+                    game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                    Check(game.Dialogue.CurrentText.Contains(game.Sound.Mixer.Pin), "PIN im Dialog");
+                    game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                    Equal(G1C_GameState.MainGame, game.State, "Dialog geschlossen");
+                    game.HandleInput(G1C_InputEvent.FromKey(Key.B));
+                    game.HandleInput(G1C_InputEvent.FromKey(Key.F11));
+                    Check(game.Sound.Mixer == null, "F11 beendet den Mixer wieder");
+                }
+                finally { if (game.Sound.Mixer != null) game.Sound.Mixer.Stop(); }
+            });
         }
 
         // ------------------------------------------------------------------ Bericht

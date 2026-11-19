@@ -125,6 +125,7 @@ namespace OOPGames
                 return;
             }
 
+            Sfx("shuffle"); // Patrick Lupierz – 19.11.2026: Karten austeilen
             // Bei wenigen Restkarten neu mischen, damit kein Stapel mitten in der Runde leer wird
             if (_deck.Remaining < 20) _deck = new G1C_Deck(Random);
 

@@ -223,6 +223,7 @@ namespace OOPGames
                 return;
             }
 
+            Sfx("chip"); // Patrick Lupierz – 19.11.2026: Chips werden gesetzt
             _playerBet = CreateBet(_target, Bet.Amount);
             _aiBet = _ai.DecideBet(_history);
             _result = Random.Next(37);

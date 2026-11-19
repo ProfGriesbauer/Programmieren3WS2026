@@ -275,10 +275,18 @@ namespace OOPGames
         private void AddFish(int y)
         {
             int x = Map.RiverCenterXAt(y);
-            if (Map.IsWater(x, y)) AddAnimal("Fisch", "animal_fish", x, y, 2, 8);
+            // Änderung durch: Patrick Lupierz – 18.11.2026 – Flussfische mit denselben Grafiken wie im Angelspiel
+            if (Map.IsWater(x, y)) AddAnimal("Fisch", RiverFishSprite(y), x, y, 2, 8);
             int secondX = Map.RiverCenterXAt(y + 3) + 1;
             if (y % 2 == 0 && Map.IsWater(secondX, y + 3))
-                AddAnimal("Fisch", "animal_fish", secondX, y + 3, 2, 10);
+                AddAnimal("Fisch", RiverFishSprite(y + 3), secondX, y + 3, 2, 10);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 18.11.2026 – Fischart je Flussstelle (fest, damit sie nicht wechselt)
+        private static string RiverFishSprite(int y)
+        {
+            List<string> ids = new List<string>(G1C_FishSprites.Ids);
+            return "river_" + ids[(y * 7) % ids.Count];
         }
 
         // Entwickler: Denis Mock
@@ -294,6 +302,20 @@ namespace OOPGames
         private int RiverBank(int y, int side)
         {
             return Map.RiverCenterXAt(y) + side;
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 18.11.2026 – Tagesablauf (G1C_NpcSchedule): Stadtbewohner kommen und gehen.
+        // Abwesende bleiben in TownNpcs (Position bleibt erhalten), stehen aber nicht in der Objektliste.
+        public bool IsPresent(G1C_WorldObject obj)
+        {
+            return _objects.Contains(obj);
+        }
+
+        public void SetNpcPresent(G1C_Npc npc, bool present)
+        {
+            if (npc == null || !_townNpcs.Contains(npc) || IsPresent(npc) == present) return;
+            if (present) _objects.Add(npc);
+            else _objects.Remove(npc);
         }
 
         // Entwickler: Denis Mock

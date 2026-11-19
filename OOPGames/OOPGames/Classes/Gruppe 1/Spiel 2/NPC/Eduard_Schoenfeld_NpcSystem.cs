@@ -60,12 +60,16 @@ namespace OOPGames
         public G1C_Conversation Conversation { get; }
         public IReadOnlyList<G1C_NpcCharacter> Characters { get { return _characters; } }
 
+        /// <summary>Änderung durch: Patrick Lupierz – 18.11.2026 – ist ein Casino-NPC laut Tagesablauf gerade da?</summary>
+        public Func<G1C_Npc, bool> IsPresent { get; set; }
+
         public IEnumerable<KeyValuePair<G1C_Npc, G1C_NpcCharacter>> PlacedNpcs
         {
             get
             {
                 foreach (KeyValuePair<G1C_NpcCharacter, G1C_Npc> pair in _worldNpcs)
-                    yield return new KeyValuePair<G1C_Npc, G1C_NpcCharacter>(pair.Value, pair.Key);
+                    if (IsPresent == null || IsPresent(pair.Value)) // Änderung durch: Patrick Lupierz – 18.11.2026 – Tagesablauf
+                        yield return new KeyValuePair<G1C_Npc, G1C_NpcCharacter>(pair.Value, pair.Key);
             }
         }
 

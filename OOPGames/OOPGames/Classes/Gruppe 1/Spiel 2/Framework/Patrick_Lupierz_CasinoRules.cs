@@ -61,7 +61,7 @@ namespace OOPGames
 
         public void ClearField()
         {
-            if (_field.Manager != null) _field.Manager.Sound.SetMusic(null); // Patrick Lupierz – 16.11.2026: alte Musik aus
+            if (_field.Manager != null) _field.Manager.Sound.StopAll(); // Patrick Lupierz – 16.11.2026/19.11.2026: alte Musik, Effekte und Handy-Mixer aus
             _field.Manager = new G1C_GameManager();
             _field.Manager.Sound.Enable(); // Patrick Lupierz – 16.11.2026: Ton nur im echten Spiel, nicht im Selbsttest
             _field.KeyboardFocusRequested = true; // Änderung durch: Patrick Lupierz – 15.11.2026

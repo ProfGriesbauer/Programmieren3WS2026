@@ -166,7 +166,7 @@ namespace OOPGames
                     break;
                 case "Gärtner Sam":
                     yield return new G1C_DialogueTopic("Gibt es Fische im Fluss?", G1C_DialogueTopic.Cycle(
-                        "Massenhaft! Auf jeder Brücke lehnt eine Angel. Halt den Fisch im grünen Bereich, dann klappt's.",
+                        "Massenhaft! Auf der Brücke lehnt eine Angel. Halt den Fisch im grünen Bereich, dann klappt's.",
                         "Barsche, Forellen, Hechte – und einmal hab ich einen goldenen Karpfen gesehen. Ehrlich!"));
                     yield return new G1C_DialogueTopic("Welche Blumen magst du am liebsten?", G1C_DialogueTopic.Cycle(
                         "Sonnenblumen. Sie schauen immer nach vorn. Das sollten mehr Leute tun."));

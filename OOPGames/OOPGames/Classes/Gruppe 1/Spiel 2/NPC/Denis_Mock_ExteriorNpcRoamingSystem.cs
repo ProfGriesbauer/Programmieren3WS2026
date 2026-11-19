@@ -37,6 +37,7 @@ namespace OOPGames
         {
             foreach (Patrol patrol in _patrols)
             {
+                if (!_world.IsPresent(patrol.Npc)) continue; // Änderung durch: Patrick Lupierz – 18.11.2026 – Tagesablauf
                 patrol.Npc.AdvanceMovement();
                 if (patrol.Npc.IsMoving || tick < patrol.NextMoveTick) continue;
 

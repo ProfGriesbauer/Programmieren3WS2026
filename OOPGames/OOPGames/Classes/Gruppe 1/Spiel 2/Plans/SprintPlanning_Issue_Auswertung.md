@@ -155,3 +155,38 @@ Quelle: Ende von `Scrum/SprintPlanning.md` (Stand 16.11.2026). Prüfung: Code-Du
 
 Hinweise: Die Statusänderungen von A9 und B1 stammen aus der SprintPlanning (vom Team auf "erledigt" gesetzt).
 Offen bleiben B4/B7 (Stadtgröße, Entscheidung Team/Dozent) sowie eine Hör- und Spielprobe der neuen Punkte im Hauptfenster.
+
+## I. Nachtrag 18.11.2026 – offene Issues
+
+Prüfung: Selbsttest **70/70 BESTANDEN** (6 neue Tests), Offscreen-Renderings mit dem echten Painter.
+
+| Punkt | Status | Umsetzung / Nachweis |
+|-------|--------|----------------------|
+| Gast-Automat: Spiele anderer Gruppen mit deren Regeln, Painter und KI | VOLLSTÄNDIG UMGESETZT | `G1C_GuestGameCatalog`: Auswahl nach Gruppen-Präfix des Klassennamens (G10_, FG_, Gruppe2_ …), bei mehreren Spielen einer Gruppe nach gemeinsamem Klassennamen. Ursache für hängende Spiele: mehrere Gruppen lesen `OOPGamesManager.Singleton.ActivePainter/ActiveRules/ActivePlayers`; der Host meldet die fremden Teile jetzt wie das Hauptfenster als aktiv an und stellt danach den alten Stand wieder her. Die KI wird bei Animationen (Gruppe 10) erneut gefragt. Ergebnis kommt nur aus den Regeln der Gruppe. [Esc] führt immer zur Spielauswahl zurück. Test: alle 9 registrierten Spiele (8x 4 gewinnt + TicTacToe) komplett bis zum Ende gespielt |
+| Fisch-Skins im Fluss wie im Angelspiel | VOLLSTÄNDIG UMGESETZT | `river_fish_<art>_<bild>` aus `G1C_FishSprites`. Test + Render |
+| Issue 5 Tagesablauf | TEILWEISE UMGESETZT | `G1C_NpcSchedule`: Paul, Sam, Lea nachts zu Hause, Lena abends im Casino, Viktor 10–4 Uhr; Wechsel nur außer Sichtweite. "Echte KI" nicht umgesetzt (externe Dienste nicht freigegeben). Test |
+| Issue 16 Geldhai spricht an | VOLLSTÄNDIG UMGESETZT | Sprechblase + Hinweis bei Abstand ≤ 2, einmal pro Vorbeigehen. Test |
+| Issue 3 Seitenverhältnisse | VOLLSTÄNDIG UMGESETZT | 16:10 und 4:3 gerendert, kein Überlauf |
+| Nachtrag B3, B5, B6, B8 | VOLLSTÄNDIG UMGESETZT | Status in SprintPlanning nachgezogen (war bereits umgesetzt) |
+
+Weiter offen: Stadtgröße (B4/B7, Team/Dozent), Hörprobe Sound, sonstige "manuell prüfen"-Punkte im Hauptfenster.
+
+## J. Nachtrag 19.11.2026 – Klangpaket und Handy-Mixer
+
+Prüfung: Selbsttest **80/80 BESTANDEN** (10 neue Klangtests), alle 49 Dateien mit dem echten WPF-MediaPlayer geöffnet (stumm),
+Handy-Seite mit Headless-Chrome gerendert. Hören und Bedienen auf einem echten Handy konnte der Agent nicht.
+
+| Punkt | Status | Umsetzung / Nachweis |
+|-------|--------|----------------------|
+| Alle Sounds des Pakets implementieren (Musik, Ambiente, Tiere, Casino, Schritte, Allgemein) | VOLLSTÄNDIG UMGESETZT | 49 Dateien in `Assets/Sounds` (OGG → WAV, lange Aufnahmen → MP3, 291 MB → 28 MB), Katalog mit 38 Sounds. Test: jede Datei gehört zu einem Sound; jeder Sound hat Datei oder eingebaute Melodie. Doppelte Datei „Oustide 3“ und OGG/MP3-Doppelung bei `slot_win_small` nicht doppelt abgelegt |
+| Handy-App für alle Einstellungen | VOLLSTÄNDIG UMGESETZT (als Web-App) | Menü B → F11: Server + PIN, Seite im Handy-Browser (Startbildschirm-fähig). Gesamt/Musik/Effekte, je Sound Lautstärke, Häufigkeit (Chance, Mindestabstand), Ein/Aus, Probehören, Stumm, Zurücksetzen, Vogel-Radius, Höchstzahl gleichzeitig. Keine native App (APK/IPA) |
+| Lautstärke anpassen | VOLLSTÄNDIG UMGESETZT | Endlautstärke = Gesamt × Musik/Effekte × Einzelwert, live änderbar, gespeichert; Effekte auf −3 dBFS Spitzenpegel angeglichen (Gras-Schritte im Original unhörbar) |
+| Häufigkeit | VOLLSTÄNDIG UMGESETZT | je Sound Wahrscheinlichkeit und Mindestabstand |
+| Mehrere Sounds nicht gleichzeitig | VOLLSTÄNDIG UMGESETZT | einstellbar 1–8; Prioritäten verdrängen; derselbe Sound nie doppelt; Musik zählt nicht |
+| Tiere nur beim Streicheln, Vögel nur im 4-Kacheln-Radius | VOLLSTÄNDIG UMGESETZT | Test: 1500 Ticks ohne Streicheln = kein Tiergeräusch; Vogel hörbar im Radius, nicht außerhalb; Radius einstellbar. Frosch-Sound liegt bereit, aber es gibt noch keinen Frosch im Spiel |
+| Schritte nach Dateinamen und Boden, in Schleife | VOLLSTÄNDIG UMGESETZT | Untergrund aus der Kachelgrafik (Gras, Weg/Straße/Steinplatten, Brücke, innen); Varianten (1)(2)(3) reihum; Fahrrad: Schleife statt Schritte |
+| Dateien in Ordnern unter Assets | VOLLSTÄNDIG UMGESETZT | Sounds: `Assets/Sounds/*`, Code: `Assets/SoundMixer/*` |
+
+Grenzen: Schleifen mit dem WPF-MediaPlayer haben eine kurze Pause beim Neustart (bei 0,7-s-Schleifen wie dem Fahrrad hörbar
+möglich). Die Handy-App braucht WLAN im selben Netz und eine Firewall-Freigabe. Die Lautstärke-Standardwerte sind nach Pegel
+geschätzt – der Feinschliff nach Gehör steht noch aus.
