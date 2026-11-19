@@ -389,3 +389,11 @@ Assistant answer:
 - I combined the train-roof and ramp/drop runner positioning with the smaller skater scale, away-facing orientation, and lane-constrained skateboard carving.
 - I updated the visual regression test for the merged scale and added a check that the skater is elevated while on a train roof.
 - The Subway Surfer test suite passed.
+
+### Prompt 30
+User prompt:
+> great. the character slides slightly on the skateboard, can you sink the motion so that the feet and the skateboard move at the same speed?
+
+Assistant answer:
+- I moved the rider's carving pivot down to the foot/deck contact height so the feet no longer drift sideways relative to the skateboard.
+- I added visual regression checks at both sway extremes. The Subway Surfer tests passed, and the application build passed using a temporary output directory because the running game had locked the normal executable.

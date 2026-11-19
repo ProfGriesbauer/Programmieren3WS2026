@@ -657,7 +657,7 @@ namespace OOPGames
                 AddBox(rider, -0.04, 0.22, -0.35, 0.18, 0.30, -0.14, RunnerShoeMaterial);
                 rider.Transform = new RotateTransform3D(
                     new AxisAngleRotation3D(new Vector3D(0, 0, 1), -run * 5),
-                    new Point3D(0, 1, 0));
+                    new Point3D(0, 0.22, 0));
             }
 
             runner.Children.Add(rider);

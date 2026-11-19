@@ -457,6 +457,7 @@ namespace OOPGames
                 AssertTrue(Math.Abs(GetRunnerHeight(skaterVisual) - restingHeight) < 0.001,
                     "side-to-side skating replaces the previous vertical bob");
                 AssertRunnerFitsTrack(skaterVisual, skaterModel, 1.55);
+                AssertFeetStayPlanted(skaterModel);
 
                 field.Distance = 3 * Math.PI / (2 * 0.32);
                 painter.TickPaintGameField(canvas, field);
@@ -467,6 +468,7 @@ namespace OOPGames
                     && GetRunnerX(skaterVisual) < 1.48,
                     "the skater carves back across the lane");
                 AssertRunnerFitsTrack(skaterVisual, skaterModel, 1.55);
+                AssertFeetStayPlanted(skaterModel);
 
                 field.Level = Gruppe2_SubwayLevel.TrainRoof;
                 painter.TickPaintGameField(canvas, field);
@@ -491,6 +493,25 @@ namespace OOPGames
             return skaterModel.Children.OfType<Model3DGroup>()
                 .FirstOrDefault(component =>
                     component.Children.OfType<GeometryModel3D>().Count() == 8);
+        }
+
+        private static void AssertFeetStayPlanted(Model3DGroup skaterModel)
+        {
+            Model3DGroup skateboard = GetSkateboardModel(skaterModel);
+            Model3DGroup rider = skaterModel.Children.OfType<Model3DGroup>()
+                .FirstOrDefault(component => !ReferenceEquals(component, skateboard));
+            AssertTrue(rider != null && rider.Transform is RotateTransform3D,
+                "the rider has a controlled carving lean");
+
+            RotateTransform3D lean = (RotateTransform3D)rider.Transform;
+            Point3D[] footAnchors =
+            {
+                new Point3D(-0.07, 0.22, 0.245),
+                new Point3D(0.07, 0.22, -0.245)
+            };
+            AssertTrue(footAnchors.All(foot =>
+                    Math.Abs(lean.Transform(foot).X - foot.X) < 0.001),
+                "the feet stay planted on the skateboard while carving");
         }
 
         private static double GetRunnerHeight(ModelVisual3D skaterVisual)
