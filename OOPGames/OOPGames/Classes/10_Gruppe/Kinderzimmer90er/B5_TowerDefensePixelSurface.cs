@@ -117,6 +117,15 @@ namespace OOPGames
             _Context.DrawText(formattedText, new Point(x * _PixelScale, y * _PixelScale));
         }
 
+        // Draws a sprite with the given opacity (0..1).
+        public void Sprite(BitmapSource sprite, double x, double y, double width, double height, double opacity)
+        {
+            EnsureDrawing();
+            _Context.PushOpacity(opacity);
+            Sprite(sprite, x, y, width, height);
+            _Context.Pop();
+        }
+
         // Draws a sprite in logical pixels. Positions are rounded so pixel art stays on the grid.
         public void Sprite(BitmapSource sprite, double x, double y, double width, double height, bool flipX = false)
         {

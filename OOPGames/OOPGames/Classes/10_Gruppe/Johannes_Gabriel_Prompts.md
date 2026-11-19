@@ -317,3 +317,89 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 **Datum:** 2026-11-17
 
 > Erstelle mir noch einen zusätzlichen Button, wenn man das Menü öffnet, in dem das Tower Defense System erklärt wird, sowie die Steuerung für Maus und Tastatur. Dazu wäre es gut, wenn Bilder der Karte als Beispiele genutzt werden und dadurch das Spiel erklärt wird. Auch die Spieloberfläche mit dem Overlay mit Bildern erklären
+
+## Prompt 53
+
+**Datum:** 2026-11-19
+
+> Warum kann ich den neuen Stand aus dem Gruppe 10 Branch nicht pullen
+
+## Prompt 54
+
+**Datum:** 2026-11-19
+
+> Ja, führe diese aus
+
+## Prompt 55
+
+**Datum:** 2026-11-19
+
+> Ist es möglich, dass ä,ö,ü in im Text vom Tower Defense Spiel genutzt werden und nicht ue. Zum Beispiel in der Anleitung
+
+## Prompt 56
+
+**Datum:** 2026-11-19
+
+> Bitte übernehme mir das
+
+## Prompt 57
+
+**Datum:** 2026-11-19
+
+> Die Reichweite der Türme ist noch schlecht sichtbar. Da wäre es gut die Farbe zu ändern, damit es nicht mit dem Hintergrund verschwimmt. Dazu sollen die Schwächen und Resistance in dem Bereich Wellengegner angezeigt werden, wie in der Anleitung
+
+## Prompt 58
+
+**Datum:** 2026-11-19
+
+> Die Farbe ist gut, aber ich hätte gerne wieder die Punkte, um die Reichweite anzuzeigen. Die Reichweite soll nach 5 Sekunden wieder verschwinden, wenn man länger den gleichen Turm ausgewählt hat und nur nach erneuter Auswahl wieder angezeigt werden. Du darfst gerne das Spiel starten und testen
+
+## Prompt 59
+
+**Datum:** 2026-11-19
+
+> Das muss in der Anleitung nicht geändert werden. Nun hätte ich gerne noch, dass bei der Spieleauswahl der Comodore Tower Defense auf der 1 ist und Münzen zählen auf der 2. Dazu wäre nützlich, wenn man allgemein die Spiele der verschiedenen Konsolen mit wasd oder den Pfeiltasten auswählen könnte
+
+## Prompt 60
+
+**Datum:** 2026-11-19
+
+> Das sieht gut aus. Die Reichweite soll eher schon nach 3 Sekunden weg gehen, 5 fühlen sich etwas zu lang an. Ich würde gerne das Spiel-Overlay von Tower Defense vergrößern. Zum einen vielleicht von 720p auf 1080p und dazu soll im Vollbild nur ein kleiner Rand sein, welcher einen alten Bildschirm darstellt und es so aussieht als würde man Tower Defense auf einem alten PC spielen. Vorerst sollen die Sprites der Türme, Gegner und Karten nicht verändert werden, aber ich würde diese gerne später an das neue Spieleoverlay anpassen
+
+## Prompt 61
+
+**Datum:** 2026-11-19
+
+> Commite und pushe meine Änderungen
+
+## Prompt 62
+
+**Datum:** 2026-11-19
+
+> Ich hätte gerne das die Effekte der Türme wie Burn, Poison und so weiter nicht dauerhaft halten, sondern nach 5 Sekunden nicht mehr getroffen weg gehen. Dazu soll der Effekt der Türme in dem Upgrade Fenster angezeigt werden, wie Schaden pro Sekunde bei Burn, Poison und Verlangsamung und Rüstungsverringerung
+
+## Prompt 63
+
+**Datum:** 2026-11-19
+
+> Passe mir nun die Sprites der Türme, Gegner, Bosse und dem MainBuilding an die neue Auflösung an und gebe allem etwas mehr Details. Die Karten sollen auch überarbeitet werden, sodass die Podeste der Türme logischer für jede Karte angelegt werden, denn bei der letzten Karte stehen viele Türme einfach nur an dem rechten Rand ohne effektiven Einfluss auch den Weg. Die Karten sollen weiterhin mit jeder neuen Karte etwas schwerer werden
+
+## Prompt 64
+
+**Datum:** 2026-11-19
+
+> Die Auflösung sieht schon mal gut aus, aber ich finde die Sprites von allem leider nicht mehr so passend. Kannst du mir alles in einem ähnlichen Stil wie in dem angehände Bild zu sehen erstellen. Also alle Sprites für Gegner, Türme, Bosse, MainBuilding und die Karte
+
+*(mit angehängtem Referenzbild: Pixel-Art-Figuren wie Kapuzenmagier, Skelett, Mimic-Truhe, Zombie, Oger, Geist, Goblin und Fledermaus)*
+
+## Prompt 65
+
+**Datum:** 2026-11-19
+
+> Das gefällt mir besser. Könnte man die Podeste allgemein besser platzieren und wenn ein Gegner in den Hintergrund eines Turmes läuft, der Turm durchlässig wird, damit man den Gegner sieht. Dadurch würde man sich nicht so stark einschränken. Dazu fühlt sich die Podestauswahl mit den Pfeiltasten bzw. wasd nicht mehr genau an. Optimiere mir die Podestauswahl zu den neuen Podest Positionen. Nutze gerne einen Testmodus, um alle Karten zu testen
+
+## Prompt 66
+
+**Datum:** 2026-11-19
+
+> Speichere mir meine heutigen Prompts in der Johannes_Gabriel_Prompts.md Datei

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -191,21 +192,23 @@ namespace OOPGames
         void DrawHelpGoal()
         {
             TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[0];
-            const int cropX = 160, cropY = 20;
+            const int cropX = 160, cropY = 8;
             Func<double, double> hx = mx => ImageX + mx - cropX;
             Func<double, double> hy = my => ImageY + my + 2 - cropY;
 
             BeginHelpImage();
             Surface.Sprite(TowerDefenseSprites.MapRegion(map.BackgroundFile, cropX, cropY, 150, 110), ImageX, ImageY, 150, 110);
-            Surface.Sprite(TowerDefenseSprites.MainBuilding(0), hx(286) - 32, hy(70) - 44, 64, 48);
-            HelpTower("Fire Mage", hx(196), hy(60), null);
+            // Pedestals 3 and 5 of map 1 lie next to the last bends before the castle.
+            Point fire = map.TowerSpots[2], archer = map.TowerSpots[4];
+            Surface.Sprite(TowerDefenseSprites.MainBuilding(0), hx(map.MainBuilding.X) - 32, hy(map.MainBuilding.Y) - 44, 64, 48);
+            HelpTower("Fire Mage", hx(fire.X), hy(fire.Y), null);
             HelpEnemy("Goblin", hx(228), hy(36), 1);
             HelpEnemy("Orc", hx(228), hy(58), 0.6);
             HelpEnemy("Goblin", hx(244), hy(90), 0.3);
-            HelpTower("Physical Archer", hx(196), hy(112), null);
-            Surface.Sprite(TowerDefenseSprites.DamageIcon(DamageType.Fire), hx(214) - 3, hy(46) - 3, 6, 6);
+            HelpTower("Physical Archer", hx(archer.X), hy(archer.Y), null);
+            Surface.Sprite(TowerDefenseSprites.DamageIcon(DamageType.Fire), hx(fire.X + 18) - 3, hy(fire.Y - 14) - 3, 6, 6);
             Callout(1, hx(234), hy(26));
-            Callout(2, hx(180), hy(24));
+            Callout(2, hx(fire.X - 30), hy(fire.Y - 22));
             Callout(3, hx(268), hy(38));
             EndHelpImage();
 
@@ -290,18 +293,20 @@ namespace OOPGames
 
             BeginHelpImage();
             Surface.Sprite(TowerDefenseSprites.MapRegion(map.BackgroundFile, cropX, cropY, 150, 110), ImageX, ImageY, 150, 110);
-            HelpCircle(hx(132), hy(45) - 6, TowerDefenseBattle.TowerRange(new IceMage(), new TowerUpgrades()));
-            HelpTower("Ice Mage", hx(132), hy(45), null);
-            HelpTower("Poison Archer", hx(132), hy(100), null);
-            double px = hx(68), py = hy(60);
+            // Pedestal 2 (ice mage with range), 7 (poison archer) and 4 (free, selected) of map 1.
+            Point ice = map.TowerSpots[1], poison = map.TowerSpots[6], free = map.TowerSpots[3];
+            HelpCircle(hx(ice.X), hy(ice.Y) - 6, TowerDefenseBattle.TowerRange(new IceMage(), new TowerUpgrades()));
+            HelpTower("Ice Mage", hx(ice.X), hy(ice.Y), null);
+            HelpTower("Poison Archer", hx(poison.X), hy(poison.Y), null);
+            double px = hx(free.X), py = hy(free.Y);
             DrawCorner(px - 16, py - 8, 1, 1, Color.FromRgb(120, 220, 240));
             DrawCorner(px + 13, py - 8, -1, 1, Color.FromRgb(120, 220, 240));
             DrawCorner(px - 16, py + 6, 1, -1, Color.FromRgb(120, 220, 240));
             DrawCorner(px + 13, py + 6, -1, -1, Color.FromRgb(120, 220, 240));
             Icon(TowerDefenseIcon.Cursor, px - 8, py - 24, 16);
             Callout(1, px - 22, py + 8);
-            Callout(2, hx(150), hy(14));
-            Callout(3, hx(170), hy(46));
+            Callout(2, hx(ice.X + 18), hy(ice.Y - 32));
+            Callout(3, hx(ice.X + 38), hy(ice.Y));
             EndHelpImage();
 
             HelpLines(TextX, 36,
