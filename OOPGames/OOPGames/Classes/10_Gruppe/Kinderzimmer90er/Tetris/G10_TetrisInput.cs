@@ -7,35 +7,56 @@ namespace OOPGames
     internal readonly struct G10_TetrisInput
     {
         public G10_TetrisInput(
-            float horizontal,
+            int horizontal,
+            int horizontalPressed,
             bool softDrop,
-            bool rotate,
+            bool rotateClockwise,
+            bool rotateCounterClockwise,
             bool hardDrop,
-            bool confirm)
+            bool hold,
+            bool start)
         {
             Horizontal = horizontal;
+            HorizontalPressed = horizontalPressed;
             SoftDrop = softDrop;
-            Rotate = rotate;
+            RotateClockwise = rotateClockwise;
+            RotateCounterClockwise = rotateCounterClockwise;
             HardDrop = hardDrop;
-            Confirm = confirm;
+            Hold = hold;
+            Start = start;
         }
 
-        public static G10_TetrisInput Neutral { get; } =
-            new G10_TetrisInput(0, false, false, false, false);
-
-        public float Horizontal { get; }
+        // Held direction (-1, 0, 1) and the direction of a fresh key press this tick.
+        public int Horizontal { get; }
+        public int HorizontalPressed { get; }
         public bool SoftDrop { get; }
-        public bool Rotate { get; }
+        public bool RotateClockwise { get; }
+        public bool RotateCounterClockwise { get; }
         public bool HardDrop { get; }
-        public bool Confirm { get; }
+        public bool Hold { get; }
+        public bool Start { get; }
     }
 
+    // X and Escape are taken by the room (leave the game), so they are not used here.
     internal sealed class G10_TetrisInputMapper
     {
+        static readonly Key[] LeftKeys = { Key.Left, Key.A };
+        static readonly Key[] RightKeys = { Key.Right, Key.D };
+        static readonly Key[] SoftDropKeys = { Key.Down, Key.S };
+        static readonly Key[] ClockwiseKeys = { Key.Up, Key.W };
+        static readonly Key[] CounterClockwiseKeys = { Key.Z, Key.Q };
+        static readonly Key[] HardDropKeys = { Key.Space };
+        static readonly Key[] HoldKeys = { Key.C, Key.LeftShift, Key.RightShift };
+        static readonly Key[] StartKeys = { Key.Enter, Key.P };
+        static readonly Key[][] AllKeys =
+        {
+            LeftKeys, RightKeys, SoftDropKeys, ClockwiseKeys,
+            CounterClockwiseKeys, HardDropKeys, HoldKeys, StartKeys
+        };
+
         readonly IG10_KeyStateSource _KeyState;
-        readonly G10_KeyAxis _Horizontal =
-            new G10_KeyAxis(Key.Left, Key.A, Key.Right, Key.D);
-        bool _SuppressUntilRelease;
+        readonly G10_KeyAxis _Horizontal = new G10_KeyAxis(Key.Left, Key.A, Key.Right, Key.D);
+        readonly HashSet<Key> _HeldLastTick = new HashSet<Key>();
 
         public G10_TetrisInputMapper(IG10_KeyStateSource keyState)
         {
@@ -43,47 +64,55 @@ namespace OOPGames
             _KeyState = keyState;
         }
 
+        // Keys still held from the cartridge menu (e.g. Enter) do not count as a press.
+        public void Reset()
+        {
+            RememberHeldKeys();
+        }
+
+        // A key counts as pressed if its KeyDown arrived this tick and it was not held
+        // last tick, so the keyboard's auto repeat does not rotate or drop again.
         public G10_TetrisInput Read(IReadOnlyCollection<Key> pressedKeys)
         {
             if (pressedKeys == null) throw new ArgumentNullException("pressedKeys");
 
-            if (_SuppressUntilRelease)
-            {
-                if (!AreControlsDown())
-                    _SuppressUntilRelease = false;
-                return G10_TetrisInput.Neutral;
-            }
-
-            return new G10_TetrisInput(
-                _Horizontal.Read(_KeyState),
-                _KeyState.IsDown(Key.Down) || _KeyState.IsDown(Key.S),
-                WasPressed(pressedKeys, Key.Up) || WasPressed(pressedKeys, Key.Z),
-                WasPressed(pressedKeys, Key.Space),
-                WasPressed(pressedKeys, Key.Enter));
+            bool left = WasPressed(pressedKeys, LeftKeys);
+            bool right = WasPressed(pressedKeys, RightKeys);
+            G10_TetrisInput input = new G10_TetrisInput(
+                (int)_Horizontal.Read(_KeyState),
+                left == right ? 0 : left ? -1 : 1,
+                IsDown(SoftDropKeys),
+                WasPressed(pressedKeys, ClockwiseKeys),
+                WasPressed(pressedKeys, CounterClockwiseKeys),
+                WasPressed(pressedKeys, HardDropKeys),
+                WasPressed(pressedKeys, HoldKeys),
+                WasPressed(pressedKeys, StartKeys));
+            RememberHeldKeys();
+            return input;
         }
 
-        public void Reset()
-        {
-            _SuppressUntilRelease = AreControlsDown();
-        }
-
-        static bool WasPressed(IReadOnlyCollection<Key> pressedKeys, Key key)
+        bool WasPressed(IReadOnlyCollection<Key> pressedKeys, Key[] keys)
         {
             foreach (Key pressedKey in pressedKeys)
-                if (pressedKey == key)
-                    return true;
+                foreach (Key key in keys)
+                    if (pressedKey == key && !_HeldLastTick.Contains(key))
+                        return true;
             return false;
         }
 
-        bool AreControlsDown()
+        bool IsDown(Key[] keys)
         {
-            return _Horizontal.IsAnyKeyDown(_KeyState) ||
-                   _KeyState.IsDown(Key.Down) ||
-                   _KeyState.IsDown(Key.S) ||
-                   _KeyState.IsDown(Key.Up) ||
-                   _KeyState.IsDown(Key.Z) ||
-                   _KeyState.IsDown(Key.Space) ||
-                   _KeyState.IsDown(Key.Enter);
+            foreach (Key key in keys)
+                if (_KeyState.IsDown(key)) return true;
+            return false;
+        }
+
+        void RememberHeldKeys()
+        {
+            _HeldLastTick.Clear();
+            foreach (Key[] keys in AllKeys)
+                foreach (Key key in keys)
+                    if (_KeyState.IsDown(key)) _HeldLastTick.Add(key);
         }
     }
 }

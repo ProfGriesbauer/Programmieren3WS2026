@@ -4,16 +4,45 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
+    // Stores the best score next to the other Kinderzimmer highscores.
+    internal sealed class G10_RoomHighscoreStore : IG10_HighscoreStore
+    {
+        readonly string _Game;
+
+        public G10_RoomHighscoreStore(string game)
+        {
+            _Game = game;
+        }
+
+        public int Best { get { return B5RoomHighscores.Get(_Game); } }
+
+        public void Submit(int score)
+        {
+            B5RoomHighscores.Save(_Game, score);
+        }
+    }
+
     public sealed class G10_TetrisGame : IB5RoomMiniGame
     {
-        readonly G10_TetrisSession _Session = new G10_TetrisSession();
-        readonly G10_TetrisRenderer _Renderer = new G10_TetrisRenderer();
-        readonly G10_TetrisInputMapper _Input =
-            new G10_TetrisInputMapper(new G10_WpfKeyStateSource());
+        const string GameTitle = "Tetris";
 
-        public string Title { get { return "Tetris"; } }
-        public int Width { get { return 160; } }
-        public int Height { get { return 144; } }
+        readonly G10_TetrisSession _Session;
+        readonly G10_TetrisRenderer _Renderer = new G10_TetrisRenderer();
+        readonly G10_TetrisInputMapper _Input;
+
+        public G10_TetrisGame()
+            : this(new G10_TetrisSession(new G10_RoomHighscoreStore(GameTitle)),
+                new G10_TetrisInputMapper(new G10_WpfKeyStateSource())) { }
+
+        internal G10_TetrisGame(G10_TetrisSession session, G10_TetrisInputMapper input)
+        {
+            _Session = session;
+            _Input = input;
+        }
+
+        public string Title { get { return GameTitle; } }
+        public int Width { get { return G10_TetrisRenderer.Width; } }
+        public int Height { get { return G10_TetrisRenderer.Height; } }
         public bool ExitRequested { get { return false; } }
 
         public void Start()
@@ -24,8 +53,7 @@ namespace OOPGames
 
         public void Update(IReadOnlyCollection<Key> keys)
         {
-            G10_TetrisInput input = _Input.Read(keys);
-            _Session.Update(G10_TetrisConfig.FixedDeltaSeconds, input);
+            _Session.Update(G10_TetrisConfig.FixedDeltaSeconds, _Input.Read(keys));
         }
 
         public void Draw(Canvas canvas)
