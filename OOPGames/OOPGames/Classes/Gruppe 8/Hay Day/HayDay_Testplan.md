@@ -112,12 +112,12 @@ Der Plan selbst führt noch keine Tests aus und ändert kein Spielverhalten.
 - Vor einem gemeinsamen Commit: Standard-Testlauf ausführen und nur fortfahren, wenn Build und Tests erfolgreich sind.
 - Tests müssen unabhängig voneinander und in beliebiger Reihenfolge bestehen. Gemeinsame globale Testdaten, echte Wartezeiten und produktive Save-Dateien sind verboten.
 
-## Noch zu erledigen, bevor Tests implementiert werden
+## Umgesetzter Teststand
 
-1. Testprojekt anlegen, xUnit und die passende .NET-Zielplattform einrichten und in die Lösung aufnehmen.
-2. Einen frischen, deterministischen Feldzustand für Tests verfügbar machen.
-3. Uhr und Speicherpfad so isolieren, dass Zeit- und Regeltests deterministisch sind und keine Nutzerdaten berühren.
-4. Die Testfälle in der Reihenfolge A bis F umsetzen und nach jeder Gruppe die gesamte Suite ausführen.
+1. Das xUnit-Projekt `Gruppe8HayDayTests` ist unter `OOPGames` angelegt und in die Lösung aufgenommen.
+2. `HayDayField.CreateNewField()` stellt einen frischen deterministischen Startzustand bereit.
+3. `SetSavePathForTesting` und `ClearSavePathForTesting` isolieren den Speicherpfad der Tests vom produktiven Spielstand.
+4. Die ersten Automatisierungstests prüfen Startwerte, Wachstum, Reife, ungültige Züge und Save-/Load-Bestände.
 
 ## Abgrenzung
 

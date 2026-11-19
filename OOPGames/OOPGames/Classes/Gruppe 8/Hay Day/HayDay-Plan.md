@@ -35,6 +35,7 @@ Der vorhandene Stand enthält bereits das 50x100-Raster, isometrische Zeichnung,
 - `OOPGames/Classes/Gruppe 8/Hay Day/HayDayGame.cs`: Regeln, Rasterzustand, Eingaben, Preise, Shop, Produktion und Save-Daten.
 - `OOPGames/Classes/Gruppe 8/Hay Day/HayDayPainter.cs`: isometrische Darstellung, Menüs, Gehege, Gebäude, Pflanzen und Tiere.
 - `OOPGames/Classes/Gruppe 8/Hay Day/HayDayHumanPlayer.cs`: Zuordnung der Maus- und Tastatureingaben zu Hay-Day-Zügen.
+- `OOPGames/Gruppe8HayDayTests`: Automatisierte xUnit-Tests für Startzustand, Wachstum, Züge und Speicher.
 
 ## Hinweise
 
