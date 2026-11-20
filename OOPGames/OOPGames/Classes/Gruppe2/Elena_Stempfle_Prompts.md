@@ -1153,3 +1153,48 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 > Ich committe alle Änderungen aus den Prompts 44 bis 58: die Gruppen-Dateien in `Classes/Gruppe2/`, das Gruppen-Interface in `Interfaces/Gruppe2/`, die neuen Dateien (`Elena_Stempfle_TrainRunPainterScene.cs`, `…TrainRunVisualPool.cs`), die umbenannten Dateien und die drei geänderten Registrierungszeilen in `MainWindow.xaml.cs`. Vorher habe ich geprüft, dass sich in `MainWindow.xaml.cs` nur diese drei Zeilen geändert haben. Die fremden obj-Dateien in `HouseExample/` kommen nicht in den Commit. Gepullt und gepusht wird nicht, weil das nicht angefragt war.
 
 **Ergebnisvermerk:** Commit lokal erstellt, nicht gepusht.
+
+## 59. Pull und Push
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du die Änderungen pullen und dann meine Änderungen pushen
+
+**Antwort:**
+
+> - **Pull:** `git pull --rebase` lief ohne Konflikt in Gruppe 2 durch, Lani hatte in der Zwischenzeit nichts gepusht. Danach Build mit 0 Warnungen und 0 Fehlern, alle Train-Run-Tests bestanden. Mein Commit ist als `f1b8c48` gepusht.
+> - **Alte Prompt-Datei wieder aufgetaucht:** Ein Commit aus Gruppe 5 („Update Gruppe 5 Satisfactory implementation“) hat versehentlich eine alte Kopie dieser Prompt-Datei wieder unter `Classes/Gruppe2/4Gewinn/Elena_Stempfle_Prompts.md` angelegt. Es ist die Fassung vom 29.10. mit kaputten Umlauten. Die gültige Datei ist diese hier in `Classes/Gruppe2/`. Die Kopie ist noch nicht entfernt, das soll erst nach Rückfrage geschehen.
+> - **Lokale fremde Build-Dateien:** Beim Zurückspielen der lokalen, nicht committeten Änderungen an fremden Build-Dateien in `HouseExample/` gab es einen Konflikt, weil eine davon inzwischen auf dem Server liegt. Diese lokalen Änderungen sind vollständig im Stash `stash@{0}` gesichert. Sie gehören nicht zu Gruppe 2 und waren nie Teil eines Commits.
+
+**Ergebnisvermerk:** Gepullt und gepusht (`f1b8c48`). Offen: alte Prompt-Kopie in `4Gewinn/` und lokaler Stash mit fremden Build-Dateien.
+
+## 60. Alte Prompt-Kopie löschen
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> 1. kannst du löschen, 2. ignorieren
+
+**Antwort:**
+
+> 1. Die versehentlich von Gruppe 5 wieder angelegte alte Kopie `Classes/Gruppe2/4Gewinn/Elena_Stempfle_Prompts.md` (Fassung vom 29.10. mit kaputten Umlauten) ist per `git rm` gelöscht. Die gültige Prompt-Datei bleibt `Classes/Gruppe2/Elena_Stempfle_Prompts.md`.
+> 2. Die fremden Build-Dateien in `HouseExample/` und der Stash `stash@{0}` bleiben wie gewünscht unverändert.
+
+**Ergebnisvermerk:** Alte Kopie gelöscht, noch nicht committet.
+
+## 61. Commit, Pull und Push
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> okay kannst du die dann wieder comitten, pullen und pushen
+
+**Antwort:**
+
+> Ich committe ausdrücklich nur die Löschung der alten Prompt-Kopie in `4Gewinn/` und diese Prompt-Datei (Einträge 59 bis 61). Die fremden Build-Dateien aus `HouseExample/`, die nach dem letzten Pull im Staging-Bereich lagen, kommen nicht mit. Danach folgen `git pull --rebase` und `git push`.
+
+**Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt.
