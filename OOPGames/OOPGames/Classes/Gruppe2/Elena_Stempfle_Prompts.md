@@ -812,3 +812,344 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 > - Lanis Drehung über `AnimationTicks` ist übernommen. Meine Drehung pro gezeichnetem Bild (`CoinDegreesPerFrame`, `_frame`) und mein Test `TestCoinsSpinIndependentOfSpeed` sind entfernt, weil Lanis Test dasselbe abdeckt.
 > - Upgrade-Münzen stehen still. Die eigenen Farben pro Upgrade aus Prompt 42 bleiben erhalten.
 > - Lanis Tests sind unverändert. Build: 0 Warnungen, 0 Fehler. Alle Tests 4-mal hintereinander bestanden.
+
+## 44. Wagen als Güterwagen ohne Frontfenster
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du die Wagons anderst Gestallten, das die eher ausschauen wie Güterwagons und keine Fenster an der Vorderseite haben, wendern nur an den Seiten aber das muss auch nicht sein
+
+**Antwort:**
+
+> Die Änderung liegt im Painter (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig. Die Spielregeln sind unverändert.
+>
+> 1. **Neues Modell** (`CreateCargoWagonModel`): Das alte Modell stammte noch von einem Personenwagen (lila, runder Dachbogen, drei Fenster und Lampen an der Front). Jetzt ist es ein gedeckter Güterwagen:
+>    - rostroter, kantiger Wagenkasten mit flachem, leicht gewölbtem Dach,
+>    - an den Seiten senkrechte Verstärkungsrippen und je eine Schiebetür mit Laufschienen und Griff,
+>    - an beiden Stirnseiten keine Fenster, stattdessen waagrechte Rippen, eine Leiter und eine Kupplung,
+>    - darunter ein dunkles Fahrgestell mit zwei Drehgestellen und je vier Rädern.
+>
+>    Seitenfenster gibt es keine, das war laut Prompt optional. Das Modell wird wie bisher passgenau zwischen die Schienen gesetzt.
+> 2. **Aufgeräumt:** Die Hilfsfunktion `AddWheel` hat nur das alte Wagenmodell genutzt und ist entfernt.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden. Gerenderte Bilder kontrolliert: Stirnseite ohne Fenster mit Leiter und Rippen, Seiten mit Rippen und Schiebetür.
+
+**Ergebnisvermerk:** Wagen sehen jetzt wie Güterwagen aus, ohne Frontfenster. Noch nicht committet.
+
+## 45. Magnet zieht aus jeder Ebene, Münzen auf den Zugdächern
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du bei dem Magnet noch einstellen, dass er aus jeder Ebene die Münzen zieht, z.B. wenn ich den Jetpack und den Magneten habe, dann sammel ich auch die Münzen vom Boden auf. Und es gibt auch Münzen auf den Zugdächern wenn ich durch eine Rampe oder Hüpfen auf diese Komme
+
+**Antwort:**
+
+> Die Änderungen liegen in `Classes/Gruppe2/Subway Surfer/` und im Gruppen-Interface `Interfaces/Gruppe2/Stefanie_Kolb_Gruppe2_SubwaySurferInterfaces.cs`, eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Drei Höhenebenen:** Neu in der gemeinsamen Zug-Geometrie sind `Gruppe2_SubwayHeightLevel` (Boden, Dach, Flug) und `LevelOf` für Münze und Läuferin. Rules und Painter entscheiden damit gleich.
+> 2. **Ohne Magnet** sammelt man nur Münzen auf der eigenen Spur und der eigenen Ebene: am Boden die Bodenmünzen, auf dem Zugdach die Dachmünzen, im Jetpack-Flug die Luftmünzen.
+> 3. **Mit Magnet** werden Münzen aus allen Ebenen und von den Nachbarspuren angezogen und eingesammelt, im Jetpack-Flug also auch die Bodenmünzen. Im Painter fliegen sie sichtbar aus jeder Höhe zur Läuferin.
+> 4. **Dachmünzen:** Auf jedem Zug (mit Rampe und ohne) liegt eine Münzreihe auf Dachhöhe, alle 5 Einheiten von vorne bis hinten. Man erreicht sie über die Rampe oder mit dem Hüpfstab. Dafür hat `Gruppe2_SubwayReward` im Gruppen-Interface die neue Eigenschaft `OnRoof`.
+> 5. **Tests:**
+>    - `TestMagnetPullsCoinsFromEveryLevel`: Im Jetpack-Flug wird eine Bodenmünze mit Magnet eingesammelt, ohne Magnet nicht.
+>    - `TestRoofCoins`: Auf Rampen-Zügen liegen Dachmünzen. Eine Dachmünze wird auf dem Dach eingesammelt, vom Gleis darunter aus nicht.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 4-mal hintereinander bestanden. Gerendertes Bild mit Münzreihen auf zwei Rampen-Zügen kontrolliert.
+
+**Ergebnisvermerk:** Magnet sammelt aus jeder Ebene, Zugdächer haben Münzen. Noch nicht committet.
+
+## 46. Surfboard so lange wie der Jetpack
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Kannst du die Zeit in der man das Surboard hat anpassen, das sie genauso lang ist wie die vom Jetpack
+
+**Antwort:**
+
+> Die Änderung liegt in den Rules (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> - Das Surfboard hielt bisher 500 Ticks, alle anderen Upgrades und damit auch der Jetpack 220 Ticks. Jetzt dauern alle Upgrades gleich lang (`UpgradeDurationTicks = 220`, bei 25 Bildern pro Sekunde knapp 9 Sekunden).
+> - Lanis Test `TestRewardCollectionAndUpgrades` hat die 500 Ticks festgehalten. Laut ihrer Prompt-Datei wollte sie nur eine „gewisse Zeit“. Ich habe im Test nur den erwarteten Wert auf 220 angepasst.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Surfboard dauert jetzt so lange wie der Jetpack. Noch nicht committet.
+
+## 47. Surfboard schließt Jetpack und Hüpfstab aus (und umgekehrt)
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Kannst du zudem noch einstellen, das wenn ich ein Surfboard habe, das ich gar keinen Jetpack oder Hüpfstab aufsammeln kann und vice versa
+
+**Antwort:**
+
+> Diese Regel ist seit Prompt 39 im Code (`ExclusiveUpgrades`, `IsBlockedByOtherExclusiveUpgrade` in den Rules). Ich habe geprüft, dass sie die Zusammenführungen mit Lanis Änderungen überstanden hat. Sie gilt in alle Richtungen:
+> - Mit Surfboard gibt es keinen Jetpack und keinen Hüpfstab.
+> - Mit Jetpack gibt es kein Surfboard und keinen Hüpfstab.
+> - Mit Hüpfstab gibt es kein Surfboard und keinen Jetpack.
+>
+> Die gesperrte Upgrade-Münze bleibt auf der Strecke, man läuft durch sie hindurch. Sie bleibt verpasst, auch wenn das aktive Upgrade kurz danach abläuft. Magnet und doppelte Münzen kann man immer dazu einsammeln.
+>
+> Der Test `TestJumpStickJetpackSurfboardExcludeEachOther` prüfte bisher nur den Fall „Surfboard aktiv“. Er prüft jetzt zusätzlich alle sechs Kombinationen (jedes der drei Upgrades aktiv, jeweils eines der beiden anderen angeboten). Am Code der Regel musste nichts geändert werden.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Regel bestätigt und Test auf alle Richtungen erweitert. Noch nicht committet.
+
+## 48. Gesperrte Upgrade-Münzen erscheinen gar nicht
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Die gesperrte Upgrade-Münze bleibt auf der Strecke, du läufst einfach durch sie hindurch. Ich will das die Icons gar nicht auftauchen können, wenn sie gespert sind
+
+**Antwort:**
+
+> Die Änderung liegt in den Rules (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Beim Einsammeln** von Hüpfstab, Jetpack oder Surfboard verschwinden alle Upgrade-Münzen der beiden anderen sofort von der Strecke (`GrantUpgrade`).
+> 2. **Beim Erzeugen neuer Wellen** werden nur Upgrades gewählt, die gerade nicht gesperrt sind. Solange eines der drei aktiv ist, erscheinen also keine Münzen der beiden anderen. Magnet und doppelte Münzen erscheinen weiterhin.
+> 3. Die bisherige Sperre beim Einsammeln bleibt als Absicherung bestehen.
+> 4. **Test:** `TestBlockedUpgradesDoNotAppear`: Nach dem Einsammeln eines Jetpacks sind Hüpfstab- und Surfboard-Münzen von der Strecke verschwunden, eine Magnet-Münze bleibt. Über 150 Ticks mit aktivem Jetpack entstehen keine gesperrten Upgrade-Münzen.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 4-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Gesperrte Upgrades tauchen nicht mehr auf der Strecke auf. Noch nicht committet.
+
+## 49. Flüssigeres Rendering (bleibende 3D-Szene)
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du die reendering Pipeline anpassen, damit das Spiel flüssiger läuft und nicht so stottern
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig. Den Takt des Frameworks (alle 40 ms) und den Spielablauf habe ich nicht verändert. Eine eigene Render-Schleife wäre laut Projektanforderungen nicht erlaubt.
+>
+> **Messung vorher** (Messprogramm, 300 Bilder): Regeln unter 0,1 ms, Zeichnen ca. 2,4 ms, Layout und Render-Vorbereitung ca. 3,6 ms, 13 Speicherbereinigungen. Ursache: Der Painter hat in jedem Bild die komplette 3D-Szene gelöscht und neu aufgebaut, also Viewport3D, über 40 einzelne Schwellen, Stadt, Gleise, alle Objekte und die Läuferin. WPF musste dadurch jedes Mal die gesamte Geometrie neu an den Render-Thread übertragen.
+>
+> **Umbau:**
+> 1. **Bleibende Szene** (`Elena_Stempfle_SubwayPainterScene.cs`, Teil des Painters als partial class): Viewport3D, Kamera, Licht, Boden, Gleise, Schwellen und Stadt werden einmal angelegt. Pro Bild werden nur Kamera, Schwellen und Stadt verschoben. Alle Schwellen sind jetzt ein einziges Objekt.
+> 2. **Objekt-Pool** (`Elena_Stempfle_SubwayVisualPool.cs`): Jedes Hindernis, jede Münze und die Läuferin behalten über alle Bilder dasselbe 3D-Objekt. Pro Bild ändern sich nur Position und bei Bedarf das Modell. Nur beim Auftauchen oder Verschwinden wird etwas eingefügt oder entfernt. Die Reihenfolge (Schatten vor Läuferin, Läuferin als letztes Objekt) bleibt erhalten, darauf bauen Lanis Tests auf.
+> 3. **Läufer-Modelle zwischengespeichert:** Die Laufbewegung wird auf 17 Phasen gerundet, jedes Modell wird nur einmal gebaut und danach wiederverwendet.
+> 4. **Keine Münzschatten mehr:** Sie waren kaum zu sehen, kosteten bei vielen Münzen aber spürbar Zeit. Hindernisse, Züge, Upgrade-Münzen und Figuren werfen weiter Schatten.
+> 5. Nur das 2D-HUD wird pro Bild neu gezeichnet. Die Viewport3D bleibt im Canvas.
+>
+> **Messung nachher:** Zeichnen ca. 1,0 ms (vorher 2,4 ms), Layout und Render-Vorbereitung ca. 2,1 ms (vorher 3,6 ms), 8 statt 13 Speicherbereinigungen. Die größte Entlastung ist für den Render-Thread zu erwarten, weil er die Geometrie nicht mehr in jedem Bild neu bekommt. Diesen Anteil kann das Messprogramm nicht direkt erfassen.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests (auch Lanis) 3-mal hintereinander bestanden. Gerendertes Bild kontrolliert: Die Szene sieht unverändert aus.
+
+**Ergebnisvermerk:** Szene bleibt über die Bilder erhalten, weniger Arbeit pro Bild und weniger Speicherbereinigungen. Noch nicht committet.
+
+## 50. Münzen bleiben länger im Bild
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du die Münzen noch länger im Bild behalten, heist sie verschwinden nicht so schnell, sobald ich auf deren höhe bin
+
+**Antwort:**
+
+> Die Änderung liegt in den Rules (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Länger sichtbar:** Münzen und Upgrade-Münzen wurden bisher schon 4 Einheiten hinter der Läuferin entfernt. Das ist noch deutlich vor der Kamera, deshalb verschwanden sie neben der Läuferin. Die Kamera steht 6,45 Welteinheiten hinter ihr. Rechnet man Blickwinkel und Höhe durch, ist eine Münze erst etwa 40 Einheiten hinter der Läuferin aus dem Bild. Sie werden jetzt erst bei 45 Einheiten entfernt (`RewardRemoveBehindDistance`). Vorbeigezogene Münzen laufen also aus dem Bild heraus, statt plötzlich zu verschwinden.
+> 2. **Einsammeln unverändert:** Eingesammelt wird eine Münze weiterhin nur, während man an ihr vorbeiläuft, also bis 4 Einheiten dahinter (`RewardCollectBehindDistance`). Sonst könnte man eine längst vorbeigezogene Münze nachträglich durch einen Spurwechsel einsammeln.
+> 3. **Test:** `TestPassedCoinsStayVisibleButAreNotCollectedLater` prüft, dass eine vorbeigezogene Münze 20 Einheiten hinter der Läuferin noch vorhanden ist und durch einen späteren Spurwechsel nicht mehr eingesammelt wird.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden. Gerendertes Bild kontrolliert: Vorbeigezogene Münzen sind neben und hinter der Läuferin zu sehen.
+
+**Ergebnisvermerk:** Münzen verschwinden erst außerhalb des Bildes. Noch nicht committet.
+
+## 51. Münzen werden auch bei hohem Tempo eingesammelt
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> wenn das Tempo schneller wird und ich durch die Münzen laufe, verschwinden sie nicht so wie beim langsamen Temp: beim schnellen sind sie immer noch da nachdem ich durch sie gelaufen bin und beim langsam sind sie weg.
+
+**Antwort:**
+
+> Die Änderung liegt in den Rules (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> **Ursache:** Seit Prompt 50 wird eine Münze nur in einem Fenster eingesammelt: von 1 Einheit vor bis 4 Einheiten hinter der Läuferin, also 5 Einheiten breit. Pro Tick bewegt sich alles um das aktuelle Tempo weiter, und das hat seit Prompt 26 keine Obergrenze. Ab etwa Tempo 5 konnte eine Münze in einem Tick über das ganze Fenster springen. Sie wurde nie eingesammelt und blieb sichtbar auf der Strecke.
+>
+> **Korrektur:** Eine Münze zählt jetzt zusätzlich dann, wenn sie genau in diesem Tick an der Läuferin vorbeigezogen ist (`passedThisTick`), egal wie weit sie dabei springt. Dass vorbeigezogene Münzen nicht später durch einen Spurwechsel eingesammelt werden, bleibt erhalten.
+>
+> **Test:** `TestCoinsAreCollectedAtHighSpeed` lässt die Läuferin mit Tempo 9 durch eine Münze laufen, sie wird eingesammelt. Ohne die Korrektur würde die Münze von 3 vor auf 6 hinter die Läuferin springen und liegen bleiben.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Münzen werden bei jedem Tempo eingesammelt. Noch nicht committet.
+
+## 52. Kamera folgt dem Hüpfstab-Sprung
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> beim hüpfstab bitte die Kamera der hüpfbewegung anpassen
+
+**Antwort:**
+
+> Die Änderung liegt im Painter (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> - Mit dem Hüpfstab springt die Läuferin etwa 3 Einheiten hoch, über die Zugdächer. Die Kamera blieb dabei bisher auf Bodenhöhe, deshalb sprang die Figur oben aus dem Bild.
+> - Die Kamera folgt jetzt dem Hüpfstab-Bogen zu 80 % (`CameraHeight`). Die Läuferin bleibt im Bild, und man sieht trotzdem, dass sie hochspringt. Beim normalen Sprung bleibt die Kamera wie bisher ruhig.
+> - Die Sprunghöhe ist in eine eigene Funktion `RunnerJumpHeight` ausgelagert, die Figur und Kamera gemeinsam nutzen.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 3-mal hintereinander bestanden. Gerendertes Bild am höchsten Punkt eines Hüpfstab-Sprungs kontrolliert: Die Kamera ist mitgegangen, die Läuferin ist samt Stab vollständig im Bild.
+
+**Ergebnisvermerk:** Kamera folgt dem Hüpfstab-Sprung. Noch nicht committet.
+
+## 53. Münzspur beim Jetpack für den ganzen Flug
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> wenn ich mit dem Jetpack oben bin hätte ich gerne länger münzen, weil bis jetzt verchwinden die nach dem ersten drittel und die restlich eZeit fliegst du einfach nur in der Luft ohne was zu machen
+
+**Antwort:**
+
+> Die Änderung liegt in den Rules (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> **Ursache (gemessen):** Die ganze Münzspur wurde beim Einsammeln auf einmal erzeugt, und zwar höchstens bis zur Spawn-Linie bei Entfernung 420. Bei Tempo 1,4 bis 3 reichte das für etwa 80 bis 88 % des Reisefluges. Das Tempo steigt aber ohne Obergrenze: Bei Tempo 6 legt man im Flug weit mehr als 420 Einheiten zurück, und die Münzen reichten nur noch für etwa ein Drittel des Fluges.
+>
+> **Änderung:**
+> 1. **Laufend wachsende Münzspur:** Die Spur wird jetzt in jedem Tick an der Spawn-Linie verlängert (`StartJetpackCoinTrail`, `ExtendJetpackCoinTrail`). Sie wächst so lange, wie die neuen Münzen noch vor dem Sinkflug bei der Läuferin ankommen. Damit hält sie bei jedem Tempo bis kurz vor dem Ende des Fluges. Ein zweiter Jetpack im Flug setzt die bestehende Spur fort.
+> 2. **Randfall beim Einsammeln** (aus Prompt 51), aufgedeckt durch den neuen Test: Lag eine Münze oder Upgrade-Münze zu Beginn eines Ticks schon im Einsammelbereich und sprang bei hohem Tempo in einem Schritt dahinter, zählte sie nicht. Jetzt zählt jede Münze, die im Lauf des Ticks im Einsammelbereich war.
+> 3. **Test:** `TestJetpackCoinTrailLastsWholeFlightAtHighSpeed` sammelt bei Tempo über 4 einen Jetpack ein und prüft, dass in mindestens 80 % des Reisefluges Luftmünzen vor der Läuferin liegen.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 4-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Jetpack-Münzen reichen bei jedem Tempo fast über den ganzen Flug. Noch nicht committet.
+
+## 54. Über Upgrade-Münzen hinwegspringen
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst ddu noch einstellen, das man auch über die Upgrade Icons hüpfen kann, weil bis jetzt sammel ich die immer ein auch wenn ich über sie drüber springen will
+
+**Antwort:**
+
+> Die Änderung liegt in den Rules (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Ursache:** Bei Upgrade-Münzen wurde nur geprüft, ob sie auf der Spur der Läuferin liegen, nicht in welcher Höhe sie ist. Deshalb wurden sie auch mitten im Sprung eingesammelt.
+> 2. **Neue Regel** (`IsAboveUpgradeCoin`): Eine Upgrade-Münze zieht unten durch, wenn die Läuferin über ihr ist. Das gilt im Sprung oberhalb von 35 % der Sprunghöhe, beim Fall vom Zugdach, im Jetpack-Flug oder auf einer anderen Ebene (z. B. Zugdach). Ganz am Anfang und Ende eines Sprungs sind die Füße noch tief genug, dann wird sie eingesammelt. Eine übersprungene Upgrade-Münze gilt als verpasst.
+> 3. **Normale Münzen** sammelt man im Sprung weiterhin ein.
+> 4. **Test:** `TestJumpingOverUpgradeCoins`: Eine Magnet-Münze erreicht die Läuferin um den höchsten Punkt des Sprungs herum. Mit Sprung bleibt sie liegen, ohne Sprung wird sie eingesammelt.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 4-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Über Upgrade-Münzen kann man jetzt hinwegspringen. Noch nicht committet.
+
+## 55. Seltenere Upgrades, vor allem der Jetpack
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du die Wahrscheinlichkeit, das Upgrade Icons kommen verkleiner, vor allem die vom Jetpack, weil gerado ist es so das alle 2s ein neues Jetpack Icon auftaucht
+
+**Antwort:**
+
+> Die Änderung liegt in den Rules (`Classes/Gruppe2/Subway Surfer/`), eine Framework-Erweiterung war nicht nötig.
+>
+> **Ursache:** Pro Welle kam mit 25 % Wahrscheinlichkeit ein Upgrade, alle fünf Arten gleich häufig. Wellen entstehen aber pro zurückgelegter Strecke, also umso öfter, je schneller man läuft. Da das Tempo keine Obergrenze hat, kamen bei hohem Tempo alle 2 bis 3 Sekunden Upgrades.
+>
+> **Änderung:**
+> 1. **Feste Pause:** Nach einer Upgrade-Münze kommt frühestens nach 300 Ticks (ca. 12 Sekunden) die nächste (`UpgradeSpawnPauseTicks`). Die Pause wird in Ticks gezählt und ist damit unabhängig vom Tempo. Danach kommt pro Welle mit 1/3 Wahrscheinlichkeit eine.
+> 2. **Gewichtung** (`UpgradeWeights`, `ChooseUpgrade`): Magnet und doppelte Münzen je 3, Hüpfstab und Surfboard je 2, Jetpack 1. Der Jetpack ist also am seltensten (1 von 11). Gesperrte Upgrades erscheinen weiterhin gar nicht.
+> 3. **Test:** `TestUpgradeCoinsAreRare` läuft 4000 Ticks mit hohem Tempo und prüft, dass zwischen zwei Upgrade-Münzen immer mindestens 300 Ticks liegen und trotzdem welche erscheinen. Endet ein Spiel im Test, startet er ein neues.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests 6-mal hintereinander bestanden.
+
+**Ergebnisvermerk:** Upgrades kommen höchstens alle ca. 12 Sekunden, der Jetpack am seltensten. Noch nicht committet.
+
+## 56. Code bereinigen (Wiederholungen und ungenutzte Teile)
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Kannst du überprüfen ob der Code wiederholungen oder unnötige Teile beinhalten, wenn ja kannst du den Code bitte bereinigen ohne die Darstellung, REgeln und Verhaltensweise zu ändern
+
+**Antwort:**
+
+> Alle Änderungen liegen in `Classes/Gruppe2/Subway Surfer/`, eine Framework-Erweiterung war nicht nötig. Darstellung, Regeln und Verhalten sind unverändert.
+>
+> **Vorgehen:** Ungenutzten Code habe ich nicht nach Augenmaß gesucht, sondern mit der Code-Analyse des C#-Compilers ermittelt (Regeln IDE0051/IDE0052/IDE0059). Die Analyse war nur für diesen Build über die Kommandozeile eingeschaltet, Projektdateien sind unverändert. Weil durch das Entfernen weitere Hilfsmethoden ungenutzt wurden, lief das in sechs Runden, bis keine Meldung mehr kam.
+>
+> 1. **Ungenutzter Code im Painter entfernt** (2568 → 1555 Zeilen): der komplette alte 2D-Zeichenweg aus der Zeit vor der 3D-Szene. Dazu gehörten `DrawBackground`, `DrawTrack`, `DrawWorldObjects`, `DrawRunner`, die 2D-Zug-, Wagen-, Rampen-, Absperrungs-, Busch- und Ampelzeichnungen, `DrawUpgradeIcon`, `DrawTexturedTrainPart`, `CreateTrainCamera`, `CreateCityCamera`, `CreateCityVisual`, die 2D-Hilfen (`AddLine`, `AddPolygon`, `AddTrainPolygon`, …) sowie nicht mehr genutzte Konstanten und Pinsel. Außerdem die nie verwendete Variable `rim` im Ampelmodell.
+> 2. **Wiederholungen zusammengefasst:**
+>    - Rules: `EndJump()` ersetzt fünf gleiche Zwei-Zeilen-Blöcke, `ClimbOntoRoof(message)` die doppelte „aufs Zugdach“-Logik bei Rampe und Hüpfstab. `HitUnless(ausgewichen, tödlich, Meldung)` ersetzt fünf gleich gebaute Kollisionsfälle (kleine/große Absperrung, Busch, Pflanzkübel, Bordstein). Die Bedingungen und Meldungen sind unverändert.
+>    - Painter: `AddBushCluster` und die handgebauten Kugeln in `AddSignalLens` nutzen jetzt die vorhandene `AddScaledSphere`.
+> 3. **Geprüft und behalten:** Alle Teile der gemeinsamen Zug-Geometrie werden genutzt. Die Tests habe ich nicht verändert.
+>
+> Build: 0 Warnungen, 0 Fehler, und die Code-Analyse meldet nichts Ungenutztes mehr. Alle Tests (auch Lanis) nach jedem Schritt bestanden. Gerendertes Bild kontrolliert: Die Darstellung ist unverändert.
+
+**Ergebnisvermerk:** Rund 1000 Zeilen ungenutzter Code entfernt, Wiederholungen zusammengefasst, Verhalten unverändert. Noch nicht committet.
+
+## 57. „Subway Surfer“ in „Train Run“ umbenennen
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> Kannst du alles was mit Subway Surfer benannt ist zu Train Run umbennenen, vor allem bei der Auswahl im Spielfenster
+
+**Rückfrage:** Wie weit soll umbenannt werden (nur sichtbare Namen / alles inkl. Klassen und Dateien / sichtbar plus eigene Dateien)? Entscheidung: „Alles inkl. Klassen/Dateien“.
+
+**Antwort:**
+
+> Die Änderungen liegen in `Classes/Gruppe2/` und `Interfaces/Gruppe2/`. In `MainWindow.xaml.cs` sind nur die drei Zeilen im erlaubten Registrierungsblock geändert. Eine Framework-Erweiterung war nicht nötig.
+>
+> 1. **Auswahl im Spielfenster:** „Gruppe 2 - Train Run Regeln“, „Gruppe 2 - Train Run Painter“, „Gruppe 2 - Train Run Laeufer“.
+> 2. **Im Code** (alle Gruppen-Dateien, auch Stefanies Interfacedatei und Lanis Tests):
+>    - `Gruppe2_Subway…` heißt jetzt `Gruppe2_TrainRun…`, `IGruppe2_Subway…` heißt `IGruppe2_TrainRun…`.
+>    - Die Zug-Geometrie heißt `Gruppe2_TrainRunLayout`.
+>    - Variablen wie `subwayField` heißen jetzt `trainRunField`.
+>    - Sichtbare Texte und Kommentare sagen „Train Run“.
+>    - Das Testskript meldet „All Train Run tests passed.“.
+> 3. **Eigene Dateien umbenannt:** `Elena_Stempfle_TrainRunLaneChange.cs`, `…TrainRunLayout.cs`, `…TrainRunPainterScene.cs`, `…TrainRunSceneLighting.cs`, `…TrainRunVisualPool.cs`.
+> 4. **Noch nicht umbenannt:** Das Verschieben der übrigen Dateien und Ordner wurde von der Sicherheitsprüfung des Werkzeugs blockiert, weil es Dateien anderer Teammitglieder betrifft. Ich habe es nicht umgangen. Offen sind:
+>    - der Ordner `Subway Surfer`,
+>    - die gemeinsamen Dateien `Gruppe2_Subway{Field,Painter,Player,Rules,Tests}.cs` und `RunSubwayTests.ps1`,
+>    - Stefanies `Stefanie_Kolb_Gruppe2_SubwaySurferInterfaces.cs` und ihre Pläne in `Plans/`,
+>    - Lanis `lani_sorensen_prompts_subwaysurfer.md`,
+>    - der Konzeptordner `Classes/Gruppe_2_Subway_Surfer`.
+>
+>    Die Inhalte von Prompt-Dateien, Plänen und Konzept bleiben unverändert, weil sie den Verlauf dokumentieren.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests bestanden.
+
+**Ergebnisvermerk:** Spielname, Klassen und eigene Dateien heißen Train Run. Die Umbenennung der übrigen Datei- und Ordnernamen wartet auf Freigabe. Noch nicht committet.
+
+## 58. Commit
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du alle Änderungen committen
+
+**Antwort:**
+
+> Ich committe alle Änderungen aus den Prompts 44 bis 58: die Gruppen-Dateien in `Classes/Gruppe2/`, das Gruppen-Interface in `Interfaces/Gruppe2/`, die neuen Dateien (`Elena_Stempfle_TrainRunPainterScene.cs`, `…TrainRunVisualPool.cs`), die umbenannten Dateien und die drei geänderten Registrierungszeilen in `MainWindow.xaml.cs`. Vorher habe ich geprüft, dass sich in `MainWindow.xaml.cs` nur diese drei Zeilen geändert haben. Die fremden obj-Dateien in `HouseExample/` kommen nicht in den Commit. Gepullt und gepusht wird nicht, weil das nicht angefragt war.
+
+**Ergebnisvermerk:** Commit lokal erstellt, nicht gepusht.

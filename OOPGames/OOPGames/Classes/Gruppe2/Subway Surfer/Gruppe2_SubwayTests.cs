@@ -9,7 +9,7 @@ using System.Windows.Media.Media3D;
 
 namespace OOPGames
 {
-    public static class Gruppe2_SubwayTests
+    public static class Gruppe2_TrainRunTests
     {
         public static void RunAllTests()
         {
@@ -39,54 +39,316 @@ namespace OOPGames
             TestJetpackFlight();
             TestMagnetCollectsNeighbourLaneCoins();
             TestJumpStickJetpackSurfboardExcludeEachOther();
+            TestBlockedUpgradesDoNotAppear();
+            TestMagnetPullsCoinsFromEveryLevel();
+            TestRoofCoins();
+            TestPassedCoinsStayVisibleButAreNotCollectedLater();
+            TestCoinsAreCollectedAtHighSpeed();
+            TestJetpackCoinTrailLastsWholeFlightAtHighSpeed();
+            TestJumpingOverUpgradeCoins();
+            TestUpgradeCoinsAreRare();
+        }
+
+        private static void TestUpgradeCoinsAreRare()
+        {
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+            HashSet<Gruppe2_TrainRunReward> seen = new HashSet<Gruppe2_TrainRunReward>();
+            int upgrades = 0;
+            int lastSpawnTick = -1;
+            int tickInRun = 0;
+            rules.ClearField();
+            for (int tick = 0; tick < 4000; tick++)
+            {
+                if (field.GameOver)
+                {
+                    // A new run starts its own upgrade pause.
+                    rules.ClearField();
+                    tickInRun = 0;
+                    lastSpawnTick = -1;
+                }
+
+                if (tickInRun == 1)
+                {
+                    field.Distance = 6000; // high speed: waves come very often
+                }
+
+                field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.Surfboard] = 100000; // survive collisions
+                rules.TickGameCall();
+                tickInRun++;
+                field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.Surfboard] = 100000;
+                foreach (Gruppe2_TrainRunReward upgrade in field.Rewards
+                    .Where(reward => reward.Kind == Gruppe2_TrainRunRewardKind.UpgradeBox && seen.Add(reward)))
+                {
+                    upgrades++;
+                    AssertTrue(lastSpawnTick < 0 || tickInRun - lastSpawnTick >= 300,
+                        "two upgrade coins appear at least 300 ticks apart, also at high speed");
+                    lastSpawnTick = tickInRun;
+                }
+            }
+
+            AssertTrue(upgrades >= 2 && upgrades <= 4000 / 300 + 1,
+                "upgrade coins still appear, but rarely (" + upgrades + " in 4000 ticks)");
+        }
+
+        private static void TestJumpingOverUpgradeCoins()
+        {
+            foreach (bool jump in new[] { true, false })
+            {
+                Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+                Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+                rules.ClearField();
+                // The upgrade coin reaches the runner around the highest point of the jump.
+                field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                    Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 9, Gruppe2_TrainRunUpgradeKind.Magnet));
+                if (jump)
+                {
+                    rules.DoMove(new Gruppe2_TrainRunMove(Key.Up, 1));
+                }
+
+                for (int tick = 0; tick < 20; tick++)
+                {
+                    rules.TickGameCall();
+                }
+
+                AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Magnet) == !jump,
+                    jump
+                        ? "jumping over an upgrade coin lets it pass below"
+                        : "running into an upgrade coin collects it");
+            }
+        }
+
+        private static void TestJetpackCoinTrailLastsWholeFlightAtHighSpeed()
+        {
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+            rules.ClearField();
+            rules.TickGameCall();
+            field.Distance = 6000; // high speed
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5, Gruppe2_TrainRunUpgradeKind.Jetpack));
+            rules.TickGameCall();
+            AssertTrue(field.Speed > 4 && field.JetpackTicks > 0, "a jetpack flight at high speed has started");
+
+            int cruiseTicks = 0;
+            int ticksWithCoinsAhead = 0;
+            while (field.JetpackTicks > 0)
+            {
+                rules.TickGameCall();
+                if (field.JetpackHeight >= 1)
+                {
+                    cruiseTicks++;
+                    ticksWithCoinsAhead += field.Rewards.Any(reward => reward.Elevated && reward.Distance > 0) ? 1 : 0;
+                }
+            }
+
+            AssertTrue(cruiseTicks > 100 && ticksWithCoinsAhead >= cruiseTicks * 0.8,
+                "air coins keep coming for most of the flight, also at high speed ("
+                + ticksWithCoinsAhead + " of " + cruiseTicks + " ticks)");
+        }
+
+        private static void TestCoinsAreCollectedAtHighSpeed()
+        {
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+            rules.ClearField();
+            rules.TickGameCall();
+            field.MutableObstacles.Clear();
+            field.MutableRewards.Clear();
+            // A long run: the speed is far above the width of the collection window.
+            field.Distance = 12000;
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(Gruppe2_TrainRunRewardKind.Coin, 1, 3));
+            rules.TickGameCall();
+
+            AssertTrue(field.Speed > 5, "the test runs at high speed (" + field.Speed + ")");
+            AssertTrue(field.Coins == 1,
+                "at high speed a coin is still collected when running through it");
+        }
+
+        private static void TestPassedCoinsStayVisibleButAreNotCollectedLater()
+        {
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+            rules.ClearField();
+            Gruppe2_TrainRunReward coin = new Gruppe2_TrainRunReward(Gruppe2_TrainRunRewardKind.Coin, 0, 2);
+            field.MutableRewards.Add(coin);
+            while (coin.Distance > -20)
+            {
+                rules.TickGameCall();
+            }
+
+            AssertTrue(field.Rewards.Contains(coin),
+                "a coin that was passed stays on the track until it has left the camera view");
+
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Left, 1));
+            rules.TickGameCall();
+            AssertTrue(field.Coins == 0, "a coin far behind the runner cannot be collected by changing lanes later");
+        }
+
+        private static void TestMagnetPullsCoinsFromEveryLevel()
+        {
+            foreach (bool magnet in new[] { true, false })
+            {
+                Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+                Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+                rules.ClearField();
+                // Cruising with the jetpack at flight level.
+                field.Level = Gruppe2_TrainRunLevel.Air;
+                field.JetpackDurationTicks = 200;
+                field.JetpackTicks = 100;
+                if (magnet)
+                {
+                    field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.Magnet] = 200;
+                }
+
+                field.MutableRewards.Add(new Gruppe2_TrainRunReward(Gruppe2_TrainRunRewardKind.Coin, 1, 0.5));
+                rules.TickGameCall();
+                AssertTrue(field.Coins == (magnet ? 1 : 0),
+                    magnet
+                        ? "with the magnet a flying runner also collects coins on the ground"
+                        : "without the magnet a flying runner does not reach coins on the ground");
+            }
+        }
+
+        private static void TestRoofCoins()
+        {
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+            bool roofCoinsFound = false;
+            for (int run = 0; run < 100 && !roofCoinsFound; run++)
+            {
+                rules.ClearField();
+                for (int tick = 0; tick < 300 && !field.GameOver && !roofCoinsFound; tick++)
+                {
+                    rules.TickGameCall();
+                    roofCoinsFound = field.MutableObstacles
+                        .Where(ramp => ramp.Kind == Gruppe2_TrainRunObstacleKind.CargoRamp && ramp.Distance > 50)
+                        .Any(ramp => field.MutableRewards.Any(coin => coin.OnRoof && coin.Lane == ramp.Lane
+                            && coin.Distance > ramp.Distance && coin.Distance < ramp.Distance + 25));
+                }
+            }
+
+            AssertTrue(roofCoinsFound, "coins lie on the roofs of trains with a ramp");
+
+            // On the roof a roof coin is collected, from the track below it is not.
+            rules.ClearField();
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(Gruppe2_TrainRunObstacleKind.CargoWagon, 1, -5));
+            field.Level = Gruppe2_TrainRunLevel.TrainRoof;
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(Gruppe2_TrainRunRewardKind.Coin, 1, 0.5, onRoof: true));
+            rules.TickGameCall();
+            AssertTrue(field.Coins == 1, "a roof coin is collected while running on the roof");
+
+            rules.ClearField();
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(Gruppe2_TrainRunRewardKind.Coin, 1, 0.5, onRoof: true));
+            rules.TickGameCall();
+            AssertTrue(field.Coins == 0, "a roof coin cannot be collected from the track below");
         }
 
         private static void TestJumpStickJetpackSurfboardExcludeEachOther()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
-            field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.Surfboard] = 200;
+            field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.Surfboard] = 200;
 
-            foreach (Gruppe2_SubwayUpgradeKind upgrade in new[]
+            foreach (Gruppe2_TrainRunUpgradeKind upgrade in new[]
             {
-                Gruppe2_SubwayUpgradeKind.JumpStick, Gruppe2_SubwayUpgradeKind.Jetpack,
-                Gruppe2_SubwayUpgradeKind.Magnet, Gruppe2_SubwayUpgradeKind.DoubleCoins
+                Gruppe2_TrainRunUpgradeKind.JumpStick, Gruppe2_TrainRunUpgradeKind.Jetpack,
+                Gruppe2_TrainRunUpgradeKind.Magnet, Gruppe2_TrainRunUpgradeKind.DoubleCoins
             })
             {
-                field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                    Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5, upgrade));
+                field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                    Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5, upgrade));
                 rules.TickGameCall();
             }
 
-            AssertTrue(!field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.JumpStick)
-                    && !field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Jetpack),
+            AssertTrue(!field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.JumpStick)
+                    && !field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Jetpack),
                 "with an active surfboard neither jump stick nor jetpack can be picked up");
-            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Magnet)
-                    && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.DoubleCoins),
+            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Magnet)
+                    && field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.DoubleCoins),
                 "magnet and double coins can always be combined");
 
-            field.MutableUpgrades.Remove(Gruppe2_SubwayUpgradeKind.Surfboard);
-            field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5, Gruppe2_SubwayUpgradeKind.JumpStick));
+            field.MutableUpgrades.Remove(Gruppe2_TrainRunUpgradeKind.Surfboard);
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5, Gruppe2_TrainRunUpgradeKind.JumpStick));
             rules.TickGameCall();
-            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.JumpStick),
+            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.JumpStick),
                 "once the surfboard has run out, the jump stick can be picked up again");
+
+            // The other way round: an active jump stick or jetpack blocks the other two.
+            Gruppe2_TrainRunUpgradeKind[] exclusive =
+            {
+                Gruppe2_TrainRunUpgradeKind.JumpStick, Gruppe2_TrainRunUpgradeKind.Jetpack,
+                Gruppe2_TrainRunUpgradeKind.Surfboard
+            };
+            foreach (Gruppe2_TrainRunUpgradeKind active in exclusive)
+            {
+                foreach (Gruppe2_TrainRunUpgradeKind other in exclusive.Where(kind => kind != active))
+                {
+                    rules.ClearField();
+                    field.MutableUpgrades[active] = 200;
+                    field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                        Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5, other));
+                    rules.TickGameCall();
+                    AssertTrue(!field.ActiveUpgrades.ContainsKey(other),
+                        "with an active " + active + " no " + other + " can be picked up");
+                }
+            }
+        }
+
+        private static void TestBlockedUpgradesDoNotAppear()
+        {
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+            rules.ClearField();
+            rules.TickGameCall();
+            field.MutableRewards.Clear();
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 0, 60, Gruppe2_TrainRunUpgradeKind.JumpStick));
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 2, 90, Gruppe2_TrainRunUpgradeKind.Surfboard));
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 0, 70, Gruppe2_TrainRunUpgradeKind.Magnet));
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5, Gruppe2_TrainRunUpgradeKind.Jetpack));
+            rules.TickGameCall();
+
+            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Jetpack),
+                "the jetpack is picked up");
+            AssertTrue(!field.Rewards.Any(reward => reward.Kind == Gruppe2_TrainRunRewardKind.UpgradeBox
+                    && (reward.Upgrade == Gruppe2_TrainRunUpgradeKind.JumpStick
+                        || reward.Upgrade == Gruppe2_TrainRunUpgradeKind.Surfboard)),
+                "picking up the jetpack removes jump stick and surfboard coins from the track");
+            AssertTrue(field.Rewards.Any(reward => reward.Upgrade == Gruppe2_TrainRunUpgradeKind.Magnet
+                    && reward.Kind == Gruppe2_TrainRunRewardKind.UpgradeBox),
+                "other upgrades stay on the track");
+
+            // While the jetpack is active, no blocked upgrade coins are spawned.
+            for (int tick = 0; tick < 150; tick++)
+            {
+                rules.TickGameCall();
+                AssertTrue(!field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Jetpack)
+                        || !field.Rewards.Any(reward => reward.Kind == Gruppe2_TrainRunRewardKind.UpgradeBox
+                            && (reward.Upgrade == Gruppe2_TrainRunUpgradeKind.JumpStick
+                                || reward.Upgrade == Gruppe2_TrainRunUpgradeKind.Surfboard)),
+                    "blocked upgrades do not appear while the jetpack is active");
+            }
         }
 
         private static void TestMagnetCollectsNeighbourLaneCoins()
         {
             foreach (bool magnet in new[] { true, false })
             {
-                Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-                Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+                Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+                Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
                 rules.ClearField();
                 if (magnet)
                 {
-                    field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.Magnet] = 200;
+                    field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.Magnet] = 200;
                 }
 
-                field.MutableRewards.Add(new Gruppe2_SubwayReward(Gruppe2_SubwayRewardKind.Coin, 0, 0.5));
+                field.MutableRewards.Add(new Gruppe2_TrainRunReward(Gruppe2_TrainRunRewardKind.Coin, 0, 0.5));
                 rules.TickGameCall();
                 AssertTrue(field.Coins == (magnet ? 1 : 0),
                     magnet
@@ -97,20 +359,20 @@ namespace OOPGames
 
         private static void TestJetpackFlight()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
-            field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5, Gruppe2_SubwayUpgradeKind.Jetpack));
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5, Gruppe2_TrainRunUpgradeKind.Jetpack));
             rules.TickGameCall();
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Air
-                    && field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Jetpack),
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.Air
+                    && field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Jetpack),
                 "picking up the jetpack starts a flight");
             AssertTrue(field.Rewards.Any(reward => reward.Elevated),
                 "a coin trail appears at flight level");
 
             double previous = field.JetpackHeight;
-            for (int tick = 0; tick < Gruppe2_SubwayTrainLayout.JetpackClimbTicks; tick++)
+            for (int tick = 0; tick < Gruppe2_TrainRunLayout.JetpackClimbTicks; tick++)
             {
                 rules.TickGameCall();
                 AssertTrue(field.JetpackHeight > previous || field.JetpackHeight == 1,
@@ -121,9 +383,9 @@ namespace OOPGames
             AssertTrue(Math.Abs(field.JetpackHeight - 1) < 0.001, "the runner reaches flight level");
 
             field.MutableRewards.Clear();
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(Gruppe2_SubwayObstacleKind.LargeBarrier, 1, 3));
-            field.MutableRewards.Add(new Gruppe2_SubwayReward(Gruppe2_SubwayRewardKind.Coin, 1, 3, elevated: true));
-            field.MutableRewards.Add(new Gruppe2_SubwayReward(Gruppe2_SubwayRewardKind.Coin, 1, 3));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(Gruppe2_TrainRunObstacleKind.LargeBarrier, 1, 3));
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(Gruppe2_TrainRunRewardKind.Coin, 1, 3, elevated: true));
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(Gruppe2_TrainRunRewardKind.Coin, 1, 3));
             int coinsBefore = field.Coins;
             for (int tick = 0; tick < 6; tick++)
             {
@@ -136,7 +398,7 @@ namespace OOPGames
 
             int remainingTicks = 0;
             bool sankBack = false;
-            while (field.Level == Gruppe2_SubwayLevel.Air && remainingTicks < 400)
+            while (field.Level == Gruppe2_TrainRunLevel.Air && remainingTicks < 400)
             {
                 rules.TickGameCall();
                 // Sinking may end early on a train roof (at half the flight level),
@@ -146,7 +408,7 @@ namespace OOPGames
             }
 
             AssertTrue(sankBack, "at the end the runner sinks back down in an arc");
-            AssertTrue(field.Level != Gruppe2_SubwayLevel.Air && field.JetpackHeight == 0,
+            AssertTrue(field.Level != Gruppe2_TrainRunLevel.Air && field.JetpackHeight == 0,
                 "after the flight the runner is back on the track (or on a train roof)");
         }
 
@@ -161,23 +423,23 @@ namespace OOPGames
         /// <summary>Returns true if the runner ends up on the roof of the second train.</summary>
         private static bool RoofJumpAcrossGap(bool jump)
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
-            double spacing = Gruppe2_SubwayTrainLayout.CarSpacing;
-            Gruppe2_SubwayObstacle firstWagon = new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoWagon, 1, 1);
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoRamp, 1, 1));
+            double spacing = Gruppe2_TrainRunLayout.CarSpacing;
+            Gruppe2_TrainRunObstacle firstWagon = new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoWagon, 1, 1);
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoRamp, 1, 1));
             field.MutableObstacles.Add(firstWagon);
             // Second train after a gap of 12 units.
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoWagon, 1, 1 + spacing + 12));
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.Train, 1, 1 + 2 * spacing + 12));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoWagon, 1, 1 + spacing + 12));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.Train, 1, 1 + 2 * spacing + 12));
 
             rules.TickGameCall();
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.TrainRoof, "the runner walks up onto the first train");
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.TrainRoof, "the runner walks up onto the first train");
 
             while (firstWagon.Distance + spacing > 4)
             {
@@ -186,8 +448,8 @@ namespace OOPGames
 
             if (jump)
             {
-                rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
-                AssertTrue(field.Level == Gruppe2_SubwayLevel.TrainRoof && field.JumpTicks > 0,
+                rules.DoMove(new Gruppe2_TrainRunMove(Key.Up, 1));
+                AssertTrue(field.Level == Gruppe2_TrainRunLevel.TrainRoof && field.JumpTicks > 0,
                     "the runner can jump while standing on a train roof");
             }
 
@@ -196,18 +458,18 @@ namespace OOPGames
                 rules.TickGameCall();
             }
 
-            return !field.GameOver && field.Level == Gruppe2_SubwayLevel.TrainRoof;
+            return !field.GameOver && field.Level == Gruppe2_TrainRunLevel.TrainRoof;
         }
 
         private static void TestLaneChangeIsSmoothArc()
         {
-            Gruppe2_SubwayLaneChange laneChange = new Gruppe2_SubwayLaneChange();
+            Gruppe2_TrainRunLaneChange laneChange = new Gruppe2_TrainRunLaneChange();
             laneChange.Reset(0);
             laneChange.Update(1.55);
 
             double previousX = 0;
             bool leftTheGround = false;
-            for (int frame = 1; frame < Gruppe2_SubwayLaneChange.DurationFrames; frame++)
+            for (int frame = 1; frame < Gruppe2_TrainRunLaneChange.DurationFrames; frame++)
             {
                 AssertTrue(laneChange.X > previousX && laneChange.X < 1.55,
                     "the runner slides step by step towards the new lane");
@@ -223,21 +485,21 @@ namespace OOPGames
 
         private static void TestJumpStickDoesNotJumpOnPickup()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
-            field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5, Gruppe2_SubwayUpgradeKind.JumpStick));
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5, Gruppe2_TrainRunUpgradeKind.JumpStick));
             rules.TickGameCall();
 
-            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.JumpStick),
+            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.JumpStick),
                 "the jump stick is active after picking it up");
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Track && field.JumpHeight == 0,
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.Track && field.JumpHeight == 0,
                 "picking up the jump stick does not start a jump by itself");
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Up, 1));
             int jumpTicks = 0;
-            while (field.Level == Gruppe2_SubwayLevel.Air && jumpTicks < 100)
+            while (field.Level == Gruppe2_TrainRunLevel.Air && jumpTicks < 100)
             {
                 rules.TickGameCall();
                 jumpTicks++;
@@ -249,8 +511,8 @@ namespace OOPGames
 
         private static void TestSpeedKeepsRisingAboveFormerLimit()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
             field.Distance = 3000;
             rules.TickGameCall();
@@ -264,8 +526,8 @@ namespace OOPGames
 
         private static void TestTrainsWithoutRampNeedJumpStick()
         {
-            foreach (Gruppe2_SubwayObstacleKind car in new[]
-                { Gruppe2_SubwayObstacleKind.Train, Gruppe2_SubwayObstacleKind.CargoWagon })
+            foreach (Gruppe2_TrainRunObstacleKind car in new[]
+                { Gruppe2_TrainRunObstacleKind.Train, Gruppe2_TrainRunObstacleKind.CargoWagon })
             {
                 AssertTrue(!JumpOntoCar(car, false),
                     "a normal jump onto a " + car + " without ramp ends the run");
@@ -275,23 +537,23 @@ namespace OOPGames
         }
 
         /// <summary>Returns true if the runner reaches the roof of a lone car by jumping.</summary>
-        private static bool JumpOntoCar(Gruppe2_SubwayObstacleKind kind, bool withJumpStick)
+        private static bool JumpOntoCar(Gruppe2_TrainRunObstacleKind kind, bool withJumpStick)
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
             if (withJumpStick)
             {
-                field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.JumpStick] = 200;
+                field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.JumpStick] = 200;
             }
 
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, 1, 3));
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(kind, 1, 3));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Up, 1));
             bool reachedRoof = false;
             for (int tick = 0; tick < 30 && !field.GameOver; tick++)
             {
                 rules.TickGameCall();
-                reachedRoof |= field.Level == Gruppe2_SubwayLevel.TrainRoof;
+                reachedRoof |= field.Level == Gruppe2_TrainRunLevel.TrainRoof;
             }
 
             return reachedRoof && !field.GameOver;
@@ -299,15 +561,15 @@ namespace OOPGames
 
         private static void TestRampCanBeWalkedUpWithoutJumping()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoRamp, 1, 10));
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoWagon, 1, 10));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoRamp, 1, 10));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoWagon, 1, 10));
 
-            double halfway = Gruppe2_SubwayTrainLayout.RampProgressUnderRunner(field.Obstacles, 1);
+            double halfway = Gruppe2_TrainRunLayout.RampProgressUnderRunner(field.Obstacles, 1);
             AssertTrue(halfway > 0 && halfway < 1,
                 "the runner is halfway up the ramp before reaching its top");
 
@@ -316,32 +578,32 @@ namespace OOPGames
                 rules.TickGameCall();
             }
 
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.TrainRoof && !field.GameOver,
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.TrainRoof && !field.GameOver,
                 "walking up the ramp without jumping leads onto the train roof");
         }
 
         private static void TestBarriersNeedJumpOrRoll()
         {
-            AssertTrue(RunIntoObstacle(Gruppe2_SubwayObstacleKind.SmallBarrier, Key.Up),
+            AssertTrue(RunIntoObstacle(Gruppe2_TrainRunObstacleKind.SmallBarrier, Key.Up),
                 "jumping clears the small barrier");
-            AssertTrue(!RunIntoObstacle(Gruppe2_SubwayObstacleKind.SmallBarrier, Key.None),
+            AssertTrue(!RunIntoObstacle(Gruppe2_TrainRunObstacleKind.SmallBarrier, Key.None),
                 "running into the small barrier ends the run");
-            AssertTrue(RunIntoObstacle(Gruppe2_SubwayObstacleKind.LargeBarrier, Key.Down),
+            AssertTrue(RunIntoObstacle(Gruppe2_TrainRunObstacleKind.LargeBarrier, Key.Down),
                 "rolling passes under the large barrier");
-            AssertTrue(!RunIntoObstacle(Gruppe2_SubwayObstacleKind.LargeBarrier, Key.Up),
+            AssertTrue(!RunIntoObstacle(Gruppe2_TrainRunObstacleKind.LargeBarrier, Key.Up),
                 "jumping does not clear the large barrier");
         }
 
         /// <summary>Returns true if the runner survives the obstacle after pressing the key.</summary>
-        private static bool RunIntoObstacle(Gruppe2_SubwayObstacleKind kind, Key key)
+        private static bool RunIntoObstacle(Gruppe2_TrainRunObstacleKind kind, Key key)
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(kind, 1, 3));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(kind, 1, 3));
             if (key != Key.None)
             {
-                rules.DoMove(new Gruppe2_SubwayMove(key, 1));
+                rules.DoMove(new Gruppe2_TrainRunMove(key, 1));
             }
 
             for (int tick = 0; tick < 5; tick++)
@@ -354,8 +616,8 @@ namespace OOPGames
 
         private static void TestSingleTrainsWithoutRampAreSpawned()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             bool singleTrainFound = false;
 
             for (int run = 0; run < 200 && !singleTrainFound; run++)
@@ -365,9 +627,9 @@ namespace OOPGames
                 {
                     rules.TickGameCall();
                     singleTrainFound = field.MutableObstacles.Any(train =>
-                        train.Kind == Gruppe2_SubwayObstacleKind.Train
+                        train.Kind == Gruppe2_TrainRunObstacleKind.Train
                         && !field.MutableObstacles.Any(ramp =>
-                            ramp.Kind == Gruppe2_SubwayObstacleKind.CargoRamp && ramp.Lane == train.Lane));
+                            ramp.Kind == Gruppe2_TrainRunObstacleKind.CargoRamp && ramp.Lane == train.Lane));
                 }
             }
 
@@ -376,8 +638,8 @@ namespace OOPGames
 
         private static void TestRampIsAlwaysFollowedByWalkableCars()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             int checkedRamps = 0;
 
             for (int run = 0; run < 200 && checkedRamps < 5; run++)
@@ -386,24 +648,24 @@ namespace OOPGames
                 for (int tick = 0; tick < 400 && !field.GameOver; tick++)
                 {
                     rules.TickGameCall();
-                    foreach (Gruppe2_SubwayObstacle ramp in field.MutableObstacles
-                        .Where(item => item.Kind == Gruppe2_SubwayObstacleKind.CargoRamp && item.Distance > 100))
+                    foreach (Gruppe2_TrainRunObstacle ramp in field.MutableObstacles
+                        .Where(item => item.Kind == Gruppe2_TrainRunObstacleKind.CargoRamp && item.Distance > 100))
                     {
                         // Follow the cars that are coupled directly behind the ramp
                         // (another train may stand further back in the same lane).
-                        List<Gruppe2_SubwayObstacle> convoy = new List<Gruppe2_SubwayObstacle>();
-                        Gruppe2_SubwayObstacle next = CarStartingAt(field, ramp.Lane, ramp.Distance);
+                        List<Gruppe2_TrainRunObstacle> convoy = new List<Gruppe2_TrainRunObstacle>();
+                        Gruppe2_TrainRunObstacle next = CarStartingAt(field, ramp.Lane, ramp.Distance);
                         while (next != null)
                         {
                             convoy.Add(next);
-                            next = next.Kind == Gruppe2_SubwayObstacleKind.Train
+                            next = next.Kind == Gruppe2_TrainRunObstacleKind.Train
                                 ? null
-                                : CarStartingAt(field, ramp.Lane, next.Distance + Gruppe2_SubwayTrainLayout.CarSpacing);
+                                : CarStartingAt(field, ramp.Lane, next.Distance + Gruppe2_TrainRunLayout.CarSpacing);
                         }
 
                         AssertTrue(convoy.Count >= 2
-                                && convoy.Last().Kind == Gruppe2_SubwayObstacleKind.Train
-                                && convoy.Take(convoy.Count - 1).All(car => car.Kind == Gruppe2_SubwayObstacleKind.CargoWagon),
+                                && convoy.Last().Kind == Gruppe2_TrainRunObstacleKind.Train
+                                && convoy.Take(convoy.Count - 1).All(car => car.Kind == Gruppe2_TrainRunObstacleKind.CargoWagon),
                             "a ramp is followed by a continuous train of wagons ending with a locomotive");
                         checkedRamps++;
                     }
@@ -413,36 +675,36 @@ namespace OOPGames
             AssertTrue(checkedRamps > 0, "train convoys with ramps are spawned");
         }
 
-        private static Gruppe2_SubwayObstacle CarStartingAt(Gruppe2_SubwayField field, int lane, double distance)
+        private static Gruppe2_TrainRunObstacle CarStartingAt(Gruppe2_TrainRunField field, int lane, double distance)
         {
             return field.MutableObstacles.FirstOrDefault(item => item.Lane == lane
-                && Gruppe2_SubwayTrainLayout.IsCar(item.Kind)
+                && Gruppe2_TrainRunLayout.IsCar(item.Kind)
                 && Math.Abs(item.Distance - distance) < 0.001);
         }
 
         private static void TestRunnerStaysOnRoofUntilLastCarPassed()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
-            double spacing = Gruppe2_SubwayTrainLayout.CarSpacing;
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoRamp, 1, 1));
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoWagon, 1, 1));
-            Gruppe2_SubwayObstacle locomotive = new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.Train, 1, 1 + spacing);
+            double spacing = Gruppe2_TrainRunLayout.CarSpacing;
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoRamp, 1, 1));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoWagon, 1, 1));
+            Gruppe2_TrainRunObstacle locomotive = new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.Train, 1, 1 + spacing);
             field.MutableObstacles.Add(locomotive);
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Up, 1));
             rules.TickGameCall();
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.TrainRoof,
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.TrainRoof,
                 "jumping onto the ramp puts the runner on the roof");
 
             while (locomotive.Distance + spacing > 2 * field.Speed)
             {
                 rules.TickGameCall();
-                AssertTrue(field.Level == Gruppe2_SubwayLevel.TrainRoof && !field.GameOver,
+                AssertTrue(field.Level == Gruppe2_TrainRunLevel.TrainRoof && !field.GameOver,
                     "the runner keeps walking on wagon and locomotive roofs");
             }
 
@@ -451,12 +713,12 @@ namespace OOPGames
                 rules.TickGameCall();
             }
 
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Air && field.DropHeight > 0.5,
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.Air && field.DropHeight > 0.5,
                 "after the last car the runner drops off the roof in an arc");
 
             double highestPoint = field.DropHeight;
             int dropTicks = 0;
-            while (field.Level == Gruppe2_SubwayLevel.Air && dropTicks < 40)
+            while (field.Level == Gruppe2_TrainRunLevel.Air && dropTicks < 40)
             {
                 rules.TickGameCall();
                 highestPoint = Math.Max(highestPoint, field.DropHeight);
@@ -465,7 +727,7 @@ namespace OOPGames
 
             AssertTrue(highestPoint > 1,
                 "the drop starts with a small hop above the roof");
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Track && field.DropHeight == 0,
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.Track && field.DropHeight == 0,
                 "the runner lands on the track after the drop");
             AssertTrue(!field.MutableObstacles.Contains(locomotive),
                 "the left car is gone before the camera is back down on the track");
@@ -473,56 +735,56 @@ namespace OOPGames
 
         private static void TestLaneChangeIntoTrainSideIsBlocked()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
             rules.ClearField();
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoWagon, 0, -5));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoWagon, 0, -5));
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Left, 1));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Left, 1));
             AssertTrue(field.Lane == 1,
                 "the runner cannot move sideways into a train");
             AssertTrue(field.GameOver,
                 "running sideways into a train ends the run");
 
             rules.ClearField();
-            field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.Surfboard] = 200;
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.CargoWagon, 0, -5));
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Left, 1));
+            field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.Surfboard] = 200;
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.CargoWagon, 0, -5));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Left, 1));
             AssertTrue(!field.GameOver
-                    && !field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Surfboard),
+                    && !field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Surfboard),
                 "the surfboard saves the runner once from a side crash");
         }
 
         private static void TestInitialState()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
             rules.ClearField();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
 
             AssertTrue(rules.MovesPossible,
-                "new Subway Surfer game accepts input");
+                "new Train Run game accepts input");
             AssertTrue(field.Lane == 1,
                 "starting lane is the middle lane");
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Track,
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.Track,
                 "runner starts on the track");
             AssertTrue(field.Speed == 1,
                 "starting speed matches the design sheet");
             AssertTrue(field.GuardGap == 100,
                 "guard starts at a full distance");
             AssertTrue(field.GuardVisible
-                && field.GuardIntroTicks == Gruppe2_SubwayField.GuardIntroDurationTicks,
+                && field.GuardIntroTicks == Gruppe2_TrainRunField.GuardIntroDurationTicks,
                 "the Bahnrichter appears during the opening animation");
         }
 
         private static void TestGuardIntroVisibility()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
             rules.ClearField();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
 
-            for (int tick = 0; tick < Gruppe2_SubwayField.GuardIntroDurationTicks - 1; tick++)
+            for (int tick = 0; tick < Gruppe2_TrainRunField.GuardIntroDurationTicks - 1; tick++)
             {
                 rules.TickGameCall();
             }
@@ -540,44 +802,44 @@ namespace OOPGames
 
         private static void TestMovementAndLaneBounds()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
             rules.ClearField();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Left, 1));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Left, 1));
             AssertTrue(field.Lane == 0,
                 "left key moves runner to the left lane");
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Right, 1));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Right, 1));
             AssertTrue(field.Lane == 2,
                 "right key moves runner to the right lane");
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Right, 1));
             AssertTrue(field.Lane == 2,
                 "lane movement stays capped at the rightmost lane");
         }
 
         private static void TestJumpAndRollTransitions()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
             rules.ClearField();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Air,
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Up, 1));
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.Air,
                 "up key triggers a jump into the air state");
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Down, 1));
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Track,
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Down, 1));
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.Track,
                 "down key returns the runner to the track");
         }
 
         private static void TestProgressionAndReset()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
             rules.ClearField();
-            IGruppe2_SubwayField field = (IGruppe2_SubwayField)rules.CurrentField;
+            IGruppe2_TrainRunField field = (IGruppe2_TrainRunField)rules.CurrentField;
 
             for (int tick = 0; tick < 24; tick++)
             {
@@ -586,19 +848,19 @@ namespace OOPGames
 
             AssertTrue(field.Distance > 0 && field.Score > 0,
                 "distance and score advance while running");
-            AssertTrue(((Gruppe2_SubwayField)field).AnimationTicks == 24,
+            AssertTrue(((Gruppe2_TrainRunField)field).AnimationTicks == 24,
                 "the animation clock advances once per game tick");
             AssertTrue(field.Speed > 1,
                 "speed increases as the score grows");
 
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Right, 1));
             rules.ClearField();
 
-            AssertTrue(field.Lane == 1 && field.Level == Gruppe2_SubwayLevel.Track,
+            AssertTrue(field.Lane == 1 && field.Level == Gruppe2_TrainRunLevel.Track,
                 "starting a new run resets the runner position");
             AssertTrue(field.Distance == 0 && field.Score == 0 && field.Coins == 0 && field.Speed == 1,
                 "starting a new run resets progression");
-            AssertTrue(((Gruppe2_SubwayField)field).AnimationTicks == 0,
+            AssertTrue(((Gruppe2_TrainRunField)field).AnimationTicks == 0,
                 "starting a new run resets the animation clock");
             AssertTrue(field.GuardGap == 100 && !field.GameOver
                 && field.Obstacles.Count == 0 && field.Rewards.Count == 0
@@ -608,30 +870,30 @@ namespace OOPGames
 
         private static void TestJumpArc()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
             rules.ClearField();
-            IGruppe2_SubwayField field = (IGruppe2_SubwayField)rules.CurrentField;
-            rules.DoMove(new Gruppe2_SubwayMove(Key.Up, 1));
+            IGruppe2_TrainRunField field = (IGruppe2_TrainRunField)rules.CurrentField;
+            rules.DoMove(new Gruppe2_TrainRunMove(Key.Up, 1));
             rules.TickGameCall();
 
-            AssertTrue(field.Level == Gruppe2_SubwayLevel.Air && field.JumpHeight > 0,
+            AssertTrue(field.Level == Gruppe2_TrainRunLevel.Air && field.JumpHeight > 0,
                 "jumping moves the runner through a visible air arc");
         }
 
         private static void TestHumanPlayerInput()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
             rules.ClearField();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
-            Gruppe2_SubwayHumanPlayer player = new Gruppe2_SubwayHumanPlayer();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
+            Gruppe2_TrainRunHumanPlayer player = new Gruppe2_TrainRunHumanPlayer();
             player.SetPlayerNumber(1);
 
             AssertTrue(player.CanBeRuledBy(rules),
-                "Subway Surfer human player is valid for the Subway Surfer rules");
+                "Train Run human player is valid for the Train Run rules");
 
             IPlayMove validMove = player.GetMove(new KeySelection(Key.Left), field);
-            AssertTrue(validMove is IGruppe2_SubwayMove && ((IGruppe2_SubwayMove)validMove).Key == Key.Left,
-                "valid keyboard input produces a Subway Surfer move");
+            AssertTrue(validMove is IGruppe2_TrainRunMove && ((IGruppe2_TrainRunMove)validMove).Key == Key.Left,
+                "valid keyboard input produces a Train Run move");
 
             AssertTrue(player.GetMove(new KeySelection(Key.Space), field) == null,
                 "unsupported keys are rejected");
@@ -652,10 +914,10 @@ namespace OOPGames
             try
             {
                 window.Show();
-                Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+                Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
                 rules.ClearField();
 
-                new Gruppe2_SubwayPainter().PaintGameField(canvas, rules.CurrentField);
+                new Gruppe2_TrainRunPainter().PaintGameField(canvas, rules.CurrentField);
 
                 AssertTrue(canvas.Focusable,
                     "game canvas accepts keyboard focus");
@@ -683,11 +945,11 @@ namespace OOPGames
             try
             {
                 window.Show();
-                Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
+                Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
                 rules.ClearField();
-                Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+                Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
                 field.GuardIntroTicks = 0;
-                Gruppe2_SubwayPainter painter = new Gruppe2_SubwayPainter();
+                Gruppe2_TrainRunPainter painter = new Gruppe2_TrainRunPainter();
                 painter.PaintGameField(canvas, field);
 
                 AssertTrue(canvas.Background is LinearGradientBrush,
@@ -700,9 +962,9 @@ namespace OOPGames
                     .Any(visual => visual.Content is Model3DGroup),
                     "the 3D scene contains rendered world models");
 
-                field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                    Gruppe2_SubwayRewardKind.UpgradeBox, 1, 25,
-                    Gruppe2_SubwayUpgradeKind.Surfboard));
+                field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                    Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 25,
+                    Gruppe2_TrainRunUpgradeKind.Surfboard));
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 ModelVisual3D upgradeCoin = GetPinkUpgradeCoinVisual(viewport);
@@ -713,8 +975,8 @@ namespace OOPGames
                     && !upgradeCoinTransform.Children.OfType<RotateTransform3D>().Any(),
                     "upgrade coins do not spin");
 
-                field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                    Gruppe2_SubwayRewardKind.Coin, 1, 25));
+                field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                    Gruppe2_TrainRunRewardKind.Coin, 1, 25));
                 field.AnimationTicks = 10;
                 field.Speed = 1;
                 painter.TickPaintGameField(canvas, field);
@@ -789,10 +1051,10 @@ namespace OOPGames
                 AssertTrue(GetRunnerHeight(skaterVisual) < 0,
                     "the runner's feet stay on the track without a skateboard");
 
-                rules.DoMove(new Gruppe2_SubwayMove(Key.Right, 1));
+                rules.DoMove(new Gruppe2_TrainRunMove(Key.Right, 1));
                 field.Distance = 0;
                 // The lane change is animated smoothly; check the position once it has finished.
-                for (int frame = 0; frame < Gruppe2_SubwayLaneChange.DurationFrames; frame++)
+                for (int frame = 0; frame < Gruppe2_TrainRunLaneChange.DurationFrames; frame++)
                 {
                     painter.TickPaintGameField(canvas, field);
                 }
@@ -803,7 +1065,7 @@ namespace OOPGames
                 AssertTrue(GetSkateboardModel(skaterVisual.Content as Model3DGroup) == null,
                     "lane changes do not unlock the skateboard");
 
-                field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.Surfboard] = 50;
+                field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.Surfboard] = 50;
                 field.Distance = Math.PI / (2 * 0.32);
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
@@ -844,14 +1106,14 @@ namespace OOPGames
                 AssertRunnerFitsTrack(skaterVisual, skaterModel, 1.55);
                 AssertFeetStayPlanted(skaterModel);
 
-                field.Level = Gruppe2_SubwayLevel.TrainRoof;
+                field.Level = Gruppe2_TrainRunLevel.TrainRoof;
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
                 AssertTrue(GetRunnerHeight(skaterVisual) > 2.4,
                     "the skater is elevated onto train roofs");
 
-                field.MutableUpgrades.Remove(Gruppe2_SubwayUpgradeKind.Surfboard);
+                field.MutableUpgrades.Remove(Gruppe2_TrainRunUpgradeKind.Surfboard);
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 skaterVisual = viewport.Children.OfType<ModelVisual3D>().Last();
@@ -870,7 +1132,7 @@ namespace OOPGames
                 AssertRearHair(guardModel, false);
 
                 field.GuardGap = 100;
-                field.GuardIntroTicks = Gruppe2_SubwayField.GuardIntroDurationTicks;
+                field.GuardIntroTicks = Gruppe2_TrainRunField.GuardIntroDurationTicks;
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
@@ -882,8 +1144,8 @@ namespace OOPGames
                 AssertTrue(introStartMovement > 0,
                     "the Bahnrichter has an active articulated running pose on the first intro frame");
 
-                int followTicks = Gruppe2_SubwayField.GuardIntroFollowDurationTicks;
-                field.GuardIntroTicks = Gruppe2_SubwayField.GuardIntroDurationTicks - followTicks;
+                int followTicks = Gruppe2_TrainRunField.GuardIntroFollowDurationTicks;
+                field.GuardIntroTicks = Gruppe2_TrainRunField.GuardIntroDurationTicks - followTicks;
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
                 guardVisual = viewport.Children.OfType<ModelVisual3D>().Last();
@@ -893,8 +1155,8 @@ namespace OOPGames
                     && Math.Abs(followEndMovement - introStartMovement) > 0.001,
                     "the Bahnrichter keeps running behind the player during the follow phase");
 
-                int exitElapsedTicks = Gruppe2_SubwayField.GuardIntroFallBehindDurationTicks / 2;
-                field.GuardIntroTicks = Gruppe2_SubwayField.GuardIntroDurationTicks
+                int exitElapsedTicks = Gruppe2_TrainRunField.GuardIntroFallBehindDurationTicks / 2;
+                field.GuardIntroTicks = Gruppe2_TrainRunField.GuardIntroDurationTicks
                     - followTicks - exitElapsedTicks;
                 painter.TickPaintGameField(canvas, field);
                 viewport = canvas.Children.OfType<Viewport3D>().First();
@@ -1108,12 +1370,12 @@ namespace OOPGames
 
         private static void TestFatalAndNonFatalObstacles()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
 
             rules.ClearField();
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.Curb, 1, 0.5));
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.Curb, 1, 0.5));
             rules.TickGameCall();
             AssertTrue(field.GuardGap < 100 && field.GuardGap > 0,
                 "light collision reduces the guard distance");
@@ -1121,9 +1383,9 @@ namespace OOPGames
                 "light collision keeps the run alive");
 
             rules.ClearField();
-            field = (Gruppe2_SubwayField)rules.CurrentField;
-            field.MutableObstacles.Add(new Gruppe2_SubwayObstacle(
-                Gruppe2_SubwayObstacleKind.Train, 1, 0.5));
+            field = (Gruppe2_TrainRunField)rules.CurrentField;
+            field.MutableObstacles.Add(new Gruppe2_TrainRunObstacle(
+                Gruppe2_TrainRunObstacleKind.Train, 1, 0.5));
             rules.TickGameCall();
             AssertTrue(field.GameOver,
                 "fatal collision ends the run");
@@ -1135,48 +1397,48 @@ namespace OOPGames
 
         private static void TestRewardCollectionAndUpgrades()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
 
             rules.ClearField();
-            field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                Gruppe2_SubwayRewardKind.Coin, 1, 0.5));
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.Coin, 1, 0.5));
             rules.TickGameCall();
             AssertTrue(field.Coins == 1,
                 "coin in the current lane is collected");
 
             rules.ClearField();
-            field = (Gruppe2_SubwayField)rules.CurrentField;
-            field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5,
-                Gruppe2_SubwayUpgradeKind.Magnet));
+            field = (Gruppe2_TrainRunField)rules.CurrentField;
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5,
+                Gruppe2_TrainRunUpgradeKind.Magnet));
             rules.TickGameCall();
-            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Magnet),
+            AssertTrue(field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Magnet),
                 "upgrade box grants the expected upgrade");
 
             rules.ClearField();
-            field = (Gruppe2_SubwayField)rules.CurrentField;
-            field.MutableRewards.Add(new Gruppe2_SubwayReward(
-                Gruppe2_SubwayRewardKind.UpgradeBox, 1, 0.5,
-                Gruppe2_SubwayUpgradeKind.Surfboard));
+            field = (Gruppe2_TrainRunField)rules.CurrentField;
+            field.MutableRewards.Add(new Gruppe2_TrainRunReward(
+                Gruppe2_TrainRunRewardKind.UpgradeBox, 1, 0.5,
+                Gruppe2_TrainRunUpgradeKind.Surfboard));
             rules.TickGameCall();
             AssertTrue(field.ActiveUpgrades.TryGetValue(
-                    Gruppe2_SubwayUpgradeKind.Surfboard, out int surfboardTicks)
-                && surfboardTicks == 500,
-                "the skateboard item unlocks the surfboard for 500 ticks");
+                    Gruppe2_TrainRunUpgradeKind.Surfboard, out int surfboardTicks)
+                && surfboardTicks == 220,
+                "the skateboard item unlocks the surfboard as long as the jetpack (220 ticks)");
 
             rules.ClearField();
-            field = (Gruppe2_SubwayField)rules.CurrentField;
-            field.MutableUpgrades[Gruppe2_SubwayUpgradeKind.Surfboard] = 1;
+            field = (Gruppe2_TrainRunField)rules.CurrentField;
+            field.MutableUpgrades[Gruppe2_TrainRunUpgradeKind.Surfboard] = 1;
             rules.TickGameCall();
-            AssertTrue(!field.ActiveUpgrades.ContainsKey(Gruppe2_SubwayUpgradeKind.Surfboard),
+            AssertTrue(!field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Surfboard),
                 "the skateboard unlock expires when its timer runs out");
         }
 
         private static void TestWaveSpawningKeepsOneSafeLane()
         {
-            Gruppe2_SubwayRules rules = new Gruppe2_SubwayRules();
-            Gruppe2_SubwayField field = (Gruppe2_SubwayField)rules.CurrentField;
+            Gruppe2_TrainRunRules rules = new Gruppe2_TrainRunRules();
+            Gruppe2_TrainRunField field = (Gruppe2_TrainRunField)rules.CurrentField;
 
             for (int run = 0; run < 30; run++)
             {
@@ -1197,21 +1459,21 @@ namespace OOPGames
         /// so after dropping off the roof the runner still has time to react.
         /// Cars coupled to the same train (gap below 1) are part of the train itself.
         /// </summary>
-        private static void AssertReactionGapBehindTrains(Gruppe2_SubwayField field)
+        private static void AssertReactionGapBehindTrains(Gruppe2_TrainRunField field)
         {
-            foreach (Gruppe2_SubwayObstacle car in field.MutableObstacles
-                .Where(item => Gruppe2_SubwayTrainLayout.IsCar(item.Kind)))
+            foreach (Gruppe2_TrainRunObstacle car in field.MutableObstacles
+                .Where(item => Gruppe2_TrainRunLayout.IsCar(item.Kind)))
             {
-                if (CarStartingAt(field, car.Lane, car.Distance + Gruppe2_SubwayTrainLayout.CarSpacing) != null)
+                if (CarStartingAt(field, car.Lane, car.Distance + Gruppe2_TrainRunLayout.CarSpacing) != null)
                 {
                     continue; // not the last car of its train
                 }
 
-                double trainEnd = Gruppe2_SubwayTrainLayout.FarEnd(car);
-                foreach (Gruppe2_SubwayObstacle next in field.MutableObstacles
-                    .Where(item => item.Lane == car.Lane && item.Kind != Gruppe2_SubwayObstacleKind.Signal))
+                double trainEnd = Gruppe2_TrainRunLayout.FarEnd(car);
+                foreach (Gruppe2_TrainRunObstacle next in field.MutableObstacles
+                    .Where(item => item.Lane == car.Lane && item.Kind != Gruppe2_TrainRunObstacleKind.Signal))
                 {
-                    double gap = Gruppe2_SubwayTrainLayout.NearEnd(next) - trainEnd;
+                    double gap = Gruppe2_TrainRunLayout.NearEnd(next) - trainEnd;
                     AssertTrue(gap <= 1 || gap >= 59,
                         "objects behind a train leave room to react after dropping off (gap " + gap + ")");
                 }
@@ -1222,16 +1484,16 @@ namespace OOPGames
         /// At every point of the track at most two lanes may be blocked.
         /// Signals stand between two tracks and block no lane, so they are not counted.
         /// </summary>
-        private static void AssertOneLaneOpenEverywhere(Gruppe2_SubwayField field)
+        private static void AssertOneLaneOpenEverywhere(Gruppe2_TrainRunField field)
         {
-            List<Gruppe2_SubwayObstacle> blocking = field.MutableObstacles
-                .Where(item => item.Kind != Gruppe2_SubwayObstacleKind.Signal && item.Distance > 0)
+            List<Gruppe2_TrainRunObstacle> blocking = field.MutableObstacles
+                .Where(item => item.Kind != Gruppe2_TrainRunObstacleKind.Signal && item.Distance > 0)
                 .ToList();
             for (double distance = 0; distance < 600; distance += 1)
             {
                 int blockedLanes = blocking
-                    .Where(item => Gruppe2_SubwayTrainLayout.NearEnd(item) <= distance + 0.5
-                        && Math.Max(Gruppe2_SubwayTrainLayout.FarEnd(item), item.Distance) >= distance - 0.5)
+                    .Where(item => Gruppe2_TrainRunLayout.NearEnd(item) <= distance + 0.5
+                        && Math.Max(Gruppe2_TrainRunLayout.FarEnd(item), item.Distance) >= distance - 0.5)
                     .Select(item => item.Lane)
                     .Distinct()
                     .Count();

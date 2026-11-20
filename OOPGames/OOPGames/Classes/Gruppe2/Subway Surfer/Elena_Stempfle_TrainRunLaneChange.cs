@@ -8,7 +8,7 @@ namespace OOPGames
     /// lifts off in a small arc. The body stays upright the whole time.
     /// The camera follows <see cref="X"/>, so the runner is always seen from behind.
     /// </summary>
-    internal sealed class Gruppe2_SubwayLaneChange
+    internal sealed class Gruppe2_TrainRunLaneChange
     {
         /// <summary>Frames per lane change (the framework repaints every 40 ms, so about 0.3 s).</summary>
         public const int DurationFrames = 7;

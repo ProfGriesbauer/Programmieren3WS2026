@@ -48,7 +48,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new G9_VierGewinntPainter());
             OOPGamesManager.Singleton.RegisterPainter(new FG_ConnectFourPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_ConnectFourPainter());
-            OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_SubwayPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_TrainRunPainter());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
             OOPGamesManager.Singleton.RegisterPainter(new B5RoomPaint());
@@ -64,7 +64,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new G9_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new FG_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_ConnectFourRules());
-            OOPGamesManager.Singleton.RegisterRules(new Gruppe2_SubwayRules());
+            OOPGamesManager.Singleton.RegisterRules(new Gruppe2_TrainRunRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
             OOPGamesManager.Singleton.RegisterRules(new B5RoomRules());
@@ -86,7 +86,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new FG_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_ConnectFourHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_ConnectFourComputerPlayer());
-            OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_SubwayHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_TrainRunHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWHumanPlayer());

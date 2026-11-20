@@ -1,8 +1,8 @@
-# RunSubwayTests.ps1, run in PowerShell.
+# RunTrainRunTests.ps1, run in PowerShell.
 $ErrorActionPreference = 'Stop'
 
 $projectPath = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\OOPGames.csproj')).Path
-$runnerDirectory = Join-Path $env:TEMP ('SubwaySurferTests-' + [guid]::NewGuid().ToString('N'))
+$runnerDirectory = Join-Path $env:TEMP ('TrainRunTests-' + [guid]::NewGuid().ToString('N'))
 $runnerExitCode = 0
 
 try {
@@ -22,7 +22,7 @@ try {
   </ItemGroup>
 </Project>
 "@
-    Set-Content -LiteralPath (Join-Path $runnerDirectory 'SubwayTestsRunner.csproj') `
+    Set-Content -LiteralPath (Join-Path $runnerDirectory 'TrainRunTestsRunner.csproj') `
         -Value $projectFile -Encoding UTF8
 
     $runnerSource = @'
@@ -36,8 +36,8 @@ internal static class Program
     {
         try
         {
-            Gruppe2_SubwayTests.RunAllTests();
-            Console.WriteLine("All Subway Surfer tests passed.");
+            Gruppe2_TrainRunTests.RunAllTests();
+            Console.WriteLine("All Train Run tests passed.");
             return 0;
         }
         catch (Exception exception)
@@ -52,7 +52,7 @@ internal static class Program
         -Value $runnerSource -Encoding UTF8
 
     Get-Command dotnet -ErrorAction Stop | Out-Null
-    & dotnet run --project (Join-Path $runnerDirectory 'SubwayTestsRunner.csproj') `
+    & dotnet run --project (Join-Path $runnerDirectory 'TrainRunTestsRunner.csproj') `
         -p:UseAppHost=false "-p:OutDir=$(Join-Path $runnerDirectory 'build')\"
     if ($LASTEXITCODE -ne 0) {
         $runnerExitCode = $LASTEXITCODE

@@ -8,12 +8,12 @@ using System.Windows.Media.Media3D;
 namespace OOPGames
 {
     /// <summary>
-    /// Lighting and shadows of the 3D Subway Surfer scene.
+    /// Lighting and shadows of the 3D Train Run scene.
     /// The sun shines from the upper right, so shadows fall to the left.
     /// WPF 3D cannot compute shadows itself; every shadow caster gets a flat,
     /// semi-transparent shadow shape: its bounding box projected along the sun direction.
     /// </summary>
-    internal static class Gruppe2_SubwaySceneLighting
+    internal static class Gruppe2_TrainRunSceneLighting
     {
         /// <summary>Direction the sunlight travels: from upper right (slightly behind the camera) to lower left.</summary>
         public static readonly Vector3D SunDirection = new Vector3D(-0.55, -1, -0.25);
@@ -42,7 +42,7 @@ namespace OOPGames
         /// (e.g. the train roof the runner stands on).
         /// Must be added to the viewport after all opaque objects (transparency).
         /// </summary>
-        public static ModelVisual3D CreateShadows(
+        public static Model3DGroup CreateShadows(
             IEnumerable<ModelVisual3D> casters, Func<ModelVisual3D, double> groundHeightOf)
         {
             Model3DGroup shadows = new Model3DGroup();
@@ -72,7 +72,8 @@ namespace OOPGames
                 }
             }
 
-            return new ModelVisual3D { Content = shadows };
+            shadows.Freeze();
+            return shadows;
         }
 
         private static GeometryModel3D CreateShadow(Rect3D bounds, double groundHeight)

@@ -3,14 +3,14 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
-    public enum Gruppe2_SubwayLevel
+    public enum Gruppe2_TrainRunLevel
     {
         Track,
         TrainRoof,
         Air
     }
 
-    public enum Gruppe2_SubwayObstacleKind
+    public enum Gruppe2_TrainRunObstacleKind
     {
         SmallBarrier,
         LargeBarrier,
@@ -24,13 +24,13 @@ namespace OOPGames
         CargoWagon
     }
 
-    public enum Gruppe2_SubwayRewardKind
+    public enum Gruppe2_TrainRunRewardKind
     {
         Coin,
         UpgradeBox
     }
 
-    public enum Gruppe2_SubwayUpgradeKind
+    public enum Gruppe2_TrainRunUpgradeKind
     {
         Magnet,
         DoubleCoins,
@@ -39,15 +39,15 @@ namespace OOPGames
         Jetpack
     }
 
-    public interface IGruppe2_SubwayMove : IPlayMove
+    public interface IGruppe2_TrainRunMove : IPlayMove
     {
         Key Key { get; }
     }
 
-    public interface IGruppe2_SubwayField : IGameField
+    public interface IGruppe2_TrainRunField : IGameField
     {
         int Lane { get; }
-        Gruppe2_SubwayLevel Level { get; }
+        Gruppe2_TrainRunLevel Level { get; }
         double JumpHeight { get; }
         /// <summary>
         /// Height while dropping off a train roof, as a fraction of the roof height:
@@ -69,15 +69,15 @@ namespace OOPGames
         bool GuardVisible { get; }
         bool GameOver { get; }
         string Message { get; }
-        IReadOnlyList<Gruppe2_SubwayObstacle> Obstacles { get; }
-        IReadOnlyList<Gruppe2_SubwayReward> Rewards { get; }
-        IReadOnlyDictionary<Gruppe2_SubwayUpgradeKind, int> ActiveUpgrades { get; }
+        IReadOnlyList<Gruppe2_TrainRunObstacle> Obstacles { get; }
+        IReadOnlyList<Gruppe2_TrainRunReward> Rewards { get; }
+        IReadOnlyDictionary<Gruppe2_TrainRunUpgradeKind, int> ActiveUpgrades { get; }
     }
 
-    public sealed class Gruppe2_SubwayObstacle
+    public sealed class Gruppe2_TrainRunObstacle
     {
-        internal Gruppe2_SubwayObstacle(
-            Gruppe2_SubwayObstacleKind kind,
+        internal Gruppe2_TrainRunObstacle(
+            Gruppe2_TrainRunObstacleKind kind,
             int lane,
             double distance,
             bool moving = false)
@@ -88,33 +88,37 @@ namespace OOPGames
             Moving = moving;
         }
 
-        public Gruppe2_SubwayObstacleKind Kind { get; }
+        public Gruppe2_TrainRunObstacleKind Kind { get; }
         public int Lane { get; }
         public double Distance { get; internal set; }
         public bool Moving { get; }
     }
 
-    public sealed class Gruppe2_SubwayReward
+    public sealed class Gruppe2_TrainRunReward
     {
-        internal Gruppe2_SubwayReward(
-            Gruppe2_SubwayRewardKind kind,
+        internal Gruppe2_TrainRunReward(
+            Gruppe2_TrainRunRewardKind kind,
             int lane,
             double distance,
-            Gruppe2_SubwayUpgradeKind upgrade = Gruppe2_SubwayUpgradeKind.Magnet,
-            bool elevated = false)
+            Gruppe2_TrainRunUpgradeKind upgrade = Gruppe2_TrainRunUpgradeKind.Magnet,
+            bool elevated = false,
+            bool onRoof = false)
         {
             Kind = kind;
             Lane = lane;
             Distance = distance;
             Upgrade = upgrade;
             Elevated = elevated;
+            OnRoof = onRoof;
         }
 
-        public Gruppe2_SubwayRewardKind Kind { get; }
+        public Gruppe2_TrainRunRewardKind Kind { get; }
         public int Lane { get; }
         public double Distance { get; internal set; }
-        public Gruppe2_SubwayUpgradeKind Upgrade { get; }
+        public Gruppe2_TrainRunUpgradeKind Upgrade { get; }
         /// <summary>True for coins floating at jetpack flight level; only collectable while flying.</summary>
         public bool Elevated { get; }
+        /// <summary>True for coins lying on a train roof; only collectable while on the roof.</summary>
+        public bool OnRoof { get; }
     }
 }

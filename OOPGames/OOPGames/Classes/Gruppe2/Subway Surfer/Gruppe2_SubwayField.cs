@@ -3,19 +3,19 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
-    public sealed class Gruppe2_SubwayField : IGruppe2_SubwayField
+    public sealed class Gruppe2_TrainRunField : IGruppe2_TrainRunField
     {
         internal const int GuardIntroFollowDurationTicks = 25;
         internal const int GuardIntroFallBehindDurationTicks = 75;
         internal const int GuardIntroDurationTicks =
             GuardIntroFollowDurationTicks + GuardIntroFallBehindDurationTicks;
-        private readonly List<Gruppe2_SubwayObstacle> _obstacles = new List<Gruppe2_SubwayObstacle>();
-        private readonly List<Gruppe2_SubwayReward> _rewards = new List<Gruppe2_SubwayReward>();
-        private readonly Dictionary<Gruppe2_SubwayUpgradeKind, int> _activeUpgrades =
-            new Dictionary<Gruppe2_SubwayUpgradeKind, int>();
+        private readonly List<Gruppe2_TrainRunObstacle> _obstacles = new List<Gruppe2_TrainRunObstacle>();
+        private readonly List<Gruppe2_TrainRunReward> _rewards = new List<Gruppe2_TrainRunReward>();
+        private readonly Dictionary<Gruppe2_TrainRunUpgradeKind, int> _activeUpgrades =
+            new Dictionary<Gruppe2_TrainRunUpgradeKind, int>();
 
         public int Lane { get; internal set; }
-        public Gruppe2_SubwayLevel Level { get; internal set; }
+        public Gruppe2_TrainRunLevel Level { get; internal set; }
         public double JumpHeight
         {
             get
@@ -54,7 +54,7 @@ namespace OOPGames
                 }
 
                 // Climb at the start, sink at the end - both with the same smooth arc.
-                int climb = Gruppe2_SubwayTrainLayout.JetpackClimbTicks;
+                int climb = Gruppe2_TrainRunLayout.JetpackClimbTicks;
                 int elapsed = JetpackDurationTicks - JetpackTicks;
                 double progress = Math.Min(1.0, Math.Min(elapsed, JetpackTicks) / (double)climb);
                 return progress * progress * (3 - 2 * progress);
@@ -67,12 +67,12 @@ namespace OOPGames
         public bool GuardVisible { get { return GuardIntroTicks > 0 || GuardGap < 92; } }
         public bool GameOver { get; internal set; }
         public string Message { get; internal set; }
-        public IReadOnlyList<Gruppe2_SubwayObstacle> Obstacles { get { return _obstacles; } }
-        public IReadOnlyList<Gruppe2_SubwayReward> Rewards { get { return _rewards; } }
-        public IReadOnlyDictionary<Gruppe2_SubwayUpgradeKind, int> ActiveUpgrades { get { return _activeUpgrades; } }
-        internal List<Gruppe2_SubwayObstacle> MutableObstacles { get { return _obstacles; } }
-        internal List<Gruppe2_SubwayReward> MutableRewards { get { return _rewards; } }
-        internal Dictionary<Gruppe2_SubwayUpgradeKind, int> MutableUpgrades { get { return _activeUpgrades; } }
+        public IReadOnlyList<Gruppe2_TrainRunObstacle> Obstacles { get { return _obstacles; } }
+        public IReadOnlyList<Gruppe2_TrainRunReward> Rewards { get { return _rewards; } }
+        public IReadOnlyDictionary<Gruppe2_TrainRunUpgradeKind, int> ActiveUpgrades { get { return _activeUpgrades; } }
+        internal List<Gruppe2_TrainRunObstacle> MutableObstacles { get { return _obstacles; } }
+        internal List<Gruppe2_TrainRunReward> MutableRewards { get { return _rewards; } }
+        internal Dictionary<Gruppe2_TrainRunUpgradeKind, int> MutableUpgrades { get { return _activeUpgrades; } }
         public double Distance { get; internal set; }
         internal int AnimationTicks { get; set; }
         internal int JumpTicks { get; set; }
@@ -87,10 +87,10 @@ namespace OOPGames
 
         public bool CanBePaintedBy(IPaintGame painter)
         {
-            return painter is Gruppe2_SubwayPainter;
+            return painter is Gruppe2_TrainRunPainter;
         }
 
-        internal bool HasUpgrade(Gruppe2_SubwayUpgradeKind upgrade)
+        internal bool HasUpgrade(Gruppe2_TrainRunUpgradeKind upgrade)
         {
             return _activeUpgrades.ContainsKey(upgrade);
         }
@@ -101,7 +101,7 @@ namespace OOPGames
             _rewards.Clear();
             _activeUpgrades.Clear();
             Lane = 1;
-            Level = Gruppe2_SubwayLevel.Track;
+            Level = Gruppe2_TrainRunLevel.Track;
             Score = 0;
             Coins = 0;
             Speed = 1;

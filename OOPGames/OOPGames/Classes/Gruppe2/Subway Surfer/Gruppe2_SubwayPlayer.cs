@@ -2,9 +2,9 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
-    public sealed class Gruppe2_SubwayMove : IGruppe2_SubwayMove
+    public sealed class Gruppe2_TrainRunMove : IGruppe2_TrainRunMove
     {
-        public Gruppe2_SubwayMove(Key key, int playerNumber)
+        public Gruppe2_TrainRunMove(Key key, int playerNumber)
         {
             Key = key;
             PlayerNumber = playerNumber;
@@ -14,9 +14,9 @@ namespace OOPGames
         public int PlayerNumber { get; private set; }
     }
 
-    public sealed class Gruppe2_SubwayHumanPlayer : IHumanGamePlayer
+    public sealed class Gruppe2_TrainRunHumanPlayer : IHumanGamePlayer
     {
-        public string Name { get { return "Gruppe 2 - Subway Surfer Laeufer"; } }
+        public string Name { get { return "Gruppe 2 - Train Run Laeufer"; } }
         public int PlayerNumber { get; private set; }
 
         public void SetPlayerNumber(int playerNumber)
@@ -26,19 +26,19 @@ namespace OOPGames
 
         public bool CanBeRuledBy(IGameRules rules)
         {
-            return rules is Gruppe2_SubwayRules;
+            return rules is Gruppe2_TrainRunRules;
         }
 
         public IGamePlayer Clone()
         {
-            return new Gruppe2_SubwayHumanPlayer();
+            return new Gruppe2_TrainRunHumanPlayer();
         }
 
         public IPlayMove GetMove(IMoveSelection selection, IGameField field)
         {
-            IGruppe2_SubwayField subwayField = field as IGruppe2_SubwayField;
+            IGruppe2_TrainRunField trainRunField = field as IGruppe2_TrainRunField;
             IKeySelection keySelection = selection as IKeySelection;
-            if (subwayField == null || subwayField.GameOver || keySelection == null)
+            if (trainRunField == null || trainRunField.GameOver || keySelection == null)
             {
                 return null;
             }
@@ -53,7 +53,7 @@ namespace OOPGames
                 case Key.D:
                 case Key.W:
                 case Key.S:
-                    return new Gruppe2_SubwayMove(keySelection.Key, PlayerNumber);
+                    return new Gruppe2_TrainRunMove(keySelection.Key, PlayerNumber);
                 default:
                     return null;
             }
