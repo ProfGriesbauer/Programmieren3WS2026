@@ -1198,3 +1198,44 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 > Ich committe ausdrücklich nur die Löschung der alten Prompt-Kopie in `4Gewinn/` und diese Prompt-Datei (Einträge 59 bis 61). Die fremden Build-Dateien aus `HouseExample/`, die nach dem letzten Pull im Staging-Bereich lagen, kommen nicht mit. Danach folgen `git pull --rebase` und `git push`.
 
 **Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt.
+
+## 62. Restliche Datei- und Ordnernamen in „Train Run“ umbenennen
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> oaky kannst du jetzt alles was mi SubwaySurfer benannt ist in Train Run umbenennen
+
+**Antwort:**
+
+> Nach der Freigabe sind jetzt auch die Datei- und Ordnernamen umbenannt, die in Prompt 57 offen geblieben waren. Alle Umbenennungen liefen per `git mv`, damit die Git-Historie erhalten bleibt. Vorher habe ich geprüft, dass keine ungesicherte Arbeit offen war und der Server nichts Neues hatte.
+>
+> - Ordner `Classes/Gruppe2/Subway Surfer` → `Classes/Gruppe2/Train Run`
+> - `Gruppe2_Subway{Field,Painter,Player,Rules,Tests}.cs` → `Gruppe2_TrainRun{…}.cs`
+> - `RunSubwayTests.ps1` → `RunTrainRunTests.ps1`
+> - `lani_sorensen_prompts_subwaysurfer.md` → `lani_sorensen_prompts_trainrun.md`
+> - `Interfaces/Gruppe2/Stefanie_Kolb_Gruppe2_SubwaySurferInterfaces.cs` → `Stefanie_Kolb_Gruppe2_TrainRunInterfaces.cs`
+> - `Plans/Stefanie_Kolb_SubwaySurfer_Plan.md` → `Stefanie_Kolb_TrainRun_Plan.md`
+> - `Plans/Stefanie_Kolb_Subway_3D_Plan.md` → `Stefanie_Kolb_TrainRun_3D_Plan.md`
+> - Konzeptordner `Classes/Gruppe_2_Subway_Surfer` → `Classes/Gruppe_2_Train_Run`
+>
+> Die Inhalte der Prompt-, Plan- und Konzeptdateien sind unverändert, weil sie den Verlauf dokumentieren. Kein Datei- oder Ordnername und keine Codezeile in Gruppe 2 enthält noch „Subway“.
+>
+> Build: 0 Warnungen, 0 Fehler. Alle Tests über das umbenannte Skript `Train Run/RunTrainRunTests.ps1` bestanden.
+
+**Ergebnisvermerk:** Alle Namen sind jetzt „Train Run“. Noch nicht committet.
+
+## 63. Commit, Pull und Push
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du comitten, pullen und die Änderungen pushen
+
+**Antwort:**
+
+> Ich committe ausdrücklich nur die Pfade von Gruppe 2: die Umbenennungen aus Prompt 62 (alte und neue Pfade) und diese Prompt-Datei. Die fremden Build-Dateien aus `HouseExample/` im Staging-Bereich kommen nicht mit. Danach folgen Pull und Push.
+
+**Ergebnisvermerk:** Siehe Antwort im Chat; Commit erstellt.
