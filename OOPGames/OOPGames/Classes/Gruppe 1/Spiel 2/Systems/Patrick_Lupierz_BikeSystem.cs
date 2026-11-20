@@ -54,7 +54,18 @@ namespace OOPGames
             Riding = true;
             ParkedAtDoor = false;
             ActiveBikeId = bikeId;
-            return "Du fährst jetzt mit dem " + bike.Name + ". Schneller unterwegs!";
+            return "Du fährst jetzt mit dem " + DativeName(bike.Name) + ". Schneller unterwegs!";
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 20.11.2026 – Rechtschreibung: "mit dem roten Fahrrad" statt "mit dem Rotes Fahrrad"
+        // Aufgabe: "Rotes Fahrrad" -> "roten Fahrrad" (Adjektiv nach "dem" endet auf -en und wird klein geschrieben).
+        public static string DativeName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return name;
+            string[] parts = name.Split(' ');
+            if (parts.Length < 2 || !parts[0].EndsWith("es")) return name;
+            parts[0] = char.ToLowerInvariant(parts[0][0]) + parts[0].Substring(1, parts[0].Length - 3) + "en";
+            return string.Join(" ", parts);
         }
 
         public string Dismount()
