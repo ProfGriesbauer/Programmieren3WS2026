@@ -1,0 +1,1116 @@
+{
+ "info": {
+  "facing": "rechts",
+  "tile_1080p": 96,
+  "tile_4k": 192,
+  "hinweis": "Ordner 1080p = native Pixel fuer 1920x1080 (Kachel 96 px), 4k = doppelte Groesse (Kachel 192 px). Sheets: Zeilen = Animationen, Spalten = Frames. Pivot in 1080p-Pixeln."
+ },
+ "sprites": {
+  "tuerme/physical_archer": {
+   "file": "tuerme/physical_archer.png",
+   "frame_w": 96,
+   "frame_h": 160,
+   "pivot": [
+    48,
+    148
+   ],
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   },
+   "schuss_ursprung": [
+    82,
+    36
+   ]
+  },
+  "tuerme/poison_archer": {
+   "file": "tuerme/poison_archer.png",
+   "frame_w": 96,
+   "frame_h": 160,
+   "pivot": [
+    48,
+    148
+   ],
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   },
+   "schuss_ursprung": [
+    82,
+    36
+   ]
+  },
+  "tuerme/fire_mage": {
+   "file": "tuerme/fire_mage.png",
+   "frame_w": 96,
+   "frame_h": 160,
+   "pivot": [
+    48,
+    148
+   ],
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   },
+   "schuss_ursprung": [
+    66,
+    16
+   ]
+  },
+  "tuerme/ice_mage": {
+   "file": "tuerme/ice_mage.png",
+   "frame_w": 96,
+   "frame_h": 160,
+   "pivot": [
+    48,
+    148
+   ],
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   },
+   "schuss_ursprung": [
+    66,
+    16
+   ]
+  },
+  "tuerme/earth_mage": {
+   "file": "tuerme/earth_mage.png",
+   "frame_w": 96,
+   "frame_h": 160,
+   "pivot": [
+    48,
+    148
+   ],
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   },
+   "schuss_ursprung": [
+    66,
+    16
+   ]
+  },
+  "tuerme/storm_mage": {
+   "file": "tuerme/storm_mage.png",
+   "frame_w": 96,
+   "frame_h": 160,
+   "pivot": [
+    48,
+    148
+   ],
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   },
+   "schuss_ursprung": [
+    66,
+    16
+   ]
+  },
+  "tuerme/flamethrower": {
+   "file": "tuerme/flamethrower.png",
+   "frame_w": 96,
+   "frame_h": 160,
+   "pivot": [
+    48,
+    148
+   ],
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   },
+   "schuss_ursprung": [
+    92,
+    50
+   ]
+  },
+  "tuerme/ice_area_tower": {
+   "file": "tuerme/ice_area_tower.png",
+   "frame_w": 96,
+   "frame_h": 160,
+   "pivot": [
+    48,
+    148
+   ],
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   },
+   "schuss_ursprung": [
+    48,
+    32
+   ]
+  },
+  "hauptgebaeude/schloss": {
+   "file": "hauptgebaeude/schloss.png",
+   "frame_w": 320,
+   "frame_h": 288,
+   "pivot": [
+    160,
+    272
+   ],
+   "animations": {
+    "intakt": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "beschaedigt": {
+     "row": 1,
+     "frames": 6,
+     "fps": 8,
+     "loop": true
+    },
+    "ruine": {
+     "row": 2,
+     "frames": 6,
+     "fps": 8,
+     "loop": true
+    }
+   },
+   "hinweis": "intakt >66% HP, beschaedigt 33-66%, ruine <33%"
+  },
+  "gegner/goblin": {
+   "file": "gegner/goblin.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 12,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/goblin_archer": {
+   "file": "gegner/goblin_archer.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 11,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/goblin_shaman": {
+   "file": "gegner/goblin_shaman.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 9,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/orc": {
+   "file": "gegner/orc.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 10,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/orc_berserker": {
+   "file": "gegner/orc_berserker.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 12,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/orc_warlord": {
+   "file": "gegner/orc_warlord.png",
+   "frame_w": 128,
+   "frame_h": 128,
+   "pivot": [
+    64,
+    120
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 8,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/skeleton": {
+   "file": "gegner/skeleton.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 10,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/skeleton_knight": {
+   "file": "gegner/skeleton_knight.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 9,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/troll": {
+   "file": "gegner/troll.png",
+   "frame_w": 128,
+   "frame_h": 128,
+   "pivot": [
+    64,
+    120
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 7,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/stone_golem": {
+   "file": "gegner/stone_golem.png",
+   "frame_w": 128,
+   "frame_h": 128,
+   "pivot": [
+    64,
+    120
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/fire_element": {
+   "file": "gegner/fire_element.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 10,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/ice_element": {
+   "file": "gegner/ice_element.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 8,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/storm_element": {
+   "file": "gegner/storm_element.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 10,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/earth_element": {
+   "file": "gegner/earth_element.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 7,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/dark_elf": {
+   "file": "gegner/dark_elf.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 12,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/vampire": {
+   "file": "gegner/vampire.png",
+   "frame_w": 96,
+   "frame_h": 96,
+   "pivot": [
+    48,
+    88
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 9,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/wyvern": {
+   "file": "gegner/wyvern.png",
+   "frame_w": 128,
+   "frame_h": 128,
+   "pivot": [
+    64,
+    120
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 10,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/fire_golem": {
+   "file": "gegner/fire_golem.png",
+   "frame_w": 128,
+   "frame_h": 128,
+   "pivot": [
+    64,
+    120
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/dragon": {
+   "file": "gegner/dragon.png",
+   "frame_w": 160,
+   "frame_h": 160,
+   "pivot": [
+    80,
+    152
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 9,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "gegner/arcane_titan": {
+   "file": "gegner/arcane_titan.png",
+   "frame_w": 160,
+   "frame_h": 160,
+   "pivot": [
+    80,
+    152
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "minibosse/fire_dragon": {
+   "file": "minibosse/fire_dragon.png",
+   "frame_w": 192,
+   "frame_h": 192,
+   "pivot": [
+    96,
+    184
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 9,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "minibosse/skeleton_mage": {
+   "file": "minibosse/skeleton_mage.png",
+   "frame_w": 192,
+   "frame_h": 192,
+   "pivot": [
+    96,
+    184
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 8,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "minibosse/dark_elf_king": {
+   "file": "minibosse/dark_elf_king.png",
+   "frame_w": 192,
+   "frame_h": 192,
+   "pivot": [
+    96,
+    184
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 9,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "minibosse/all_elements_golem": {
+   "file": "minibosse/all_elements_golem.png",
+   "frame_w": 192,
+   "frame_h": 192,
+   "pivot": [
+    96,
+    184
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 6,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "minibosse/goblin_lord": {
+   "file": "minibosse/goblin_lord.png",
+   "frame_w": 192,
+   "frame_h": 192,
+   "pivot": [
+    96,
+    184
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 8,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "bosse/skeletonking": {
+   "file": "bosse/skeletonking.png",
+   "frame_w": 256,
+   "frame_h": 256,
+   "pivot": [
+    128,
+    248
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 7,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "bosse/orc_lord": {
+   "file": "bosse/orc_lord.png",
+   "frame_w": 256,
+   "frame_h": 256,
+   "pivot": [
+    128,
+    248
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 7,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "bosse/elemental_god": {
+   "file": "bosse/elemental_god.png",
+   "frame_w": 256,
+   "frame_h": 256,
+   "pivot": [
+    128,
+    248
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 8,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "bosse/vampire_lord": {
+   "file": "bosse/vampire_lord.png",
+   "frame_w": 256,
+   "frame_h": 256,
+   "pivot": [
+    128,
+    248
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 7,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "bosse/elder_dragon": {
+   "file": "bosse/elder_dragon.png",
+   "frame_w": 256,
+   "frame_h": 256,
+   "pivot": [
+    128,
+    248
+   ],
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 6,
+     "fps": 8,
+     "loop": true
+    },
+    "death": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false
+    }
+   }
+  },
+  "effekte/arrow": {
+   "file": "effekte/arrow.png",
+   "frame_w": 48,
+   "frame_h": 24,
+   "pivot": [
+    48,
+    24
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   }
+  },
+  "effekte/poison_arrow": {
+   "file": "effekte/poison_arrow.png",
+   "frame_w": 48,
+   "frame_h": 24,
+   "pivot": [
+    48,
+    24
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 4,
+     "fps": 10,
+     "loop": true
+    }
+   }
+  },
+  "effekte/fireball": {
+   "file": "effekte/fireball.png",
+   "frame_w": 48,
+   "frame_h": 48,
+   "pivot": [
+    48,
+    48
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 4,
+     "fps": 12,
+     "loop": true
+    }
+   }
+  },
+  "effekte/ice_shard": {
+   "file": "effekte/ice_shard.png",
+   "frame_w": 48,
+   "frame_h": 24,
+   "pivot": [
+    48,
+    24
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 4,
+     "fps": 10,
+     "loop": true
+    }
+   }
+  },
+  "effekte/rock": {
+   "file": "effekte/rock.png",
+   "frame_w": 32,
+   "frame_h": 32,
+   "pivot": [
+    32,
+    32
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 4,
+     "fps": 12,
+     "loop": true
+    }
+   }
+  },
+  "effekte/lightning_strike": {
+   "file": "effekte/lightning_strike.png",
+   "frame_w": 48,
+   "frame_h": 128,
+   "pivot": [
+    48,
+    128
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 4,
+     "fps": 16,
+     "loop": false
+    }
+   }
+  },
+  "effekte/flamethrower_flame": {
+   "file": "effekte/flamethrower_flame.png",
+   "frame_w": 96,
+   "frame_h": 48,
+   "pivot": [
+    96,
+    48
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 6,
+     "fps": 14,
+     "loop": true
+    }
+   }
+  },
+  "effekte/frost_nova": {
+   "file": "effekte/frost_nova.png",
+   "frame_w": 192,
+   "frame_h": 128,
+   "pivot": [
+    192,
+    128
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 6,
+     "fps": 12,
+     "loop": false
+    }
+   }
+  },
+  "effekte/arcane_bolt": {
+   "file": "effekte/arcane_bolt.png",
+   "frame_w": 32,
+   "frame_h": 32,
+   "pivot": [
+    32,
+    32
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 4,
+     "fps": 12,
+     "loop": true
+    }
+   }
+  },
+  "effekte/soul_bolt": {
+   "file": "effekte/soul_bolt.png",
+   "frame_w": 32,
+   "frame_h": 32,
+   "pivot": [
+    32,
+    32
+   ],
+   "animations": {
+    "play": {
+     "row": 0,
+     "frames": 4,
+     "fps": 12,
+     "loop": true
+    }
+   }
+  }
+ }
+}

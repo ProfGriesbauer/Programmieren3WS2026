@@ -53,13 +53,15 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new G9_VierGewinntPainter());
             OOPGamesManager.Singleton.RegisterPainter(new FG_ConnectFourPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_ConnectFourPainter());
-            OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_SubwayPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_TrainRunPainter());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new B5RoomPaint());
             OOPGamesManager.Singleton.RegisterPainter(new G5_FabrikPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G1_VierGewinntPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe3DragRacePainter());
             OOPGamesManager.Singleton.RegisterPainter(new HayDayPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new G1C_CasinoPainter());
             //Rules
             OOPGamesManager.Singleton.RegisterRules(new X_TicTacToeRules());
             OOPGamesManager.Singleton.RegisterRules(new G10_VierGewinntRules());
@@ -67,13 +69,15 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new G9_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new FG_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_ConnectFourRules());
-            OOPGamesManager.Singleton.RegisterRules(new Gruppe2_SubwayRules());
+            OOPGamesManager.Singleton.RegisterRules(new Gruppe2_TrainRunRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
-            OOPGamesManager.Singleton.RegisterRules(new G5_FabrikRules());
+            OOPGamesManager.Singleton.RegisterRules(new B5RoomRules());
+            OOPGamesManager.Singleton.RegisterRules(new SatisfactoryGameRules());
             OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe3DragRaceRules());
             OOPGamesManager.Singleton.RegisterRules(new HayDayRules());
+            OOPGamesManager.Singleton.RegisterRules(new G1C_CasinoRules());
             //Players
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new X_TicTacToeComputerPlayer());
@@ -87,17 +91,19 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new FG_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_ConnectFourHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_ConnectFourComputerPlayer());
-            OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_SubwayHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_TrainRunHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWComputerPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new B5RoomHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_FabrikHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe3DragRaceHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe3DragRaceComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new HayDayHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new G1C_CasinoHumanPlayer());
 
             InitializeComponent();
             PaintList.ItemsSource = OOPGamesManager.Singleton.Painters;
@@ -289,7 +295,10 @@ namespace OOPGames
                         _CurrentRules.DoMove(pm);
                         _CurrentPainter.PaintGameField(PaintCanvas, _CurrentRules.CurrentField);
                         _CurrentPlayer = _CurrentPlayer == _CurrentPlayer1 ? _CurrentPlayer2 : _CurrentPlayer1;
-                        Status.Text = "Player " + _CurrentPlayer.PlayerNumber + "'s turn!";
+                        HayDayField hayDayField = _CurrentRules.CurrentField as HayDayField;
+                        Status.Text = hayDayField != null
+                            ? hayDayField.StatusMessage
+                            : "Player " + _CurrentPlayer.PlayerNumber + "'s turn!";
                     }
 
                     winner = _CurrentRules.CheckIfPLayerWon();
@@ -340,8 +349,23 @@ namespace OOPGames
                 if (_CurrentRules.MovesPossible &&
                     _CurrentPlayer is IHumanGamePlayer)
                 {
+                    int frameworkMouseButton;
+                    switch (e.ChangedButton)
+                    {
+                        case MouseButton.Left:
+                            frameworkMouseButton = 0;
+                            break;
+                        case MouseButton.Right:
+                            frameworkMouseButton = 1;
+                            break;
+                        case MouseButton.Middle:
+                            frameworkMouseButton = 2;
+                            break;
+                        default:
+                            return;
+                    }
                     IPlayMove pm = ((IHumanGamePlayer)_CurrentPlayer).GetMove(new ClickSelection((int)e.GetPosition(PaintCanvas).X, 
-                        (int)e.GetPosition(PaintCanvas).Y, (int)e.ChangedButton), _CurrentRules.CurrentField);
+                        (int)e.GetPosition(PaintCanvas).Y, frameworkMouseButton), _CurrentRules.CurrentField);
                     if (pm != null)
                     {
                         _CurrentRules.DoMove(pm);
@@ -360,14 +384,6 @@ namespace OOPGames
             _PaintTimer.Tick -= _PaintTimer_Tick;
             _PaintTimer.Stop();
             _PaintTimer = null;
-        }
-
-        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            if (_CurrentRules is Gruppe2_SubwayRules && e.Key == Key.Space)
-            {
-                e.Handled = true;
-            }
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)

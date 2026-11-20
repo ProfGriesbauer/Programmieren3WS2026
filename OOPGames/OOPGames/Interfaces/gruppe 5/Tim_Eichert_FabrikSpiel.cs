@@ -6,14 +6,23 @@ namespace OOPGames
     {
         Keines,
         Foerderer,
-        Schmelze
+        Schmelze,
+        Foerderband,
+        GebaeudeVerschieben
     }
 
     public enum G5_FabrikGebaeudeTyp
     {
         Hub,
         Foerderer,
-        Schmelze
+        Schmelze,
+        Konstruktor,
+        Assembler,
+        Verbrennungsgenerator,
+        Strommast,
+        Laufband,
+        Splitter,
+        Merger
     }
 
     public enum G5_FabrikAktionstyp

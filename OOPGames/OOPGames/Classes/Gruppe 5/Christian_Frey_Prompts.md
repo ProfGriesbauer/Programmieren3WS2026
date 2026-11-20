@@ -48,3 +48,143 @@
 > änder nichts auserhalb der gruppe 5. Wenn du noch Vorgaben brauchst, erstelle einen Abschnitt in der Gebaude datei in Plans, was du brauchst. viele sachen werden noch ergänzt durch die anderen Entwickler welche parallel beispielsweise die Spielumgebung und die Bedienung entwickeln
 
 - **Ergebnisvermerk:** Der Gebaeude-Plan wurde um die fuer die spaetere Integration benoetigten Absprachen mit Spielumgebung und Bedienung erweitert. Die laufende Umsetzung ist auf Gruppe 5 begrenzt; der temporäre Testordner ausserhalb von Gruppe 5 wurde wieder entfernt.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Kannst du mir eine Datei erstellen mit der ich mir das Design der Gebäude anschauen kann
+
+- **Ergebnisvermerk:** Eine eigenständige HTML-Vorschau mit stilisierten Vogelperspektiven für Miner, Schmelze, Konstruktor, Assembler, Lager, Verbrennungsgenerator, Strommast und Laufband wurde unter `Plans/Gebaeude_Designvorschau.html` erstellt. Die MK1-/MK2-/MK3-Ansicht lässt sich im Browser umschalten.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Das sieht momentan mehr nach Symbolen oder Wappen aus. Gestalte das ganze deutlich realistischer. Orientier dich dazu stark an den Bauwerken von Factorio wie hier im Bild oder auf der Webseite unter folgendem Link zu finden.
+> https://wiki.factorio.com/
+> Füge außerdem zur Kategorie der des Laufbands noch Splitter und Merger hinzu, durch diese kann der Gutfluss eines Laufbands auf zwei aufgeteilt (z.B. für zwei Smelter für mehr Durchsatz) und anschließend wieder durch den Merger auf eines zusammengeführt werden.
+> Erstell die Modelle in dem Stil, aber performanceorientiert
+
+- **Ergebnisvermerk:** Die Vorschau wurde mit eigenständigen, detaillierteren Industrie-Vektormodellen überarbeitet. Hinzu kamen Splitter und Merger sowie ein Ablaufbeispiel mit zwei Schmelzen. Der Gebäudeplan hält die Verteilungs-/Zusammenführungsregeln und das verlustfreie Verhalten bei blockierten Bändern fest. Die Modelle verwenden lokale SVGs ohne externe Assets; nur die Beispiel-Fördergüter werden animiert.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Bau den miner mal optisch nach diesem vorbild und vergleiche ihn anshcließend mit dem original. wenn dieser dem original witestgehend entspricht erstell auch die modelle der anderen gebäude nach dem vorbild der Webseite und der Bilder. Wenn du diese nicht gut genug erkennst oder weitere Infos brauchst sag Bescheid, dann helf ich nach
+> Ich meine natürlich nur die Form und Farbgebung des Bilds in einer eigenen Interpretation möglichst genau nachbauen
+> führ es mal aus, dann schau ich es mir in der designvoschau an. Die Farbgebung zur Darstellung der Level finde ich gut, kann fast noch minimal auffälliger sein. aber erstell erstmal die neuen Modelle, danach kannst du nochmal die Levelunterscheidung angehen
+
+- **Ergebnisvermerk:** Der Miner und alle übrigen Gebäudemodelle wurden als eigenständige SVG-Industrieillustrationen mit abgeschrägten Gehäusen, sichtbarer Mechanik und Materialdetails neu gestaltet. Splitter und Merger bleiben enthalten. Die vorhandene MK-Farbunterscheidung wurde in diesem Schritt nicht angepasst.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> probier das ganzenochmal. lass dir ruhig zeit und gleich das ganze lieber mehrmals ab. der miner bspw. ist durch die vielen blöcke die random platztiert sind nicht erkennbar. mach ihn simpel und gut erkennbar durch die Füße den Bohrer (mit Bohrprofil)
+
+- **Ergebnisvermerk:** Der Miner wurde vereinfacht und seine Silhouette neu aufgebaut: zwei Standfüße tragen den Motorrahmen; der große mittige Bohrer hat eine kontrastreiche spiralförmige Schnecke und eine sichtbare Spitze. Andere Gebäude und Level-Farbgebung blieben unverändert.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> mach nur zwei der standfüé, kontrollier außerdem dass die designelemente alle sauber platziert sind. für diese art des design dann auch für die aneren gebäude aus und überprüfe diese. Überleg dir außerdem wie man das ganze gut in die 2D Welt unseres Spiels aus der Vogelperspektive integrieren kann. Berücksichtige auch benötigte AUs- sowie Eingänge.
+
+- **Ergebnisvermerk:** Der Miner hat nun genau zwei Standfüße. Alle Gebäude der Vorschau zeigen funktional getrennte Gegenstands- und Stromanschlüsse; die Gebäudekarten listen Ein- und Ausgänge auf. Eine schematische Rasteransicht zeigt beispielhafte Footprints, 1x1-Bänder und ein separates Stromnetz. Footprint- und Rastermaße sind ausdrücklich vorläufig, bis sie mit der Spielumgebung abgestimmt sind. Die Gebäudeplanung wurde um dieselben Anschlussregeln ergänzt.
+
+## 2026-11-12
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> geh auch bei den anderen designs von den strikten Blöcken als designgrundlage weg und überarbeite diese nochmal nach den grundlagen die ich dir für den Miner gegeben habe
+
+- **Ergebnisvermerk:** Schmelze, Konstruktor, Assembler, Lager und Verbrennungsgenerator wurden mit runden Kesseln, geöffneten Drehtischen, mehreren Fertigungsstationen und zylindrischen Silos neu gezeichnet. Strommast, Laufband, Splitter und Merger wurden ebenfalls von blockigen Sockeln bzw. Gehäusen auf rundere, funktionsbetonte Formen umgestellt. Die Anschlusssymbole und Levelumschaltung blieben erhalten.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> erstelle den konstruktor exakt nach diesem bild. Gehe genau danach vor und gleiche anschließend die Pixel deines Ergebnisses ab und verbessere zur Not
+
+- **Ergebnisvermerk:** Das Konstruktor-SVG wurde als Schmiedewerkbank mit dominantem Amboss, Hammer, Zange, Stahlwinkeln, Querstrebe und dunklem Bodenschatten neu aufgebaut. Nach erneutem Hochladen des Referenzbilds wurden die Position und der Begrenzungsrahmen anhand eines Bild-Overlays angepasst.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Wenn man im Spiel keinen Unterschied sieht nimm gerne die PNG. Wenn du meinst du schaffst es das ganze sauber anchzubauen mach lieber einheitlich eine SVG. Probier eventuell al beide Optionen und klass mich beide sehen, so dass ich entscheiden kann was besser passt.
+
+- **Ergebnisvermerk:** In der Vorschau stehen SVG-Nachzeichnung und freigestellte PNG-Referenz nebeneinander. Die PNG-Datei ist als Vergleich eingebunden, noch nicht in die Spielzeichnung übernommen; die endgültige Variante entscheidet der Nutzer.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> nimm das png wieder raus. Mach schnell. Und mach den konstruktor noch besser erkennbar. (Oberer Teil des Amboss, Zange und Hammer genau ach dem Vorbild, Abschnitt im unteren Teil des Amboss unauffälliger)
+
+- **Ergebnisvermerk:** Der PNG-Vergleich wurde aus der Vorschau entfernt. Ambosskopf, Hammer und Zange wurden klarer modelliert; der untere Ambossbereich und seine Details sind zurückgenommen.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Geh jetzt nochmal den Strommast, Splitter und Merger an. Achte bei Splitter und Merger nur noch darauf Pfeile in der richtigen anordnung darzustelen. (Splitter 1 Eingang, 2 Ausgänge; Merger 2 Eingänge, 1 Ausgang). Den Strommast mach bitte einfach genauer
+
+- **Ergebnisvermerk:** Der Strommast erhielt verstärkte Querträger, gestapelte Isolatoren, Mastsegmente und verschraubte Details. Splitterpfeile zeigen einen oberen Eingang und linke/rechte Ausgänge; Mergerpfeile zeigen linke/rechte Eingänge und einen oberen Ausgang.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> lass beim konstruktor den holzgriff vom hammer. Mach beim Lager die akzente in den Farben des Upgrades. Füg dem Laufband und den Splittern eine leichte Umrandung in der Levelfarbe hinzu. Mach das rot bei Stufe 3 etwas kräftiger
+
+- **Ergebnisvermerk:** Der Holzgriff des Konstruktor-Hammers bleibt über alle Ausbaustufen unverändert. Das Lager erhält türkisfarbene bzw. kräftig rote MK2-/MK3-Akzente; Laufband und Splitter bekommen passende feine Levelkonturen.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Mach das Lager doch komplett in den Levelfarben. Nutz für Laufband, Merger und Splitter die schon existente umrandung
+
+- **Ergebnisvermerk:** Die Lagerdarstellung wird vollständig mit dem aktiven MK2-/MK3-Farbfilter eingefärbt. Laufband, Splitter und Merger verwenden ihre bereits im SVG definierten Level-Umrandungen statt zusätzlicher Kontur-Overlays.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> nehm die graue Umrandung, ich hab sie dir hier mal pink markiert
+
+- **Ergebnisvermerk:** Die graue Zwischenlage der Laufband-SVG-Kontur wurde entfernt; der dunkle Gurt und die Levelakzente bleiben bestehen.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> nicht weg nehmen, sondern in den farben der Level gestalten, die aktuelle levelmarkierung kann dafür weg. nehm bei splitter und konstruktor auch die graue umrandung
+
+- **Ergebnisvermerk:** Die graue Gurtumrandung wird wiederverwendet und in MK2-Blau bzw. MK3-Rot dargestellt. Die separaten farbigen Markierungsstreifen am Laufband entfallen; Splitter/Merger-Ränder und Konstruktor-Metallplatten erhalten ebenfalls Level-Umrandungen.
+
+## 2026-11-19
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> entferne jetzt noch die umrandungen der metallplatten beim konstruktor und mach die umrandungen im gleichen farbton (weniger kräftig)
+
+- **Ergebnisvermerk:** Die farbigen Konturen der Konstruktor-Metallplatten wurden entfernt. Laufband-, Splitter- und Merger-Umrandungen behalten ihre MK2-/MK3-Farbtöne, erscheinen aber transparenter und dadurch dezenter.

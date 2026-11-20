@@ -1,0 +1,34 @@
+Tower-Defense Karten v2 (kompakt, passend zu den Sprites im 96-px-Raster)
+=======================================================================
+Groesse: 1920 x 1056 px = 20 x 11 Kacheln a 96 px. Bei 1920x1080 bleiben 24 px fuer eine schmale Leiste.
+Die Sprites dazu liegen in tower_defense_sprites_v4.zip (Ordner 1080p, ebenfalls 96-px-Raster).
+
+Pro Karte:
+  <karte>_boden.png     Gelaende, Wege, Wasser/Lava, Wasserbruecken, Podeste, Spawn-Hoehlen
+  <karte>_deko.png      Baeume, Felsen usw. (transparent), ueber dem Boden, unter den Figuren
+  <karte>_bruecken.png  Brueckendeck an den Wegkreuzungen (transparent)
+  <karte>_komplett.png  alles zusammen als statisches Bild
+  <karte>_vorschau.png  Beispielansicht mit Schloss, Tuermen und Gegnern
+  <karte>.json          Daten fuers Spiel (Pixel, Ursprung oben links)
+
+Zeichenreihenfolge im Spiel:
+  1. boden  2. deko  3. Gegner, die UNTER der Bruecke laufen  4. bruecken  5. Gegner auf der Bruecke, Tuerme, Schloss (nach y sortiert)
+  Regel: Ein Gegner gilt als "auf der Bruecke", solange er sich innerhalb von kreuzungen[].bereich befindet
+  und sich in Richtung kreuzungen[].oben bewegt (horizontal = links/rechts, vertikal = hoch/runter).
+
+JSON:
+  routen[]      je Spawn: spawn, waypoints (Ecken als Kachelmitten, letzter Punkt = Schlosstor), kacheln = Weglaenge.
+                Wege duerfen sich selbst kreuzen; die Wegpunkte laufen einfach durch die Kreuzung.
+  kreuzungen[]  tile, oben (welche Richtung ueber die Bruecke fuehrt), bereich [x0, y0, x1, y1]
+  podeste[]     tile, turm_pivot = Punkt fuer den Fusspunkt (Pivot) des Turm-Sprites
+  schloss.pivot Punkt fuer den Pivot von hauptgebaeude/schloss.png
+
+Karten:
+  1 Gruenes Tal        leicht         1 Weg mit Steinbruecke ueber sich selbst, 46 Kacheln
+  2 Sumpfwald          mittel         1 Weg mit Holzbruecke ueber sich selbst, 46 Kacheln, Tuempel nehmen Bauplaetze weg
+  3 Winterpass         mittel-schwer  2 Spawns (Westen 32, Norden 20 Kacheln), Nordweg fuehrt per Bruecke ueber den Westweg
+  4 Flussschlucht      schwer         2 Spawns (Westen 22 / Norden 21 Kacheln), Kreuzung mit Holzbruecke, Flussbruecke vor dem Schloss
+  5 Verfluchtes Oedland sehr schwer   2 Spawns (Norden nur 17 / Westen 36 Kacheln), Westweg mit Schleife ueber sich selbst und
+                                      zweiter Bruecke ueber den Nordweg, Lava, Podeste oft 2 Kacheln vom Weg
+Podeste: je 10. Auf leichten Karten an den Stellen mit der meisten Wegabdeckung (Reichweite 2,5 Kacheln), auf schweren weiter weg.
+Fuer 4K alles mit Nearest Neighbor auf 2x skalieren.

@@ -82,6 +82,11 @@ namespace OOPGames
             ((IG5_KartenansichtSteuerung)_welt).Zoomieren(faktor, fokusX, fokusY);
         }
 
+        void IG5_KartenansichtSteuerung.SetzeAnsicht(double zoom, double verschiebungX, double verschiebungY)
+        {
+            ((IG5_KartenansichtSteuerung)_welt).SetzeAnsicht(zoom, verschiebungX, verschiebungY);
+        }
+
         internal bool TryGetKachel(int x, int y, out G5_Kachel kachel)
         {
             return _welt.TryGetKachel(x, y, out kachel);
@@ -129,6 +134,31 @@ namespace OOPGames
                 if (_gebaeude is G5_Smelter)
                 {
                     return G5_FabrikGebaeudeTyp.Schmelze;
+                }
+
+                if (_gebaeude is G5_Constructor)
+                {
+                    return G5_FabrikGebaeudeTyp.Konstruktor;
+                }
+
+                if (_gebaeude is G5_Assembler)
+                {
+                    return G5_FabrikGebaeudeTyp.Assembler;
+                }
+
+                if (_gebaeude is G5_BurningGenerator)
+                {
+                    return G5_FabrikGebaeudeTyp.Verbrennungsgenerator;
+                }
+
+                if (_gebaeude is G5_PowerPole)
+                {
+                    return G5_FabrikGebaeudeTyp.Strommast;
+                }
+
+                if (_gebaeude is G5_Conveyor)
+                {
+                    return G5_FabrikGebaeudeTyp.Laufband;
                 }
 
                 throw new InvalidOperationException("Unbekannter Gebäudetyp in der Fabrikansicht.");

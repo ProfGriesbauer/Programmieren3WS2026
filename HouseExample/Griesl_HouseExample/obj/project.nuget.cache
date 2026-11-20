@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "B1AiX4R+rXQ=",
+  "dgSpecHash": "6i01xfTInEM=",
   "success": true,
-  "projectFilePath": "C:\\Users\\tillm\\Documents\\Hochschule\\Semester 3\\Programieren3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
+  "projectFilePath": "C:\\Users\\steel\\Documents\\HS_Kempten\\3_Semester\\Programmieren_3\\Programmieren3WS2026\\HouseExample\\Griesl_HouseExample\\Griesl_HouseExample.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\tillm\\.nuget\\packages\\microsoft.netcore.app.ref\\7.0.20\\microsoft.netcore.app.ref.7.0.20.nupkg.sha512",
-    "C:\\Users\\tillm\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\7.0.20\\microsoft.windowsdesktop.app.ref.7.0.20.nupkg.sha512",
-    "C:\\Users\\tillm\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\7.0.20\\microsoft.aspnetcore.app.ref.7.0.20.nupkg.sha512",
-    "C:\\Users\\tillm\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\7.0.20\\microsoft.netcore.app.host.win-x64.7.0.20.nupkg.sha512"
+    "C:\\Users\\steel\\.nuget\\packages\\microsoft.netcore.app.ref\\7.0.20\\microsoft.netcore.app.ref.7.0.20.nupkg.sha512",
+    "C:\\Users\\steel\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\7.0.20\\microsoft.windowsdesktop.app.ref.7.0.20.nupkg.sha512",
+    "C:\\Users\\steel\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\7.0.20\\microsoft.aspnetcore.app.ref.7.0.20.nupkg.sha512",
+    "C:\\Users\\steel\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\7.0.20\\microsoft.netcore.app.host.win-x64.7.0.20.nupkg.sha512"
   ],
   "logs": []
 }

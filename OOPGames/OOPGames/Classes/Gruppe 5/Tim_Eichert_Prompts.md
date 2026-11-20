@@ -204,3 +204,113 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > achso klarden painter die rules und players dürfen hinzugefügt werden
 
 - **Ergebnisvermerk:** `G5_FabrikPainter`, `G5_FabrikRules` und `G5_FabrikHumanPlayer` wurden ausschließlich im bestehenden Registrierungsblock von `MainWindow.xaml.cs` eingetragen. Konzept und UML wurden entsprechend korrigiert.
+
+### 2026-11-19, 09:08 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Die anderen gruppenmitglieder haben auch einige dinge erstellt und gepushed. Kannst du alles zu einem spiel vereinen, damit klassesn wie items auch nur einmal vorhanden sind und die einzelnen programmteile da drauf zugreifen können und nicht jeder ne einzelnge klasse dafür hat. Bitte dokumentiere was du aus welche programm verwendest hast. Außerdem erstelle klare schnittstellen die jeder verwenden kann.
+
+- **Ergebnisvermerk:** Die Gruppe-5-Fabrikteile wurden auf ein gemeinsames Regelwerk zusammengeführt: `SatisfactoryGameRules` verwendet Tims Welt, Spielfeldprojektion, Painter und Player sowie Chris' gemeinsame Items, Rezepte, Gebäude, Transfer-/Strommodelle und Simulation. Die parallele Prototyp-Regelklasse und automatische Doppelregistrierung wurden entfernt. Die Item-/Power-Schnittstellen liegen im Interface-Ordner und folgen dem `IG5_`-Präfix. Herkunft und Verträge sind in `Plans/Gemeinsame_Architektur_und_Schnittstellen.md` dokumentiert.
+
+### 2026-11-19, 09:19 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> welche von den ganzen datein und klassen werden aktuell verwendet, wird alles verwendet ode rgibt es noch alte dinge die nicht mehr verwendet werden und auch keine verwendung mehr haben
+
+- **Ergebnisvermerk:** Die aktuellen Gruppe-5-Dateien und Klassen wurden nach registriertem Spielablauf, nur vorbereiteten Erweiterungen und separaten Spielen klassifiziert. Die Übersicht steht im Abschnitt „Aktueller Nutzungsstand“ in `Plans/Gemeinsame_Architektur_und_Schnittstellen.md`. Insbesondere sind Constructor, Assembler, Förderbänder, Generatoren, Masten, Upgrades und Zoom-/Pan-Eingabe noch nicht im aktuellen Satisfactory-Ablauf angeschlossen; die frühere Regelklasse `G5_FabrikRules` ist lokal entfernt, aber die Änderung noch nicht gepusht.
+
+### 2026-11-19, 09:28 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompts im Wortlaut:**
+
+> Kannst du die designs von chris implementieren
+
+> setzte bitte alle um schau aber das man noch nicht alles im spiel verwenden kann
+
+- **Ergebnisvermerk:** Alle zehn Designs aus Chris' HTML-Vorschau wurden als native WPF-Vektorzeichnungen im Fabrik-Painter umgesetzt. Vorhandene Gebäude werden auf ihre passenden Designs abgebildet; die Stufen 1–3 erhalten optische Akzente. Splitter und Merger sind nur als Zeichnungen vorbereitet, da ihnen Gebäudemodelle und Spielregeln fehlen. Bauwerkzeuge, Regeln und `MainWindow.xaml.cs` wurden nicht geändert; dadurch sind noch nicht verfügbare Gebäude weiterhin nicht platzierbar.
+
+### 2026-11-19, 10:00 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Bitte ändere im vollbild modus unsere anzeige so, dass das spielfeld gut draufpasst und oben zwei reihen frei sind wo die steuerung erklärt wird. Im nicht vollbild modus wird das spiel aktuell sehr komisch angezeigt, da es die anzeige für die spielauswahl teils überschreibt, ass darf nicht sein. In diesem modus ist es ok wenn nur der obere linke ausschnitt des spielfeld zusehen ist
+
+- **Ergebnisvermerk:** Der Fabrik-Painter passt die Karte im breiten Vollbild-Viewport an, reserviert oben zwei HUD-Zeilen für Steuerung, Werkzeug, Hub-Bestand und Status und beschneidet die Zeichnung auf das Spielfeld-Canvas. Im normalen Fenstermodus bleibt der sichtbare Kartenausschnitt oben links unter der Steuerungsanzeige bei Standardgröße, sodass die restliche Karte abgeschnitten statt über die Spielauswahl gezeichnet wird. Die Steuerungszeilen fangen keine Spielaktionen ab. Die Anleitung wurde ergänzt.
+
+### 2026-11-19, 10:28 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Ich habe ein neues design für den hintergrund erstellt. Kannst du wie wiese Hintergrund bitte implementieren. Außerdem habe ich gemerkt, bei jeden Tick das komplette spielfeld neu erstellt wird. Kannst du das bitte umsetzten, dass das nur beim spiel start geschieht und dann der hintergrund bleibt und nurdie gebäude und so neu geladen werden?
+
+- **Ergebnisvermerk:** `G5_WieseHintergrund` wurde in den Fabrik-Painter eingebunden. Die Gras-/Raster-/Felsgrafik wird als statische Bitmap-Ebene pro Spielfeld und Ansichtsgröße vorgehalten; im Simulationstick werden nur die dynamische Ebene mit Rohstoffanzeigen, Gebäuden und HUD neu aufgebaut. Bei einem Spielfeldwechsel oder Größenwechsel wird die Hintergrundebene neu erstellt.
+
+### 2026-11-19, 10:51 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Pushe bitte die änderungen und schau die letzten änderungen von den andern auf die nun gemeinsamen klassen verwenden oder ob die noch die einzelnen klassen verwenden.
+
+- **Ergebnisvermerk:** Die Wiesenhintergrund-Änderungen wurden auf `origin/master` gepusht. Die geprüften letzten Änderungen verwenden weiterhin die gemeinsamen `G5_*`-Modelle statt separater Item- oder Gebäudeklassen.
+
+### 2026-11-19, 11:02 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Kannst du bitte ändern, dass nicht direkt zu beginn schmelzen platziert sind. Kannst du außerdem ändern, dann man über die einstellungen sich die gebäude aktivieren kann. Das heißt wenn man im spiel constructors haben möchte, dass man das in den einstellungen aktiviert und dann kann man die auch im spielfeld platzieren.
+
+- **Ergebnisvermerk:** Die Start-Schmelzen wurden entfernt. Schmelzen und Konstruktoren lassen sich einzeln in den Einstellungen aktivieren und danach mit `S`/`K` beziehungsweise `C` platzieren. Der Build war erfolgreich; `MainWindow.xaml.cs` blieb unverändert.
+
+### 2026-11-19, 11:18 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Kannst du bitte ebenlls die förderbänder hinzufügen und so, dass wenn die in den einstellungen deaktiviert sind, dann soll das spiel die items weiterhin automatisch weiter geben und wenn die förderbänder aktiviert ind muss ich diese selbst verbinden. Dafür soll am Ausgang eines gebäudes eine rote loinie sein von der ich das förderband zum eingang des neuen gebäudes ziehe die eingänge sollen mit einer blauen linie erkennbar sein
+
+- **Ergebnisvermerk:** Die Förderbandoption schaltet zwischen automatischer Materialübergabe und manuellem Transport über verbundene Bänder um. Rote Ausgänge und blaue Eingänge markieren die Gebäudeanschlüsse. Da die Framework-Eingabe einzelne Klicks liefert, wurde die Verbindung als Ausgangs- und anschließender Eingangsklick umgesetzt, nicht als Ziehbewegung. Der Build war erfolgreich.
+
+### 2026-11-19, 12:02 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Um die Förderbänder zu platzieren kannst du bitte ebenfalls ein key hinzufügen, wo man dann den anfang und ende anklichen muss. Für die anfänge und ende bei den gebäuden machen die blaue und rote linie bei dem gebäude selbst hinzu und nicht neben dran
+
+- **Ergebnisvermerk:** `B` aktiviert den Förderbandmodus; erst der rote Ausgang und dann der blaue Eingang werden angeklickt. Die Anschlusslinien sind direkt auf den Gebäuden platziert. `Esc` beendet den Modus. Der Build war erfolgreich und `MainWindow.xaml.cs` blieb unverändert.
+
+### 2026-11-19, 12:19 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> bitte füge ein interaktionsmenü für die gebäude auf. Wo man sehen kann welche stufe das gebäude hat und wo man das rezept auswählen kann und wo man auch sieht was man an den eingängen gerade erhält
+
+- **Ergebnisvermerk:** Das Gebäudefenster zeigt Stufe, verfügbare und aktive Rezepte sowie den aktuellen Eingangsinhalts- beziehungsweise Lagerbestand. Rezepte lassen sich im Fenster auswählen; Schließen geht über `X`, `Esc` oder einen Klick außerhalb des Fensters. Build und `git diff --check` waren erfolgreich.
+
+### 2026-11-19, 12:34 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> pushe das projekt
+
+- **Ergebnisvermerk:** Die Fabrikspiel-Änderungen wurden nach Integration der zwischenzeitlichen Teamänderungen auf `origin/master` gepusht (Commit `921fb4e`). Der Build war erfolgreich; Cache- und temporäre Projektdateien wurden nicht mit aufgenommen.
+
+### 2026-11-19, 12:40 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> füge in miene prompt markdow datei alle weiteren prompts hinzu
+
+- **Ergebnisvermerk:** Die seit dem letzten dokumentierten Spieleintrag fehlenden Prompts aus dem Gesprächsverlauf wurden mit Uhrzeit und Ergebnisvermerk ergänzt.

@@ -10,14 +10,14 @@ Das detaillierte Spielfeldkonzept steht in [Tim_Eichert_Spielfeldkonzept.md](./T
 
 ## Aktueller Prototyp
 
-Der erste einfache Spielablauf ist in den Spielklassen umgesetzt: feste Karte mit zwei Eisenvorkommen, ein vorhandenes HUB/Lager, Förderer- und Schmelzenplatzierung per Klick und automatische Erz-/Barrenproduktion. `F` wählt einen Förderer, `S` eine Schmelze, `Esc` hebt die Auswahl auf; danach wird auf eine passende freie Fläche geklickt. Das HUB übernimmt im Prototyp automatisch den Itemtransport. Gebäude sind kostenlos; Laufbänder, Stromversorgung, Handabbau und Handcrafting sind noch nicht Teil dieser Version. Da `MainWindow.xaml.cs` unverändert bleiben muss, ist der Prototyp noch nicht über die Framework-Auswahllisten startbar.
+Der aktuelle spielbare Fabrikstand verwendet eine feste Karte mit Eisen- und Kupfervorkommen, einem Hub, passenden Startschmelzen sowie per Klick platzierbaren Förderern und Schmelzen. `F` wählt einen Förderer, `S` eine Schmelze und `Esc` hebt die Auswahl auf. Für die Startversion wird der Itemtransport über das Hub vereinfacht; die gemeinsamen Gebäudemodelle enthalten zusätzlich Laufband- und Stromkomponenten. Die Spielerrollen sind im Framework registriert.
 
-Die Maschinen und ihre Fabriksimulation werden aus Chris' `Christian_Frey_FabrikGebaeude.cs` wiederverwendet. Der Spielcode erzeugt die feste Karte, prüft die Platzierung, taktet die Simulation und transferiert Gegenstände zum/vom HUB.
+Die gemeinsame Herkunft der Karten-, Regel-, UI- und Gebäudeteile sowie der benutzbaren Schnittstellen ist in [Gemeinsame_Architektur_und_Schnittstellen.md](./Gemeinsame_Architektur_und_Schnittstellen.md) dokumentiert. Alle Fabriksysteme benutzen denselben `G5_Item`-Enum und dieselben `G5_Recipe`-Daten.
 
 ## 2. Architekturprinzipien
 
 - **OOPGames-Rollen bleiben getrennt:** Rules verwalten Zustand und Regeln, Player übersetzt Eingaben in Aktionen, Painter zeichnet. Keine dieser Rollen soll die Implementierung einer anderen Rolle direkt voraussetzen.
-- **Ein zentraler Zustand:** `G5_FabrikRules` besitzt im Prototyp das Spielfeld und koordiniert Fabriksimulation sowie Aktionen. `CurrentField` veröffentlicht das Spielfeld nur über `IGameField`.
+- **Ein zentraler Zustand:** `SatisfactoryGameRules` besitzt das Spielfeld und koordiniert Aktionen sowie `G5_FactorySimulation`. `CurrentField` veröffentlicht das Spielfeld nur über `IGameField`.
 - **Renderzustand erreichbar machen:** OOPGames übergibt dem Painter nur `IGameField`. Daher muss das Feld darzustellende Zustände (Gebäude, Spieler, Laufbänder und UI-Anzeige) über kleine, nur lesende `IG5_...Info`-Verträge erreichbar machen. Die Rules bleiben die einzige Stelle, die diese Zustände verändert.
 - **Eingaben sind Befehle:** Der Player entscheidet nicht, ob eine Aktion zulässig ist. Er erzeugt eine Aktion; die Rules prüfen und führen sie aus.
 - **Simulation ist unabhängig von Darstellung:** Die Regeln verändern keine Canvas-Elemente. Der Painter liest Spielzustand und zeichnet ihn.
@@ -28,7 +28,7 @@ Die Maschinen und ihre Fabriksimulation werden aus Chris' `Christian_Frey_Fabrik
 
 | OOPGames-Vertrag | Geplante Gruppe-5-Komponente | Zweck |
 |---|---|---|
-| `IGameRules2` (`IGameRules`) | `G5_FabrikRules` | Spielfeld besitzen, Aktionen prüfen und die zeitbasierte Simulation aktualisieren |
+| `IGameRules2` (`IGameRules`) | `SatisfactoryGameRules` | Spielfeld besitzen, Aktionen prüfen und die zeitbasierte Simulation aktualisieren |
 | `IGameField` | `G5_FabrikSpielfeld : IG5_FabrikSpielInfo` | Welt- und Fabrikzustand read-only bereitstellen sowie Painter-Kompatibilität prüfen |
 | `IPaintGame2` (`IPaintGame`) | `G5_FabrikPainter : IG5_FabrikPainter` | Karte und Produktionszustand nach Aktionen und beim Framework-Tick darstellen |
 | `IHumanGamePlayer` | `G5_FabrikHumanPlayer` | `F`, `S`, `Esc` und Kartenklicks in Fabrikaktionen übersetzen |
@@ -36,7 +36,7 @@ Die Maschinen und ihre Fabriksimulation werden aus Chris' `Christian_Frey_Fabrik
 
 Rules, Painter und Player benötigen jeweils eine eindeutige `Name`-Property. Der Player muss außerdem `SetPlayerNumber`, `PlayerNumber`, `CanBeRuledBy` und `Clone` korrekt implementieren; seine Spielwelt darf nicht in der geklonten Controller-Instanz gespeichert werden.
 
-`G5_FabrikRules.TickGameCall()` wird vom Framework zusammen mit dem Darstellungstick aufgerufen (derzeit etwa alle 40 ms). Der Tick dient der zeitbasierten Simulation; er darf keine blockierenden Wartezeiten enthalten. `StartedGameCall()` kann eine Spielsitzung initialisieren. `ClearField()` setzt Welt und Fabriksimulation zurück.
+`SatisfactoryGameRules.TickGameCall()` wird vom Framework zusammen mit dem Darstellungstick aufgerufen (derzeit etwa alle 40 ms). Der Tick dient der zeitbasierten Simulation; er darf keine blockierenden Wartezeiten enthalten. `StartedGameCall()` initialisiert die Spielsitzung. `ClearField()` setzt Welt und Fabriksimulation zurück.
 
 Das Framework erwartet bei `CheckIfPLayerWon()` laut Vertrag `-1`, wenn niemand gewonnen hat. Für den Cozy-Modus gibt es normalerweise keinen Sieger; Missionsziele können später einen Abschlusszustand ergänzen. `MovesPossible` ist solange wahr, wie die Sitzung Eingaben annimmt.
 
@@ -54,7 +54,7 @@ Dateien folgen dem Projektschema `Tim_Eichert_<Inhalt>.cs`; eigene Klassen und I
 
 | Klasse / Interface | Aufgabe | Stand / Zuständigkeit |
 |---|---|---|
-| `G5_FabrikRules` | Implementiert `IGameRules2`; validiert Werkzeugwahl und Platzierung, koordiniert Fabriksimulation und Reset. | MVP implementiert – Erweiterung Maxi |
+| `SatisfactoryGameRules` | Implementiert `IGameRules2`; validiert Werkzeugwahl und Platzierung, koordiniert gemeinsame Fabriksimulation und Reset. | Aktuelles einziges Regelwerk – Maxi |
 | `G5_FabrikAktion` / `IG5_FabrikAktion` | Read-only Befehl für Werkzeugwahl und Gebäudeplatzierung; implementiert `IPlayMove`. | MVP implementiert – Erweiterung Maxi |
 | `G5_FabrikHumanPlayer` | Verarbeitet `F`, `S`, `Esc` und Kartenklicks; liefert eine Fabrikaktion. | MVP implementiert |
 | `G5_FabrikPainter` / `IG5_FabrikPainter` | Zeichnet Karte, Rohstoffe, Gebäude, HUB-Bestand und Status; keine Spielzustandsänderungen. | MVP implementiert |
@@ -69,7 +69,7 @@ Dateien folgen dem Projektschema `Tim_Eichert_<Inhalt>.cs`; eigene Klassen und I
 |---|---|---|
 | `G5_Spielerzustand` | Position und Inventar des menschlichen Spielers; gehört zum Spielzustand, nicht zur Player-Controller-Instanz. | Eine Instanz im Cozy-MVP |
 | `G5_Inventar` / `G5_Gegenstandsstapel` | Begrenzter Platz, Mengen und kontrolliertes Hinzufügen/Entnehmen; fehlgeschlagene Aufnahme verändert den Bestand nicht. | Kapazität zunächst in Slots oder Einheiten festlegen |
-| `G5_Gegenstandstyp` (Enum) | Abbaubare Rohstoffe und verarbeitete Produkte wie Erz, Barren, Platten und Stangen. | Rohstoffvorkommen im Feld bleiben davon getrennt |
+| `G5_Item` (Enum) | Einzige Item-ID für Rohstoffe, Produkte, Lagerbestände, Rezepte und Transfer. | Vorhanden bei Chris; gemeinsam verwendet |
 | `G5_Gebaeude` | Abstrakte Basis mit ID, Position, Level und Zustand. Kein Canvas-Code. | Chris |
 | `G5_Miner` | Entnimmt in Zeitintervallen Eisenerz aus dem Vorkommen unter sich und legt es ins Ausgabelager. | Vorhanden bei Chris; im MVP integriert |
 | `G5_Fertigungsgebaeude` | Gemeinsame Produktionslogik mit Rezept, Eingangs-/Ausgangslager und Fortschritt. | Chris |
@@ -78,14 +78,14 @@ Dateien folgen dem Projektschema `Tim_Eichert_<Inhalt>.cs`; eigene Klassen und I
 | `G5_FactorySimulation` | Aktualisiert Maschinenzustände in diskreten Ticks und verwaltet hinzugefügte Gebäude. | Vorhanden bei Chris; im MVP integriert |
 | `G5_Kraftwerk` | Gemeinsame Erzeugerlogik; konkrete Generatoren verbrauchen Brennstoff und erzeugen Leistung. | Chris / Maxi |
 | `G5_Verbrennungsgenerator`, `G5_Kohlekraftwerk` | Konkrete Kraftwerkvarianten mit abgestimmtem Brennstoff- und Leistungsprofil. | Chris / Maxi |
-| `G5_Rezept` | Unveränderliche Eingabe-/Ausgabemengen, Produktionsdauer und zulässiger Maschinentyp. | Chris |
+| `G5_Recipe` | Unveränderliche Eingabe-/Ausgabemengen, Produktionsdauer und zulässiger Maschinentyp. | Vorhanden bei Chris; gemeinsam verwendet |
 | `G5_LaufbandSegment` / `G5_LaufbandSystem` | Getrennte Belt-Belegung, Richtung/Verbindung und Transport von Gegenständen über Zeit. | Chris |
 | `G5_Stromnetz` | Ermittelt verbundene Strombereiche und gleicht Erzeugung/Verbrauch ab. Wird als Overlay dargestellt. | Chris / Maxi |
 | `G5_Sichtsystem` | Aktualisiert `IstAktuellSichtbar` und dauerhaftes `IstErkundet` um den Spieler herum. | Maxi |
 | `G5_Missionssystem` | Prüft optionale Ziele, Zeitlimits und Fehlschlagzustände. Für den Cozy-MVP nicht erforderlich. | Maxi |
 | `G5_KartenGenerator` | Erzeugt eine Karte aus Konfiguration oder Seed. Für den Anfang kann eine feste Testkarte genügen. | Tim / Maxi |
 
-**Abgrenzung:** `G5_FabrikRules` koordiniert im Prototyp die Systeme, enthält aber nicht selbst Rezeptlisten, Lagerdetails oder Produktionslogik. In der ersten Version werden Maschinen und Ticks durch Chris' Simulation verwaltet.
+**Abgrenzung:** `SatisfactoryGameRules` koordiniert Welt, Aktionen und Simulation, enthält aber nicht selbst Item-, Rezept-, Lager- oder Maschinenimplementierungen. Diese stammen aus dem gemeinsamen Fabrikmodell.
 
 ## 5. Zentrale Spielabläufe
 
@@ -94,7 +94,7 @@ Dateien folgen dem Projektschema `Tim_Eichert_<Inhalt>.cs`; eigene Klassen und I
 1. Das Framework liefert dem `G5_FabrikHumanPlayer` eine Maus- oder Tastaturauswahl und das Feld als `IGameField`.
 2. Der Player wandelt die Auswahl in eine typisierte `G5_FabrikAktion` um. Bei Kartenklicks kann er über `IG5_WeltSpielfeld.TryBildschirmZuRaster(...)` die Rasterkoordinate ergänzen.
 3. Der Player gibt die Aktion zurück oder `null`, wenn die Eingabe keine Aktion ergibt.
-4. `G5_FabrikRules.DoMove(...)` prüft die Aktion und führt gültige Werkzeugwahl oder Gebäudeplatzierung aus.
+4. `SatisfactoryGameRules.DoMove(...)` prüft die Aktion und führt gültige Werkzeugwahl oder Gebäudeplatzierung aus.
 5. Nur bei gültiger Aktion ändert sich der Spielzustand; der Painter zeichnet ihn anschließend neu.
 
 ### Zeitbasierte Fabrik

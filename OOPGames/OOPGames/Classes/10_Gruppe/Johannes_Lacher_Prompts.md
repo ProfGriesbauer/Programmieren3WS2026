@@ -230,6 +230,72 @@ Werkzeug: Claude Code (VS-Code-Erweiterung), Modell: Claude Opus 5.5 (`claude-op
 
 **Ergebnis:** übernommen – Gruppe 3 verwendet `IG10_Painter` nicht mehr; Interface entfernt, Build und Tests geprüft.
 
+## 2026-11-05 – Claude Code (Modell: Claude Opus 5.5) – Branch `gruppe10`
+
+(Im Branch `gruppe10` ursprünglich als 37–46 nummeriert; beim Merge von `master` am 2026-11-12 auf 41–50 umnummeriert, da 37–40 in `master` schon vergeben waren.)
+
+### 41
+**Prompt:**
+> Before starting with the second game, lets discuss the branch structure: Feature branches or only one branch for our group? All other groups will develop in the same repo#
+
+**Ergebnis:** übernommen – Vergleich „nur Gruppenbranch“ vs. „Gruppenbranch + Feature-Branches“ mit Empfehlung (Präfix im Branchnamen, kein Squash-Merge, `master` per Merge statt Rebase einholen, Vier-gewinnt-Fixes weiter auf `master`).
+
+### 42
+**Prompt:**
+> Lets use one group branch for now
+
+**Ergebnis:** übernommen – lokalen `master` mit `origin/master` zusammengeführt und Branch `gruppe10` angelegt; Build ohne Compilerfehler geprüft.
+
+### 43
+**Prompt:**
+> Now lets discuss the spec for the second game:
+> Basic idea: the player has the choice between multiple retro game consoles (pc, atari, gameboy). the location is a 3d room from the 90ies. when a console is selected the user can choose different games. the game should open full screen. the games will be chosen later.
+> create a md file which documents the spec and future changes to it.
+
+**Ergebnis:** übernommen – Spezifikation `Plans/2026-11-05_Johannes_Lacher_Spielkonzept_RetroKinderzimmer.md` mit Anforderungen, Framework-Rahmenbedingungen, Abgleich mit dem Prototyp, offenen Fragen und Änderungshistorie erstellt.
+
+### 44
+**Prompt:**
+> adjust the plan to the prototype: Lets go with the Commodore
+
+**Ergebnis:** übernommen – Spezifikation auf Version 0.2: F2 nennt Commodore statt PC, Abweichung und offene Frage zum PC entfernt, Eintrag in der Änderungshistorie.
+
+### 45
+**Prompt:**
+> below the canvas there should be the "Tastenkreuz" of the gameboy so it can also be controlled with a mouse
+
+**Ergebnis:** übernommen – Spezifikation auf Version 0.3: neue Anforderung F8 (klickbares Gameboy-Steuerkreuz im unteren Teil des Canvas), F5 angepasst, Hinweis auf nur MouseDown/KeyDown im Framework, Architekturhinweis und offene Frage zu A/B/Start/Select ergänzt.
+
+### 46
+**Prompt:**
+> yes, a/b and start/select should be clickable to
+
+**Ergebnis:** übernommen – Spezifikation auf Version 0.4: F8 um A, B, Start und Select erweitert (sichtbar ab Gerätewahl), Tastenbelegung als Tabelle, offene Frage zur Maussteuerung auf Zimmer und Atari/Commodore eingegrenzt.
+
+### 47
+**Prompt:**
+> mouse control would be great but is not a hard requirement
+
+**Ergebnis:** übernommen – Spezifikation auf Version 0.5: Maussteuerung im Zimmer und bei Atari/Commodore als optionale Anforderung F9 aufgenommen, zugehörige offene Frage entfernt.
+
+### 48
+**Prompt:**
+> refine the gameboys 3d model. add keys and adjust the base shape
+
+**Ergebnis:** übernommen – Gameboy-Modell nach `Kinderzimmer90er/B5_GameBoyModel.cs` ausgelagert (Maße des echten DMG-01, 90 × 148 × 32 mm): Gehäuse mit großer abgerundeter Ecke unten rechts, Displayrahmen mit Streifen, Batterie-LED und Beschriftungen, Steuerkreuz, A/B, Start/Select und Lautsprecherschlitze; Tasten sind jetzt immer sichtbar (vorher nur im Spiel). `B5_RoomPaint.cs` ruft das Modell auf und übernimmt Bildschirm- und Kameraposition daraus; ungenutzte Hilfsmethoden `AddCylinder`/`AddTriangle` entfernt. Ergebnis per Offscreen-Rendering geprüft.
+
+### 49
+**Prompt:**
+> zoom a bit closer to the gameboy so the details can be seen
+
+**Ergebnis:** übernommen – Kameraabstand in der Geräteansicht des Gameboys von 1,8 auf 1,05 verringert (`B5_RoomPaint.cs`, `UpdateCamera`); per Offscreen-Rendering geprüft, das Modell bleibt links der Spieleliste.
+
+### 50
+**Prompt:**
+> fix the book shelf: the books are floating and are unproportional
+
+**Ergebnis:** übernommen – Bücher in `B5_RoomPaint.cs` neu aufgebaut (`BuildBooks`): schmale Bücher mit unterschiedlicher Höhe, Breite und Tiefe stehen exakt auf der Regaloberkante (y = 2,34, vorher 3 cm darüber) bündig zur Rückwand, dazu ein flach liegender Bücherstapel am rechten Ende. Per Offscreen-Rendering geprüft. Modell: Claude Sonnet 5.5 (Wechsel per /model).
+
 ## 2026-11-12 – Claude Code (Modell: Claude Opus 5.5) – Branch `Framework`
 
 (Einträge 41–50 stehen im Branch `gruppe10`.)
@@ -444,3 +510,191 @@ Rückfragen beantwortet: Vollbild = randlos und nur das Spielfeld; zurück über
 > okay merge master into framework
 
 **Ergebnis:** übernommen – `origin/master` (24 Commits, u. a. Drag Race, Hay Day) in `Framework` gemergt, Merge-Commit `5a6e3ec`, nicht gepusht. Genau ein Konflikt in `MainWindow.xaml` (Zeile `Title=…`: Master entfernte eine Leerzeile, `Framework` hatte `StateChanged=…` ergänzt) – `StateChanged` und die entfernte Leerzeile übernommen. Dabei Seiten zunächst vertauscht (im Merge ist „HEAD“ die eigene Seite, im Rebase umgekehrt), sofort bemerkt und korrigiert. Der Merge baut, die Tests B2, B3, B5 und B6 laufen durch (B5 mit allen Paintern von Master). Temporäre Dateien (Eingabetest) vorher gestasht und danach wiederhergestellt; ihr Konflikt im Registrierungsblock von `MainWindow.xaml.cs` mit Master (Drag-Race-Zeilen) durch Behalten beider Seiten gelöst. Temporäre Worktrees entfernt.
+
+## 2026-11-05 und 2026-11-12 – Claude Code – Branch `gruppe10` (Nachtrag aus Stash)
+
+(Im Branch `gruppe10` ursprünglich als 47–50 nummeriert; zeitlich vor den Einträgen 51–84, beim Wiederherstellen des Stashs am 2026-11-12 auf 87–90 umnummeriert, da 47–50 schon vergeben waren.)
+
+### 87
+**Prompt:**
+> add keys to the keyboard as well. make the "Heimcomputer" more detailed as well
+
+**Ergebnis:** übernommen – Heimcomputer in `Kinderzimmer90er/B5_CommodoreModel.cs` ausgelagert und neu aufgebaut: dreistufiges Röhrenmonitor-Gehäuse mit Standfuß, Bezel und Rahmen um den Bildschirm, Bedienleiste (Badge mit Farbstreifen, LED, zwei Knöpfe, Schalter), Lüftungsschlitze, Tastatur mit Rückleiste, über 50 Tasten in fünf Reihen plus Funktionstastenspalte und Leertaste, Diskettenlaufwerk mit zwei Disketten und Tastaturkabel. Die Tasten sind jetzt immer sichtbar (vorher nur im Spiel). Dabei Spalt zwischen Monitorfuß und Monitor erkannt und behoben.
+
+### 88
+**Prompt:**
+> make the controller for the atatri look proper. the yellow selection cube also needs an update for all consoles
+
+**Ergebnis:** übernommen – Atari-Joystick in `Kinderzimmer90er/B5_AtariControllerModel.cs` neu modelliert (schwarzer Sockel, roter Feuerknopf, Schaft mit rundem Griff, Kabel zur Konsole) und auf das Regal neben die Konsole gestellt (vorher schwebte er frei im Raum und war nur im Spiel sichtbar). Der gelbe Auswahlquader wurde durch einen flachen, leuchtenden Rahmen um das jeweilige Gerät ersetzt (`AddFrame`); `AddBox` ist jetzt statisch und teilt sich die Mesh-Erzeugung mit `AppendBox`. Nicht mehr benötigte `_DeviceControls`-Gruppen entfernt. Per Offscreen-Rendering geprüft.
+
+### 89
+**Prompt:**
+> move the controls down to the bottom. they should be in a sort of retro look like in the attached image
+
+(Anhang: Konzeptbild mit Atari, Game Boy und Commodore im 90er-Zimmer und einer Spieleliste „Spiele wählen:“ im Retro-Stil.)
+
+**Ergebnis:** übernommen – Gerätewahl (vorher oben) und Tastenhinweise (vorher unten) zu einer Steuerleiste am unteren Rand zusammengefasst: Geräte als Tabs, das gewählte im blauen Kasten, Tasten als Keycaps. Retro-Stil wie im Bild (dunkles Navy-Panel mit hellem Rahmen, Monospace-Schrift Consolas). Spieleliste rechts im gleichen Stil („Spiele waehlen:“) und endet über der Leiste; laufendes Spiel wird über der Leiste zentriert. Stil und Leiste in neue Datei `Kinderzimmer90er/B5_RetroUi.cs` (`B5RetroStyle`, `B5ControlBar`) ausgelagert. Per Offscreen-Rendering geprüft.
+
+### 90
+**Prompt:**
+> the enter key is not read when the cursor is not in the text field at the bottom. when the cursor is in there it types. can we read the enter key like the other keys (a, d, z and so on)?
+
+**Ergebnis:** übernommen – Ursache: Nach dem Klick auf „Start New Game“ behält der Button den Tastaturfokus und wertet Enter (und Leertaste) selbst als Klick, sodass `Window_KeyDown` des Frameworks die Taste nie erhält; das Status-Textfeld lässt Enter durch, tippt aber die Buchstaben mit. Lösung ohne Änderung am Framework und ohne eigene Event-Handler am `MainWindow`: Der Painter (`B5_RoomPaint.cs`, `TakeKeyboardFocus`) verschiebt den Fokus bei jedem Zeichnen von einem Button oder Textfeld auf das eigene Wurzelelement des Zimmers; die Tasten laufen danach wie gewohnt über das Framework. Kompiliert; im laufenden Programm noch nicht getestet.
+
+## 2026-11-12 – Claude Code (Modell: Claude Opus 5.5) – Branch `gruppe10`
+
+### 91
+**Prompt:**
+> okay lets switch back to the gruppe 10 branch and rebase it. remove the unneccessary rules we hand implemented
+
+Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Rebase bräuchte Force-Push); Stash mit der Kinderzimmer-Arbeit bleibt unangetastet; Prompt-Einträge des `gruppe10`-Teils umnummerieren.
+
+**Ergebnis:** übernommen – `origin/master` (inkl. Framework-Änderungen) in `gruppe10` gemergt, Merge-Commit `3367116`, nicht gepusht. Konflikte: Registrierungsblock in `MainWindow.xaml.cs` (beide Seiten behalten), `Johannes_Gabriel_Prompts.md` (`gruppe10`-Fassung enthält die von `master` vollständig), eigene Prompt-Datei (37–40 doppelt vergeben: Einträge von `master` behalten, `gruppe10`-Einträge 37–46 als 41–50). Einzige nun überflüssige eigene Lösung ist `TakeKeyboardFocus` im Kinderzimmer-Painter; sie liegt nur im Stash und wurde daher nicht entfernt. Test mit dem echten `MainWindow`: Fokus nach dem Start auf dem Spiel, D/Enter/Esc/A kommen im Kinderzimmer an, Enter öffnet das Gerät statt neu zu starten, F11 funktioniert. Einträge 85–86 (Merge-Reihenfolge, PR-Text) fehlen in allen Branches.
+
+### 92
+**Prompt:**
+> okay restore my stashed changes
+
+**Ergebnis:** übernommen – Stash mit der Kinderzimmer-Arbeit (Commodore- und Atari-Modell, Retro-Steuerleiste, Auswahlrahmen) per `git stash apply` wiederhergestellt; der Stash bleibt als Sicherung bestehen. Prompt-Datei: Die Einträge 47–50 aus dem Stash als 87–90 angehängt (Nummern vergeben), der Merge-Eintrag wurde dadurch 91. Wie in Eintrag 91 gewünscht, die nun überflüssige eigene Fokus-Lösung `TakeKeyboardFocus` im Kinderzimmer-Painter entfernt (samt `Focusable`/`FocusVisualStyle` am Wurzelelement und zwei ungenutzten `using`s); das Framework legt den Fokus jetzt selbst aufs Spiel. Build fehlerfrei; Test mit dem echten `MainWindow`: Fokus nach dem Start auf dem Spiel, D/Enter/Esc/A kommen an, Enter öffnet das Gerät, F11 funktioniert.
+
+### 93
+**Prompt:**
+> add the arrow keys for navigation back then suggest a commit for the changes
+
+**Ergebnis:** übernommen – Pfeiltasten wieder eingeführt, zusätzlich zu WASD (Lukas hatte sie im Commit „changed steering“ ersetzt, weil sie damals in den Listen des Hauptfensters landeten; das behebt jetzt das Framework). Neue Hilfsklasse `B5RoomKeys` (`IsLeft`/`IsRight`/`IsUp`/`IsDown`: Pfeiltaste oder WASD), genutzt bei der Geräteauswahl im Zimmer (`B5_RoomCore.cs`) und in Münzen sammeln, Snake und Pong (`B5_RoomGames.cs`); Hinweise in der Steuerleiste („← → / A D“, „PFEILE / WASD“), im Münzspiel und in der README angepasst. Test mit dem echten `MainWindow`: ←/→ wählen das Gerät, im Münzspiel bewegen → und ↓ die Figur, A und W weiterhin; Fokus bleibt auf dem Spiel; Screenshot der Hinweise geprüft. Commit-Nachricht vorgeschlagen.
+
+## 2026-11-19 – Claude Code (Modell: Claude Opus 5.5) – Branch `gruppe10`
+
+### 94
+**Prompt:**
+> Have a look at the project requirements. i would like to add pac-man to the atari with a highly structured object oriented codebase. lets plan this first
+
+**Ergebnis:** abgebrochen – Projektanforderungen und Kinderzimmer-Code (Minispiel-Interface, Registry, Painter, Tower Defense, Void Courier) gelesen; vor dem Schreiben des Plans vom Nutzer unterbrochen.
+
+### 95
+**Prompt:**
+> write the plan in english as well
+
+**Ergebnis:** übernommen (Entwurf) – Plan `Plans/2026-11-19_Johannes_Lacher_PacMan.md` (deutsch) und `Plans/2026-11-19_Johannes_Lacher_PacMan_EN.md` (englisch, gleicher Inhalt) erstellt: Pac-Man als `IB5RoomMiniGame` am Atari, Schichten Modell/Ansicht/Adapter, Geister mit Strategy und State, Level-Tabelle, Schritte, Tests, offene Entscheidungen (u. a. Hub-Änderung für pixelscharfe Spiele). Noch kein Code.
+
+### 96
+**Prompt:**
+> what do you think about the following class structure? did i forget anything?
+>
+> - Game: holds Maze, a list of GameObjects, score and lives; calls update() and draw() on all objects each frame. Use a State pattern for game states (Menu, Playing, GameOver).
+> - Maze: tile grid loaded from a text array (# wall, . dot, o power pellet); provides isWall(x, y). Includes a left/right wrap-around tunnel.
+> - GameObject (abstract): position x, y; abstract update() and draw(); onCollision(other).
+>   - MovingEntity (abstract): direction, speed; move(maze) handles wall stops and tunnel wrap.
+>     - PacMan: nextDirection buffered from input via handleInput().
+>     - Ghost: has a TargetStrategy, a GhostMode and a scatterCorner. At each intersection, picks the direction (no reversing) that minimizes distance to the target tile. frighten() switches mode.
+>   - Collectible (abstract): points; abstract collect(game).
+>     - Dot (10 pts), PowerPellet (50 pts, frightens all ghosts), Fruit (bonus).
+> - TargetStrategy (interface, Strategy pattern): getTarget(ghost, pacman) returns a tile.
+>   - DirectChase (Pac-Man's tile), Ambush (4 tiles ahead of Pac-Man), Flank (derived from Pac-Man and the red ghost), Shy (chases Pac-Man unless within 8 tiles, then its scatter corner).
+> - GhostMode (abstract, State pattern): getTarget(ghost), onCollision(ghost, pacman).
+>   - Chase (uses strategy), Scatter (own corner), Frightened (random direction, can be eaten), Eaten (returns to ghost house, then back to Chase).
+> - Helpers: Direction enum (UP, DOWN, LEFT, RIGHT), Tile class for grid coordinates.
+
+**Ergebnis:** Bewertung der Klassenstruktur im Chat (Vergleich mit dem Plan, fehlende Teile); Plan noch nicht angepasst.
+
+### 97
+**Prompt:**
+> use GhostMode.onCollision(ghost, pacman) in your plan. split draw so game logic and drawing ist independent from each other. move dots to the maze grid. keep fruit as a free object. collecting should return points so the game can react to it. use a context object for flank/inky (pac-man, Blinky, maze). the ghosts schould return to whatever mode is currently active. add a adapter class so pac man does not know about keys. add your suggestions for whats missing. update the plan like you suggested
+
+**Ergebnis:** übernommen (Entwurf) – beide Plan-Fassungen überarbeitet: neuer Abschnitt „Entwurfsentscheidungen“; Namen aus der eigenen Struktur übernommen (`G10_MovingEntity`, `G10_GhostMode`, `G10_Collectible`, Strategien `G10_DirectChase`/`Ambush`/`Flank`/`Shy`); `OnCollision` liefert `G10_CollisionOutcome`; Punkte und Kraftpillen im Raster von `G10_Maze`, Bonusfrucht als freies Objekt; `Collect()` liefert `G10_CollectResult`; Kontextobjekt `G10_GhostContext`; Rückkehr in den gerade aktiven Modus; Adapter als einzige Klasse mit Tasten. Ergänzt: Modi InHouse/LeavingHouse, Phase Paused, `Direction.None`, Tabelle der Geistermodi, zusätzliche Testfälle. Noch kein Code.
+
+### 98
+**Prompt:**
+> start the implementation. use subagents for tasks which can be done in parallel. for example use sonnet 5.5 for the sprite generation.
+
+**Ergebnis:** übernommen – Pac-Man nach Plan umgesetzt (Schritte 1–5) und am Atari registriert (`B5_RoomCore.cs`). Erst die Verträge selbst geschrieben (`Interfaces/10_Gruppe/PacMan/Johannes_Lacher_I_PacMan.cs`, Raster-Typen, Sprite-API), dann zwei Sub-Agenten (Claude Sonnet 5.5) parallel: Sprites und Pixelschrift (`Johannes_Lacher_PacManSprites.cs`) sowie Renderer mit eigener `WriteableBitmap` (`Johannes_Lacher_PacManRenderer.cs`); Modell, Geister, Modi, Level, Punkte, Session und Adapter selbst geschrieben. E1 ohne Hub-Änderung gelöst (eigene Bitmap, Nearest Neighbor). Build ohne Fehler/Warnungen; Testprogramm im Scratchpad gegen die echten Klassen: 70/70 bestanden (u. a. Dauertest über 240.000 Ticks ohne Durchlaufen von Geistern), Screenshots geprüft. Plan um „Stand“ ergänzt, `PacMan/README.md` angelegt. Im laufenden Programm noch nicht von Hand getestet; nicht committet.
+
+### 99
+**Prompt:**
+> continue
+
+**Ergebnis:** Zwischennachricht während der Umsetzung von Eintrag 98; Arbeit fortgesetzt.
+
+### 100
+**Prompt:**
+> add sound effects to pac man
+
+**Ergebnis:** übernommen – Soundeffekte ohne Framework- oder Hub-Änderung: Die Session meldet nur Ereignisse (`G10_SoundCue` in der nur lesenden Ansicht), `G10_PacManAudio` entscheidet, was zu hören ist (Einmal-Sounds plus eine Hintergrundschleife je nach Spielzustand: Sirene, verängstigte Geister, heimkehrende Augen), `IG10_SoundOutput`/`G10_MediaSoundOutput` spielt mit WPF-`MediaPlayer` ab, `G10_SoundSynth` erzeugt alle Klänge im Code (eigene Entwürfe inklusive eigener Startmelodie). Taste M schaltet den Ton um (Hinweis im HUD). Schleifen werden von den Ticks neu gestartet, enden also nach Esc von selbst. Gemessen: Das erste Öffnen einer Mediendatei dauert ca. 6,6 s; deshalb werden die Sounds schon während der Kassetten-Animation geladen und noch nicht geladene Sounds übersprungen statt verspätet gespielt. Build ohne Fehler/Warnungen, Testprogramm 120/120 bestanden; Plan (Abschnitt 10) und README ergänzt. Hörbarkeit und Klang im laufenden Programm noch nicht von Hand geprüft; nicht committet.
+
+### 101
+**Prompt:**
+> can we improve the performance of the 3d scene without editing the framework? the 3d screen is a bit laggy since the last additions
+
+**Ergebnis:** übernommen – ohne Framework-Änderung. Zuerst gemessen (Benchmark im Scratchpad mit echtem Painter in einem 1600×900-Fenster, Vergleich mit dem committeten Stand): (1) Beim Einlegen einer Kassette fror die UI 190–220 ms ein, genau beim Start des Kamera-Zooms – Ursache waren meine Pac-Man-Ergänzungen (MediaPlayer, WriteableBitmap und JIT im `Start()`); (2) die Kamera bewegte sich nur in 25 Schritten pro Sekunde; (3) die Nahansicht kostet ca. 22 ms Renderzeit pro Bild, u. a. weil die 45 `DrawingBrush`-Texturen (Holz, Tapete, Buchrücken, Tasten …) bei jeder Kamerabewegung neu gerastert werden. Änderungen: Pac-Man startet billig (Hintergrund-Warm-up ohne WPF, Bitmap/MediaPlayer erst beim ersten Anzeigen, Startmelodie wartet bis 0,5 s auf das Laden) → Hänger beim Einlegen 4–20 ms; Renderer in `Compose` (ohne WPF) und Anzeige getrennt; `B5RoomTextures.CacheAsBitmap` (CachingHint) für alle Vektor-Texturen in `B5_RoomPaint.cs` und `B5_GameBoyModel.cs`; Kamera fährt per WPF-Animation mit Ease-out (1,2 s) statt in Tick-Schritten → Kamera ändert sich in jedem Bild (ca. 40/s statt 21/s), Zoom 33–36 → 42–45 fps. Getestet: Punktlichter und Glanzlichter kosten nichts Messbares, bleiben also. Pac-Man-Tests 120/120 bestanden. Im laufenden Programm noch nicht von Hand geprüft; nicht committet.
+
+### 102
+**Prompt:**
+> performance looks good now. come to an end soon
+
+**Ergebnis:** Zwischennachricht während Eintrag 101; Arbeit abgeschlossen.
+
+### 103
+**Prompt:**
+> in a new worktree: improve the 3d model of the atari console to make it a bit more realistic. think about the insert cartridge animation. can we make the cratridges it look more realisic as well
+
+**Ergebnis:** übernommen (Entwurf) – im eigenen Worktree auf dem lokalen Branch `gruppe10-atari-model` (von `gruppe10`). Neues 3D-Modell der Atari 2600 (Sechs-Schalter-Version) in Millimetern wie beim Game Boy (`Johannes_Lacher_AtariConsoleModel.cs`, Hilfsfunktionen in `Johannes_Lacher_AtariMesh.cs`): Keilform, Holzfront mit Chromleiste, gerippte Oberseite, sechs Metallschalter mit Beschriftung, erhöhter Schacht mit echter Öffnung und zwei Klappen, Logo, Gummifüße, TV-Kabel. Modul als 3D-Modell (`Johannes_Lacher_AtariCartridgeModel.cs`): Gehäuse mit runden Ecken, Griffrippen, Staubschieber, Bildetikett (Titel, Grafik, „ATARI / GAME PROGRAM“) und Stirnetikett, alles im Code gezeichnet in der Modulfarbe. Einlege-Animation in 3D statt der flachen 2D-Karte (`Johannes_Lacher_AtariConsoleAnimation.cs`): Kamera fährt unter die Tischplatte, Modul fliegt von vorne links heran, richtet sich über dem Schacht auf, drückt die Klappen auf, rastet mit kleinem Nachfedern ein, danach kippt der Netzschalter; Auswerfen spielt rückwärts. Eingelegte Module bleiben sichtbar. Dafür untere Ablage des TV-Tischs tiefer gesetzt und die Tischbeine bis zum Boden verlängert (schwebten vorher). Game Boy und Commodore nutzen weiter die 2D-Karte. Build ohne Fehler/Warnungen; Render-Testprogramm im Scratchpad gegen die echten Klassen (Einzelbilder und echte Tick-Folge für Einlegen und Modulwechsel) geprüft. Im laufenden Programm noch nicht von Hand getestet; nicht committet.
+
+### 104
+**Prompt:**
+> move these changes to the main work tree. there is one commit on the main worktree since starting this task
+
+**Ergebnis:** übernommen – Änderungen aus Eintrag 103 auf den neuen Stand von `gruppe10` (Commit „improve performance of the 3d scene“) gebracht; `B5_RoomPaint.cs` ließ sich automatisch zusammenführen, im Prompt-Log beide Einträge behalten (101/102 vom Performance-Commit, 103/104 hier). Die neuen Vektor-Texturen (Holzmaserung, Modul-Etiketten, Beschriftungen) nutzen jetzt ebenfalls `B5RoomTextures.CacheAsBitmap`. Als nicht committete Änderungen in den Haupt-Worktree übertragen.
+
+### 105
+**Prompt:**
+> update the monitor 3d model as well. make it more detailed and realistic
+
+**Ergebnis:** übernommen – nach Rückfrage (gemeint ist der Fernseher auf dem Atari-Tisch) neues Modell `Johannes_Lacher_AtariTelevisionModel.cs`: 17-Zoll-Farbfernseher der frühen 80er in Millimetern wie die Konsole – Holzgehäuse mit Chromleiste und Füßen, dunkle Frontmaske mit Öffnung, erhöhter schwarzer Bildschirmrahmen mit runden Ecken, gewölbte Bildröhre (eigenes Gitter-Mesh), Aluminium-Bedienfeld mit Marke, Netz-LED, VHF-/UHF-Kanalwählern mit Griffrippen und Zeiger, Lautstärke- und Farbregler, Lautsprechergitter, verjüngte Rückseite mit Lüftungsschlitzen und Antennenbuchse, Zimmerantenne („Hasenohren“). Bildschirm aus: dunkles Glas mit Glanzlicht; an: leuchtender Startbildschirm wie der Titelbildschirm der Konsole mit Scanlines und dunklen Ecken. Kamera-Zoom zielt auf die neue Bildschirmmitte. In `B5_RoomPaint.cs`: Atari-Bildschirm nutzt das gewölbte Mesh und die neuen Materialien; eine im alten TV versteckte Leiste entfernt; beim Zusammenfassen der statischen Szene werden einseitige Beschriftungen jetzt nach den Flächen gezeichnet, auf denen sie liegen (vorher verdeckten ihre transparenten Teile die Fläche dahinter – sichtbar als schwarze Balken auf dem Aluminium-Feld). Extrusionen haben jetzt Texturkoordinaten (für die Holzmaserung). Build ohne Fehler/Warnungen; Render-Testprogramm (Front, Bedienfeld, Rückseite, aus/an, Geräteansicht, Raum, Zoom, Game Boy zur Kontrolle der Beschriftungen) geprüft. Im laufenden Programm noch nicht von Hand getestet; nicht committet.
+
+### 106
+**Prompt:**
+> make a nice cartridge animation for the other two consoles as well
+
+**Ergebnis:** übernommen – Einlege-/Auswurf-Animation in 3D jetzt für alle drei Geräte, die flache 2D-Karte ist entfernt. Gemeinsamer Ablauf in der abstrakten Klasse `B5MediaAnimation` (`Johannes_Lacher_MediaAnimation.cs`: Anflug, Ausrichten vor dem Schacht, Einschieben, Einrasten, Einschalten; Auswerfen rückwärts; Kameraansicht je Gerät), Atari-Animation darauf umgestellt; Etiketten-Grafik gemeinsam in `B5MediaArt` (`Johannes_Lacher_MediaArt.cs`). Game Boy (`Johannes_Lacher_GameBoyCartridgeModel.cs`/`...Animation.cs`): graues Modul mit Bildetikett, Griffrillen, Pfeil und Goldkontakten; kommt von links mit dem Etikett zum Spieler, dreht sich über dem Gerät um und rutscht hinten in den Schacht, danach Netzschalter oben auf ON und rote Batterie-LED an. Game Boy dafür 14 cm nach vorne gerückt (das Modul wäre sonst durch die Regalleiste gefahren), Auswahlrahmen folgt. Commodore (`Johannes_Lacher_CommodoreDiskModel.cs`/`...Animation.cs`): 5,25"-Diskette mit Nabe, Schreib-Lese-Fenster, Indexloch, Schreibschutzkerbe und handbeschriftetem Aufkleber (`LOAD "*",8,1`); legt sich flach, gleitet ins Laufwerk, Verriegelungshebel dreht zu, Laufwerks-LED leuchtet. Die zwei Disketten auf dem Laufwerk auf echte Größe gebracht. Kamera für den Commodore von vorne rechts, weil von links ein Pfosten der Tischecke im Bild stand. Build ohne Fehler/Warnungen; Render-Testprogramm (Einzelbilder beider neuen Animationen inkl. Auswerfen, Nahaufnahme Etikett, Atari nach der Umstellung, echte Tick-Folge für Einlegen und Modulwechsel) geprüft. Im laufenden Programm noch nicht von Hand getestet; nicht committet.
+
+### 107
+**Prompt:**
+> (Stacktrace eingefügt: `System.InvalidOperationException: The pixel surface is not drawing.` aus `TowerDefensePixelSurface.EnsureDrawing` über `B5RoomDraw.Text` ← `B5RoomPaint.AddScreenText` ← `B5RoomPaint.DrawGame` ← `TickPaintGameField`)
+
+**Ergebnis:** übernommen – Ursache: Tower Defense legt seine Pixelfläche in `_GameCanvas.Tag` ab; `B5RoomDraw` zeichnet in diese Fläche, solange sie dort liegt. Nach dem Verlassen von Tower Defense räumte `DrawGame` beim Titelbildschirm des nächsten Spiels zwar die Leinwand ab, ließ die alte Fläche aber im `Tag` – der Titeltext ging dann an eine Fläche, die nicht zeichnet. Fehler bestand schon vor den heutigen Änderungen. Im Testprogramm nachgestellt (Commodore: Tower Defense spielen, verlassen, „Muenzen sammeln“ einlegen → gleicher Stacktrace). Behebung in `B5_RoomPaint.cs`: neue Methode `ClearGameCanvas()` leert die Leinwand und entfernt die alte Fläche aus dem `Tag`; Tower Defense legt beim nächsten Anzeigen ohnehin eine neue an. Danach läuft die nachgestellte Folge ohne Fehler durch. Build ohne Fehler/Warnungen; im laufenden Programm noch nicht von Hand geprüft; nicht committet.
+
+### 108
+**Prompt:**
+> pull the changes and merge them with mine (i think lukas changed the cartdrige animation as well)
+
+**Ergebnis:** übernommen – `origin/gruppe10` per Merge (kein Rebase) übernommen, keine Konflikte. Lukas' Commit fügt Tetris als neues Game-Boy-Spiel hinzu (Ordner `Tetris/`, ein Eintrag in `B5_RoomCore.cs`), die Modul-Animation hatte er nicht geändert; der Commit von Skeletnking ändert Tower Defense (Türme, Gegner, Grafiken). Geprüft: Build ohne Fehler, Tetris bekommt automatisch ein eigenes Modul mit blauem Etikett, Absturz-Fix aus Eintrag 107 greift weiter, echte Tick-Folgen laufen durch. Merge-Commit lokal, nicht gepusht.
+
+### 109
+**Prompt:**
+> can we move the tower defense assets into our folder and avoid the registrastion in the project file?
+
+**Ergebnis:** übernommen (nach Rückfrage: Laden aus unserem Ordner statt Einbetten als Base64) – die 11 PNGs per `git mv` von `OOPGames/Assets/TowerDefense` nach `Classes/10_Gruppe/Tower Defense/Assets` verschoben, `<Resource Include="Assets\TowerDefense\*.png" />` aus `OOPGames.csproj` entfernt (die Datei entspricht damit wieder `master`). `B5_TowerDefenseSprites.cs` lädt die Bilder jetzt als Dateien: den Ordner findet es über den Pfad der eigenen Quelldatei (`CallerFilePath`), ersatzweise durch Suche aufwärts vom Programmordner (wie Gruppe 3); fehlt eine Datei, gibt es eine klare Fehlermeldung mit dem erwarteten Ordner. Standard-Zielordner des Sprite-Generators und die drei READMEs angepasst. Geprüft: sauberer Neubau ohne Fehler, Tower Defense im Testprogramm gespielt – Karte, Burg, Gegner und Menü-Icons werden geladen. Einschränkung: Das Spiel muss aus dem Repository gebaut werden; eine kopierte exe ohne Quellordner findet die Grafiken nicht. Nicht committet.
+
+### 110
+**Prompt:**
+> finish up the placeholder games in a new work tree (snake, münzen sammeln). remove münzen sammeln from one of the consoles we need it only once
+
+**Ergebnis:** übernommen – im eigenen Worktree auf dem lokalen Branch `gruppe10-minigames` (von `gruppe10`). Snake und Muenzen sammeln neu geschrieben, aufgebaut wie Pac-Man (Spiellogik ohne WPF/Tasten, nur lesende Sicht als Interface, Renderer, Adapter mit Tasten und Highscore); Ordner `Kinderzimmer90er/Snake/` und `Kinderzimmer90er/Muenzen/`, Interfaces in `Interfaces/10_Gruppe/Kinderzimmer90er/`. Snake: Start nach erster Richtung, Puffer für zwei schnelle Wendungen ohne Umkehr in den Hals, Level/Tempo, Käfer als Bonus mit Zeitbalken, Pause, Sterbeanimation, Game Over/Sieg, Game-Boy-Grün. Muenzen sammeln: Level-Ziel mit Zeitlimit und Zeitbonus, vier Raumaufteilungen, diagonal springende Wollmäuse, drei Leben, Diamant, Pause, C64-Farben; gehaltene Tasten laufen weiter (Adapter liest dafür den Tastaturzustand). Muenzen sammeln steht nur noch am Commodore (Atari hat schon Pac-Man), Diskettenfarbe gold; alte Platzhalterklassen entfernt. Build ohne Fehler/Warnungen; Testprogramm im Scratchpad (47.960 Prüfungen inkl. Bots, nachgebauter Tastatur, Hub mit echtem Painter, Bildschirmfotos) bestanden. Dabei gefunden und behoben: Wollmäuse blieben auf einer Schachbrettfarbe, pendelten an Ecken und mieden Gänge der Breite 1 (Seitschritt, zufälliges Abprallen, zwei Aufteilungen geändert). Plan mit Stand: `Plans/2026-11-19_Johannes_Lacher_Snake_Muenzen.md`. Im laufenden Programm noch nicht von Hand gespielt; nicht committet.
+
+### 111
+**Prompt:**
+> apply them to the main worktree
+
+**Ergebnis:** übernommen – Änderungen aus Eintrag 110 als Patch (3-Wege) in den Haupt-Worktree übertragen, der inzwischen die Commits „improve tetris“ und „add bomberman“ enthält. Einziger Konflikt in der Spieleliste des Commodore (`B5_RoomCore.cs`): beide Einträge behalten, Reihenfolge Tower Defense, Muenzen sammeln, Bomberman. `G10_Direction` liegt jetzt in `Shared/`, gleiche Schnittstelle, kein Anpassungsbedarf. Build ohne Fehler/Warnungen; Testprogramm gegen den Haupt-Worktree erneut 47.960/47.960 bestanden. Nicht committet.
+
+### 112
+**Prompt:**
+> how does pong work? is it multiplayer?
+
+**Ergebnis:** Erklärung im Chat – Pong war ein Platzhalter für einen Spieler: rechter Schläger steht still, verpasste Bälle kosten nichts, kein Gegner, kein Menü, kein Spielende, fester Winkel. Mehrspieler an einer Tastatur wäre mit eigener Tastenbelegung möglich; Ausbau vorgeschlagen.
+
+### 113
+**Prompt:**
+> finish pong
+
+**Ergebnis:** übernommen – Pong neu geschrieben, Aufbau wie Snake/Muenzen sammeln (Ordner `Kinderzimmer90er/Pong/`, Interface `Johannes_Lacher_I_Pong.cs`): Menü für 1 oder 2 Spieler, Computergegner und Spieler über das Strategy-Interface `IG10_PaddleControl`, zu zweit W/S gegen Pfeiltasten, gehaltene Tasten bewegen weiter, Abprallwinkel nach Trefferpunkt, Ball wird schneller, Trefferprüfung über die Bahn (kein Durchrutschen), Aufschlag zum Verlierer, Spiel bis 7, Pause, Highscore = längster Ballwechsel gegen den Computer. Game-Boy-Farben nach `Shared/Johannes_Lacher_GameBoyColors.cs` verschoben und von Snake mitbenutzt; alte Klasse `B5RoomPongGame` entfernt. Build ohne Fehler/Warnungen; Testprogramm 48.065/48.065 bestanden (u. a. Physik, 20 Partien Bot gegen Computer, Eingabeleser, Hub, Bildschirmfotos). Plan mit Stand: `Plans/2026-11-19_Johannes_Lacher_Pong.md`. Im laufenden Programm noch nicht von Hand gespielt; nicht committet.

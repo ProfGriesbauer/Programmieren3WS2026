@@ -55,6 +55,24 @@ namespace OOPGames
             _verschiebungY += deltaY;
         }
 
+        internal void SetzeAnsicht(double zoom, double verschiebungX, double verschiebungY)
+        {
+            if (zoom <= 0 || double.IsNaN(zoom) || double.IsInfinity(zoom))
+            {
+                throw new ArgumentOutOfRangeException(nameof(zoom));
+            }
+
+            if (double.IsNaN(verschiebungX) || double.IsInfinity(verschiebungX) ||
+                double.IsNaN(verschiebungY) || double.IsInfinity(verschiebungY))
+            {
+                throw new ArgumentOutOfRangeException(nameof(verschiebungX));
+            }
+
+            _zoom = Math.Max(MinZoom, Math.Min(MaxZoom, zoom));
+            _verschiebungX = verschiebungX;
+            _verschiebungY = verschiebungY;
+        }
+
         internal void Zoomieren(double faktor, double fokusX, double fokusY)
         {
             if (faktor <= 0 || double.IsNaN(faktor) || double.IsInfinity(faktor))
