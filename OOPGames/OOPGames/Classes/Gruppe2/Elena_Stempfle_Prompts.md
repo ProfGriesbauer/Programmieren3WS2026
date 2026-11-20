@@ -1369,3 +1369,41 @@ Modell: Claude Opus 5.5 (claude-opus-5-5)
 > Ich committe ausdrücklich nur die Pfade von Gruppe 2: die Umbenennungen aus Prompt 62 (alte und neue Pfade) und diese Prompt-Datei. Die fremden Build-Dateien aus `HouseExample/` im Staging-Bereich kommen nicht mit. Danach folgen Pull und Push.
 
 **Ergebnisvermerk:** Siehe Antwort im Chat; Commit erstellt.
+
+## 64. Pull
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du pullen
+
+**Antwort:**
+
+> - **Pull vorbereitet:** Der Pull war durch den offenen Konflikt an der fremden Build-Datei `HouseExample/Griesl_HouseExample/obj/Debug/net7.0/Griesl_HouseExample.assets.cache` blockiert. Ich habe diese eine Datei auf den Stand im Repository zurückgesetzt. Die lokale Version davon bleibt im Stash gesichert.
+> - **Pull durchgeführt:** Es kamen drei eigene Commits von einem anderen Rechner bzw. aus einer anderen Sitzung:
+>   - „Rename Train Run classes to group prefix“: Die fünf Dateien `Elena_Stempfle_TrainRun*.cs` heißen jetzt `Gruppe2_TrainRun*.cs`, die Inhalte sind unverändert.
+>   - „Update generated build assets“: Build-Dateien in `HouseExample/`.
+>   - „Document recent Gruppe 2 prompts“: Diese Prompt-Datei wurde um die Einträge 15 bis 23 aus der Sitzung vom 12.11. erweitert.
+> - **Prüfung:** Danach Build mit 0 Warnungen und 0 Fehlern, alle Train-Run-Tests bestanden.
+> - **Hinweis zur Nummerierung:** Durch die eingefügten Einträge sind die Nummern 18 bis 26 jetzt doppelt vergeben. Zuerst kommen 15 bis 26 (12.11. und Beginn der Sitzung vom 19.11.), danach ab „18. Subway Surfer: Züge gerade …“ die Fortsetzung vom 19./20.11.
+> - **Konflikte an fremden Dateien:** Beim Zurückspielen der lokalen, nicht committeten Änderungen gab es Konflikte an drei fremden Build-Dateien in `HouseExample/LukasHindelang_HouseExample/obj/`. Die lokalen Versionen liegen gesichert in `stash@{0}` und `stash@{1}`.
+
+**Ergebnisvermerk:** Gepullt, Build und Tests grün. Offen: doppelte Nummern 18 bis 26 in dieser Datei und drei Konflikte an fremden Build-Dateien. Noch nicht committet.
+
+## 65. Commit, Pull und Push
+
+**Datum:** 20.11.2026
+**Werkzeug/Modell:** Claude Code in VS Code / Claude Opus 5.5
+**Prompt im Wortlaut:**
+
+> kannst du committen, pullen und pushen
+
+**Antwort:**
+
+> - **Commit:** Ich committe ausdrücklich nur diese Prompt-Datei (Einträge 64 und 65). Die fremden Build-Dateien aus `HouseExample/` kommen nicht mit.
+> - **Pull vorbereiten:** Damit der Pull nicht abbricht, setze ich die drei fremden Build-Dateien mit offenem Konflikt in `HouseExample/LukasHindelang_HouseExample/obj/` auf den Stand im Repository zurück. Die lokalen Versionen bleiben in den Stashes gesichert.
+> - **Danach:** Pull mit Rebase und Push.
+> - **Nicht geändert:** Die doppelten Nummern 18 bis 26 habe ich nicht angefasst, weil dazu noch keine Entscheidung vorlag.
+
+**Ergebnisvermerk:** Commit erstellt, Pull mit Rebase und Push durchgeführt.
