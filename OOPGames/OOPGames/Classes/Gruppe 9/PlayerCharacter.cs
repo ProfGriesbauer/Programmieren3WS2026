@@ -1,12 +1,13 @@
-using System.Diagnostics;
+using System;
 using System.Windows.Media;
 
 namespace OOPGames
 {
     public sealed class PlayerCharacter : Entity
     {
-        private const double AttackAnimationDurationMilliseconds = 200;
-        private long _attackStartTimestamp;
+        // Game time, so the attack pose lasts longer during slow motion.
+        private const double AttackAnimationDurationSeconds = 0.2;
+        private double _attackAnimationRemainingSeconds;
         public const int BaseMaxHitPoints = 100;
         public const double BaseMaxSpeed = 15;
 
@@ -21,18 +22,19 @@ namespace OOPGames
         public PlayerFacing AttackFacing { get; private set; } = PlayerFacing.Front;
         public bool IsAttacking
         {
-            get
-            {
-                return _attackStartTimestamp != 0
-                    && Stopwatch.GetElapsedTime(_attackStartTimestamp).TotalMilliseconds
-                        < AttackAnimationDurationMilliseconds;
-            }
+            get { return _attackAnimationRemainingSeconds > 1e-9; }
         }
 
         public void StartAttack()
         {
             AttackFacing = Facing;
-            _attackStartTimestamp = Stopwatch.GetTimestamp();
+            _attackAnimationRemainingSeconds = AttackAnimationDurationSeconds;
+        }
+
+        protected override void OnGameTimeAdvanced(double deltaSeconds)
+        {
+            _attackAnimationRemainingSeconds = Math.Max(
+                0, _attackAnimationRemainingSeconds - deltaSeconds);
         }
     }
 }

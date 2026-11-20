@@ -6,6 +6,8 @@ namespace OOPGames
     public static class BowUpgradeCatalog
     {
         public const string AutoAim = "bow-auto-aim";
+        public const string AttackCooldown = "bow-attack-cooldown";
+        public const double BaseCooldownSeconds = 0.7;
         public const string ArrowDamage = "bow-arrow-damage";
         public const string Poison = "bow-element-poison";
         public const string Lightning = "bow-element-lightning";
@@ -22,6 +24,10 @@ namespace OOPGames
                     AutoAim, "Autoaim",
                     "Erweitert den Zielkegel und verbessert die Pfeilsteuerung; Rang 5 zielt rundum.",
                     5, 1, null),
+                new WeaponUpgradeDefinition(
+                    AttackCooldown, "Schusstempo",
+                    "Senkt die Abklingzeit zwischen zwei Pfeilen um 12 % je Rang.",
+                    PlayerAbilityCatalog.ModifierMaximumRank, 1, null),
                 new WeaponUpgradeDefinition(
                     ArrowDamage, "Pfeilschaden",
                     "Erhöht den Grundschaden jedes Pfeils.",
@@ -137,7 +143,9 @@ namespace OOPGames
                     GetAutoAimHalfAngleRadians(autoAimRank),
                     GetHomingTurnRateRadiansPerSecond(autoAimRank)),
                 CreateBowEffect(progression, damage),
-                0.7, WeaponTargetingMode.Opponents, "bow-arrow",
+                BaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
+                    progression.GetWeaponUpgradeRank(AttackCooldown)),
+                WeaponTargetingMode.Opponents, "bow-arrow",
                 knockbackDistance: GetKnockbackDistance(progression));
         }
 

@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
 
@@ -9,15 +8,14 @@ namespace OOPGames
     {
         public const double AttackRange = 60;
         public const int AttackDamagePerHit = 10;
-        public const int AttackIntervalMilliseconds = 1000;
         public const double SightRange = 200;
         public const double SightRangeAfterDetectionBonus = 50;
         public const double HitboxSize = 34;
-        private const double GameTickDurationSeconds = 0.04;
         private const double WanderSpeedMultiplier = 0.5;
         private const double MinimumWanderDurationSeconds = 1.5;
         private const double WanderDurationVarianceSeconds = 2.5;
-        private long _nextWanderDirectionChange;
+        // Game time until the next wander direction change; follows slow motion.
+        private double _wanderRemainingSeconds;
         private bool _hasSeenPlayer;
         private double _wanderDirectionX;
         private double _wanderDirectionY;
@@ -74,16 +72,14 @@ namespace OOPGames
                     PositionY + offsetY / distance * travelDistance);
             }
 
-            long remainingTicks = _nextWanderDirectionChange - Stopwatch.GetTimestamp();
-            if (remainingTicks <= 0)
+            if (_wanderRemainingSeconds <= 0)
             {
                 return currentPosition;
             }
 
-            double remainingSeconds = (double)remainingTicks / Stopwatch.Frequency;
+            // Speeds are distances per regular tick; convert the remaining game time to ticks.
             double travel = EffectiveSpeed * WanderSpeedMultiplier
-                * remainingSeconds / GameTickDurationSeconds
-                * field.GameTimeScale;
+                * _wanderRemainingSeconds / ArenaField.GameTickDurationSeconds;
             return ClampToMovementBounds(currentPosition,
                 _wanderDirectionX, _wanderDirectionY, travel);
         }
@@ -125,6 +121,7 @@ namespace OOPGames
                 throw new ArgumentNullException(nameof(field));
             }
 
+            _wanderRemainingSeconds -= ArenaField.GameTickDurationSeconds * speedScale;
             PlayerCharacter player = field.Player;
             if (!IsAlive || !player.IsAlive)
             {
@@ -175,7 +172,7 @@ namespace OOPGames
                 return;
             }
 
-            if (Stopwatch.GetTimestamp() >= _nextWanderDirectionChange)
+            if (_wanderRemainingSeconds <= 0)
             {
                 ChooseWanderDirection();
             }
@@ -235,10 +232,8 @@ namespace OOPGames
 
         private void ScheduleNextWanderDirectionChange()
         {
-            double duration = MinimumWanderDurationSeconds
+            _wanderRemainingSeconds = MinimumWanderDurationSeconds
                 + Random.Shared.NextDouble() * WanderDurationVarianceSeconds;
-            _nextWanderDirectionChange = Stopwatch.GetTimestamp()
-                + (long)(duration * Stopwatch.Frequency);
         }
 
         private void FacePlayer(double offsetX, double offsetY)

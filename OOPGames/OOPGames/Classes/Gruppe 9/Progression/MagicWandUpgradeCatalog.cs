@@ -38,6 +38,10 @@ namespace OOPGames
         public const string Range = "magic-wand-range";
         public const string Knockback = "magic-wand-knockback";
         public const string StrikeAbility = "magic-wand-strike";
+        public const string AttackCooldown = "magic-wand-attack-cooldown";
+        public const double BaseCooldownSeconds = 0.55;
+        public const string StrikeCooldown = "strike-cooldown";
+        public const double StrikeBaseCooldownSeconds = 0.8;
 
         private static readonly IReadOnlyList<WeaponUpgradeDefinition> _upgrades =
             Array.AsReadOnly(new[]
@@ -50,6 +54,14 @@ namespace OOPGames
                     StrikeDamage, "Stabschaden",
                     "Erhöht den Schaden des freigeschalteten Nahkampfschlags.",
                     5, 1, Strike),
+                new WeaponUpgradeDefinition(
+                    StrikeCooldown, "Schlag-Abklingzeit",
+                    "Senkt die Abklingzeit des Stabschlags um 12 % je Rang.",
+                    PlayerAbilityCatalog.ModifierMaximumRank, 1, Strike),
+                new WeaponUpgradeDefinition(
+                    AttackCooldown, "Zaubertempo",
+                    "Senkt die Abklingzeit des magischen Projektils um 12 % je Rang.",
+                    PlayerAbilityCatalog.ModifierMaximumRank, 1, null),
                 new WeaponUpgradeDefinition(
                     ProjectileDamage, "Projektilschaden", "Erhöht den Grundschaden des Projektils.",
                     5, 1, null),
@@ -147,7 +159,9 @@ namespace OOPGames
                 "Magischer Stab: magisches Projektil mit ausbaubarem Schaden und Elementen.",
                 new ProjectileAttackPattern(range, 540, 7),
                 CreateWandEffect(progression, projectileDamage),
-                0.55, WeaponTargetingMode.Opponents, "magic-projectile",
+                BaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
+                    progression.GetWeaponUpgradeRank(AttackCooldown)),
+                WeaponTargetingMode.Opponents, "magic-projectile",
                 knockbackDistance: GetKnockbackDistance(progression));
         }
 
@@ -171,7 +185,9 @@ namespace OOPGames
                 "Langer, schmaler Hieb in Blickrichtung des Spielers.",
                 new MeleeConeAttackPattern(range, Math.PI / 36, 0.26),
                 CreateWandEffect(progression, damage),
-                0.8, WeaponTargetingMode.Opponents, "magic-wand-strike",
+                StrikeBaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
+                    progression.GetWeaponUpgradeRank(StrikeCooldown)),
+                WeaponTargetingMode.Opponents, "magic-wand-strike",
                 knockbackDistance: GetKnockbackDistance(progression));
         }
 

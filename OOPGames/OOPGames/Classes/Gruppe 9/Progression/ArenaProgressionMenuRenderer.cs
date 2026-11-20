@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 
 namespace OOPGames
@@ -11,10 +10,9 @@ namespace OOPGames
     {
         private static readonly Brush TextBrush =
             new SolidColorBrush(Color.FromRgb(225, 233, 241));
-        private static readonly Brush ButtonBrush =
-            new SolidColorBrush(Color.FromRgb(55, 70, 88));
-        private static readonly Brush DisabledBrush =
-            new SolidColorBrush(Color.FromRgb(65, 68, 72));
+        private const double ButtonHeight = 36;
+        private const double SplitRowWidth = 300;
+        private const string MaxedOutLabel = "Maximale Stufe erreicht";
 
         public UIElement CreateSkillTree(ArenaField field, Action refresh)
         {
@@ -70,16 +68,32 @@ namespace OOPGames
                     IsExpanded = true
                 };
                 AddText(skill, definition.Description);
+                bool isMaxed = rank >= definition.MaximumRank;
                 AddButton(skill,
-                    (rank == 0 ? "Freischalten" : "Verbessern")
-                        + " (" + cost + " universelle Punkte)",
-                    rank < definition.MaximumRank
-                        && progression.UniversalPoints >= cost,
+                    isMaxed
+                        ? MaxedOutLabel
+                        : (rank == 0 ? "Freischalten" : "Verbessern")
+                            + " (" + cost + " universelle Punkte)",
+                    !isMaxed && progression.UniversalPoints >= cost,
                     () =>
                     {
                         progression.TryUpgradeSkill(definition.Id);
                         refresh();
-                    });
+                    },
+                    isMaxed);
+                AddAbilityModifier(skill, progression, definition.CooldownUpgradeId,
+                    "Abklingzeit", "Senkt die Abklingzeit um "
+                        + (PlayerAbilityCatalog.CooldownReductionPerRank * 100).ToString("0")
+                        + " % je Rang.", rank > 0, refresh);
+                if (definition.HasDuration)
+                {
+                    AddAbilityModifier(skill, progression, definition.DurationUpgradeId,
+                        "Dauer", definition.DurationDescription, rank > 0, refresh);
+                }
+                if (definition.Id == PlayerAbilityCatalog.SlowMotion)
+                {
+                    AddBulletTimeUpgrade(skill, progression, rank, refresh);
+                }
                 root.Items.Add(skill);
             }
             tree.Items.Add(root);
@@ -88,7 +102,7 @@ namespace OOPGames
             AddText(content, "Spielerfähigkeiten");
             AddAbilitySlots(content, progression.EntityAbilities,
                 GetUnlockedEntityAbilities(progression),
-                progression.TryAssignEntityAbility, "Spielerfähigkeit");
+                progression.TryAssignEntityAbility, "Spielerfähigkeit", refresh);
             return CreateScrollablePage(content);
         }
 
@@ -171,7 +185,7 @@ namespace OOPGames
 
                 AddPurchaseButton(node, field, upgrade,
                     canPurchase, cost, weaponPointsToSpend,
-                    skillPointsToSpend, refresh);
+                    skillPointsToSpend, rank >= maximumRank, refresh);
 
                 if (!string.IsNullOrEmpty(prerequisite)
                     && nodes.TryGetValue(prerequisite, out TreeViewItem parent))
@@ -192,7 +206,7 @@ namespace OOPGames
             AddAbilitySlots(content, progression.GetWeaponAbilities(weaponId),
                 GetUnlockedWeaponAbilities(progression, weaponId),
                 (slot, ability) => progression.TryAssignWeaponAbility(
-                    weaponId, slot, ability), "Waffenfähigkeit");
+                    weaponId, slot, ability), "Waffenfähigkeit", refresh);
             return CreateScrollablePage(content);
         }
 
@@ -207,13 +221,28 @@ namespace OOPGames
                         + ": jetzt Taste oder Maustaste drücken (Escape bricht ab)."
                     : "Eintrag wählen. Maustasten funktionieren für Bewegung, Angriffe und Fähigkeiten.");
 
+            // Split rows: action name on the long half, current key on the short half.
             foreach (ArenaAction action in ArenaKeyBindings.Actions)
             {
                 ArenaAction selectedAction = action;
-                AddButton(content,
-                    ArenaKeyBindings.GetActionName(action) + ": "
-                        + field.KeyBindings.GetDisplayName(action),
-                    true, () => beginCapture(selectedAction));
+                bool isCapturing = waitingFor == action;
+                string keyName = isCapturing
+                    ? "…"
+                    : field.KeyBindings.GetDisplayName(action);
+                ArenaUiButton actionButton = CreateSplitButton(
+                    ArenaKeyBindings.GetActionName(action),
+                    ArenaUiButtonShape.SplitLong, () => beginCapture(selectedAction));
+                ArenaUiButton keyButton = CreateSplitButton(
+                    keyName, ArenaUiButtonShape.SplitShort,
+                    () => beginCapture(selectedAction));
+                actionButton.IsChosen = isCapturing;
+                keyButton.IsChosen = isCapturing;
+                keyButton.ToolTip = field.KeyBindings.GetDisplayName(action);
+                System.Windows.Automation.AutomationProperties.SetName(
+                    actionButton, ArenaKeyBindings.GetActionName(action) + ": "
+                        + field.KeyBindings.GetDisplayName(action));
+                content.Children.Add(ArenaUiButton.CreateSplitRow(
+                    actionButton, keyButton, SplitRowWidth, ButtonHeight));
             }
             AddButton(content, "Auf Standard zurücksetzen", true, () =>
             {
@@ -260,7 +289,7 @@ namespace OOPGames
         private static void AddAbilitySlots(
             StackPanel panel, IReadOnlyList<string> equipped,
             IReadOnlyList<AbilityOption> unlocked,
-            Func<int, string, bool> assign, string label)
+            Func<int, string, bool> assign, string label, Action refresh)
         {
             List<AbilityOption> options = new List<AbilityOption>
             {
@@ -268,37 +297,44 @@ namespace OOPGames
             };
             options.AddRange(unlocked);
 
+            // Long half cycles through the unlocked abilities, short half clears the slot.
             for (int slot = 0; slot < ArenaProgression.AbilitySlotCount; slot++)
             {
                 int selectedSlot = slot;
-                StackPanel row = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Margin = new Thickness(0, 3, 0, 3)
-                };
-                row.Children.Add(new TextBlock
-                {
-                    Text = label + " " + (slot + 1),
-                    Width = 145,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Foreground = TextBrush
-                });
-                ComboBox selector = new ComboBox
-                {
-                    Width = 200,
-                    ItemsSource = options,
-                    DisplayMemberPath = "Name",
-                    SelectedValuePath = "Id",
-                    SelectedValue = equipped[slot] ?? string.Empty
-                };
-                selector.SelectionChanged += (sender, args) =>
-                {
-                    string selected = selector.SelectedValue as string;
-                    assign(selectedSlot,
-                        string.IsNullOrEmpty(selected) ? null : selected);
-                };
-                row.Children.Add(selector);
-                panel.Children.Add(row);
+                string equippedId = equipped[slot] ?? string.Empty;
+                int current = options.FindIndex(option => option.Id == equippedId);
+                ArenaUiButton cycleButton = CreateSplitButton(
+                    label + " " + (slot + 1) + ": "
+                        + (current >= 0 ? options[current].Name : "Leer"),
+                    ArenaUiButtonShape.SplitLong,
+                    () =>
+                    {
+                        for (int step = 1; step < options.Count; step++)
+                        {
+                            AbilityOption next =
+                                options[(Math.Max(current, 0) + step) % options.Count];
+                            if (assign(selectedSlot,
+                                string.IsNullOrEmpty(next.Id) ? null : next.Id))
+                            {
+                                break;
+                            }
+                        }
+                        refresh();
+                    });
+                cycleButton.IsEnabled = unlocked.Count > 0;
+                cycleButton.ToolTip = unlocked.Count > 0
+                    ? "Klicken, um die nächste freigeschaltete Fähigkeit zu wählen."
+                    : "Noch keine Fähigkeit freigeschaltet.";
+                ArenaUiButton clearButton = CreateSplitButton(
+                    "Leeren", ArenaUiButtonShape.SplitShort,
+                    () =>
+                    {
+                        assign(selectedSlot, null);
+                        refresh();
+                    });
+                clearButton.IsEnabled = !string.IsNullOrEmpty(equippedId);
+                panel.Children.Add(ArenaUiButton.CreateSplitRow(
+                    cycleButton, clearButton, SplitRowWidth, ButtonHeight));
             }
         }
 
@@ -339,6 +375,69 @@ namespace OOPGames
                 : MagicWandUpgradeCatalog.IsElement(id);
         }
 
+        // Cooldown or duration upgrade below an ability; locked until the ability is unlocked.
+        private static void AddAbilityModifier(
+            TreeViewItem parent, ArenaProgression progression, string modifierId,
+            string name, string description, bool isAbilityUnlocked, Action refresh)
+        {
+            int rank = progression.GetSkillRank(modifierId);
+            int maximumRank = PlayerAbilityCatalog.ModifierMaximumRank;
+            bool isMaxed = rank >= maximumRank;
+            TreeViewItem node = new TreeViewItem
+            {
+                Header = name + " — Rang " + rank + "/" + maximumRank,
+                IsExpanded = true
+            };
+            AddText(node, description
+                + (isAbilityUnlocked ? string.Empty : " Erst die Fähigkeit freischalten."));
+            AddButton(node,
+                isMaxed
+                    ? MaxedOutLabel
+                    : "Verbessern ("
+                        + progression.GetAbilityModifierNextRankCost(modifierId)
+                        + " Skillpunkte)",
+                progression.CanUpgradeAbilityModifier(modifierId),
+                () =>
+                {
+                    progression.TryUpgradeAbilityModifier(modifierId);
+                    refresh();
+                },
+                isMaxed);
+            parent.Items.Add(node);
+        }
+
+        // Expensive one-off stage of the slow motion that keeps the player at normal speed.
+        private static void AddBulletTimeUpgrade(
+            TreeViewItem parent, ArenaProgression progression, int slowMotionRank,
+            Action refresh)
+        {
+            bool isUnlocked = progression.HasBulletTime;
+            TreeViewItem node = new TreeViewItem
+            {
+                Header = "Bullet Time — " + (isUnlocked ? "freigeschaltet" : "gesperrt"),
+                IsExpanded = true
+            };
+            AddText(node, "Während der Zeitlupe bewegst du dich, greifst an und erholst "
+                + "dich in normalem Tempo, nur die Arena bleibt verlangsamt."
+                + (slowMotionRank < PlayerAbilityCatalog.BulletTimeRequiredSlowMotionRank
+                    ? " Benötigt Zeitlupe Rang "
+                        + PlayerAbilityCatalog.BulletTimeRequiredSlowMotionRank + "."
+                    : string.Empty));
+            AddButton(node,
+                isUnlocked
+                    ? MaxedOutLabel
+                    : "Freischalten (" + PlayerAbilityCatalog.BulletTimeCost
+                        + " Skillpunkte)",
+                progression.CanUnlockBulletTime(),
+                () =>
+                {
+                    progression.TryUnlockBulletTime();
+                    refresh();
+                },
+                isUnlocked);
+            parent.Items.Add(node);
+        }
+
         private static void AddPlayerStatUpgrade(
             TreeViewItem parent, ArenaField field, string statId,
             string name, string description, double currentValue,
@@ -354,14 +453,16 @@ namespace OOPGames
                 IsExpanded = true
             };
             AddText(node, description + " Aktuell: " + currentValue + ".");
+            bool isMaxed = rank >= maximumRank;
             AddButton(node,
-                "Verbessern (" + cost + " Skillpunkte)",
+                isMaxed ? MaxedOutLabel : "Verbessern (" + cost + " Skillpunkte)",
                 progression.CanUpgradePlayerStat(statId),
                 () =>
             {
                 field.TryUpgradePlayerStat(statId);
                 refresh();
-            });
+            },
+                isMaxed);
             parent.Items.Add(node);
         }
 
@@ -369,25 +470,34 @@ namespace OOPGames
             ItemsControl content, ArenaField field,
             WeaponUpgradeDefinition upgrade, bool enabled, int cost,
             int weaponPointsToSpend, int skillPointsToSpend,
-            Action refresh)
+            bool isMaxed, Action refresh)
         {
             AddButton(content,
-                field.IsGodMode
+                isMaxed
+                    ? MaxedOutLabel
+                    : field.IsGodMode
                     ? "Kostenlos verbessern (" + cost + ")"
-                    : "Verbessern (" + weaponPointsToSpend
-                        + " Waffenpunkte"
-                        + (skillPointsToSpend > 0
-                            ? " + " + skillPointsToSpend + " Skillpunkte"
-                            : string.Empty)
-                        + ")",
+                    : "Verbessern (" + FormatPayment(
+                        weaponPointsToSpend, skillPointsToSpend) + ")",
                 enabled, () =>
                 {
+                    // Every purchase that uses skill points needs an explicit confirmation,
+                    // also when the weapon has no weapon points left at all.
                     if (skillPointsToSpend > 0
                         && MessageBox.Show(
-                            "Es fehlen " + skillPointsToSpend
-                                + " Waffenpunkte. Möchtest du die Differenz mit "
-                                + skillPointsToSpend + " Skillpunkten bezahlen?",
-                            "Upgrade bestätigen",
+                            (weaponPointsToSpend == 0
+                                ? "Du hast keine Waffenpunkte für "
+                                    + field.SelectedPlayerWeapon.Name + ". "
+                                : "Es fehlen " + skillPointsToSpend + " Waffenpunkte. ")
+                                + "Möchtest du „" + upgrade.Name + "“ mit "
+                                + skillPointsToSpend + " Skillpunkt"
+                                + (skillPointsToSpend == 1 ? "" : "en")
+                                + (weaponPointsToSpend > 0
+                                    ? " und " + weaponPointsToSpend + " Waffenpunkt"
+                                        + (weaponPointsToSpend == 1 ? "" : "en")
+                                    : string.Empty)
+                                + " bezahlen?",
+                            "Mit Skillpunkten bezahlen?",
                             MessageBoxButton.YesNo,
                             MessageBoxImage.Question) != MessageBoxResult.Yes)
                     {
@@ -396,7 +506,19 @@ namespace OOPGames
 
                     field.TryUpgradeWeaponWithSkillPoints(upgrade.Id);
                     refresh();
-                });
+                },
+                isMaxed);
+        }
+
+        private static string FormatPayment(int weaponPoints, int skillPoints)
+        {
+            if (skillPoints <= 0)
+            {
+                return weaponPoints + " Waffenpunkte";
+            }
+            return weaponPoints > 0
+                ? weaponPoints + " Waffenpunkte + " + skillPoints + " Skillpunkte"
+                : skillPoints + " Skillpunkte";
         }
 
         private static StackPanel CreateContent(string title, string summary)
@@ -437,23 +559,33 @@ namespace OOPGames
             });
         }
 
+        // Disabled upgrade buttons show the locked sprite, fully upgraded ones the maxed-out sprite.
         private static void AddButton(
-            DependencyObject panel, string label, bool enabled, Action action)
+            DependencyObject panel, string label, bool enabled, Action action,
+            bool isMaxed = false)
         {
-            Button button = new Button
+            ArenaUiButton button = new ArenaUiButton(label, action)
             {
-                Content = label,
-                Height = 36,
+                Height = ButtonHeight,
+                MinWidth = 240,
+                HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(0, 3, 0, 3),
-                Background = enabled ? ButtonBrush : DisabledBrush,
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0),
                 FontSize = 13,
-                IsEnabled = enabled,
-                Cursor = Cursors.Hand
+                IsEnabled = enabled && !isMaxed,
+                State = isMaxed ? ArenaUiButtonState.MaxedOut : ArenaUiButtonState.Normal,
+                ToolTip = label
             };
-            button.Click += (sender, args) => action();
             AddElement(panel, button);
+        }
+
+        private static ArenaUiButton CreateSplitButton(
+            string label, ArenaUiButtonShape shape, Action action)
+        {
+            return new ArenaUiButton(label, action, shape)
+            {
+                FontSize = 13,
+                ToolTip = label
+            };
         }
 
         private static void AddElement(DependencyObject parent, UIElement element)

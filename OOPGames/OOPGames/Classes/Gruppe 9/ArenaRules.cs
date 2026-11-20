@@ -34,15 +34,7 @@ namespace OOPGames
 
         public void TickGameCall()
         {
-            if (!_field.IsGameStarted)
-            {
-                return;
-            }
-
-            double timeScale = _field.GameTimeScale;
-            _field.UpdatePlayerPosition(timeScale);
-            _field.UpdateEnemyPositions(timeScale);
-            _field.UpdateCombat(0.04 * timeScale);
+            _field.Tick();
         }
     }
 }

@@ -30,6 +30,10 @@ namespace OOPGames
         // Reusable brushes avoid creating new colors for every frame.
         private static readonly Brush FloorBrush = new SolidColorBrush(Color.FromRgb(55, 93, 65));
         private static readonly Brush WallBrush = new SolidColorBrush(Color.FromRgb(55, 57, 62));
+        private static readonly Brush SlowMotionTintBrush =
+            new SolidColorBrush(Color.FromArgb(45, 70, 130, 220));
+        private static readonly Brush BulletTimeTintBrush =
+            new SolidColorBrush(Color.FromArgb(45, 220, 160, 60));
         private static readonly object StartMenuTag = new object();
         private static readonly object PauseMenuTag = new object();
         private static readonly object GameOverMenuTag = new object();
@@ -49,6 +53,8 @@ namespace OOPGames
         private SpriteSheetAnimator _playerAnimator;
         private AnimationProfile _playerAnimatorProfile;
         private SpriteSheetAnimator _enemyAnimator;
+        private readonly ArenaAudio _audio = new ArenaAudio();
+        private Canvas _menuClickCanvas;
         private ArenaField _pauseMenuField;
         private ArenaField _menuStateField;
         private MenuPage _menuPage;
@@ -85,6 +91,14 @@ namespace OOPGames
                 return;
             }
             SynchronizeMenuState(field);
+            _audio.Attach(field);
+            if (field.IsGameStarted)
+            {
+                // Menus stay free of media players; sounds load once gameplay begins.
+                _audio.PreloadAll();
+            }
+            _audio.Update();
+            AttachMenuClickSound(canvas);
 
             double width = canvas.ActualWidth;
             double height = canvas.ActualHeight;
@@ -183,7 +197,7 @@ namespace OOPGames
                 _playerAnimatorProfile = _selectedAnimationProfile;
             }
             BitmapSource sprite = _playerAnimator.GetFrame(
-                animationName, field.GameTimeScale);
+                animationName, field.PlayerTimeScale);
             double spriteHeight = field.Player.Size * 2 * PlayerSpriteScale;
             double spriteWidth = spriteHeight * sprite.PixelWidth / sprite.PixelHeight;
             Image player = new Image
@@ -253,6 +267,19 @@ namespace OOPGames
             }
 
             canvas.Children.Add(worldCanvas);
+            if (field.IsSlowMotionActive)
+            {
+                // Cool tint over the arena while the Zeitlupe ability slows the tick speed.
+                canvas.Children.Add(new Rectangle
+                {
+                    Width = width,
+                    Height = height,
+                    Fill = field.IsBulletTimeActive
+                        ? BulletTimeTintBrush
+                        : SlowMotionTintBrush,
+                    IsHitTestVisible = false
+                });
+            }
             _hudRenderer.PaintPlayerHud(canvas, field, sprite);
             _debugRenderer.PaintPanels(canvas, field, width, height);
             if (field.IsWeaponWheelOpen)
@@ -294,6 +321,35 @@ namespace OOPGames
                     return enemy.IsMoving ? "WalkRight" : "idleLeft";
                 default:
                     return enemy.IsMoving ? "WalkForward" : "IdleFront";
+            }
+        }
+
+        // Menu buttons are rebuilt often, so one handler on the canvas catches every click as it
+        // bubbles up. The canvas is shared with other games, hence the active-painter check.
+        private void AttachMenuClickSound(Canvas canvas)
+        {
+            if (ReferenceEquals(_menuClickCanvas, canvas))
+            {
+                return;
+            }
+            if (_menuClickCanvas != null)
+            {
+                _menuClickCanvas.RemoveHandler(
+                    System.Windows.Controls.Primitives.ButtonBase.ClickEvent,
+                    new RoutedEventHandler(OnMenuButtonClick));
+            }
+
+            _menuClickCanvas = canvas;
+            canvas.AddHandler(
+                System.Windows.Controls.Primitives.ButtonBase.ClickEvent,
+                new RoutedEventHandler(OnMenuButtonClick), true);
+        }
+
+        private void OnMenuButtonClick(object sender, RoutedEventArgs e)
+        {
+            if (ReferenceEquals(OOPGamesManager.Singleton.ActivePainter, this))
+            {
+                _audio.PlayMenuClick();
             }
         }
 
@@ -480,6 +536,11 @@ namespace OOPGames
 
         private void OnZoomMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            if (_zoomInputField != null && _zoomInputField.HandleGameSpeedWheel(e.Delta))
+            {
+                e.Handled = true;
+                return;
+            }
             if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control
                 && _zoomInputField != null)
             {
@@ -618,6 +679,34 @@ namespace OOPGames
         // Locate project assets both when launched from the project and from its build output.
         internal static string FindAssetPath(params string[] relativePath)
         {
+            string path = FindAssetLocation(relativePath, File.Exists);
+            if (path != null)
+            {
+                return path;
+            }
+
+            throw new FileNotFoundException(
+                "Could not locate an asset under Classes\\Gruppe 9\\Assets.",
+                String.Join(System.IO.Path.DirectorySeparatorChar.ToString(), relativePath));
+        }
+
+        // Locates an asset folder such as Sounds the same way as single asset files.
+        internal static string FindAssetDirectory(params string[] relativePath)
+        {
+            string path = FindAssetLocation(relativePath, Directory.Exists);
+            if (path != null)
+            {
+                return path;
+            }
+
+            throw new DirectoryNotFoundException(
+                "Could not locate the asset folder Classes\\Gruppe 9\\Assets\\"
+                + String.Join("\\", relativePath) + ".");
+        }
+
+        private static string FindAssetLocation(
+            string[] relativePath, Func<string, bool> exists)
+        {
             HashSet<string> visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             string[] startingDirectories =
             {
@@ -639,7 +728,7 @@ namespace OOPGames
                         pathParts[3] = "Assets";
                         Array.Copy(relativePath, 0, pathParts, 4, relativePath.Length);
                         string path = System.IO.Path.Combine(pathParts);
-                        if (File.Exists(path))
+                        if (exists(path))
                         {
                             return path;
                         }
@@ -648,9 +737,7 @@ namespace OOPGames
                 }
             }
 
-            throw new FileNotFoundException(
-                "Could not locate an asset under Classes\\Gruppe 9\\Assets.",
-                String.Join(System.IO.Path.DirectorySeparatorChar.ToString(), relativePath));
+            return null;
         }
 
         private void PaintStartMenu(
@@ -688,8 +775,7 @@ namespace OOPGames
                 contents.Children.Add(_progressionMenuRenderer.CreateSkillTree(
                     field, () => canvas.Tag = null));
                 contents.Children.Add(CreateMenuButton("Back",
-                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                    (sender, e) =>
+                    () =>
                     {
                         _menuPage = MenuPage.Main;
                         canvas.Tag = null;
@@ -704,8 +790,7 @@ namespace OOPGames
                 contents.Children.Add(_progressionMenuRenderer.CreateWeaponUpgrades(
                     field, () => canvas.Tag = null));
                 contents.Children.Add(CreateMenuButton("Back",
-                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                    (sender, e) =>
+                    () =>
                     {
                         _menuPage = _menuPageBeforeWeaponUpgrades;
                         canvas.Tag = null;
@@ -726,8 +811,7 @@ namespace OOPGames
                     },
                     () => canvas.Tag = null));
                 contents.Children.Add(CreateMenuButton("Back",
-                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                    (sender, e) =>
+                    () =>
                     {
                         _menuPage = MenuPage.Main;
                         _keyBindingCaptureAction = null;
@@ -766,25 +850,42 @@ namespace OOPGames
                     WeaponCatalog.Bow
                 })
                 {
-                    contents.Children.Add(CreateMenuButton(
-                        weapon.Name + " — " + weapon.AttackPattern.Name
-                            + " (" + weapon.Effect.Description + ")",
-                        GetWeaponButtonBrush(field, weapon),
-                        (sender, e) =>
+                    // Split row: left selects the weapon, right opens its upgrade tree.
+                    ArenaUiButton selectButton = new ArenaUiButton(
+                        weapon.Name + " — " + weapon.AttackPattern.Name,
+                        () =>
                         {
                             field.SelectPlayerWeapon(weapon);
                             canvas.Tag = null;
-                        }));
-                    contents.Children.Add(CreateMenuButton(
-                        weapon.Name + " — Waffenbaum",
-                        new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                        (sender, e) => OpenWeaponUpgrades(
+                        },
+                        ArenaUiButtonShape.SplitLong)
+                    {
+                        IsChosen = field.SelectedPlayerWeapon.Id == weapon.Id,
+                        ToolTip = weapon.Effect.Description,
+                        FontSize = 14,
+                        FontWeight = FontWeights.SemiBold
+                    };
+                    bool canUpgrade = field.HasActiveGame && !field.IsGameOver;
+                    ArenaUiButton treeButton = new ArenaUiButton(
+                        "Baum",
+                        () => OpenWeaponUpgrades(
                             canvas, field, weapon, MenuPage.Equipment),
-                        field.HasActiveGame && !field.IsGameOver));
+                        ArenaUiButtonShape.SplitShort)
+                    {
+                        IsEnabled = canUpgrade,
+                        ToolTip = canUpgrade
+                            ? weapon.Name + " — Waffenbaum"
+                            : "Waffen-Upgrades sind erst während eines aktiven Runs verfügbar.",
+                        FontSize = 14,
+                        FontWeight = FontWeights.SemiBold
+                    };
+                    System.Windows.Automation.AutomationProperties.SetName(
+                        treeButton, weapon.Name + " — Waffenbaum");
+                    contents.Children.Add(ArenaUiButton.CreateSplitRow(
+                        selectButton, treeButton, MenuButtonWidth, MenuButtonHeight));
                 }
                 contents.Children.Add(CreateMenuButton("Back",
-                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                    (sender, e) =>
+                    () =>
                     {
                         _menuPage = MenuPage.Main;
                         canvas.Tag = null;
@@ -814,15 +915,13 @@ namespace OOPGames
                     Margin = new Thickness(0, 0, 0, 14)
                 });
                 contents.Children.Add(CreateMenuButton("BoxingKnight (ohne Schlag)",
-                    GetAnimationButtonBrush(BoxingKnightProfile),
-                    (sender, e) => SelectAnimationProfile(
-                        canvas, BoxingKnightProfile)));
+                    () => SelectAnimationProfile(canvas, BoxingKnightProfile),
+                    isChosen: IsSelectedAnimationProfile(BoxingKnightProfile)));
                 contents.Children.Add(CreateMenuButton("Kurt (mit Schlaganimation)",
-                    GetAnimationButtonBrush(KurtProfile),
-                    (sender, e) => SelectAnimationProfile(canvas, KurtProfile)));
+                    () => SelectAnimationProfile(canvas, KurtProfile),
+                    isChosen: IsSelectedAnimationProfile(KurtProfile)));
                 contents.Children.Add(CreateMenuButton("Back",
-                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                    (sender, e) =>
+                    () =>
                     {
                         _menuPage = MenuPage.Main;
                         canvas.Tag = null;
@@ -857,8 +956,7 @@ namespace OOPGames
                 isGameOver
                     ? "Erneut spielen"
                     : field.HasActiveGame ? "Spiel fortsetzen" : "Spiel starten",
-                new SolidColorBrush(Color.FromRgb(43, 91, 125)),
-                (sender, e) =>
+                () =>
                 {
                     if (isGameOver)
                     {
@@ -875,45 +973,65 @@ namespace OOPGames
                     }
                 }));
             contents.Children.Add(CreateMenuButton("How to Play",
-                new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                (sender, e) => ShowNotImplemented("How to Play")));
+                () => ShowNotImplemented("How to Play")));
             contents.Children.Add(CreateMenuButton("Ausrüstung",
-                new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                (sender, e) =>
+                () =>
                 {
                     _menuPage = MenuPage.Equipment;
                     canvas.Tag = null;
                 }));
             contents.Children.Add(CreateMenuButton("Choose Animation",
-                new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                (sender, e) =>
+                () =>
                 {
                     _menuPage = MenuPage.Animation;
                     canvas.Tag = null;
                 }));
             if (field.HasActiveGame && !field.IsGameOver)
             {
-                contents.Children.Add(CreateMenuButton(
+                // Split row: left toggles godmode, right buys every upgrade (godmode only).
+                ArenaUiButton godModeButton = new ArenaUiButton(
                     "Godmode: " + (field.IsGodMode ? "AN" : "AUS")
                         + " — " + (field.IsGodMode ? "deaktivieren" : "aktivieren"),
-                    new SolidColorBrush(field.IsGodMode
-                        ? Color.FromRgb(125, 58, 58)
-                        : Color.FromRgb(55, 70, 88)),
-                    (sender, e) =>
+                    () =>
                     {
                         field.ToggleGodMode();
                         canvas.Tag = null;
-                    }));
+                    },
+                    ArenaUiButtonShape.SplitLong)
+                {
+                    IsChosen = field.IsGodMode,
+                    FontSize = 14,
+                    FontWeight = FontWeights.SemiBold,
+                    ToolTip = "Im Godmode: T + Mausrad ändert das Spieltempo."
+                };
+                ArenaUiButton buyAllButton = new ArenaUiButton(
+                    "Alles",
+                    () =>
+                    {
+                        field.PurchaseAllUpgrades();
+                        canvas.Tag = null;
+                    },
+                    ArenaUiButtonShape.SplitShort)
+                {
+                    IsEnabled = field.IsGodMode,
+                    FontSize = 14,
+                    FontWeight = FontWeights.SemiBold,
+                    ToolTip = field.IsGodMode
+                        ? "Alle Skills und Waffen-Upgrades vollständig kaufen."
+                        : "Nur im Godmode verfügbar."
+                };
+                System.Windows.Automation.AutomationProperties.SetName(
+                    buyAllButton, "Alle Upgrades kaufen");
+                contents.Children.Add(ArenaUiButton.CreateSplitRow(
+                    godModeButton, buyAllButton, MenuButtonWidth, MenuButtonHeight));
                 contents.Children.Add(CreateMenuButton("Skilltree",
-                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                    (sender, e) =>
+                    () =>
                     {
                         _menuPage = MenuPage.SkillTree;
                         canvas.Tag = null;
                     }));
                 contents.Children.Add(CreateMenuButton("Waffen verbessern",
-                    new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                    (sender, e) =>
+                    () =>
                     {
                         _menuPageBeforeWeaponUpgrades = MenuPage.Main;
                         _menuPage = MenuPage.WeaponUpgrades;
@@ -921,25 +1039,16 @@ namespace OOPGames
                     }));
             }
             contents.Children.Add(CreateMenuButton("Tastenbelegung",
-                new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                (sender, e) =>
+                () =>
                 {
                     _menuPage = MenuPage.KeyBindings;
                     canvas.Tag = null;
                 }));
             contents.Children.Add(CreateMenuButton("High Scores",
-                new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-                (sender, e) => ShowNotImplemented("High Scores")));
+                () => ShowNotImplemented("High Scores")));
             panel.Child = contents;
 
             DrawStartMenuPanel(canvas, panel, width, height);
-        }
-
-        private static Brush GetWeaponButtonBrush(ArenaField field, Weapon weapon)
-        {
-            return field.SelectedPlayerWeapon.Id == weapon.Id
-                ? new SolidColorBrush(Color.FromRgb(43, 125, 82))
-                : new SolidColorBrush(Color.FromRgb(55, 70, 88));
         }
 
         private static Effect GetDamageFlashEffect(Entity entity)
@@ -990,11 +1099,9 @@ namespace OOPGames
             canvas.Tag = StartMenuTag;
         }
 
-        private Brush GetAnimationButtonBrush(AnimationProfile profile)
+        private bool IsSelectedAnimationProfile(AnimationProfile profile)
         {
-            return ReferenceEquals(profile, _selectedAnimationProfile)
-                ? new SolidColorBrush(Color.FromRgb(43, 125, 82))
-                : new SolidColorBrush(Color.FromRgb(55, 70, 88));
+            return ReferenceEquals(profile, _selectedAnimationProfile);
         }
 
         private void SelectAnimationProfile(Canvas canvas, AnimationProfile profile)
@@ -1008,32 +1115,23 @@ namespace OOPGames
             canvas.Tag = null;
         }
 
-        private static Button CreateMenuButton(
-            string text, Brush background, RoutedEventHandler onClick,
-            bool isEnabled = true)
+        private const double MenuButtonWidth = 318;
+        private const double MenuButtonHeight = 46;
+
+        // Menu buttons use the UiButtons sprite sheet; chosen entries show the selected frame.
+        private static ArenaUiButton CreateMenuButton(
+            string text, Action onClick, bool isEnabled = true, bool isChosen = false)
         {
-            Button button = new Button
+            return new ArenaUiButton(text, onClick)
             {
-                Content = text,
-                Width = 318,
-                Height = 46,
+                Width = MenuButtonWidth,
+                Height = MenuButtonHeight,
                 Margin = new Thickness(0, 5, 0, 5),
-                Background = isEnabled
-                    ? background
-                    : new SolidColorBrush(Color.FromRgb(65, 68, 73)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0),
                 FontSize = 15,
                 FontWeight = FontWeights.SemiBold,
-                Cursor = isEnabled ? Cursors.Hand : Cursors.Arrow,
-                IsEnabled = isEnabled
+                IsEnabled = isEnabled,
+                IsChosen = isChosen
             };
-            if (!isEnabled)
-            {
-                button.ToolTip = "Waffen-Upgrades sind erst während eines aktiven Runs verfügbar.";
-            }
-            button.Click += onClick;
-            return button;
         }
 
         private void OpenWeaponUpgrades(

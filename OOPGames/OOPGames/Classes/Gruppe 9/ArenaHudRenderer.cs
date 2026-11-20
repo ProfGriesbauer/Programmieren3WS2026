@@ -56,10 +56,23 @@ namespace OOPGames
                 : "Skillpunkte: " + field.Progression.UniversalPoints
                     + "  |  Waffenpunkte: "
                     + field.Progression.GetWeaponPoints(player.EquippedWeapon.Id), 16, 100);
-            AddHudText(canvas, "Sprint: Strg halten", 16, 128);
+            AddHudText(canvas, "Sprint: " + (field.IsSprintEnabled ? "AN" : "AUS")
+                + " (Strg umschalten)", 16, 128);
+            double statusTop = 156;
             if (player.IsInvulnerable)
             {
-                AddHudText(canvas, "GODMODE AKTIV", 16, 156);
+                AddHudText(canvas, "GODMODE AKTIV  |  Spieltempo "
+                    + (field.GameSpeed * 100).ToString("0") + " % ("
+                    + field.KeyBindings.GetDisplayName(ArenaAction.GameSpeed)
+                    + " + Mausrad)", 16, statusTop);
+                statusTop += 28;
+            }
+            if (field.IsSlowMotionActive)
+            {
+                AddHudText(canvas, (field.IsBulletTimeActive ? "BULLET TIME  " : "ZEITLUPE  ")
+                    + (field.SlowMotionTimeScale * 100).ToString("0")
+                    + " % Tempo  |  noch " + field.SlowMotionRemainingSeconds.ToString("0.0")
+                    + " s", 16, statusTop);
             }
 
             PaintHealthBar(canvas, player, scaleX, scaleY);

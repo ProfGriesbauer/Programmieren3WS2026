@@ -68,6 +68,48 @@ namespace OOPGames
         }
     }
 
+    // Carries the slow-motion parameters of the Zeitlupe ability. Hitting the caster changes
+    // nothing by itself; ArenaField reads the values and lowers the tick speed of the arena.
+    public sealed class TimeSlowEffect : ICombatEffect
+    {
+        public TimeSlowEffect(
+            double timeScale, double durationSeconds, bool keepsCasterAtNormalSpeed = false)
+        {
+            if (timeScale <= 0 || timeScale >= 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeScale));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+
+            TimeScale = timeScale;
+            DurationSeconds = durationSeconds;
+            KeepsCasterAtNormalSpeed = keepsCasterAtNormalSpeed;
+        }
+
+        public double TimeScale { get; }
+        // Bullet Time: only the arena is slowed, the caster keeps the normal tick speed.
+        public bool KeepsCasterAtNormalSpeed { get; }
+        // Measured in unscaled ticks, so the slow motion does not stretch itself.
+        public double DurationSeconds { get; }
+        public string Name { get { return KeepsCasterAtNormalSpeed ? "Bullet Time" : "Zeitlupe"; } }
+        public string Description
+        {
+            get
+            {
+                return "Spieltempo " + (TimeScale * 100).ToString("0") + " % für "
+                    + DurationSeconds.ToString("0.0") + " s";
+            }
+        }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Slow; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+        }
+    }
+
     public sealed class SlowEffect : ICombatEffect
     {
         public SlowEffect(double speedMultiplier, double durationSeconds)

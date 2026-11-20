@@ -43,6 +43,7 @@ namespace OOPGames
         private readonly Dictionary<string, string[]> _weaponAbilities =
             new Dictionary<string, string[]>();
         private int _universalPoints;
+        private bool _isBuyingEverything;
 
         public int UniversalPoints
         {
@@ -50,6 +51,8 @@ namespace OOPGames
         }
         public int TotalKills { get; private set; }
         public bool IsGodMode { get; private set; }
+        // Raised after any skill, player stat or weapon upgrade was bought.
+        public event Action UpgradePurchased;
         public IReadOnlyList<string> EntityAbilities
         {
             get { return Array.AsReadOnly(_entityAbilities); }
@@ -176,7 +179,102 @@ namespace OOPGames
             {
                 AssignToFirstFreeSlot(_entityAbilities, skillId);
             }
+            RaiseUpgradePurchased();
             return true;
+        }
+
+        // Godmode helper: buys every skill, ability modifier, player stat and weapon upgrade
+        // up to its maximum rank. Element branches exclude each other, so a weapon only gets
+        // its element upgrades when an element was already chosen. Returns the purchase count.
+        public int PurchaseAllUpgrades()
+        {
+            if (!IsGodMode)
+            {
+                return 0;
+            }
+
+            int purchases = 0;
+            _isBuyingEverything = true;
+            try
+            {
+                bool boughtSomething = true;
+                while (boughtSomething)
+                {
+                    int before = purchases;
+                    foreach (PlayerAbilityDefinition definition in PlayerAbilityCatalog.Definitions)
+                    {
+                        purchases += BuyRepeatedly(() => TryUpgradeSkill(definition.Id));
+                        purchases += BuyRepeatedly(
+                            () => TryUpgradeAbilityModifier(definition.CooldownUpgradeId));
+                        if (definition.HasDuration)
+                        {
+                            purchases += BuyRepeatedly(
+                                () => TryUpgradeAbilityModifier(definition.DurationUpgradeId));
+                        }
+                    }
+                    purchases += BuyRepeatedly(TryUnlockBulletTime);
+                    purchases += BuyRepeatedly(() => TryUpgradePlayerStat(MaximumHealth));
+                    purchases += BuyRepeatedly(() => TryUpgradePlayerStat(MaximumSpeed));
+
+                    foreach (WeaponUpgradeDefinition upgrade in SwordUpgradeCatalog.Upgrades)
+                    {
+                        if (!SwordUpgradeCatalog.IsElement(upgrade.Id)
+                            || SelectedSwordElement != WeaponElement.None)
+                        {
+                            purchases += BuyRepeatedly(() => TryUpgradeSword(
+                                upgrade.Id, UpgradeCurrency.Universal));
+                        }
+                    }
+                    foreach (WeaponUpgradeDefinition upgrade in MagicWandUpgradeCatalog.Upgrades)
+                    {
+                        if (!MagicWandUpgradeCatalog.IsElement(upgrade.Id)
+                            || SelectedMagicWandElement != WeaponElement.None)
+                        {
+                            purchases += BuyRepeatedly(() => TryUpgradeMagicWand(
+                                upgrade.Id, UpgradeCurrency.Universal));
+                        }
+                    }
+                    foreach (WeaponUpgradeDefinition upgrade in BowUpgradeCatalog.Upgrades)
+                    {
+                        if (!BowUpgradeCatalog.IsElement(upgrade.Id)
+                            || SelectedBowElement != WeaponElement.None)
+                        {
+                            purchases += BuyRepeatedly(() => TryUpgradeBow(
+                                upgrade.Id, UpgradeCurrency.Universal));
+                        }
+                    }
+                    boughtSomething = purchases > before;
+                }
+            }
+            finally
+            {
+                _isBuyingEverything = false;
+            }
+
+            if (purchases > 0)
+            {
+                RaiseUpgradePurchased();
+            }
+            return purchases;
+        }
+
+        private static int BuyRepeatedly(Func<bool> tryBuy)
+        {
+            int count = 0;
+            while (tryBuy())
+            {
+                count++;
+            }
+            return count;
+        }
+
+        // Buying everything at once reports a single purchase instead of dozens of sounds.
+        private void RaiseUpgradePurchased()
+        {
+            if (!_isBuyingEverything)
+            {
+                UpgradePurchased?.Invoke();
+            }
         }
 
         public int GetPlayerStatMaximumRank(string statId)
@@ -210,7 +308,82 @@ namespace OOPGames
                 _universalPoints -= GetPlayerStatNextRankCost(statId);
             }
             _skillRanks[statId] = GetSkillRank(statId) + 1;
+            RaiseUpgradePurchased();
             return true;
+        }
+
+        // Cooldown and duration upgrades of player abilities. They use their own rank line
+        // (stored with the skill ranks) and need the ability itself to be unlocked first.
+        public int GetAbilityModifierNextRankCost(string modifierId)
+        {
+            GetModifierOwner(modifierId);
+            return PlayerAbilityCatalog.GetModifierCost(GetSkillRank(modifierId));
+        }
+
+        public bool CanUpgradeAbilityModifier(string modifierId)
+        {
+            PlayerAbilityDefinition owner = GetModifierOwner(modifierId);
+            return GetSkillRank(owner.Id) > 0
+                && GetSkillRank(modifierId) < PlayerAbilityCatalog.ModifierMaximumRank
+                && (IsGodMode
+                    || _universalPoints >= GetAbilityModifierNextRankCost(modifierId));
+        }
+
+        public bool TryUpgradeAbilityModifier(string modifierId)
+        {
+            if (!CanUpgradeAbilityModifier(modifierId))
+            {
+                return false;
+            }
+
+            if (!IsGodMode)
+            {
+                _universalPoints -= GetAbilityModifierNextRankCost(modifierId);
+            }
+            _skillRanks[modifierId] = GetSkillRank(modifierId) + 1;
+            RaiseUpgradePurchased();
+            return true;
+        }
+
+        public bool HasBulletTime
+        {
+            get { return GetSkillRank(PlayerAbilityCatalog.BulletTime) > 0; }
+        }
+
+        public bool CanUnlockBulletTime()
+        {
+            return !HasBulletTime
+                && GetSkillRank(PlayerAbilityCatalog.SlowMotion)
+                    >= PlayerAbilityCatalog.BulletTimeRequiredSlowMotionRank
+                && (IsGodMode || _universalPoints >= PlayerAbilityCatalog.BulletTimeCost);
+        }
+
+        public bool TryUnlockBulletTime()
+        {
+            if (!CanUnlockBulletTime())
+            {
+                return false;
+            }
+
+            if (!IsGodMode)
+            {
+                _universalPoints -= PlayerAbilityCatalog.BulletTimeCost;
+            }
+            _skillRanks[PlayerAbilityCatalog.BulletTime] = 1;
+            RaiseUpgradePurchased();
+            return true;
+        }
+
+        private static PlayerAbilityDefinition GetModifierOwner(string modifierId)
+        {
+            PlayerAbilityDefinition owner =
+                PlayerAbilityCatalog.FindModifierOwner(modifierId);
+            if (owner == null)
+            {
+                throw new ArgumentException(
+                    "Unknown ability modifier: " + modifierId, nameof(modifierId));
+            }
+            return owner;
         }
 
         public bool TryAssignEntityAbility(int slotIndex, string abilityId)
@@ -237,10 +410,18 @@ namespace OOPGames
         {
             ValidateSlot(slotIndex);
             string abilityId = _entityAbilities[slotIndex];
-            return abilityId == null
-                ? null
-                : PlayerAbilityCatalog.CreateWeapon(
-                    abilityId, GetSkillRank(abilityId));
+            if (abilityId == null)
+            {
+                return null;
+            }
+
+            PlayerAbilityDefinition definition =
+                PlayerAbilityCatalog.GetDefinition(abilityId);
+            return PlayerAbilityCatalog.CreateWeapon(
+                abilityId, GetSkillRank(abilityId),
+                GetSkillRank(definition.CooldownUpgradeId),
+                definition.HasDuration ? GetSkillRank(definition.DurationUpgradeId) : 0,
+                abilityId == PlayerAbilityCatalog.SlowMotion && HasBulletTime);
         }
 
         public IReadOnlyList<string> GetWeaponAbilities(string weaponId)
@@ -444,12 +625,9 @@ namespace OOPGames
         {
             if (IsGodMode)
             {
-                _weaponUpgradeRanks[upgradeId] =
-                    GetWeaponUpgradeRank(upgradeId) + 1;
-                return;
+                // Godmode buys without paying.
             }
-
-            if (currency == UpgradeCurrency.Universal)
+            else if (currency == UpgradeCurrency.Universal)
             {
                 _universalPoints -= cost;
             }
@@ -468,6 +646,7 @@ namespace OOPGames
             }
 
             _weaponUpgradeRanks[upgradeId] = GetWeaponUpgradeRank(upgradeId) + 1;
+            RaiseUpgradePurchased();
         }
 
         public void GetWeaponUpgradePayment(

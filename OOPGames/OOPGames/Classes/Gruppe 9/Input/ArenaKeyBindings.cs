@@ -28,7 +28,8 @@ namespace OOPGames
         ToggleDebugHud,
         ZoomIn,
         ZoomOut,
-        SpawnEnemy
+        SpawnEnemy,
+        GameSpeed
     }
 
     public enum ArenaInputDevice
@@ -148,6 +149,7 @@ namespace OOPGames
             }
 
             Dictionary<ArenaAction, ArenaInputBinding> bindings = CreateDefaults();
+            HashSet<ArenaAction> savedActions = new HashSet<ArenaAction>();
             if (!File.Exists(filePath))
             {
                 return new ArenaKeyBindings(bindings);
@@ -177,10 +179,12 @@ namespace OOPGames
                             "A mouse button is assigned to an unsupported action.");
                     }
                     bindings[action] = binding;
+                    savedActions.Add(action);
                 }
             }
 
             MigrateWeaponWheelBindings(bindings);
+            MoveNewActionsOffTakenInputs(bindings, savedActions);
 
             if (bindings[ArenaAction.WeaponAttack]
                 .MatchesMouseButton(MouseButton.Right))
@@ -335,6 +339,7 @@ namespace OOPGames
                 case ArenaAction.ZoomIn: return "Zoom hinein";
                 case ArenaAction.ZoomOut: return "Zoom heraus";
                 case ArenaAction.SpawnEnemy: return "Testgegner spawnen";
+                case ArenaAction.GameSpeed: return "Spieltempo (halten + Mausrad, Godmode)";
                 default: return action.ToString();
             }
         }
@@ -423,8 +428,58 @@ namespace OOPGames
                 { ArenaAction.ToggleDebugHud, ArenaInputBinding.ForKey(Key.H) },
                 { ArenaAction.ZoomIn, ArenaInputBinding.ForKey(Key.K) },
                 { ArenaAction.ZoomOut, ArenaInputBinding.ForKey(Key.L) },
-                { ArenaAction.SpawnEnemy, ArenaInputBinding.ForKey(Key.N) }
+                { ArenaAction.SpawnEnemy, ArenaInputBinding.ForKey(Key.N) },
+                { ArenaAction.GameSpeed, ArenaInputBinding.ForKey(Key.T) }
             };
+        }
+
+        // Actions added after a settings file was saved get their default input. If the
+        // player already uses that input elsewhere, the new action moves to a free key.
+        private static void MoveNewActionsOffTakenInputs(
+            Dictionary<ArenaAction, ArenaInputBinding> bindings,
+            HashSet<ArenaAction> savedActions)
+        {
+            Key[] fallbackKeys =
+            {
+                Key.T, Key.G, Key.Y, Key.U, Key.I, Key.O, Key.P,
+                Key.F5, Key.F6, Key.F7, Key.F8, Key.F9, Key.F10
+            };
+            foreach (ArenaAction action in Actions)
+            {
+                if (savedActions.Contains(action)
+                    || !IsInputTakenByOtherAction(bindings, action, bindings[action]))
+                {
+                    continue;
+                }
+
+                foreach (Key key in fallbackKeys)
+                {
+                    ArenaInputBinding candidate = ArenaInputBinding.ForKey(key);
+                    if (!IsInputTakenByOtherAction(bindings, action, candidate))
+                    {
+                        bindings[action] = candidate;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static bool IsInputTakenByOtherAction(
+            Dictionary<ArenaAction, ArenaInputBinding> bindings,
+            ArenaAction action, ArenaInputBinding input)
+        {
+            foreach (KeyValuePair<ArenaAction, ArenaInputBinding> other in bindings)
+            {
+                if (other.Key != action
+                    && other.Value.Device == input.Device
+                    && (input.Device == ArenaInputDevice.Keyboard
+                        ? other.Value.Key == input.Key
+                        : other.Value.MouseButton == input.MouseButton))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static void MigrateWeaponWheelBindings(

@@ -38,6 +38,17 @@ internal static class Program
             TestRangeKnockbackStatsAndGodMode();
             TestPushableEntityMovement();
             TestTimedEnemySpawningAndLimit();
+            TestPlayerDamageEvents();
+            TestSoundGroupSelection();
+            TestDeathEnemyAndPurchaseSoundEvents();
+            TestSwordSwingSoundEvents();
+            TestSoundFilesMatchGroups();
+            TestSprintAndLowHealthSoundEvents();
+            TestSlowMotionScalesGameTime();
+            TestAbilityCooldownAndDurationUpgrades();
+            TestWeaponAttackCooldownUpgrades();
+            TestBulletTimeKeepsPlayerAtNormalSpeed();
+            TestGodModeBuyAllAndGameSpeed();
 
             Console.WriteLine("OK: " + _assertions + " arena assertions passed.");
             return 0;
@@ -46,6 +57,395 @@ internal static class Program
         {
             Console.Error.WriteLine(exception);
             return 1;
+        }
+    }
+
+    private static void TestSlowMotionScalesGameTime()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        field.Player.IsInvulnerable = true;
+        Assert(field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.SlowMotion)
+            && field.Progression.EntityAbilities[0] == PlayerAbilityCatalog.SlowMotion,
+            "slow motion can be unlocked as a player ability");
+        Assert(field.AttackWithEntityAbility(0) && field.IsSlowMotionActive,
+            "using the ability starts slow motion");
+        double scale = PlayerAbilityCatalog.GetSlowMotionTimeScale(1);
+        Assert(Math.Abs(field.GameTimeScale - scale) < 1e-9,
+            "slow motion lowers the game time scale");
+
+        Weapon slowMotion = field.Progression.GetEntityAbilityWeapon(0);
+        double cooldownBefore = field.GetAttackCooldownRemaining(field.Player, slowMotion);
+        field.Tick();
+        double cooldownAfter = field.GetAttackCooldownRemaining(field.Player, slowMotion);
+        Assert(Math.Abs(cooldownBefore - cooldownAfter
+                - ArenaField.GameTickDurationSeconds * scale) < 1e-9,
+            "cooldowns advance with the slowed tick speed");
+        Assert(!field.AttackWithEntityAbility(0),
+            "slow motion respects its own cooldown");
+
+        field.Player.StartAttack();
+        int attackTicks = 0;
+        while (field.Player.IsAttacking && attackTicks < 100)
+        {
+            field.Tick();
+            attackTicks++;
+        }
+        Assert(attackTicks == (int)Math.Ceiling(
+                0.2 / (ArenaField.GameTickDurationSeconds * scale) - 1e-9),
+            "the attack pose lasts longer in slow motion because it uses game time");
+
+        int ticks = 1 + attackTicks;
+        while (field.IsSlowMotionActive && ticks < 1000)
+        {
+            field.Tick();
+            ticks++;
+        }
+        Assert(ticks == (int)Math.Ceiling(
+                PlayerAbilityCatalog.SlowMotionBaseDurationSeconds
+                    / ArenaField.GameTickDurationSeconds - 1e-9)
+            && Math.Abs(field.GameTimeScale - 1) < 1e-9,
+            "slow motion ends after its duration in unscaled ticks");
+
+        field.ActivateSlowMotion(0.4, 1);
+        field.HandleKeyDown(field.KeyBindings.GetKey(ArenaAction.WeaponWheel));
+        Assert(Math.Abs(field.GameTimeScale - ArenaField.WeaponWheelSlowMotionScale) < 1e-9,
+            "weapon wheel and slow motion use the stronger slowdown");
+        field.CancelWeaponWheel();
+        field.RestartGame();
+        Assert(!field.IsSlowMotionActive, "a new run ends slow motion");
+
+        // Projectiles travel by game time: half the time scale, half the distance per tick.
+        ArenaField normal = new ArenaField();
+        ArenaField slowed = new ArenaField();
+        foreach (ArenaField arena in new[] { normal, slowed })
+        {
+            arena.StartNewGame();
+            arena.SelectPlayerWeapon(WeaponCatalog.MagicWand);
+            arena.UpdateCombat(0);
+            arena.AttackWithPlayer(1, 0);
+        }
+        double startX = normal.ActiveAttackVisuals[0].ProjectileX;
+        slowed.ActivateSlowMotion(0.5, 5);
+        normal.UpdateCombat(ArenaField.GameTickDurationSeconds * normal.GameTimeScale);
+        slowed.UpdateCombat(ArenaField.GameTickDurationSeconds * slowed.GameTimeScale);
+        double normalTravel = normal.ActiveAttackVisuals[0].ProjectileX - startX;
+        double slowedTravel = slowed.ActiveAttackVisuals[0].ProjectileX - startX;
+        Assert(normalTravel > 0 && Math.Abs(slowedTravel * 2 - normalTravel) < 1e-6,
+            "projectiles move proportionally slower in slow motion");
+    }
+
+    private static void TestAbilityCooldownAndDurationUpgrades()
+    {
+        ArenaProgression progression = new ArenaProgression();
+        PlayerAbilityDefinition blast =
+            PlayerAbilityCatalog.GetDefinition(PlayerAbilityCatalog.PowerBlast);
+        Assert(!blast.HasDuration
+            && PlayerAbilityCatalog.GetDefinition(PlayerAbilityCatalog.SlowMotion).HasDuration,
+            "only abilities with a lasting effect offer a duration upgrade");
+        Assert(!progression.TryUpgradeAbilityModifier(blast.CooldownUpgradeId),
+            "cooldown upgrades need the ability to be unlocked");
+        Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && progression.TryUpgradeAbilityModifier(blast.CooldownUpgradeId)
+            && progression.TryUpgradeAbilityModifier(blast.CooldownUpgradeId),
+            "cooldown upgrades can be bought after unlocking");
+        Weapon upgradedBlast = progression.GetEntityAbilityWeapon(0);
+        Assert(Math.Abs(upgradedBlast.CooldownSeconds
+                - 3.5 * (1 - 2 * PlayerAbilityCatalog.CooldownReductionPerRank)) < 1e-9,
+            "each cooldown rank lowers the ability cooldown");
+
+        PlayerAbilityDefinition slow =
+            PlayerAbilityCatalog.GetDefinition(PlayerAbilityCatalog.SlowMotion);
+        Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.SlowMotion)
+            && progression.TryUpgradeAbilityModifier(slow.DurationUpgradeId),
+            "slow-motion duration can be upgraded");
+        TimeSlowEffect slowEffect =
+            (TimeSlowEffect)progression.GetEntityAbilityWeapon(1).Effect;
+        Assert(Math.Abs(slowEffect.DurationSeconds
+                - (PlayerAbilityCatalog.SlowMotionBaseDurationSeconds
+                    + PlayerAbilityCatalog.SlowMotionDurationPerRank)) < 1e-9,
+            "duration ranks extend the slow motion");
+        Assert(Math.Abs(PlayerAbilityCatalog.GetSlowMotionTimeScale(1)
+                - PlayerAbilityCatalog.GetSlowMotionTimeScale(5)
+                - 4 * PlayerAbilityCatalog.SlowMotionTimeScalePerRank) < 1e-9,
+            "higher slow-motion ranks slow down more");
+
+        progression.SetGodMode(true);
+        for (int i = 0; i < 10; i++)
+        {
+            progression.TryUpgradeAbilityModifier(blast.CooldownUpgradeId);
+        }
+        Assert(progression.GetSkillRank(blast.CooldownUpgradeId)
+                == PlayerAbilityCatalog.ModifierMaximumRank,
+            "modifier ranks stop at their maximum");
+        progression.SetGodMode(false);
+
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        Assert(field.Progression.TryUpgradeSword(
+                SwordUpgradeCatalog.StrikeDamage, UpgradeCurrency.Universal)
+            && field.Progression.TryUpgradeSword(
+                SwordUpgradeCatalog.Spin, UpgradeCurrency.Universal)
+            && field.Progression.TryUpgradeSword(
+                SwordUpgradeCatalog.SpinCooldown, UpgradeCurrency.Universal)
+            && field.Progression.TryUpgradeSword(
+                SwordUpgradeCatalog.SpinDuration, UpgradeCurrency.Universal),
+            "sword spin cooldown and duration can be upgraded");
+        Weapon spin = SwordUpgradeCatalog.CreateSpinWeapon(field.Progression);
+        Assert(Math.Abs(spin.CooldownSeconds - SwordUpgradeCatalog.SpinBaseCooldownSeconds
+                * (1 - PlayerAbilityCatalog.CooldownReductionPerRank)) < 1e-9
+            && SwordUpgradeCatalog.GetSpinRotations(field.Progression)
+                == SwordUpgradeCatalog.SpinRotations + 1,
+            "spin upgrades shorten the cooldown and add a revolution");
+        int swings = 0;
+        field.PlayerSwordSwung += () => swings++;
+        field.AttackWithWeaponAbility(0);
+        for (int index = 0; index < 60; index++)
+        {
+            field.UpdateCombat(0.04);
+        }
+        Assert(swings == SwordUpgradeCatalog.SpinRotations + 1,
+            "a longer spin swings once per added revolution");
+
+        field.Progression.SetGodMode(true);
+        Assert(field.Progression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.Strike, UpgradeCurrency.Universal)
+            && field.Progression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.StrikeCooldown, UpgradeCurrency.Universal)
+            && Math.Abs(MagicWandUpgradeCatalog.CreateStrikeWeapon(field.Progression)
+                .CooldownSeconds - MagicWandUpgradeCatalog.StrikeBaseCooldownSeconds
+                    * (1 - PlayerAbilityCatalog.CooldownReductionPerRank)) < 1e-9,
+            "the wand strike cooldown can be upgraded");
+    }
+
+    private static void TestWeaponAttackCooldownUpgrades()
+    {
+        ArenaProgression progression = new ArenaProgression();
+        double factor = 1 - PlayerAbilityCatalog.CooldownReductionPerRank;
+        Assert(progression.TryUpgradeSword(
+                SwordUpgradeCatalog.AttackCooldown, UpgradeCurrency.Universal)
+            && progression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.AttackCooldown, UpgradeCurrency.Universal)
+            && progression.TryUpgradeBow(
+                BowUpgradeCatalog.AttackCooldown, UpgradeCurrency.Universal),
+            "every weapon offers a primary attack cooldown upgrade without prerequisite");
+
+        Weapon sword = SwordUpgradeCatalog.CreateSword(progression);
+        Assert(Math.Abs(sword.CooldownSeconds
+                - SwordUpgradeCatalog.BaseCooldownSeconds * factor) < 1e-9
+            && Math.Abs(((SweepingArcAttackPattern)sword.AttackPattern).DurationSeconds
+                - SwordUpgradeCatalog.BaseSwingSeconds * factor) < 1e-9,
+            "sword cooldown and swing duration shrink together");
+        Assert(Math.Abs(MagicWandUpgradeCatalog.CreateMagicWand(progression).CooldownSeconds
+                - MagicWandUpgradeCatalog.BaseCooldownSeconds * factor) < 1e-9,
+            "magic wand cooldown can be upgraded");
+        Assert(Math.Abs(BowUpgradeCatalog.CreateBow(progression).CooldownSeconds
+                - BowUpgradeCatalog.BaseCooldownSeconds * factor) < 1e-9,
+            "bow cooldown can be upgraded");
+
+        progression.SetGodMode(true);
+        for (int i = 0; i < 10; i++)
+        {
+            progression.TryUpgradeSword(
+                SwordUpgradeCatalog.AttackCooldown, UpgradeCurrency.Universal);
+        }
+        Weapon fastestSword = SwordUpgradeCatalog.CreateSword(progression);
+        Assert(((SweepingArcAttackPattern)fastestSword.AttackPattern).DurationSeconds
+                < fastestSword.CooldownSeconds,
+            "fully upgraded sword slashes still never overlap");
+    }
+
+    private static void TestBulletTimeKeepsPlayerAtNormalSpeed()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        field.Player.IsInvulnerable = true;
+        ArenaProgression progression = field.Progression;
+        Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.SlowMotion)
+            && !progression.CanUnlockBulletTime(),
+            "bullet time needs a higher slow-motion rank");
+        progression.SetGodMode(true);
+        progression.TryUpgradeSkill(PlayerAbilityCatalog.SlowMotion);
+        progression.TryUpgradeSkill(PlayerAbilityCatalog.SlowMotion);
+        progression.SetGodMode(false);
+        for (int i = 0; i < ArenaProgression.KillsPerUniversalPoint; i++)
+        {
+            progression.AwardKill(WeaponCatalog.Sword);
+        }
+        int pointsBefore = progression.UniversalPoints;
+        Assert(progression.TryUnlockBulletTime() && progression.HasBulletTime
+            && progression.UniversalPoints
+                == pointsBefore - PlayerAbilityCatalog.BulletTimeCost
+            && !progression.TryUnlockBulletTime(),
+            "bullet time is a one-off purchase for its skill-point price");
+
+        Assert(field.AttackWithEntityAbility(0) && field.IsBulletTimeActive,
+            "the slow-motion ability starts bullet time once it is unlocked");
+        double worldScale = PlayerAbilityCatalog.GetSlowMotionTimeScale(3);
+        Assert(Math.Abs(field.GameTimeScale - worldScale) < 1e-9
+            && Math.Abs(field.PlayerTimeScale - 1) < 1e-9,
+            "bullet time slows the arena but not the player");
+
+        field.SelectPlayerWeapon(WeaponCatalog.MagicWand);
+        Weapon wand = field.Player.EquippedWeapon;
+        field.AttackWithPlayer(1, 0);
+        double playerCooldown = field.GetAttackCooldownRemaining(field.Player, wand);
+        field.Tick();
+        Assert(Math.Abs(playerCooldown
+                - field.GetAttackCooldownRemaining(field.Player, wand)
+                - ArenaField.GameTickDurationSeconds) < 1e-9,
+            "player cooldowns run at normal speed during bullet time");
+
+        // A player-team entity follows the player time, other entities the arena time.
+        ArenaCombatSystem combat = new ArenaCombatSystem();
+        TestEntity fast = new TestEntity(0, 0, 30, 10, CombatTeam.Player)
+        {
+            EquippedWeapon = WeaponCatalog.Sword
+        };
+        TestEntity slow = new TestEntity(500, 0, 30, 10, CombatTeam.Enemies)
+        {
+            EquippedWeapon = WeaponCatalog.EnemyClaws
+        };
+        combat.TryStartAttack(fast, 1, 0);
+        combat.TryStartAttack(slow, -1, 0);
+        combat.Update(new Entity[] { fast, slow }, null,
+            entity => ReferenceEquals(entity, fast) ? 0.1 : 0.02);
+        Assert(Math.Abs(combat.GetCooldownRemaining(fast)
+                - (WeaponCatalog.Sword.CooldownSeconds - 0.1)) < 1e-9
+            && Math.Abs(combat.GetCooldownRemaining(slow)
+                - (WeaponCatalog.EnemyClaws.CooldownSeconds - 0.02)) < 1e-9,
+            "the combat system advances each entity by its own time");
+
+        while (field.IsSlowMotionActive)
+        {
+            field.Tick();
+        }
+        Assert(!field.IsBulletTimeActive && Math.Abs(field.PlayerTimeScale - 1) < 1e-9,
+            "bullet time ends together with the slow motion");
+    }
+
+    private static void TestGodModeBuyAllAndGameSpeed()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        Assert(!field.PurchaseAllUpgrades() && !field.ChangeGameSpeed(1)
+                && field.Progression.GetSkillRank(PlayerAbilityCatalog.PowerBlast) == 0,
+            "buy-all and game speed are godmode-only tools");
+
+        int purchaseEvents = 0;
+        field.Progression.UpgradePurchased += () => purchaseEvents++;
+        field.ToggleGodMode();
+        Assert(field.PurchaseAllUpgrades() && purchaseEvents == 1,
+            "buying everything reports one purchase instead of one per rank");
+
+        ArenaProgression progression = field.Progression;
+        bool allSkillsMaxed = true;
+        foreach (PlayerAbilityDefinition definition in PlayerAbilityCatalog.Definitions)
+        {
+            allSkillsMaxed &= progression.GetSkillRank(definition.Id) == definition.MaximumRank
+                && progression.GetSkillRank(definition.CooldownUpgradeId)
+                    == PlayerAbilityCatalog.ModifierMaximumRank
+                && (!definition.HasDuration
+                    || progression.GetSkillRank(definition.DurationUpgradeId)
+                        == PlayerAbilityCatalog.ModifierMaximumRank);
+        }
+        Assert(allSkillsMaxed && progression.HasBulletTime,
+            "all player abilities, their modifiers and bullet time are maxed");
+        Assert(field.Player.MaxHitPoints == PlayerCharacter.BaseMaxHitPoints
+                + ArenaProgression.PlayerStatMaximumRank * ArenaProgression.HealthIncreasePerRank
+            && Math.Abs(field.Player.MaxSpeed - (PlayerCharacter.BaseMaxSpeed
+                + ArenaProgression.PlayerStatMaximumRank
+                    * ArenaProgression.SpeedIncreasePerRank)) < 1e-9,
+            "player stat upgrades are bought and applied to the player");
+
+        bool weaponsMaxed = true;
+        foreach (WeaponUpgradeDefinition upgrade in SwordUpgradeCatalog.Upgrades)
+        {
+            if (!SwordUpgradeCatalog.IsElement(upgrade.Id)
+                && upgrade.Id != SwordUpgradeCatalog.ElementPower)
+            {
+                weaponsMaxed &= progression.GetWeaponUpgradeRank(upgrade.Id)
+                    == upgrade.MaximumRank;
+            }
+        }
+        foreach (WeaponUpgradeDefinition upgrade in BowUpgradeCatalog.Upgrades)
+        {
+            if (!BowUpgradeCatalog.IsElement(upgrade.Id)
+                && upgrade.Id != BowUpgradeCatalog.ElementPower)
+            {
+                weaponsMaxed &= progression.GetWeaponUpgradeRank(upgrade.Id)
+                    == upgrade.MaximumRank;
+            }
+        }
+        foreach (WeaponUpgradeDefinition upgrade in MagicWandUpgradeCatalog.Upgrades)
+        {
+            if (!MagicWandUpgradeCatalog.IsElement(upgrade.Id)
+                && upgrade.Id != MagicWandUpgradeCatalog.ElementPower)
+            {
+                weaponsMaxed &= progression.GetWeaponUpgradeRank(upgrade.Id)
+                    == upgrade.MaximumRank;
+            }
+        }
+        Assert(weaponsMaxed
+                && progression.SelectedSwordElement == WeaponElement.None
+                && progression.SelectedBowElement == WeaponElement.None
+                && progression.SelectedMagicWandElement == WeaponElement.None,
+            "all weapon upgrades are maxed while element choices stay open");
+        Assert(Math.Abs(field.Player.EquippedWeapon.CooldownSeconds
+                - SwordUpgradeCatalog.BaseCooldownSeconds
+                    * PlayerAbilityCatalog.GetCooldownMultiplier(
+                        PlayerAbilityCatalog.ModifierMaximumRank)) < 1e-9,
+            "the equipped weapon is rebuilt with the bought upgrades");
+
+        ArenaField elementField = new ArenaField();
+        elementField.StartNewGame();
+        elementField.ToggleGodMode();
+        elementField.Progression.TryUpgradeSword(
+            SwordUpgradeCatalog.StrikeDamage, UpgradeCurrency.Universal);
+        elementField.Progression.TryUpgradeSword(
+            SwordUpgradeCatalog.Fire, UpgradeCurrency.Universal);
+        elementField.PurchaseAllUpgrades();
+        Assert(elementField.Progression.GetWeaponUpgradeRank(SwordUpgradeCatalog.ElementPower)
+                == SwordUpgradeCatalog.GetDefinition(SwordUpgradeCatalog.ElementPower).MaximumRank
+            && elementField.Progression.GetWeaponUpgradeRank(SwordUpgradeCatalog.Poison) == 0,
+            "an already chosen element is maxed, other elements stay locked");
+
+        Assert(field.ChangeGameSpeed(5) && Math.Abs(field.GameSpeed - 1.5) < 1e-9
+                && Math.Abs(field.GameTimeScale - 1.5) < 1e-9
+                && Math.Abs(field.PlayerTimeScale - 1.5) < 1e-9,
+            "godmode can speed the game up");
+        field.ActivateSlowMotion(0.5, 1);
+        Assert(Math.Abs(field.GameTimeScale - 0.75) < 1e-9,
+            "game speed combines with slow motion");
+        field.Tick();
+        Assert(Math.Abs(field.SlowMotionRemainingSeconds
+                - (1 - ArenaField.GameTickDurationSeconds * 1.5)) < 1e-9,
+            "the slow-motion countdown follows the overall game speed");
+        field.ChangeGameSpeed(100);
+        Assert(Math.Abs(field.GameSpeed - ArenaField.MaximumGameSpeed) < 1e-9,
+            "game speed stops at its maximum");
+        field.ChangeGameSpeed(-100);
+        Assert(Math.Abs(field.GameSpeed - ArenaField.MinimumGameSpeed) < 1e-9,
+            "game speed stops at its minimum");
+        field.ToggleGodMode();
+        Assert(Math.Abs(field.GameSpeed - 1) < 1e-9,
+            "leaving godmode restores normal game speed");
+
+        string path = Path.Combine(
+            Path.GetTempPath(), "arena-keybindings-" + Guid.NewGuid() + ".json");
+        try
+        {
+            Assert(ArenaKeyBindings.Load(path).GetKey(ArenaAction.GameSpeed) == Key.T,
+                "the game-speed modifier defaults to T");
+            File.WriteAllText(path, "{\"MoveUp\":\"T\"}");
+            ArenaKeyBindings migrated = ArenaKeyBindings.Load(path);
+            Assert(migrated.GetKey(ArenaAction.MoveUp) == Key.T
+                    && migrated.GetKey(ArenaAction.GameSpeed) == Key.G,
+                "older settings that already use T move the new action to a free key");
+        }
+        finally
+        {
+            File.Delete(path);
         }
     }
 
@@ -634,7 +1034,8 @@ internal static class Program
         painter.PaintGameField(canvas, field);
         Assert(!FindMenuButton(canvas, "Magischer Stab — Waffenbaum").IsEnabled,
             "weapon upgrades are unavailable before a run starts");
-        FindMenuButton(canvas, "Magischer Stab — Projectile (10 damage)").RaiseEvent(
+        FindMenuButton(canvas, "Magischer Stab — "
+            + WeaponCatalog.MagicWand.AttackPattern.Name).RaiseEvent(
             new RoutedEventArgs(Button.ClickEvent));
         Assert(field.SelectedPlayerWeapon.Id == WeaponCatalog.MagicWand.Id,
             "equipment menu selects a real weapon instead of test weapons");
@@ -772,6 +1173,28 @@ internal static class Program
             .AttackPattern).Range - 780) < 0.001,
             "bow range ranks increase projectile range");
 
+        // Five sword kills earn one skill point but no bow points: the bow can still be
+        // upgraded, paid entirely with skill points.
+        ArenaField skillOnlyField = new ArenaField();
+        skillOnlyField.StartNewGame();
+        for (int i = 0; i < ArenaProgression.KillsPerUniversalPoint; i++)
+        {
+            skillOnlyField.Progression.AwardKill(WeaponCatalog.Sword);
+        }
+        skillOnlyField.SelectPlayerWeapon(WeaponCatalog.Bow);
+        Assert(skillOnlyField.CanUpgradeWeapon(
+                BowUpgradeCatalog.AutoAim, out int skillOnlyCost,
+                out int skillOnlyWeaponPoints, out int skillOnlySkillPoints)
+            && skillOnlyWeaponPoints == 0 && skillOnlySkillPoints == skillOnlyCost,
+            "weapons without weapon points can be upgraded with skill points only");
+        int skillPointsBefore = skillOnlyField.Progression.UniversalPoints;
+        Assert(skillOnlyField.TryUpgradeWeaponWithSkillPoints(BowUpgradeCatalog.AutoAim)
+            && skillOnlyField.Progression.UniversalPoints
+                == skillPointsBefore - skillOnlyCost
+            && skillOnlyField.Progression.GetWeaponPoints(WeaponCatalog.Bow.Id) == 0
+            && skillOnlyField.Progression.GetWeaponUpgradeRank(BowUpgradeCatalog.AutoAim) == 1,
+            "a skill-point-only weapon upgrade spends the skill points");
+
         ArenaProgression freeProgression = new ArenaProgression();
         freeProgression.SetGodMode(true);
         freeProgression.AwardKill(WeaponCatalog.Bow);
@@ -904,6 +1327,271 @@ internal static class Program
             "manual and timed spawning never exceed the enemy limit");
     }
 
+    private static void TestDeathEnemyAndPurchaseSoundEvents()
+    {
+        ArenaField field = new ArenaField();
+        int playerDeaths = 0;
+        List<int> enemyDamage = new List<int>();
+        List<Entity> enemyDeaths = new List<Entity>();
+        int purchases = 0;
+        field.PlayerDied += () => playerDeaths++;
+        field.NonPlayerEntityDamaged += (entity, amount) => enemyDamage.Add(amount);
+        field.NonPlayerEntityDied += enemyDeaths.Add;
+        field.Progression.UpgradePurchased += () => purchases++;
+
+        field.Player.TakeDamage(10);
+        Assert(playerDeaths == 0, "a survivable hit is not a player death");
+        field.Player.TakeDamage(field.Player.CurrentHitPoints);
+        field.Player.TakeDamage(10);
+        Assert(playerDeaths == 1, "the player death is reported exactly once");
+
+        field.ResetPlayer();
+        PursuerEnemy enemy = field.Enemies[0];
+        enemy.TakeDamage(5);
+        enemy.TakeDamage(enemy.CurrentHitPoints);
+        Assert(enemyDamage.Count == 2 && enemyDeaths.SequenceEqual(new Entity[] { enemy })
+            && playerDeaths == 1,
+            "enemy hits and enemy deaths are reported separately from the player");
+
+        field.StartNewGame();
+        for (int index = 0; index < 50 && field.Enemies.Count < 2; index++)
+        {
+            field.SpawnEnemy();
+        }
+        field.Enemies[field.Enemies.Count - 1].TakeDamage(1);
+        Assert(enemyDamage.Count == 3, "spawned enemies report their damage as well");
+
+        Assert(field.Progression.TryUpgradeSword(
+            SwordUpgradeCatalog.StrikeDamage, UpgradeCurrency.Universal)
+            && field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast),
+            "fixture buys a weapon upgrade and a skill");
+        Assert(purchases == 2, "every successful purchase plays the pay sound");
+
+        // Keep buying until points or ranks run out: only successes may play the sound.
+        int successes = 0;
+        int failures = 0;
+        for (int index = 0; index < 30; index++)
+        {
+            if (field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast))
+            {
+                successes++;
+            }
+            else
+            {
+                failures++;
+            }
+        }
+        Assert(failures > 0 && purchases == 2 + successes,
+            "failed purchases play no pay sound");
+
+        field.ToggleGodMode();
+        Assert(field.Progression.TryUpgradePlayerStat(ArenaProgression.MaximumHealth)
+            && purchases == 3 + successes,
+            "godmode purchases and player stat upgrades play the pay sound too");
+    }
+
+    private static void TestSwordSwingSoundEvents()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        int swings = 0;
+        field.PlayerSwordSwung += () => swings++;
+
+        Assert(field.Progression.TryUpgradeSword(
+            SwordUpgradeCatalog.StrikeDamage, UpgradeCurrency.Universal)
+            && field.Progression.TryUpgradeSword(
+                SwordUpgradeCatalog.Spin, UpgradeCurrency.Universal)
+            && field.AttackWithWeaponAbility(0),
+            "fixture starts the sword spin");
+        for (int index = 0; index < 40; index++)
+        {
+            field.UpdateCombat(0.04);
+        }
+        Assert(swings == SwordUpgradeCatalog.SpinRotations,
+            "the sword spin swings once per revolution");
+
+        field.AttackWithPlayer(1, 0);
+        Assert(swings == SwordUpgradeCatalog.SpinRotations + 1,
+            "a normal sword slash swings once");
+        field.AttackWithPlayer(1, 0);
+        Assert(swings == SwordUpgradeCatalog.SpinRotations + 1,
+            "an attack blocked by its cooldown makes no swing");
+
+        field.SelectPlayerWeapon(WeaponCatalog.MagicWand);
+        for (int index = 0; index < 40; index++)
+        {
+            field.UpdateCombat(0.04);
+        }
+        field.AttackWithPlayer(1, 0);
+        Assert(swings == SwordUpgradeCatalog.SpinRotations + 1,
+            "other weapons make no sword swing");
+    }
+
+    private static void TestSprintAndLowHealthSoundEvents()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        int turns = 0;
+        field.PlayerTurned += () => turns++;
+
+        Assert(!field.IsSprintEnabled, "a new run starts without sprint");
+        field.HandleKeyDown(Key.LeftCtrl);
+        Assert(!field.IsSprintEnabled, "pressing Ctrl alone does not toggle yet");
+        field.HandleKeyUp(Key.LeftCtrl);
+        Assert(field.IsSprintEnabled, "tapping Ctrl turns sprint on");
+        field.HandleKeyDown(Key.RightCtrl);
+        field.HandleKeyUp(Key.RightCtrl);
+        Assert(!field.IsSprintEnabled, "tapping Ctrl again turns sprint off");
+        double zoom = field.ZoomLevel;
+        field.HandleKeyDown(Key.LeftCtrl);
+        field.HandleZoomWheel(120);
+        field.HandleKeyUp(Key.LeftCtrl);
+        Assert(!field.IsSprintEnabled && field.ZoomLevel != zoom,
+            "Ctrl + mouse wheel zooms without toggling sprint");
+        field.HandleKeyUp(Key.LeftCtrl);
+        Assert(!field.IsSprintEnabled, "a release without a press toggles nothing");
+
+        field.UpdatePlayerMotion(true, 1, 0);
+        Assert(field.IsPlayerInMotion && !field.IsPlayerSprinting && turns == 0,
+            "walking starts the engine at walking level without a turn sound");
+        field.UpdatePlayerMotion(true, 1, -1);
+        Assert(turns == 0, "a 45 degree adjustment is not a turn");
+        field.UpdatePlayerMotion(true, 0, -1);
+        Assert(turns == 1, "a 90 degree change while walking is a turn");
+        field.ToggleSprint();
+        Assert(field.IsPlayerSprinting, "toggling sprint while moving switches to sprinting");
+        field.UpdatePlayerMotion(true, 0, 1);
+        Assert(turns == 2, "reversing while sprinting is a turn");
+        field.UpdatePlayerMotion(true, 0, 1);
+        Assert(turns == 2, "keeping the direction makes no further turn sound");
+
+        field.UpdatePlayerMotion(false, 0, 1);
+        Assert(!field.IsPlayerInMotion && field.IsSprintEnabled,
+            "stopping ends the motion but keeps sprint mode on");
+        field.UpdatePlayerMotion(true, 1, 0);
+        Assert(field.IsPlayerSprinting && turns == 2,
+            "moving off in another direction is a start, not a turn");
+        field.UpdatePlayerMotion(true, 0, 0);
+        Assert(!field.IsPlayerInMotion, "no movement input ends the motion");
+
+        field.UpdatePlayerMotion(true, 1, 0);
+        field.HandleKeyDown(Key.Escape);
+        Assert(!field.IsGameStarted && !field.IsPlayerInMotion && field.IsSprintEnabled,
+            "pausing silences the engine but keeps sprint mode");
+        field.HandleKeyDown(Key.LeftCtrl);
+        field.HandleKeyUp(Key.LeftCtrl);
+        Assert(field.IsSprintEnabled, "Ctrl does not toggle sprint in the pause menu");
+        field.HandleKeyDown(Key.Escape);
+        field.RestartGame();
+        Assert(!field.IsSprintEnabled, "a new run resets sprint mode");
+
+        int lowHealthWarnings = 0;
+        field.PlayerHealthLow += () => lowHealthWarnings++;
+        int lowHealthLimit = (int)(field.Player.MaxHitPoints * ArenaField.LowHealthFraction);
+        field.Player.TakeDamage(field.Player.CurrentHitPoints - lowHealthLimit - 1);
+        Assert(lowHealthWarnings == 0, "health above the limit gives no warning");
+        field.Player.TakeDamage(1);
+        Assert(lowHealthWarnings == 1, "dropping to low health warns once");
+        field.Player.TakeDamage(1);
+        Assert(lowHealthWarnings == 1, "further hits at low health do not repeat the warning");
+        field.Player.Heal(field.Player.MaxHitPoints);
+        field.Player.TakeDamage(field.Player.MaxHitPoints - lowHealthLimit);
+        Assert(lowHealthWarnings == 2, "healing and dropping again warns again");
+        field.Player.TakeDamage(field.Player.CurrentHitPoints);
+        Assert(lowHealthWarnings == 2 && !field.IsPlayerSprinting,
+            "a lethal hit plays the death sound instead of a warning");
+    }
+
+    private static void TestSoundFilesMatchGroups()
+    {
+        string sounds = Path.Combine(
+            FindGameProjectDirectory(), "Classes", "Gruppe 9", "Assets", "Sounds");
+        string[] patterns =
+        {
+            "playerDamage_*.wav", "player_death*.wav", "nonPlayerEntityDamage_*.wav",
+            "entity_death_*.wav", "sword_swing_*.wav", "paySkill*.wav",
+            "playerLowHealth*.wav", "sprint_loop_*.wav", "sprint_turn_neeow_*.wav",
+            "sprint_stop_brake*.wav", "ui_menu_click*.wav"
+        };
+        foreach (string pattern in patterns)
+        {
+            Assert(Directory.GetFiles(sounds, pattern).Length > 0,
+                "sound group " + pattern + " has at least one file");
+        }
+        Assert(Directory.GetFiles(sounds, "*.wav").All(file => patterns.Any(pattern =>
+                Directory.GetFiles(sounds, pattern).Contains(file))),
+            "every sound file belongs to a sound group");
+    }
+
+    private static void TestPlayerDamageEvents()
+    {
+        ArenaField field = new ArenaField();
+        List<int> damageEvents = new List<int>();
+        field.PlayerDamaged += damageEvents.Add;
+
+        field.Player.TakeDamage(10);
+        field.Player.TakeDamage(0);
+        Assert(damageEvents.SequenceEqual(new[] { 10 }),
+            "player damage is reported once with the hit points lost");
+
+        field.Player.IsInvulnerable = true;
+        field.Player.TakeDamage(10);
+        field.Player.IsInvulnerable = false;
+        Assert(damageEvents.Count == 1, "blocked damage plays no damage sound");
+
+        int remainingHitPoints = field.Player.CurrentHitPoints;
+        field.Player.TakeDamage(remainingHitPoints + 50);
+        Assert(damageEvents.Count == 2 && damageEvents[1] == remainingHitPoints,
+            "a lethal hit reports only the hit points the player still had");
+
+        PlayerCharacter oldPlayer = field.Player;
+        field.ResetPlayer();
+        oldPlayer.Heal(10);
+        field.Player.TakeDamage(5);
+        Assert(damageEvents.Count == 3 && damageEvents[2] == 5,
+            "after a restart only the new player's damage is reported");
+
+        field.Enemies[0].TakeDamage(5);
+        Assert(damageEvents.Count == 3, "enemy damage is not reported as player damage");
+    }
+
+    private static void TestSoundGroupSelection()
+    {
+        CountingSound[] sounds =
+        {
+            new CountingSound(), new CountingSound(), new CountingSound()
+        };
+        ArenaSoundGroup group = new ArenaSoundGroup(sounds, 0.1, new Random(7));
+
+        int previous = -1;
+        bool repeated = false;
+        for (int index = 0; index < 60; index++)
+        {
+            int played = group.Play(index);
+            repeated |= played == previous;
+            previous = played;
+        }
+        Assert(!repeated, "a random damage sound never repeats directly");
+        Assert(sounds.All(sound => sound.PlayCount > 0)
+            && sounds.Sum(sound => sound.PlayCount) == 60,
+            "all damage sound variants are used");
+
+        Assert(group.Play(100) >= 0 && group.Play(100.05) == -1 && group.Play(100.2) >= 0,
+            "hits within the minimum interval are merged into one sound");
+        Assert(new ArenaSoundGroup(new IArenaSoundEffect[0], 0).Play(0) == -1,
+            "a missing sound folder leaves the event silent");
+    }
+
+    private sealed class CountingSound : IArenaSoundEffect
+    {
+        public int PlayCount { get; private set; }
+
+        public void Play()
+        {
+            PlayCount++;
+        }
+    }
+
     private static Button FindMenuButton(Canvas canvas, string content)
     {
         Button found = FindMenuButtonIn(canvas, content);
@@ -934,7 +1622,9 @@ internal static class Program
     private static Button FindMenuButtonIn(DependencyObject parent, string content)
     {
         Button button = parent as Button;
-        if (button != null && Equals(button.Content, content))
+        // Split buttons only show a short label, so their full name is the automation name.
+        if (button != null && (Equals(button.Content, content)
+            || System.Windows.Automation.AutomationProperties.GetName(button) == content))
         {
             return button;
         }

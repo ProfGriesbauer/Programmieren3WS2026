@@ -126,15 +126,41 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
             }
+
+            Update(entities, movementBounds, entity => deltaSeconds);
+        }
+
+        // Advances every entity by its own game time: cooldowns and status effects of an
+        // entity and the attacks it started all use getDeltaSeconds(entity). Bullet Time uses
+        // this to keep the player at normal speed inside the slowed arena.
+        public void Update(
+            IReadOnlyList<Entity> entities, Rect? movementBounds,
+            Func<Entity, double> getDeltaSeconds)
+        {
             if (entities == null)
             {
                 throw new ArgumentNullException(nameof(entities));
             }
+            if (getDeltaSeconds == null)
+            {
+                throw new ArgumentNullException(nameof(getDeltaSeconds));
+            }
+
+            Func<Entity, double> deltaFor = entity =>
+            {
+                double delta = getDeltaSeconds(entity);
+                if (delta < 0 || double.IsNaN(delta))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(getDeltaSeconds));
+                }
+                return delta;
+            };
 
             List<Entity> cooldownOwners = new List<Entity>(_cooldownSeconds.Keys);
             foreach (Entity owner in cooldownOwners)
             {
                 Dictionary<string, double> weaponCooldowns = _cooldownSeconds[owner];
+                double deltaSeconds = deltaFor(owner);
                 List<string> weaponIds = new List<string>(weaponCooldowns.Keys);
                 foreach (string weaponId in weaponIds)
                 {
@@ -167,7 +193,7 @@ namespace OOPGames
 
                 List<Entity> targets = GetTargets(attack, entities);
                 IReadOnlyList<Entity> hits =
-                    attack.Instance.Update(deltaSeconds, targets);
+                    attack.Instance.Update(deltaFor(attack.Source), targets);
                 attack.Source.CurrentAttackVisual = attack.Instance.VisualState;
                 attack.Source.HasActiveAttack = true;
 
@@ -224,6 +250,7 @@ namespace OOPGames
             List<SpreadRequest> spreadRequests = new List<SpreadRequest>();
             foreach (Entity entity in entities)
             {
+                double deltaSeconds = deltaFor(entity);
                 entity.UpdateStatusEffects(deltaSeconds);
                 foreach (ActiveDamageOverTimeEffect effect
                     in new List<ActiveDamageOverTimeEffect>(

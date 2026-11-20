@@ -104,6 +104,8 @@ namespace OOPGames
         public bool IsAlive { get; private set; } = true;
         public bool CanBePushed { get; set; }
         public bool IsInvulnerable { get; set; }
+        // Raised with the hit points actually lost, so presentation code (sounds) can react.
+        public event Action<Entity, int> Damaged;
         public double DamageFlashIntensity
         {
             get
@@ -238,11 +240,16 @@ namespace OOPGames
 
             int previousHitPoints = CurrentHitPoints;
             CurrentHitPoints -= damage;
-            if (CurrentHitPoints < previousHitPoints)
+            int lostHitPoints = previousHitPoints - CurrentHitPoints;
+            if (lostHitPoints > 0)
             {
                 _damageFlashRemainingSeconds = DamageFlashDurationSeconds;
             }
             CheckAndKill();
+            if (lostHitPoints > 0)
+            {
+                Damaged?.Invoke(this, lostHitPoints);
+            }
         }
 
         public int Heal(int amount)
@@ -371,6 +378,7 @@ namespace OOPGames
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
             }
 
+            OnGameTimeAdvanced(deltaSeconds);
             _damageFlashRemainingSeconds = Math.Max(
                 0, _damageFlashRemainingSeconds - deltaSeconds);
             for (int i = _activeStatusEffects.Count - 1; i >= 0; i--)
@@ -387,6 +395,12 @@ namespace OOPGames
             {
                 IsMoving = false;
             }
+        }
+
+        // Called once per combat update with the scaled game time, so timers of derived
+        // entities follow slow motion like every other game system.
+        protected virtual void OnGameTimeAdvanced(double deltaSeconds)
+        {
         }
 
         internal void RemoveExpiredDamageOverTimeEffects()

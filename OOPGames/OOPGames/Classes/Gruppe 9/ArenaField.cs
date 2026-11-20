@@ -18,15 +18,31 @@ namespace OOPGames
         private const double ZoomStep = 0.1;
         public const int MaximumEnemyCount = 15;
         public const double EnemySpawnIntervalSeconds = 7;
-        private const double GameTickDurationSeconds = 0.04;
+        // Game time simulated by one framework tick at normal speed. Slow motion keeps the
+        // framework timer but simulates less game time per tick (GameTimeScale).
+        public const double GameTickDurationSeconds = 0.04;
         public const double PlayerAttackRange = 80;
         public const double PlayerAttackHalfAngleRadians = Math.PI / 6;
         public const int PlayerAttackDamage = 10;
         public const double WeaponWheelSlowMotionScale = 0.15;
+        // Godmode only: overall game speed, changed with the GameSpeed key + mouse wheel.
+        public const double MinimumGameSpeed = 0.1;
+        public const double MaximumGameSpeed = 3;
+        public const double GameSpeedStep = 0.1;
         private const double EnemySpawnVisibilityMargin = 50;
         private const int EnemySpawnPositionAttemptLimit = 10000;
         private readonly List<PursuerEnemy> _enemies = new List<PursuerEnemy>();
         private double _enemySpawnElapsedSeconds;
+        private double _slowMotionRemainingSeconds;
+        private double _slowMotionTimeScale = 1;
+        private bool _isBulletTime;
+        private int _spinSwingsRaised;
+        private double _motionReferenceX;
+        private double _motionReferenceY;
+        // Ctrl toggles sprint on release, unless it was used for Ctrl + mouse-wheel zoom.
+        private bool _sprintKeyDown;
+        private bool _sprintKeyUsedForZoom;
+        private bool _isGameStarted;
         private readonly ArenaCombatSystem _combatSystem = new ArenaCombatSystem();
         private Weapon _selectedPlayerWeapon = WeaponCatalog.Sword;
         private readonly ArenaProgression _progression = new ArenaProgression();
@@ -34,6 +50,26 @@ namespace OOPGames
 
         // The field owns the current player instance.
         public PlayerCharacter Player { get; private set; }
+        // Gameplay events for presentation code such as sounds. Player events follow the
+        // current player, including after restarts replace it. A lethal hit raises both the
+        // damage and the death event.
+        public event Action<int> PlayerDamaged;
+        public event Action PlayerDied;
+        public event Action<Entity, int> NonPlayerEntityDamaged;
+        public event Action<Entity> NonPlayerEntityDied;
+        // Raised for each sword slash and once per revolution of the sword spin.
+        public event Action PlayerSwordSwung;
+        // Raised when a hit drops the living player to LowHealthFraction or below.
+        public event Action PlayerHealthLow;
+        // Raised when the walking or sprinting direction has turned by TurnAngleDegrees or more.
+        public event Action PlayerTurned;
+        public const double LowHealthFraction = 0.25;
+        public const double TurnAngleDegrees = 90;
+        // Sprint mode, switched by tapping Ctrl; stays on until tapped again or a new run.
+        public bool IsSprintEnabled { get; private set; }
+        // True while the player actually moves, walking or sprinting.
+        public bool IsPlayerInMotion { get; private set; }
+        public bool IsPlayerSprinting { get { return IsPlayerInMotion && IsSprintEnabled; } }
         public IReadOnlyList<PursuerEnemy> Enemies { get { return _enemies; } }
         public Weapon SelectedPlayerWeapon
         {
@@ -46,7 +82,19 @@ namespace OOPGames
         {
             get { return _combatSystem.GetActiveVisuals(); }
         }
-        public bool IsGameStarted { get; private set; }
+        public bool IsGameStarted
+        {
+            get { return _isGameStarted; }
+            private set
+            {
+                _isGameStarted = value;
+                if (!value)
+                {
+                    // Pausing stops all motion; the sprint mode itself is kept.
+                    IsPlayerInMotion = false;
+                }
+            }
+        }
         public bool IsWeaponWheelOpen { get; private set; }
         public int WeaponWheelSelectionIndex
         {
@@ -56,11 +104,46 @@ namespace OOPGames
                     AimDirectionX, AimDirectionY);
             }
         }
+        // Fraction of GameTickDurationSeconds simulated per tick. Every time-based system
+        // (movement, attacks, projectiles, cooldowns, status effects, spawning, enemy AI and
+        // animations) advances by this scaled tick, so slow motion affects all of them alike.
         public double GameTimeScale
         {
             get
             {
-                return IsWeaponWheelOpen ? WeaponWheelSlowMotionScale : 1;
+                // The strongest slowdown applies; the overall game speed multiplies it.
+                double slowdown = 1;
+                if (IsWeaponWheelOpen)
+                {
+                    slowdown = Math.Min(slowdown, WeaponWheelSlowMotionScale);
+                }
+                if (IsSlowMotionActive)
+                {
+                    slowdown = Math.Min(slowdown, _slowMotionTimeScale);
+                }
+                return GameSpeed * slowdown;
+            }
+        }
+        public bool IsSlowMotionActive { get { return _slowMotionRemainingSeconds > 0; } }
+        // Remaining slow motion in unscaled ticks (real seconds at the regular tick rate).
+        public double SlowMotionRemainingSeconds { get { return _slowMotionRemainingSeconds; } }
+        public double SlowMotionTimeScale
+        {
+            get { return IsSlowMotionActive ? _slowMotionTimeScale : 1; }
+        }
+        public bool IsBulletTimeActive { get { return IsSlowMotionActive && _isBulletTime; } }
+        // Multiplies every time scale, including the slow-motion countdown. Always 1 outside
+        // godmode.
+        public double GameSpeed { get; private set; } = 1;
+        // Time scale of the player: equal to GameTimeScale, except during Bullet Time where
+        // only the weapon wheel can slow the player down.
+        public double PlayerTimeScale
+        {
+            get
+            {
+                return IsBulletTimeActive
+                    ? GameSpeed * (IsWeaponWheelOpen ? WeaponWheelSlowMotionScale : 1)
+                    : GameTimeScale;
             }
         }
         public bool HasActiveGame { get; private set; }
@@ -92,14 +175,93 @@ namespace OOPGames
         {
             // Resetting starts the player at the center of the arena.
             _combatSystem.Clear();
+            if (Player != null)
+            {
+                Player.Damaged -= OnPlayerDamaged;
+            }
             Player = new PlayerCharacter(MapWidth / 2, MapHeight / 2);
+            Player.Damaged += OnPlayerDamaged;
             Player.EquippedWeapon = _selectedPlayerWeapon;
             Player.IsInvulnerable = IsGodMode;
             _enemies.Clear();
             _enemySpawnElapsedSeconds = 0;
+            _spinSwingsRaised = 0;
+            EndSlowMotion();
+            IsPlayerInMotion = false;
+            IsSprintEnabled = false;
             Point spawnPosition = GetRandomEnemySpawnPosition(Player);
-            _enemies.Add(new PursuerEnemy(
+            AddEnemy(new PursuerEnemy(
                 spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
+        }
+
+        private void AddEnemy(PursuerEnemy enemy)
+        {
+            enemy.Damaged += OnNonPlayerEntityDamaged;
+            _enemies.Add(enemy);
+        }
+
+        private void OnPlayerDamaged(Entity player, int lostHitPoints)
+        {
+            PlayerDamaged?.Invoke(lostHitPoints);
+            if (!player.IsAlive)
+            {
+                IsPlayerInMotion = false;
+                PlayerDied?.Invoke();
+                return;
+            }
+
+            double lowHealthLimit = player.MaxHitPoints * LowHealthFraction;
+            if (player.CurrentHitPoints <= lowHealthLimit
+                && player.CurrentHitPoints + lostHitPoints > lowHealthLimit)
+            {
+                PlayerHealthLow?.Invoke();
+            }
+        }
+
+        public void ToggleSprint()
+        {
+            IsSprintEnabled = !IsSprintEnabled;
+        }
+
+        // Tracks walking and sprinting for sounds. A turn is reported once the movement
+        // direction has rotated by TurnAngleDegrees from the direction at the start of the
+        // movement or the last turn, so gradual curves count as well as sharp ones.
+        public void UpdatePlayerMotion(bool isMoving, double directionX, double directionY)
+        {
+            double length = Math.Sqrt(directionX * directionX + directionY * directionY);
+            if (!isMoving || length == 0)
+            {
+                IsPlayerInMotion = false;
+                return;
+            }
+
+            directionX /= length;
+            directionY /= length;
+            if (!IsPlayerInMotion)
+            {
+                IsPlayerInMotion = true;
+                _motionReferenceX = directionX;
+                _motionReferenceY = directionY;
+                return;
+            }
+
+            double turnLimit = Math.Cos(TurnAngleDegrees * Math.PI / 180);
+            if (directionX * _motionReferenceX + directionY * _motionReferenceY
+                <= turnLimit + 1e-9)
+            {
+                _motionReferenceX = directionX;
+                _motionReferenceY = directionY;
+                PlayerTurned?.Invoke();
+            }
+        }
+
+        private void OnNonPlayerEntityDamaged(Entity entity, int lostHitPoints)
+        {
+            NonPlayerEntityDamaged?.Invoke(entity, lostHitPoints);
+            if (!entity.IsAlive)
+            {
+                NonPlayerEntityDied?.Invoke(entity);
+            }
         }
 
         public void SelectPlayerWeapon(Weapon weapon)
@@ -216,6 +378,12 @@ namespace OOPGames
                 return false;
             }
 
+            ApplyPlayerStats();
+            return true;
+        }
+
+        private void ApplyPlayerStats()
+        {
             Player.MaxHitPoints = PlayerCharacter.BaseMaxHitPoints
                 + _progression.GetSkillRank(ArenaProgression.MaximumHealth)
                     * ArenaProgression.HealthIncreasePerRank;
@@ -223,13 +391,55 @@ namespace OOPGames
                 + _progression.GetSkillRank(ArenaProgression.MaximumSpeed)
                     * ArenaProgression.SpeedIncreasePerRank;
             Player.currentSpeed = Player.MaxSpeed;
-            return true;
         }
 
         public void ToggleGodMode()
         {
             _progression.SetGodMode(!IsGodMode);
             Player.IsInvulnerable = IsGodMode;
+            if (!IsGodMode)
+            {
+                GameSpeed = 1;
+            }
+        }
+
+        // Godmode only: buys every skill and weapon upgrade at once and applies them.
+        public bool PurchaseAllUpgrades()
+        {
+            if (!IsGodMode)
+            {
+                return false;
+            }
+
+            _progression.PurchaseAllUpgrades();
+            ApplyPlayerStats();
+            RefreshPlayerWeapon();
+            return true;
+        }
+
+        // Godmode only: changes the overall game speed by whole steps.
+        public bool ChangeGameSpeed(int steps)
+        {
+            if (!IsGodMode || steps == 0)
+            {
+                return false;
+            }
+
+            GameSpeed = Math.Round(Math.Max(MinimumGameSpeed, Math.Min(
+                MaximumGameSpeed, GameSpeed + steps * GameSpeedStep)), 2);
+            return true;
+        }
+
+        // Mouse wheel while the GameSpeed key is held; returns false so other wheel uses
+        // (zoom) still work when the key is up or godmode is off.
+        public bool HandleGameSpeedWheel(int delta)
+        {
+            if (delta == 0 || !IsGodMode
+                || !_keyBindings.IsDown(ArenaAction.GameSpeed))
+            {
+                return false;
+            }
+            return ChangeGameSpeed(Math.Sign(delta));
         }
 
         private void RefreshPlayerWeapon()
@@ -263,6 +473,7 @@ namespace OOPGames
             IsGameStarted = false;
             IsWeaponWheelOpen = false;
             HasActiveGame = false;
+            GameSpeed = 1;
         }
 
         public void StartNewGame()
@@ -336,6 +547,67 @@ namespace OOPGames
             return painter is PainterG9;
         }
 
+        // One framework tick: everything advances by the scaled game time, while the slow
+        // motion itself counts down in unscaled ticks so it cannot stretch its own duration.
+        public void Tick()
+        {
+            if (!IsGameStarted)
+            {
+                return;
+            }
+
+            double worldScale = GameTimeScale;
+            double playerScale = PlayerTimeScale;
+            UpdatePlayerPosition(playerScale);
+            UpdateEnemyPositions(worldScale);
+            UpdateCombat(
+                GameTickDurationSeconds * worldScale,
+                GameTickDurationSeconds * playerScale);
+            UpdateSlowMotion(GameTickDurationSeconds * GameSpeed);
+        }
+
+        public void ActivateSlowMotion(
+            double timeScale, double durationSeconds, bool keepsPlayerAtNormalSpeed = false)
+        {
+            if (timeScale <= 0 || timeScale >= 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeScale));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+
+            _slowMotionTimeScale = timeScale;
+            _slowMotionRemainingSeconds = durationSeconds;
+            _isBulletTime = keepsPlayerAtNormalSpeed;
+        }
+
+        public void UpdateSlowMotion(double unscaledDeltaSeconds)
+        {
+            if (unscaledDeltaSeconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(unscaledDeltaSeconds));
+            }
+            if (!IsSlowMotionActive)
+            {
+                return;
+            }
+
+            _slowMotionRemainingSeconds -= unscaledDeltaSeconds;
+            if (_slowMotionRemainingSeconds <= 1e-9)
+            {
+                EndSlowMotion();
+            }
+        }
+
+        private void EndSlowMotion()
+        {
+            _slowMotionRemainingSeconds = 0;
+            _slowMotionTimeScale = 1;
+            _isBulletTime = false;
+        }
+
         public void UpdatePlayerPosition(double speedScale = 1)
         {
             if (!IsGameStarted)
@@ -357,12 +629,10 @@ namespace OOPGames
             if (_keyBindings.IsDown(ArenaAction.MoveRight) || Keyboard.IsKeyDown(Key.Right)) directionX += 1;
 
             Rect movementBounds = MovementBounds;
-            double sprintScale = Keyboard.IsKeyDown(Key.LeftCtrl)
-                || Keyboard.IsKeyDown(Key.RightCtrl)
-                    ? 1.5
-                    : 1;
+            double sprintScale = IsSprintEnabled ? 1.5 : 1;
             Player.Move(directionX, directionY, movementBounds,
                 speedScale * sprintScale);
+            UpdatePlayerMotion(Player.IsMoving, directionX, directionY);
             if (!TryResolveEntityOverlaps(
                 Player, entities, movementBounds,
                 Player.PositionX - previousX,
@@ -417,13 +687,25 @@ namespace OOPGames
 
         public void UpdateCombat(double deltaSeconds)
         {
+            UpdateCombat(deltaSeconds, deltaSeconds);
+        }
+
+        // The player and everything it started advance by playerDeltaSeconds, the rest of
+        // the arena by deltaSeconds; both are equal outside Bullet Time.
+        public void UpdateCombat(double deltaSeconds, double playerDeltaSeconds)
+        {
             if (!IsGameStarted)
             {
                 return;
             }
 
+            PlayerCharacter player = Player;
             _combatSystem.Update(
-                deltaSeconds, GetCombatEntities(), MovementBounds);
+                GetCombatEntities(), MovementBounds,
+                entity => ReferenceEquals(entity, player)
+                    ? playerDeltaSeconds
+                    : deltaSeconds);
+            RaiseSpinSwings();
             if (!Player.IsAlive)
             {
                 IsWeaponWheelOpen = false;
@@ -440,7 +722,7 @@ namespace OOPGames
             }
 
             Point spawnPosition = GetRandomEnemySpawnPosition(Player);
-            _enemies.Add(new PursuerEnemy(
+            AddEnemy(new PursuerEnemy(
                 spawnPosition.X, spawnPosition.Y, Player.MaxSpeed));
         }
 
@@ -712,6 +994,31 @@ namespace OOPGames
             if (_combatSystem.TryStartAttack(Player, aimX, aimY))
             {
                 Player.StartAttack();
+                if (Player.EquippedWeapon.Id == WeaponCatalog.Sword.Id)
+                {
+                    PlayerSwordSwung?.Invoke();
+                }
+            }
+        }
+
+        // Follows the spin's game-time progress, so swings stay in step with each revolution
+        // and slow down together with the weapon-wheel slow motion.
+        private void RaiseSpinSwings()
+        {
+            AttackVisualState spin = GetPlayerSpinVisual();
+            if (spin == null)
+            {
+                _spinSwingsRaised = 0;
+                return;
+            }
+
+            int rotations = SwordUpgradeCatalog.GetSpinRotations(_progression);
+            int reachedRevolutions = Math.Min(
+                rotations, (int)Math.Floor(spin.Progress * rotations) + 1);
+            while (_spinSwingsRaised < reachedRevolutions)
+            {
+                _spinSwingsRaised++;
+                PlayerSwordSwung?.Invoke();
             }
         }
 
@@ -757,6 +1064,12 @@ namespace OOPGames
             if (started)
             {
                 Player.StartAttack();
+                if (ability.Effect is TimeSlowEffect timeSlow)
+                {
+                    ActivateSlowMotion(
+                        timeSlow.TimeScale, timeSlow.DurationSeconds,
+                        timeSlow.KeepsCasterAtNormalSpeed);
+                }
             }
             return started;
         }
@@ -852,6 +1165,14 @@ namespace OOPGames
         {
             if (key == Key.None)
             {
+                return false;
+            }
+
+            if (IsSprintKey(key))
+            {
+                // The toggle happens on release so Ctrl + mouse wheel can still zoom.
+                _sprintKeyDown = true;
+                _sprintKeyUsedForZoom = false;
                 return false;
             }
 
@@ -953,6 +1274,18 @@ namespace OOPGames
 
         public bool HandleKeyUp(Key key)
         {
+            if (IsSprintKey(key))
+            {
+                bool wasTapped = _sprintKeyDown && !_sprintKeyUsedForZoom;
+                _sprintKeyDown = false;
+                if (wasTapped && IsGameStarted && Player.IsAlive)
+                {
+                    ToggleSprint();
+                    return true;
+                }
+                return false;
+            }
+
             if (!IsWeaponWheelOpen
                 || !_keyBindings.MatchesKey(ArenaAction.WeaponWheel, key))
             {
@@ -963,6 +1296,11 @@ namespace OOPGames
             SelectPlayerWeapon(ArenaWeaponWheel.Weapons[selectedIndex]);
             IsWeaponWheelOpen = false;
             return true;
+        }
+
+        private static bool IsSprintKey(Key key)
+        {
+            return key == Key.LeftCtrl || key == Key.RightCtrl;
         }
 
         public void CancelWeaponWheel()
@@ -985,6 +1323,10 @@ namespace OOPGames
 
         public void HandleZoomWheel(int delta)
         {
+            if (_sprintKeyDown)
+            {
+                _sprintKeyUsedForZoom = true;
+            }
             if (delta != 0)
             {
                 ChangeZoom(Math.Sign(delta));
