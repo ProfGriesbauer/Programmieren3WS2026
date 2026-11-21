@@ -205,10 +205,10 @@ namespace OOPGames
             return upgrades.Invested(tower) / 2;
         }
 
-        public void StartWave(int wave)
+        public void StartWave(int wave, int endlessSeed = 0)
         {
             if (Phase != TowerDefenseBattlePhase.Building) return;
-            CurrentWave = TowerDefenseWaves.Get(_MapIndex, wave);
+            CurrentWave = TowerDefenseWaves.Get(_MapIndex, wave, endlessSeed);
             _CastleDamage = CastleDamageAt(wave);
             _SpawnQueue.Clear();
             foreach (string name in CurrentWave.Spawns) _SpawnQueue.Enqueue(name);

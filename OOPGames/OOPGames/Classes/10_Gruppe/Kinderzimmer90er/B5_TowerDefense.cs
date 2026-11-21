@@ -174,7 +174,7 @@ namespace OOPGames
             {
                 if (_Battle == null) return 0;
                 if (_Battle.Phase == TowerDefenseBattlePhase.Running) return _Battle.RemainingEnemies;
-                return TowerDefenseWaves.Get(_MapIndex, _Wave).Spawns.Count;
+                return TowerDefenseWaves.Get(_MapIndex, _Wave, _EndlessSeed).Spawns.Count;
             }
         }
         public int Gold { get { return _Gold; } }
@@ -211,6 +211,7 @@ namespace OOPGames
             _SlotSelection = 0;
             _SlotIndex = -1;
             _Wave = 1;
+            _Endless = false;
             _MainBuildingHealth = 100;
             _Dialog = TowerDefenseDialog.None;
             _DialogSelection = 0;
@@ -240,7 +241,7 @@ namespace OOPGames
         void CompleteWave()
         {
             if (_Map == null) return;
-            if (_Wave >= TowerDefenseWaves.WaveCount)
+            if (!_Endless && _Wave >= TowerDefenseWaves.WaveCount)
             {
                 CompleteCurrentMap();
                 return;
@@ -248,6 +249,7 @@ namespace OOPGames
             _Battle.Heal(RepairPerWave);
             int bonus = _Battle.CurrentWave.CompletionBonus;
             _Wave++;
+            if (_Endless) TowerDefenseSaves.RecordEndlessWave(_SlotIndex, _MapIndex, _Wave - 1);
             SaveRun();
             _StatusMessage = "Welle " + (_Wave - 1) + " geschafft";
             ShowBanner("WELLE " + (_Wave - 1) + " GESCHAFFT  +" + bonus + " GOLD");
@@ -300,12 +302,10 @@ namespace OOPGames
             bool countsForUnlock = UnlocksNextMap(_Difficulty);
             _CompletedUnlockedNext = TowerDefenseSaves.CompleteMap(_SlotIndex, _MapIndex, (int)_Difficulty, countsForUnlock);
             _CompletedMap = _MapIndex;
-            _Map = null;
-            _Battle = null;
-            // The map selection (showing the new check mark) lies behind the "map completed" menu.
+            // The battle stays loaded behind the "map completed" menu, so the endless mode can continue it.
             _MapSelection = _MapIndex;
             _MapSelectionMessage = null;
-            _Screen = TowerDefenseScreen.MapSelection;
+            _Screen = TowerDefenseScreen.Map;
             _Dialog = TowerDefenseDialog.MapComplete;
             _DialogSelection = 0;
         }
@@ -313,6 +313,38 @@ namespace OOPGames
         // Map of the last "map completed" menu and whether that win unlocked the next map.
         int _CompletedMap = -1;
         bool _CompletedUnlockedNext;
+        // Endless mode: the map continues after wave 50 until the castle falls.
+        bool _Endless;
+        // Endless record of this map when the endless run began (to recognise a new record).
+        int _EndlessRecordBefore;
+        // Random seed of the current endless run: decides which enemies and bosses come after wave 50.
+        int _EndlessSeed;
+
+        // Continues the beaten map with wave 51; towers, upgrades and gold stay.
+        void StartEndless()
+        {
+            _Endless = true;
+            _EndlessSeed = new Random().Next(1, int.MaxValue);
+            _EndlessRecordBefore = CurrentSlot.EndlessRecord(_MapIndex);
+            // The record counts all waves of the map: reaching the endless mode means wave 50 is beaten.
+            TowerDefenseSaves.RecordEndlessWave(_SlotIndex, _MapIndex, TowerDefenseWaves.WaveCount);
+            _Wave = TowerDefenseWaves.WaveCount + 1;
+            _Battle.Heal(RepairPerWave);
+            SaveRun();
+            _StatusMessage = "Endlos-Modus";
+            ShowBanner("ENDLOS-MODUS  WELLE " + _Wave);
+            if (AutoStart) _AutoStartCountdown = AutoStartDelay;
+        }
+
+        // Closes the current map and shows the map selection.
+        void LeaveMap()
+        {
+            _Map = null;
+            _Battle = null;
+            _Endless = false;
+            _MapSelection = Math.Max(0, _MapIndex);
+            _Screen = TowerDefenseScreen.MapSelection;
+        }
 
         bool CompletedNextOpen
         {
@@ -331,6 +363,12 @@ namespace OOPGames
         // selection). SCHWIERIGKEIT WAEHLEN: difficulty selection of the same map.
         void ActivateMapCompleteItem(string item)
         {
+            if (item == "ENDLOS-MODUS")
+            {
+                StartEndless();
+                return;
+            }
+            LeaveMap();
             if (item == "NÄCHSTE KARTE")
             {
                 _MapSelection = _CompletedMap + 1;
@@ -491,6 +529,8 @@ namespace OOPGames
                 }
                 if (_Battle.Phase == TowerDefenseBattlePhase.Lost)
                 {
+                    // The castle has fallen: the run is over, its checkpoint is removed.
+                    TowerDefenseSaves.DiscardRun(_SlotIndex, _MapIndex);
                     _Dialog = TowerDefenseDialog.Defeat;
                     _DialogSelection = 0;
                     return;
@@ -501,13 +541,13 @@ namespace OOPGames
         void StartNextWave()
         {
             if (_Battle == null || _Battle.Phase != TowerDefenseBattlePhase.Building) return;
-            _Battle.StartWave(_Wave);
+            _Battle.StartWave(_Wave, _EndlessSeed);
             TowerDefenseWave wave = _Battle.CurrentWave;
             _StatusMessage = "Welle " + _Wave + " läuft";
             if (wave.Boss != null)
                 ShowBanner((wave.IsMiniBoss ? "MINIBOSS: " : "BOSS: ") + wave.Boss.ToUpperInvariant());
             else
-                ShowBanner("WELLE " + _Wave + " / " + TowerDefenseWaves.WaveCount);
+                ShowBanner(_Endless ? "ENDLOS  WELLE " + _Wave : "WELLE " + _Wave + " / " + TowerDefenseWaves.WaveCount);
         }
 
         void ToggleSpeed()
@@ -592,6 +632,8 @@ namespace OOPGames
             {
                 Difficulty = (int)_Difficulty,
                 Wave = _Wave,
+                Endless = _Endless,
+                EndlessSeed = _EndlessSeed,
                 Gold = _Gold,
                 MainBuildingHealth = MainBuildingHealth,
                 Towers = new string[_Towers.Length],
@@ -615,16 +657,22 @@ namespace OOPGames
         string[] DialogItems()
         {
             if (_Dialog == TowerDefenseDialog.ResumeRun) return new[] { "WEITERSPIELEN", "NEU BEGINNEN", "ABBRECHEN" };
-            if (_Dialog == TowerDefenseDialog.Defeat) return new[] { "WELLE NEU", "KARTENWAHL" };
+            // After an endless run the difficulty choice is offered as well, like after wave 50.
+            if (_Dialog == TowerDefenseDialog.Defeat)
+                return _Endless
+                    ? new[] { "NEUSTARTEN", "SCHWIERIGKEIT WÄHLEN", "ANDERE KARTE", "HAUPTMENÜ" }
+                    : new[] { "NEUSTARTEN", "ANDERE KARTE", "HAUPTMENÜ" };
             if (_Dialog == TowerDefenseDialog.MapComplete)
-                return CompletedNextOpen ? new[] { "NÄCHSTE KARTE", "SCHWIERIGKEIT WÄHLEN" } : new[] { "SCHWIERIGKEIT WÄHLEN", "KARTENAUSWAHL" };
+                return CompletedNextOpen
+                    ? new[] { "NÄCHSTE KARTE", "SCHWIERIGKEIT WÄHLEN", "ENDLOS-MODUS" }
+                    : new[] { "SCHWIERIGKEIT WÄHLEN", "KARTENAUSWAHL", "ENDLOS-MODUS" };
             return new[] { "NEIN", "JA, LÖSCHEN" };
         }
 
-        // The defeat question cannot be dismissed: the lost battle must not continue.
+        // Defeat and "map completed" cannot be dismissed: the player has to choose how to go on.
         void CloseDialog()
         {
-            if (_Dialog != TowerDefenseDialog.Defeat) _Dialog = TowerDefenseDialog.None;
+            if (_Dialog != TowerDefenseDialog.Defeat && _Dialog != TowerDefenseDialog.MapComplete) _Dialog = TowerDefenseDialog.None;
         }
 
         void HandleDialogKey(Key key)
@@ -654,15 +702,16 @@ namespace OOPGames
             }
             else if (dialog == TowerDefenseDialog.Defeat)
             {
-                // Back to the last checkpoint (start of the lost wave) or to the map selection.
-                if (index == 0) ResumeMap(_MapIndex);
-                else
+                // The run is over (its save was removed): start again at wave 1, pick another map or quit.
+                if (item == "NEUSTARTEN") StartMap(_MapIndex);
+                else if (item == "SCHWIERIGKEIT WÄHLEN")
                 {
-                    _MapSelection = _MapIndex;
-                    _Map = null;
-                    _Battle = null;
-                    _Screen = TowerDefenseScreen.MapSelection;
+                    LeaveMap();
+                    _DifficultySelection = SuggestedDifficulty(_MapIndex);
+                    _Screen = TowerDefenseScreen.DifficultySelection;
                 }
+                else if (item == "ANDERE KARTE") LeaveMap();
+                else ReturnToMainMenu();
             }
             else if (index == 1)
             {
@@ -691,8 +740,8 @@ namespace OOPGames
                 else if (CurrentSlot.HasCompletedAll(_CompletedMap))
                     highlight = "ALLE SCHWIERIGKEITEN GESCHAFFT!";
                 icons = CompletedNextOpen
-                    ? new[] { TowerDefenseIcon.Star, TowerDefenseIcon.Skull }
-                    : new[] { TowerDefenseIcon.Skull, TowerDefenseIcon.Wave };
+                    ? new[] { TowerDefenseIcon.Star, TowerDefenseIcon.Skull, TowerDefenseIcon.Upgrade }
+                    : new[] { TowerDefenseIcon.Skull, TowerDefenseIcon.Wave, TowerDefenseIcon.Upgrade };
             }
             else if (_Dialog == TowerDefenseDialog.ResumeRun)
             {
@@ -700,15 +749,30 @@ namespace OOPGames
                 int towers = 0;
                 foreach (string tower in run.Towers) if (tower != null) towers++;
                 title = "WEITERSPIELEN?";
-                info = TowerDefenseMaps.Maps[_MapSelection].Name.ToUpperInvariant() + "  WELLE " + run.Wave +
+                info = TowerDefenseMaps.Maps[_MapSelection].Name.ToUpperInvariant() + (run.Endless ? "  ENDLOS" : "") + "  WELLE " + run.Wave +
                     "  GOLD " + run.Gold + "  TÜRME " + towers + "  " + DifficultyNames[run.Difficulty].ToUpperInvariant();
                 icons = new[] { TowerDefenseIcon.Upgrade, TowerDefenseIcon.Sword, TowerDefenseIcon.Wave };
             }
             else if (_Dialog == TowerDefenseDialog.Defeat)
             {
                 title = "BURG ZERSTÖRT";
-                info = "WELLE " + _Wave + " VERLOREN - NEUSTART AB WELLENBEGINN";
-                icons = new[] { TowerDefenseIcon.Upgrade, TowerDefenseIcon.Wave };
+                string mapName = _Map != null ? _Map.Name.ToUpperInvariant() : "";
+                if (_Endless)
+                {
+                    int record = CurrentSlot.EndlessRecord(_MapIndex);
+                    info = "ENDLOS-MODUS  " + mapName + "  WELLE " + _Wave + " VERLOREN";
+                    if (record > 0)
+                        highlight = record > _EndlessRecordBefore
+                            ? "NEUER REKORD: BIS WELLE " + record + " GESCHAFFT!"
+                            : "REKORD: BIS WELLE " + record + " GESCHAFFT";
+                }
+                else
+                {
+                    info = mapName + "  WELLE " + _Wave + " VERLOREN";
+                }
+                icons = _Endless
+                    ? new[] { TowerDefenseIcon.Upgrade, TowerDefenseIcon.Skull, TowerDefenseIcon.Wave, TowerDefenseIcon.Heart }
+                    : new[] { TowerDefenseIcon.Upgrade, TowerDefenseIcon.Wave, TowerDefenseIcon.Heart };
             }
             else
             {
@@ -773,6 +837,7 @@ namespace OOPGames
         void ReturnToMainMenu()
         {
             _Dialog = TowerDefenseDialog.None;
+            _Endless = false;
             _Screen = TowerDefenseScreen.MainMenu;
             _MenuSelection = 0;
             _Map = null;
@@ -985,6 +1050,7 @@ namespace OOPGames
             _Upgrades = new TowerUpgrades[_Map.TowerSpots.Count];
             _Gold = 500;
             _Wave = 1;
+            _Endless = false;
             _MainBuildingHealth = 100;
             _SelectedSpot = 0;
             _StatusMessage = "Bereit";
@@ -1003,6 +1069,9 @@ namespace OOPGames
             _Difficulty = (TowerDefenseDifficulty)run.Difficulty;
             _Gold = run.Gold;
             _Wave = run.Wave;
+            _Endless = run.Endless;
+            _EndlessSeed = run.EndlessSeed;
+            _EndlessRecordBefore = CurrentSlot.EndlessRecord(mapIndex);
             _MainBuildingHealth = run.MainBuildingHealth;
             _Towers = new Tower[_Map.TowerSpots.Count];
             _Upgrades = new TowerUpgrades[_Map.TowerSpots.Count];
@@ -1219,7 +1288,7 @@ namespace OOPGames
             }
             else if (savedRun != null)
             {
-                string saved = "GESPEICHERT: WELLE " + savedRun.Wave;
+                string saved = "GESPEICHERT: " + (savedRun.Endless ? "ENDLOS " : "") + "WELLE " + savedRun.Wave;
                 double badgeWidth = saved.Length * 2.75 + 18;
                 Surface.Rect(previewX + 2, previewY + 2, badgeWidth, 11, Outline);
                 Surface.Rect(previewX + 3, previewY + 3, badgeWidth - 2, 9, Selection);
@@ -1268,6 +1337,15 @@ namespace OOPGames
                 Surface.Rect(cx + 0.5, bandY + 2.5, 5, 5, done ? Color.FromRgb(30, 70, 34) : PanelInsideDark);
                 if (done) DrawCheck(cx + 0.5, bandY + 2.5, 5, CheckGreen);
                 ShadowText(DifficultyNames[d].ToUpperInvariant(), cx + 8, bandY + 2, 5, done ? TextLight : TextDim);
+            }
+
+            int record = CurrentSlot.EndlessRecord(mapIndex);
+            if (record > 0)
+            {
+                string text = "REKORD: BIS WELLE " + record;
+                double plateWidth = text.Length * 2.75 + 6;
+                Surface.Rect(x, bandY - 9, plateWidth, 9, Color.FromArgb(200, 20, 18, 16));
+                ShadowText(text, x + 3, bandY - 8, 5, TitleGold);
             }
 
             if (!CurrentSlot.HasCompletedAll(mapIndex)) return;
@@ -1618,12 +1696,21 @@ namespace OOPGames
         // Window below the enemy counter: which enemy types the current or next wave brings (no counts).
         void DrawWavePreview()
         {
-            TowerDefenseWave wave = WaveRunning ? _Battle.CurrentWave : TowerDefenseWaves.Get(_MapIndex, _Wave);
+            TowerDefenseWave wave = WaveRunning ? _Battle.CurrentWave : TowerDefenseWaves.Get(_MapIndex, _Wave, _EndlessSeed);
             IList<string> types = wave.EnemyTypes;
-            const double width = 124;
-            double x = Math.Min(DesignWidth - width - 2, HudEnemyX - 2);
-            double height = 20 + types.Count * 17;
             const double y = HudHeight + 1;
+            // Up to 8 enemy types in one column; more (endless mode) continue in a second column to the
+            // right. With more than 16 types the rows get a little tighter so everything stays on screen.
+            const int rowsPerColumn = 8;
+            const double columnWidth = 120, maxListHeight = 150;
+            int columns = types.Count > rowsPerColumn ? 2 : 1;
+            // The first column is filled completely, the rest continues in the second one.
+            int rows = columns == 1 ? types.Count : Math.Max(rowsPerColumn, (types.Count + 1) / 2);
+            double rowHeight = Math.Min(17, Math.Floor(maxListHeight / Math.Max(1, rows)));
+            double iconSize = Math.Min(16, rowHeight - 1);
+            double width = 4 + columns * columnWidth;
+            double x = Math.Min(DesignWidth - width - 2, HudEnemyX - 2);
+            double height = 20 + rows * rowHeight;
             AddClickArea(x, y, width, height, null, () => _ShowWavePreview = false);
             Surface.Rect(x, y, width, height, Outline);
             Surface.Rect(x + 1, y + 1, width - 2, height - 2, StoneDark);
@@ -1631,20 +1718,23 @@ namespace OOPGames
             string title = (WaveRunning ? "WELLE " : "NÄCHSTE WELLE ") + wave.Number;
             ShadowText(title, x + 6, y + 4, 6, TitleGold);
             ShadowText("x", x + width - 10, y + 3, 6, TextDim);
+            if (columns > 1) Surface.Rect(x + 2 + columnWidth, y + 15, 0.5, rows * rowHeight, StoneDark);
             for (int i = 0; i < types.Count; i++)
             {
                 string name = types[i];
-                double rowY = y + 16 + i * 17;
+                double cx = x + (i / rows) * columnWidth;
+                double rowY = y + 16 + (i % rows) * rowHeight;
                 bool boss = TowerDefenseSprites.IsBoss(name);
-                Surface.Rect(x + 5, rowY, 18, 16, PanelInsideDark);
-                DrawSpriteIcon(name, x + 6, rowY, 16);
-                ShadowText(name.ToUpperInvariant(), x + 27, rowY + 2, 5, boss ? TitleGold : TextLight);
+                Surface.Rect(cx + 5, rowY, iconSize + 2, iconSize, PanelInsideDark);
+                DrawSpriteIcon(name, cx + 6, rowY, iconSize);
+                double textX = cx + 9 + iconSize;
+                ShadowText(name.ToUpperInvariant(), textX, rowY + 1, 5, boss ? TitleGold : TextLight);
                 if (boss)
                 {
                     string label = wave.IsMiniBoss ? "MINIBOSS" : "BOSS";
-                    Surface.Text(label, x + width - 5 - label.Length * 2.75, rowY + 2, 5, Color.FromRgb(230, 110, 200));
+                    Surface.Text(label, cx + columnWidth - 1 - label.Length * 2.75, rowY + 1, 5, Color.FromRgb(230, 110, 200));
                 }
-                DrawPreviewDamageTypes(PreviewEnemy(name), x + 27, rowY + 9);
+                DrawPreviewDamageTypes(PreviewEnemy(name), textX, rowY + Math.Min(9, rowHeight - 6));
             }
         }
 
@@ -1819,9 +1909,9 @@ namespace OOPGames
         {
             Surface.Rect(0, 0, DesignWidth, HudHeight, Color.FromArgb(225, 30, 26, 22));
             Surface.Rect(0, HudHeight - 0.5, DesignWidth, 0.5, StoneDark);
-            double x = DrawHudValue(1.5, TowerDefenseIcon.Coin, Gold.ToString(), 5);
+            double x = DrawHudValue(1.5, TowerDefenseIcon.Coin, Gold.ToString(), 6);
             x = DrawHudValue(x, TowerDefenseIcon.Heart, MainBuildingHealth + "%", 4);
-            DrawHudValue(x, TowerDefenseIcon.Wave, CurrentWave + "/" + TowerDefenseWaves.WaveCount, 5);
+            DrawHudValue(x, TowerDefenseIcon.Wave, _Endless ? CurrentWave + " ENDLOS" : CurrentWave + "/" + TowerDefenseWaves.WaveCount, 5);
 
             // The enemy counter opens the wave preview (mouse or E).
             string enemies = (WaveRunning ? "FEINDE " : "NÄCHSTE ") + ExpectedEnemies + (_ShowWavePreview ? " ^" : " v");
@@ -2228,7 +2318,8 @@ namespace OOPGames
             bool delete = _Screen == TowerDefenseScreen.SlotSelection && !TowerDefenseSaves.Slots[_SlotSelection].IsEmpty;
             if (_Dialog != TowerDefenseDialog.None)
             {
-                hint = _Dialog == TowerDefenseDialog.Defeat ? "KLICK / ENTER  AUSWÄHLEN" : "KLICK / ENTER  AUSWÄHLEN   ESC  ABBRECHEN";
+                hint = _Dialog == TowerDefenseDialog.Defeat || _Dialog == TowerDefenseDialog.MapComplete
+                    ? "KLICK / ENTER  AUSWÄHLEN" : "KLICK / ENTER  AUSWÄHLEN   ESC  ABBRECHEN";
                 back = menu = delete = false;
             }
             if (_Paused)

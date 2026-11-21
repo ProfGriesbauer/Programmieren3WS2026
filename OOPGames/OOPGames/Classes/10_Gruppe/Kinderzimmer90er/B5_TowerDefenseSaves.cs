@@ -23,6 +23,10 @@ namespace OOPGames
         public int[] RangeLevels { get; set; } = new int[0];
         public int[] SpeedLevels { get; set; } = new int[0];
         public int[] MasteryLevels { get; set; } = new int[0];
+        // True for a run in endless mode (waves after 50).
+        public bool Endless { get; set; }
+        // Seed of the random endless waves, so a resumed endless run gets the same waves again.
+        public int EndlessSeed { get; set; }
 
         public TowerUpgrades GetUpgrades(int spot)
         {
@@ -78,6 +82,15 @@ namespace OOPGames
         public bool AutoStart { get; set; }
         // Key = map index, value = bit mask of the difficulties the map was beaten on (bit 0 = Easy ... bit 3 = God).
         public Dictionary<int, int> CompletedDifficulties { get; set; } = new Dictionary<int, int>();
+        // Key = map index, value = highest wave number beaten on the map in endless mode (at least 50, the
+        // first 50 waves count as well).
+        public Dictionary<int, int> EndlessRecords { get; set; } = new Dictionary<int, int>();
+
+        public int EndlessRecord(int mapIndex)
+        {
+            int wave;
+            return EndlessRecords != null && EndlessRecords.TryGetValue(mapIndex, out wave) ? wave : 0;
+        }
 
         public bool HasCompleted(int mapIndex, int difficulty)
         {
@@ -165,6 +178,16 @@ namespace OOPGames
             slot.Runs[mapIndex] = run;
             Touch(slot, mapIndex);
             Save();
+        }
+
+        // Stores a beaten endless wave if it is a new record (saved together with the next Save()).
+        public static bool RecordEndlessWave(int slotIndex, int mapIndex, int wave)
+        {
+            TowerDefenseSaveSlot slot = Slots[slotIndex];
+            if (slot.EndlessRecords == null) slot.EndlessRecords = new Dictionary<int, int>();
+            if (wave <= slot.EndlessRecord(mapIndex)) return false;
+            slot.EndlessRecords[mapIndex] = wave;
+            return true;
         }
 
         public static void DiscardRun(int slotIndex, int mapIndex)

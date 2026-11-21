@@ -84,12 +84,14 @@ kommen die Gegner abwechselnd aus beiden, der Boss immer ueber den laengeren Weg
 
 | Nr. | Karte | Wege | Gegnerstaerke |
 | --- | --- | --- |
-| 1 | Gruenes Tal | 1 Weg, 46 Kacheln, Steinbruecke | x1,05 |
-| 2 | Sumpfwald | 1 Weg, 46 Kacheln, Holzbruecke | x1,29 |
-| 3 | Winterpass | 2 Spawns (32 / 20 Kacheln) | x1,08 |
-| 4 | Flussschlucht | 2 Spawns (22 / 21 Kacheln) | x0,85 |
-| 5 | Verfluchtes Oedland | 2 Spawns (17 / 36 Kacheln), Schleife | x1,2 |
+| 1 | Gruenes Tal | 1 Weg, 46 Kacheln, Steinbruecke | x1,25 |
+| 2 | Sumpfwald | 1 Weg, 46 Kacheln, Holzbruecke | x1,45 |
+| 3 | Winterpass | 2 Spawns (32 / 20 Kacheln) | x1,2 |
+| 4 | Flussschlucht | 2 Spawns (22 / 21 Kacheln) | x0,92 |
+| 5 | Verfluchtes Oedland | 2 Spawns (17 / 36 Kacheln), Schleife | x1,38 |
 
+Die 10 Podeste jeder Karte stehen an den vom Spieler markierten Stellen, jeweils direkt neben dem
+Weg (93-99 px vom Weg; Baeume oder Steine an diesen Stellen wurden entfernt).
 Jedes Podest liegt so nah am Weg, dass jeder Tower ihn schon mit seiner Grundreichweite
 erreicht (auch Flamethrower und Ice Area Tower mit 3 x 48 px). Die Reichweite wird von der
 Podestmitte am Boden gemessen. Die Gegnerstaerke je Karte (`TowerDefenseMaps.EnemyStrength`)
@@ -108,7 +110,40 @@ einer neu freigeschalteten Karte zusaetzlich `NEUE KARTE FREIGESCHALTET: <Name>`
 Weiterspielen-Frage, falls dort ein Zwischenstand liegt), `SCHWIERIGKEIT WAEHLEN` zur
 Schwierigkeitsauswahl der gleichen Karte; vorausgewaehlt ist die erste noch nicht geschaffte
 Schwierigkeit. Ist die naechste Karte noch gesperrt oder war es die letzte, steht statt
-`NAECHSTE KARTE` der Button `KARTENAUSWAHL`.
+`NAECHSTE KARTE` der Button `KARTENAUSWAHL`. Das Menue liegt ueber der Karte und laesst sich
+nicht mit Esc schliessen.
+
+### Endlos-Modus
+
+Der dritte Button `ENDLOS-MODUS` spielt die geschaffte Karte mit Welle 51 weiter, mit allen
+Tuermen, Upgrades und dem Gold. Es geht so lange weiter, bis die Burg faellt. Die Wellen nach 50 sind
+zufaellig (`TowerDefenseWaves.Endless`): Die Anzahl der Gegner waechst weiter wie in Welle 1-50
+(hoechstens 60 Plaetze pro Welle), aber welche Gegner kommen, wird aus allen 20 normalen Gegnertypen
+ausgewuerfelt. Jede 5. Welle endet mit einem zufaelligen Mini-Boss, jede 10. mit einem zufaelligen
+Boss. Jeder Endlos-Lauf bekommt beim Start einen eigenen Zufallswert (`EndlessSeed`, im Spielstand
+gespeichert): Die Wellen-Vorschau zeigt deshalb die echte naechste Welle, und eine vom Speicherpunkt
+neu gestartete Welle ist dieselbe, aber jeder neue Endlos-Lauf verlaeuft anders.
+
+Weil die Zufallsmischung auch schwache Gegner wie Goblins enthaelt, haben Endlos-Gegner eine hoehere
+Stufe (`EnemyLevel`: normale Stufe x 1,5 + 2). Dadurch ist Welle 51 im Schnitt so stark wie Welle 49
+(etwa 88.000 statt 59.000 Lebenspunkte), danach steigt es weiter. Gold gibt es weiter: 30 % der
+Gegnerbelohnung plus Wellenbonus; uebriges Gold steckt man in die Meister-Stufen. Das HUD zeigt
+`<Welle> ENDLOS`.
+
+Der Endlos-Lauf wird wie ein normaler Lauf nach jeder Welle gespeichert (`TowerDefenseRunState.Endless`)
+und laesst sich fortsetzen. Pro Karte merkt sich der Spielstand den Rekord: die hoechste geschaffte
+Wellennummer inklusive der ersten 50 (`EndlessRecords`, mindestens 50, sobald der Endlos-Modus
+beginnt). Die Kartenauswahl zeigt ihn als `REKORD: BIS WELLE n`, die Niederlage als
+`REKORD: BIS WELLE n GESCHAFFT` bzw. `NEUER REKORD: BIS WELLE n GESCHAFFT!`.
+
+### Burg zerstoert
+
+Faellt die Burg (normal oder endlos), erscheint `BURG ZERSTOERT` mit Karte und verlorener Welle,
+im Endlos-Modus zusaetzlich Rekord bzw. `NEUER REKORD`. Der Lauf ist damit vorbei, sein
+Zwischenstand wird geloescht. Auswahl: `NEUSTARTEN` (gleiche Karte und Schwierigkeit ab Welle 1
+mit 500 Gold), `ANDERE KARTE` (Kartenauswahl) oder `HAUPTMENUE`. Nach einem Endlos-Lauf gibt es
+zusaetzlich `SCHWIERIGKEIT WAEHLEN` (wie nach Welle 50: Schwierigkeitsauswahl der gleichen Karte,
+vorausgewaehlt ist die erste noch nicht geschaffte Schwierigkeit).
 
 Jeder Spielstand merkt sich pro Karte, auf welchen Schwierigkeiten sie geschafft wurde
 (`CompletedDifficulties`, Bitmaske). Die Kartenauswahl zeigt das in einer Leiste unten im
@@ -148,7 +183,8 @@ Ablauf: Spielstand -> Karte -> bei angefangener Karte Abfrage `WEITERSPIELEN` /
 Gespeichert wird nur an Checkpoints: beim Start einer Karte (Anfang Welle 1) und nach jeder
 abgeschlossenen Welle. Der Spielstand enthaelt damit Gold, Tower und Upgrades zum Anfang der
 naechsten Welle. Was danach gebaut, verbessert oder verkauft wird, geht beim Verlassen der
-Karte verloren, bis die Welle geschafft ist. Einer geschafften Karte wird ihr Zwischenstand
+Karte verloren, bis die Welle geschafft ist. Einer geschafften Karte (ausser im Endlos-Modus) und
+nach einer Niederlage wird ihr Zwischenstand
 entfernt. Spielstaende lassen sich in der Auswahl mit `Entf` oder dem Button `LOESCHEN` (mit
 Rueckfrage) leeren.
 
@@ -178,7 +214,11 @@ Waehrend Bau-, Upgrade-, Esc-Menue und Dialogen ist der Kampf angehalten.
 - Die Zusammensetzung jeder Welle ist pro Karte fest (Seed aus Karte und Welle), damit eine
   neu gestartete Welle wieder gleich aussieht.
 - Klick auf das HUD-Feld `FEINDE`/`NAECHSTE` oder `E` oeffnet ein Fenster mit den Gegnertypen
-  der laufenden bzw. naechsten Welle (Icon und Name, ohne Anzahl; Bosse markiert).
+  der laufenden bzw. naechsten Welle (Icon und Name, ohne Anzahl; Bosse markiert). Ab 9 Gegnertypen
+  (Endlos-Modus) wird die erste Spalte mit 8 Typen gefuellt und der Rest steht in einer zweiten
+  Spalte rechts daneben; bei mehr als 16 Typen werden die Zeilen etwas enger.
+- Der Arcane Titan hat 75 statt 90 Grund-Ruestung, weil er im Endlos-Modus (hohe Stufe) sonst kaum
+  noch zu knacken war.
 
 Kampf (`Battle.cs`): Gegner laufen den Kartenweg entlang (`MoveSpeed` x 100 px/s). Tower
 schiessen auf den vordersten Gegner in Reichweite (`AttackRange` x 48 px ab Podestmitte). Flaechen-Tower
@@ -197,8 +237,8 @@ der Schwierigkeit abhaengt (`TowerDefenseDifficultyRules.CastleGrowthPerWave`):
 | Gott | +1 % | 30 / 37 / 45 |
 
 Weil Gegner auf hoeheren Stufen ohnehin weniger Schaden nehmen, ist die Burg auf Gott deutlich
-schwaecher als auf Einfach und bleibt immer schwaecher als ein ausgebauter Tower. Erreicht ein Gegner die Burg, zieht er `DamageOnMainBuilding` ab; bei 0 % ist die
-Welle verloren und kann ab dem letzten Checkpoint neu gestartet werden.
+schwaecher als auf Einfach und bleibt immer schwaecher als ein ausgebauter Tower. Erreicht ein Gegner die Burg, zieht er `DamageOnMainBuilding` ab; bei 0 % ist der Lauf
+verloren (siehe Burg zerstoert).
 
 Gold: Jeder besiegte Gegner zahlt einen Anteil seines `Reward` direkt aufs Konto (als `+n` ueber
 dem Gegner sichtbar): bis Welle 15 sind es 60 %, danach sinkt der Anteil gleichmaessig auf 30 % in
@@ -249,9 +289,9 @@ Schwaechen der Gegner zu achten, Meister-Stufen eingeschlossen). Ergebnis mit de
 | --- | --- | --- | --- | --- |
 | Gruenes Tal | gewonnen | gewonnen | gewonnen | verloren Welle 49 |
 | Sumpfwald | gewonnen | gewonnen | gewonnen | verloren Welle 40 |
-| Winterpass | gewonnen | gewonnen | knapp gewonnen | verloren Welle 42 |
+| Winterpass | gewonnen | gewonnen | knapp gewonnen | verloren Welle 49 |
 | Flussschlucht | gewonnen | knapp gewonnen | verloren Welle 40 | verloren Welle 38 |
-| Verfluchtes Oedland | gewonnen | verloren Welle 47 | verloren Welle 36 | verloren Welle 17 |
+| Verfluchtes Oedland | gewonnen | verloren Welle 46 | verloren Welle 40 | verloren Welle 20 |
 
 Wo der Bot verliert, ist gezielter Einsatz der Schadensarten noetig.
 

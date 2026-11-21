@@ -208,11 +208,11 @@ namespace OOPGames
             HelpEnemy("Goblin", hx(1150), hy(528), 1);
             HelpEnemy("Orc", hx(1296), hy(640), 0.6);
             HelpEnemy("Goblin", hx(1680), hy(760), 0.3);
-            HelpTower("Fire Mage", hx(1200), hy(729), null);
+            HelpTower("Fire Mage", hx(1584), hy(633), null);
             TowerDefenseSprite fireball = TowerDefenseSprites.Effect("fireball");
-            DrawCentered(fireball, fireball.FrameAt("play", ClockSeconds), hx(1252), hy(600), 0);
+            DrawCentered(fireball, fireball.FrameAt("play", ClockSeconds), hx(1640), hy(612), 0);
             Callout(1, hx(1150) - 4, hy(528) - 24);
-            Callout(2, hx(1200) - 15, hy(729) - 30);
+            Callout(2, hx(1584) - 15, hy(633) - 30);
             Callout(3, hx(1680) + 18, hy(399) - 36);
             EndHelpImage();
 
@@ -226,11 +226,12 @@ namespace OOPGames
                 "3  Die Burg schießt auf nahe Gegner",
                 "   und wird jede Welle stärker (auf",
                 "   Einfach mehr als auf Gott). Bei",
-                "   0 % Leben ist die Welle verloren.",
+                "   0 % Leben ist das Spiel verloren.",
                 "",
                 "Jede Karte hat 50 Wellen. Wer alle",
                 "auf Normal, Schwer oder Gott schafft,",
-                "schaltet die nächste Karte frei.");
+                "schaltet die nächste Karte frei.",
+                "Danach geht es endlos weiter.");
         }
 
         // The HUD values (top bar) and the buttons in the bottom right corner with numbered explanations.
@@ -295,8 +296,8 @@ namespace OOPGames
             TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[0];
             Func<double, double> hx, hy;
             BeginHelpImage();
-            HelpMapCrop(map, 150, 200, out hx, out hy);
-            Point ice = new Point(624, 441), poison = new Point(432, 729), free = new Point(432, 441);
+            HelpMapCrop(map, 150, 120, out hx, out hy);
+            Point ice = new Point(624, 345), poison = new Point(432, 633), free = new Point(432, 345);
             Point center = TowerDefenseBattle.RangeCenter(ice);
             HelpCircle(hx(center.X), hy(center.Y), TowerDefenseBattle.TowerRange(new IceMage(), new TowerUpgrades()) / Px);
             HelpTower("Ice Mage", hx(ice.X), hy(ice.Y), null);

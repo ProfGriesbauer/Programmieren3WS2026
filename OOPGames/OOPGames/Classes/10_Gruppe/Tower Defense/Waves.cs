@@ -35,11 +35,51 @@ namespace OOPGames
         }
     }
 
-    // 50 waves per map. Regular waves draw from enemy tiers that get stronger over time;
+    // 50 waves per map (plus random endless waves after that). Regular waves draw from enemy tiers that get stronger;
     // waves 5, 15, 25, 35, 45 end with a mini boss, waves 10, 20, 30, 40, 50 with a boss.
     public static class TowerDefenseWaves
     {
         public const int WaveCount = 50;
+        // Upper limit for the enemy slots of a wave, so very late endless waves stay playable; they still
+        // get harder because the enemy level keeps rising.
+        const int MaxSlots = 60;
+
+        // Endless mode (waves after 50): which enemies come is random. The number of enemy slots keeps growing
+        // like in waves 1-50, every 5th wave ends with a random mini boss, every 10th with a random boss.
+        // The seed is drawn once per endless run, so the preview matches the battle and a wave restarted
+        // from its checkpoint is the same, but every new endless run is different.
+        static TowerDefenseWave Endless(int mapIndex, int wave, int seed)
+        {
+            Random random = new Random(unchecked(seed * 31 + mapIndex * 7919 + wave * 131));
+            int slots = Math.Min(MaxSlots, 6 + (int)Math.Round(wave * 0.62));
+            string boss = null;
+            bool miniBoss = wave % 10 == 5;
+            if (wave % 5 == 0)
+            {
+                List<string> bosses = new List<string>();
+                foreach (KeyValuePair<int, KeyValuePair<string, string[]>> entry in _BossWaves)
+                    if ((entry.Key % 10 == 5) == miniBoss) bosses.Add(entry.Value.Key);
+                boss = bosses[random.Next(bosses.Count)];
+                slots = (int)Math.Round(slots * 0.7);
+            }
+
+            List<string> pool = new List<string>();
+            foreach (string name in _Factory.Keys)
+                if (!IsBoss(name)) pool.Add(name);
+            List<string> spawns = new List<string>();
+            while (slots > 0)
+            {
+                string name = pool[random.Next(pool.Count)];
+                spawns.Add(name);
+                slots -= SlotCost(name);
+            }
+            spawns.Sort((a, b) => SlotCost(a).CompareTo(SlotCost(b)));
+            if (boss != null) spawns.Add(boss);
+
+            int bonus = 20 + wave * 5;
+            if (boss != null) bonus *= 2;
+            return new TowerDefenseWave(wave, spawns, boss, boss != null && miniBoss, bonus);
+        }
 
         static readonly Dictionary<string, Func<int, Enemy>> _Factory = new Dictionary<string, Func<int, Enemy>>
         {
@@ -122,8 +162,13 @@ namespace OOPGames
         // Level passed to the enemy constructors. Enemy stats grow by 20 % of their base value per level.
         public static int EnemyLevel(int wave)
         {
-            return 1 + (wave - 1) / 2;
+            int level = 1 + (wave - 1) / 2;
+            // Endless waves mix in weak enemies (goblins, skeletons) at random. A higher level makes the
+            // average random wave as strong as the late fixed waves instead of suddenly easier.
+            return wave > WaveCount ? (int)Math.Round(level * EndlessLevelFactor + EndlessLevelBonus) : level;
         }
+
+        const double EndlessLevelFactor = 1.5, EndlessLevelBonus = 2;
 
         public static Enemy CreateEnemy(string name, int wave)
         {
@@ -138,11 +183,13 @@ namespace OOPGames
             return Math.Max(0.45, 1.0 - wave * 0.011);
         }
 
-        public static TowerDefenseWave Get(int mapIndex, int wave)
+        // endlessSeed is only used for waves after 50 (see Endless).
+        public static TowerDefenseWave Get(int mapIndex, int wave, int endlessSeed = 0)
         {
-            if (wave < 1 || wave > WaveCount) throw new ArgumentOutOfRangeException(nameof(wave));
+            if (wave < 1) throw new ArgumentOutOfRangeException(nameof(wave));
+            if (wave > WaveCount) return Endless(mapIndex, wave, endlessSeed);
             Random random = new Random((mapIndex + 1) * 7919 + wave * 131);
-            int slots = 6 + (int)Math.Round(wave * 0.62);
+            int slots = Math.Min(MaxSlots, 6 + (int)Math.Round(wave * 0.62));
             List<string> spawns = new List<string>();
             string boss = null;
             bool miniBoss = false;

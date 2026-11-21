@@ -76,8 +76,8 @@ namespace OOPGames
         public static IList<TowerDefenseMapDefinition> Maps { get { return _Maps; } }
 
         // Extra enemy strength per map (multiplies the difficulty multiplier). Tuned with the balancing bot so the
-        // maps get harder in order. Retuned after the stronger upgrades, the mastery levels and the damped gold.
-        static readonly double[] _Strength = { 1.05, 1.29, 1.08, 0.85, 1.2 };
+        // maps get harder in order. Retuned after the pedestals were moved next to the paths (closer = stronger towers).
+        static readonly double[] _Strength = { 1.25, 1.45, 1.2, 0.92, 1.38 };
 
         public static double EnemyStrength(int mapIndex)
         {

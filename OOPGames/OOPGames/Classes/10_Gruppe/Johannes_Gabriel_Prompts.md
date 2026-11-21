@@ -531,3 +531,53 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 **Datum:** 2026-11-19
 
 > Die Arme sollen kürzer sein und der Abstand etwas größer zwischen den Ecken
+
+## Prompt 74
+
+**Datum:** 2026-11-21
+
+> Warum habe ich immer wenn ich VsCode neu starte Changes, obwohl ich darin nichts gemacht habe?
+
+## Prompt 75
+
+**Datum:** 2026-11-21
+
+> Nur für jetzt
+
+## Prompt 76
+
+**Datum:** 2026-11-21
+
+> Jetzt würde ich gerne noch einen Endlos Modus in mein Tower Defense Spiel einfügen. Dabei soll nach dem eine Karte geschafft wurde zusätzlich zur Auswahl der nächsten Karte bzw. neue Schwierigkeit auch ein Button für Endlos Modus kommen. Dann geht es von Welle 51 weiter, bis das MainBuilding besiegt ist. Dazu soll nun auch ein Screen kommen, wenn das MainBuilding allgemein besiegt wird. Dabei kann man Neustarten, andere Karte oder Hauptmenü auswählen. Bei Neustart startet man bei Welle 1 von vorne
+
+## Prompt 77
+
+**Datum:** 2026-11-21
+
+> Im Endlos Modus wäre noch gut, wenn die Burg zerstört wird auch Schwierigkeit wählen kommt, wie wenn man Welle 50 geschafft hat.
+
+## Prompt 78
+
+**Datum:** 2026-11-21
+
+> Am besten zählen die ersten 50 Wellen auch zum Rekord dazu, wenn man im Endlos Modus verliert. Damit man weiß bis zu welcher Welle man die Karte geschafft hat
+
+## Prompt 79
+
+**Datum:** 2026-11-21
+
+> Könnte man den Endlos Modus auch so machen, dass es zufällig ist, welche Gegner kommen. Also die Anzahl der Gegner steigt wie bis Welle 50, aber es wird zufällig ausgewählt welche Gegner genau kommen. Genauso bei MiniBossen und Bossen. Dass man nie weiß was als nächstes kommt
+
+## Prompt 80
+
+**Datum:** 2026-11-21
+
+> [5 Screenshots der Karten mit rot markierten Podest-Positionen]
+> Kannst du mir die Podeste aller Karten verschieben. Bitte auch die mit dem roten X markierten Positionen und teste, ob diese Positionen auch gut spielbar sind
+
+## Prompt 81
+
+**Datum:** 2026-11-21
+
+> Wenn man die nächste Gegner Info öffnet im EndlosModus kommt es öfter vor, dass nicht alle Gegner angezeigt werden. Es wäre gut, wenn eine zweite Reihe aufgemacht wird, wenn zu viele Gegner angezeigt werden würden. Also rechts neben den angezeigten Gegner noch eine Reihe nach unten mit dem Rest.
+> Dazu möchte ich die Armor von dem ArcaneTitan von 90 auf 75 setzen, da er zu viel aushält, sobald man in den Endlos Modus kommt
