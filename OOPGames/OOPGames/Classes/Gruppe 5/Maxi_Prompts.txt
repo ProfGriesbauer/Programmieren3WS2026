@@ -142,3 +142,5 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-22 16:42:54] Gruppe 2 per pull aktualisieren
 
 [2026-11-22 17:43:42] Lasse bei dem Transport der Rohstoffe, diese über das komplette Förderband und nicht nur über das Letzte laufen. Außerdem soll das Inventar auch einklappbar sein.. Auch der mentor soll noch für die neuen Gebäude erweitert werden und erklären was die Gebäude machen, indem man sie platziert und anbindet
+
+[2026-11-22 21:54:18] Pull push und commit
