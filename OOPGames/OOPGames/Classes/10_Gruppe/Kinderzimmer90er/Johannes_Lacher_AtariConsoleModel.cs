@@ -231,9 +231,8 @@ namespace OOPGames
                 }
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
     }
 }

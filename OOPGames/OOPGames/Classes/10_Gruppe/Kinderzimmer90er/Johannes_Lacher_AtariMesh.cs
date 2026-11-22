@@ -155,9 +155,8 @@ namespace OOPGames
             Geometry geometry = formatted.BuildGeometry(new Point(0, 0));
             Rect bounds = geometry.Bounds;
             DrawingBrush brush = new DrawingBrush(new GeometryDrawing(new SolidColorBrush(color), null, geometry));
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            DiffuseMaterial material = new DiffuseMaterial(brush);
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            DiffuseMaterial material = new DiffuseMaterial(texture);
             material.Freeze();
             Quad(parent, place, center, right, up, height * bounds.Width / bounds.Height, height, material);
         }

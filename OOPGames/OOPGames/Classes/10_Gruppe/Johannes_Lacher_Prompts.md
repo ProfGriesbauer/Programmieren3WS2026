@@ -698,3 +698,9 @@ Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Reb
 > finish pong
 
 **Ergebnis:** übernommen – Pong neu geschrieben, Aufbau wie Snake/Muenzen sammeln (Ordner `Kinderzimmer90er/Pong/`, Interface `Johannes_Lacher_I_Pong.cs`): Menü für 1 oder 2 Spieler, Computergegner und Spieler über das Strategy-Interface `IG10_PaddleControl`, zu zweit W/S gegen Pfeiltasten, gehaltene Tasten bewegen weiter, Abprallwinkel nach Trefferpunkt, Ball wird schneller, Trefferprüfung über die Bahn (kein Durchrutschen), Aufschlag zum Verlierer, Spiel bis 7, Pause, Highscore = längster Ballwechsel gegen den Computer. Game-Boy-Farben nach `Shared/Johannes_Lacher_GameBoyColors.cs` verschoben und von Snake mitbenutzt; alte Klasse `B5RoomPongGame` entfernt. Build ohne Fehler/Warnungen; Testprogramm 48.065/48.065 bestanden (u. a. Physik, 20 Partien Bot gegen Computer, Eingabeleser, Hub, Bildschirmfotos). Plan mit Stand: `Plans/2026-11-19_Johannes_Lacher_Pong.md`. Im laufenden Programm noch nicht von Hand gespielt; nicht committet.
+
+### 114
+**Prompt:**
+> merge our branch into master if there are no conflicts
+
+**Ergebnis:** übernommen – Probe-Merge ohne Konflikte; die 3 eigenen Commits (Tetris, Bomberman, Pong/Snake/Münzen) ändern nur Dateien in `Classes/10_Gruppe` und `Interfaces/10_Gruppe`. `origin/master` (12 neue Commits anderer Gruppen) per Merge in `gruppe10` übernommen, Build ohne Fehler/Warnungen, Testprogramm 48.065/48.065 bestanden. Danach erneut geholt, `gruppe10` gepusht und `master` per Fast-Forward auf `gruppe10` gesetzt (kein Force-Push).

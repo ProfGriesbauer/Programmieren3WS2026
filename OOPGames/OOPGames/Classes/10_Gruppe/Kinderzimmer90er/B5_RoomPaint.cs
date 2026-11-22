@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 
@@ -33,8 +35,9 @@ namespace OOPGames
         static readonly Dictionary<Color, Material> BoxMaterialCache = new Dictionary<Color, Material>();
         static readonly Dictionary<(Color Color, Color Highlight), Material> EllipsoidMaterialCache =
             new Dictionary<(Color Color, Color Highlight), Material>();
-        static readonly Dictionary<(Brush Texture, double SpecularPower), Material> TexturedMaterialCache =
-            new Dictionary<(Brush Texture, double SpecularPower), Material>();
+        static readonly Dictionary<Brush, Material> TexturedMaterialCache = new Dictionary<Brush, Material>();
+        // Meshes made by AddBox are closed boxes with outward faces, so their back faces can never be seen.
+        static readonly ConditionalWeakTable<MeshGeometry3D, object> ClosedMeshes = new ConditionalWeakTable<MeshGeometry3D, object>();
         static readonly Material[,] ScreenMaterials = CreateScreenMaterials();
         static readonly Material[] HighlightMaterials = CreateHighlightMaterials();
         static readonly Brush FloorShadowBrush = CreateFloorShadowBrush();
@@ -65,6 +68,9 @@ namespace OOPGames
         static readonly Brush WallpaperTexture = CreateWallpaperTexture();
         static readonly Brush CarpetTexture = CreateCarpetTexture();
         static readonly Brush CurtainTexture = CreateCurtainTexture();
+        static readonly Brush ArcadePoster = B5WallArt.CreateArcadePoster();
+        static readonly Brush WindowView = B5WallArt.CreateWindowView();
+        static readonly Brush DinoPoster = B5WallArt.CreateDinoPoster();
 
         public string Name { get { return "Kinderzimmer (90er) 3D"; } }
 
@@ -267,7 +273,7 @@ namespace OOPGames
         void BuildRoom()
         {
             AddBox(0, -0.05, 0, 10, 0.1, 6, Color.FromRgb(94, 64, 43));
-            AddTexturedBox(0, 2, -3, 10, 4, 0.1, WallpaperTexture, 8);
+            AddTexturedBox(0, 2, -3, 10, 4, 0.1, WallpaperTexture);
             AddBox(-5, 2, 0, 0.1, 4, 6, Color.FromRgb(192, 166, 132));
 
             for (int row = 0; row < 8; row++)
@@ -302,7 +308,7 @@ namespace OOPGames
                 }
             }
 
-            AddTexturedBox(0, 0.015, 0.8, 3.2, 0.02, 3.2, CarpetTexture, 10);
+            AddTexturedBox(0, 0.015, 0.8, 3.2, 0.02, 3.2, CarpetTexture);
             AddBox(0, 0.029, -0.62, 2.9, 0.006, 0.1, Color.FromRgb(218, 174, 124));
             AddBox(0, 0.029, 2.22, 2.9, 0.006, 0.1, Color.FromRgb(218, 174, 124));
             AddBox(-1.46, 0.029, 0.8, 0.1, 0.006, 2.7, Color.FromRgb(218, 174, 124));
@@ -313,7 +319,7 @@ namespace OOPGames
             AddBox(-0.72, 0.029, 0.38, 0.14, 0.006, 0.62, Color.FromRgb(198, 150, 103));
             AddBox(0.72, 0.029, 1.22, 0.14, 0.006, 0.62, Color.FromRgb(198, 150, 103));
 
-            AddTexturedBox(1.8, 1.55, -2.35, 5, 0.1, 1.3, WoodTexture, 20);
+            AddTexturedBox(1.8, 1.55, -2.35, 5, 0.1, 1.3, WoodTexture);
             AddWoodBox(-0.2, 0.75, -2.35, 0.9, 1.5, 1.2);
             AddWoodBox(4.2, 0.75, -2.35, 0.15, 1.5, 1.2);
             AddBox(1.8, 0.96, -0.9, 0.9, 0.12, 0.9, Color.FromRgb(139, 134, 128));
@@ -340,22 +346,13 @@ namespace OOPGames
             BuildComputerCaseDetails();
             BuildDesktopWear();
 
-            AddBox(-1.5, 2.7, -2.91, 1.3, 0.8, 0.04, Color.FromRgb(48, 53, 64));
-            AddBox(-1.5, 2.48, -2.884, 1.04, 0.07, 0.012, Color.FromRgb(178, 69, 54));
-            AddBox(-1.5, 2.57, -2.884, 1.04, 0.07, 0.012, Color.FromRgb(74, 106, 145));
-            AddBox(-1.5, 2.66, -2.884, 1.04, 0.07, 0.012, Color.FromRgb(217, 180, 115));
-            AddBox(-1.5, 2.91, -2.884, 0.18, 0.18, 0.012, Color.FromRgb(233, 196, 128));
-            AddBox(-1.86, 2.76, -2.884, 0.28, 0.1, 0.012, Color.FromRgb(95, 116, 131));
-            AddBox(-1.53, 2.78, -2.884, 0.34, 0.12, 0.012, Color.FromRgb(63, 83, 103));
-            AddBox(-1.18, 2.76, -2.884, 0.3, 0.1, 0.012, Color.FromRgb(95, 116, 131));
-
             AddBox(1.1, 2.6, -2.9, 1.1, 0.7, 0.04, Color.FromRgb(222, 194, 151));
             AddBox(0.72, 2.6, -2.872, 0.1, 0.5, 0.012, Color.FromRgb(38, 57, 78));
             AddBox(1.18, 2.42, -2.872, 0.6, 0.08, 0.012, Color.FromRgb(196, 76, 55));
             AddBox(0.98, 2.68, -2.872, 0.18, 0.18, 0.012, Color.FromRgb(221, 133, 63));
             AddBox(1.42, 2.77, -2.872, 0.18, 0.18, 0.012, Color.FromRgb(38, 57, 78));
-            BuildPosterFrame(-1.5, 2.7, -2.815, 1.3, 0.8);
-            BuildPosterFrame(-3.6, 2.77, -2.77, 2.25, 1.05);
+            BuildPosterFrame(-1.5, 2.7, -2.875, 1.3, 0.8);
+            BuildPosterFrame(-3.6, 2.77, -2.835, 2.25, 1.05);
             BuildPosterFrame(1.1, 2.6, -2.845, 1.1, 0.7);
             AddBox(0.6, 2.3, -2.75, 3.2, 0.08, 0.35, Color.FromRgb(107, 74, 54));
             AddBox(0.6, 3.0, -2.75, 3.2, 0.08, 0.35, Color.FromRgb(107, 74, 54));
@@ -381,7 +378,6 @@ namespace OOPGames
         void BuildRoomDecor()
         {
             Color trim = Color.FromRgb(147, 105, 67);
-            Color windowBlue = Color.FromRgb(93, 140, 171);
 
             AddBox(0, 0.22, -2.91, 9.7, 0.16, 0.12, Color.FromRgb(157, 121, 82));
             AddBox(0, 0.31, -2.84, 9.6, 0.018, 0.02, Color.FromRgb(201, 168, 126));
@@ -396,14 +392,13 @@ namespace OOPGames
 
             AddWoodBox(3.58, 3.48, -2.91, 1.62, 1.02, 0.1);
             AddBox(3.58, 3.48, -2.85, 1.42, 0.84, 0.035, Color.FromRgb(72, 93, 105));
-            AddBox(3.58, 3.48, -2.82, 1.3, 0.72, 0.018, windowBlue);
+            // Painted evening view behind the glass (z -2.81), between the inner frame (-2.8325) and the
+            // window cross (-2.794). It glows a little, like daylight coming in.
+            AddWindowView(3.58, 3.48, -2.81, 1.3, 0.72);
             AddBox(3.58, 3.48, -2.8, 1.27, 0.012, 0.012, Color.FromRgb(192, 210, 208));
             AddBox(3.58, 3.48, -2.8, 0.012, 0.69, 0.012, Color.FromRgb(192, 210, 208));
-            AddBox(3.58, 3.15, -2.77, 1.2, 0.13, 0.035, Color.FromRgb(74, 105, 76));
-            AddBox(3.82, 3.25, -2.76, 0.72, 0.22, 0.025, Color.FromRgb(81, 122, 82));
-            AddSphere(3.88, 3.59, -2.76, 0.1, Color.FromRgb(218, 210, 169), Color.FromRgb(247, 239, 209));
-            AddTexturedBox(2.75, 3.45, -2.8, 0.2, 1.12, 0.07, CurtainTexture, 4);
-            AddTexturedBox(4.4, 3.45, -2.8, 0.2, 1.12, 0.07, CurtainTexture, 4);
+            AddTexturedBox(2.75, 3.45, -2.8, 0.2, 1.12, 0.07, CurtainTexture);
+            AddTexturedBox(4.4, 3.45, -2.8, 0.2, 1.12, 0.07, CurtainTexture);
             for (int fold = 0; fold < 4; fold++)
             {
                 double x = fold < 2 ? 2.72 + fold * 0.08 : 4.36 + (fold - 2) * 0.08;
@@ -412,21 +407,14 @@ namespace OOPGames
             AddWoodBox(3.58, 4.02, -2.79, 1.95, 0.07, 0.08);
 
             AddBox(-3.6, 2.77, -2.91, 2.25, 1.05, 0.12, Color.FromRgb(116, 87, 61));
-            AddBox(-3.6, 2.77, -2.835, 2.06, 0.86, 0.018, Color.FromRgb(231, 217, 184));
-            AddBox(-3.6, 2.46, -2.82, 2.0, 0.018, 0.018, Color.FromRgb(179, 73, 56));
-            AddBox(-3.6, 2.56, -2.82, 0.85, 0.16, 0.018, Color.FromRgb(64, 112, 142));
-            AddBox(-3.6, 2.83, -2.82, 1.5, 0.28, 0.018, Color.FromRgb(223, 181, 111));
-            AddBox(-3.6, 3.02, -2.82, 0.045, 0.18, 0.018, Color.FromRgb(113, 149, 115));
-            AddBox(-3.93, 2.92, -2.82, 0.48, 0.055, 0.018, Color.FromRgb(113, 149, 115));
-            AddBox(-3.2, 2.92, -2.82, 0.48, 0.055, 0.018, Color.FromRgb(113, 149, 115));
+            // Arcade poster on the backing board (front at z -2.85), framed by BuildPosterFrame.
+            AddTexturedQuad(_Scene, -3.6, 2.77, -2.846, 2.06, 0.86, ArcadePoster, false);
 
+            // Dino poster: backing board (front at z -2.89), picture just in front, frame around it.
             AddBox(-1.5, 2.7, -2.91, 1.3, 0.8, 0.04, Color.FromRgb(115, 93, 71));
-            AddBox(-1.5, 2.7, -2.88, 1.15, 0.65, 0.012, Color.FromRgb(219, 204, 174));
-            AddBox(-1.5, 2.48, -2.86, 1.05, 0.045, 0.012, Color.FromRgb(174, 76, 59));
-            AddBox(-1.5, 2.63, -2.86, 0.82, 0.16, 0.012, Color.FromRgb(77, 119, 147));
-            AddBox(-1.5, 2.82, -2.86, 0.7, 0.12, 0.012, Color.FromRgb(222, 174, 94));
+            AddTexturedQuad(_Scene, -1.5, 2.7, -2.886, 1.15, 0.65, DinoPoster, false);
 
-            AddTexturedBox(1.8, 1.46, -2.26, 4.68, 0.045, 0.06, WoodTexture, 20);
+            AddTexturedBox(1.8, 1.46, -2.26, 4.68, 0.045, 0.06, WoodTexture);
             AddBox(1.8, 1.38, -1.77, 0.035, 1.02, 0.035, trim);
             AddBox(3.9, 1.38, -1.77, 0.035, 1.02, 0.035, trim);
 
@@ -672,9 +660,8 @@ namespace OOPGames
                 context.DrawText(authorText, new Point(4, 438));
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
 
         static string GetKeyboardLabel(int row, int column)
@@ -696,9 +683,8 @@ namespace OOPGames
                 context.DrawText(text, new Point((64 - text.Width) / 2, (64 - text.Height) / 2));
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
 
         void AddTexturedQuad(Model3DGroup parent, double x, double y, double z, double width, double height,
@@ -753,6 +739,22 @@ namespace OOPGames
             parent.Children.Add(new GeometryModel3D(mesh, material) { BackMaterial = material });
         }
 
+        // Window view: lit by the room like a picture, plus some emissive light of its own.
+        void AddWindowView(double x, double y, double z, double width, double height)
+        {
+            AddTexturedQuad(_Scene, x, y, z, width, height, WindowView, false);
+            GeometryModel3D view = (GeometryModel3D)_Scene.Children[_Scene.Children.Count - 1];
+            Brush glow = WindowView.Clone();
+            glow.Opacity = 0.55;
+            glow.Freeze();
+            MaterialGroup material = new MaterialGroup();
+            material.Children.Add(new DiffuseMaterial(WindowView));
+            material.Children.Add(new EmissiveMaterial(glow));
+            material.Freeze();
+            view.Material = material;
+            view.BackMaterial = null;
+        }
+
         GeometryModel3D AddBox(double x, double y, double z, double width, double height, double depth, Color color)
         {
             return AddBox(_Scene, x, y, z, width, height, depth, color);
@@ -779,6 +781,7 @@ namespace OOPGames
             MeshGeometry3D mesh = new MeshGeometry3D();
             AppendBox(mesh, x, y, z, width, height, depth);
             mesh.Freeze();
+            ClosedMeshes.Add(mesh, null);
             Material material = GetBoxMaterial(color);
             GeometryModel3D model = new GeometryModel3D(mesh, material) { BackMaterial = material };
             parent.Children.Add(model);
@@ -819,14 +822,14 @@ namespace OOPGames
 
         GeometryModel3D AddWoodBox(double x, double y, double z, double width, double height, double depth)
         {
-            return AddTexturedBox(x, y, z, width, height, depth, WoodTexture, 22);
+            return AddTexturedBox(x, y, z, width, height, depth, WoodTexture);
         }
 
         GeometryModel3D AddTexturedBox(double x, double y, double z, double width, double height, double depth,
-            Brush texture, double specularPower)
+            Brush texture)
         {
             GeometryModel3D model = AddBox(x, y, z, width, height, depth, Colors.White);
-            Material material = GetTexturedMaterial(texture, specularPower);
+            Material material = GetTexturedMaterial(texture);
             model.Material = material;
             model.BackMaterial = material;
             return model;
@@ -837,12 +840,12 @@ namespace OOPGames
             Material material;
             if (BoxMaterialCache.TryGetValue(color, out material)) return material;
 
-            MaterialGroup group = new MaterialGroup();
-            group.Children.Add(new DiffuseMaterial(GetFrozenBrush(color)));
-            group.Children.Add(new SpecularMaterial(GetFrozenBrush(Color.FromRgb(38, 34, 29)), 18));
-            group.Freeze();
-            BoxMaterialCache.Add(color, group);
-            return group;
+            // Diffuse only: every material in a MaterialGroup is drawn as an extra pass over the whole mesh,
+            // and the old dark specular layer was hardly visible but doubled the drawing work.
+            DiffuseMaterial diffuse = new DiffuseMaterial(GetFrozenBrush(color));
+            diffuse.Freeze();
+            BoxMaterialCache.Add(color, diffuse);
+            return diffuse;
         }
 
         static Material GetEllipsoidMaterial(Color color, Color highlight)
@@ -859,18 +862,15 @@ namespace OOPGames
             return group;
         }
 
-        static Material GetTexturedMaterial(Brush texture, double specularPower)
+        static Material GetTexturedMaterial(Brush texture)
         {
-            (Brush Texture, double SpecularPower) key = (texture, specularPower);
             Material material;
-            if (TexturedMaterialCache.TryGetValue(key, out material)) return material;
+            if (TexturedMaterialCache.TryGetValue(texture, out material)) return material;
 
-            MaterialGroup group = new MaterialGroup();
-            group.Children.Add(new DiffuseMaterial(texture));
-            group.Children.Add(new SpecularMaterial(GetFrozenBrush(Color.FromRgb(42, 34, 27)), specularPower));
-            group.Freeze();
-            TexturedMaterialCache.Add(key, group);
-            return group;
+            DiffuseMaterial diffuse = new DiffuseMaterial(texture);
+            diffuse.Freeze();
+            TexturedMaterialCache.Add(texture, diffuse);
+            return diffuse;
         }
 
         static Brush GetFrozenBrush(Color color)
@@ -902,9 +902,8 @@ namespace OOPGames
             DrawingGroup drawing = new DrawingGroup();
             drawing.Children.Add(new GeometryDrawing(gradient, null, new EllipseGeometry(new Rect(0, 0, 1, 1))));
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
 
         static Material CreateFloorShadowMaterial()
@@ -935,9 +934,10 @@ namespace OOPGames
 
         static Material[] CreateHighlightMaterials()
         {
+            // Unselected frames get no material at all: an invisible (alpha 0) material would still be drawn.
             return new[]
             {
-                CreateFrozenMaterial(Color.FromArgb(0, 239, 190, 94), null),
+                null,
                 CreateFrozenMaterial(Color.FromArgb(145, 239, 190, 94), Color.FromArgb(75, 190, 127, 51))
             };
         }
@@ -968,7 +968,9 @@ namespace OOPGames
             // Printed labels (single-sided, partly transparent) must be drawn after the surfaces they lie on,
             // otherwise their transparent parts hide those surfaces.
             List<Model3D> decals = new List<Model3D>();
-            Dictionary<Material, MeshGeometry3D> batches = new Dictionary<Material, MeshGeometry3D>();
+            // Closed boxes and open meshes are merged separately: only open meshes need their back faces drawn.
+            Dictionary<(Material Material, bool Closed), MeshGeometry3D> batches =
+                new Dictionary<(Material Material, bool Closed), MeshGeometry3D>();
             foreach (Model3D child in group.Children)
             {
                 GeometryModel3D model = child as GeometryModel3D;
@@ -988,23 +990,25 @@ namespace OOPGames
                     continue;
                 }
 
+                object unused;
+                (Material Material, bool Closed) key = (model.Material, ClosedMeshes.TryGetValue(mesh, out unused));
                 MeshGeometry3D batch;
-                if (!batches.TryGetValue(model.Material, out batch))
+                if (!batches.TryGetValue(key, out batch))
                 {
                     batch = new MeshGeometry3D();
-                    batches.Add(model.Material, batch);
+                    batches.Add(key, batch);
                 }
                 AppendMesh(batch, mesh);
             }
 
             group.Children.Clear();
             foreach (Model3D model in retained) group.Children.Add(model);
-            foreach (KeyValuePair<Material, MeshGeometry3D> batch in batches)
+            foreach (KeyValuePair<(Material Material, bool Closed), MeshGeometry3D> batch in batches)
             {
                 batch.Value.Freeze();
-                GeometryModel3D merged = new GeometryModel3D(batch.Value, batch.Key)
+                GeometryModel3D merged = new GeometryModel3D(batch.Value, batch.Key.Material)
                 {
-                    BackMaterial = batch.Key
+                    BackMaterial = batch.Key.Closed ? null : batch.Key.Material
                 };
                 merged.Freeze();
                 group.Children.Add(merged);
@@ -1048,9 +1052,8 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.38, 0.62),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
 
         static Brush CreateWallpaperTexture()
@@ -1080,9 +1083,8 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.06, 0.12),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
 
         static Brush CreateCarpetTexture()
@@ -1110,9 +1112,8 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.18, 0.18),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
 
         static Brush CreateCurtainTexture()
@@ -1135,9 +1136,8 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.7, 0.45),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
 
         GeometryModel3D AddSphere(double x, double y, double z, double radius, Color color, Color highlight)
@@ -1675,14 +1675,52 @@ namespace OOPGames
 
     static class B5RoomTextures
     {
-        // Vector textures (DrawingBrush) on 3D surfaces are otherwise rasterized again for every
-        // frame in which the camera moves. With this hint WPF keeps the rasterized bitmap and only
-        // redraws it when the texture appears at less than half or more than twice the size.
-        public static void CacheAsBitmap(TileBrush brush)
+        const int TextureSize = 512;
+
+        // Vector textures (DrawingBrush) on 3D surfaces are rasterized again by WPF in many frames while the
+        // camera moves, which made the room stutter (measured: ~45 instead of 90 fps on a 2880x1800 laptop).
+        // So every texture is drawn once into a bitmap (longest side TextureSize pixels) and used as an
+        // ImageBrush with the same tiling. Returns the frozen bitmap brush.
+        public static Brush ToBitmap(DrawingBrush brush, int size = TextureSize)
         {
-            RenderOptions.SetCachingHint(brush, CachingHint.Cache);
-            RenderOptions.SetCacheInvalidationThresholdMinimum(brush, 0.5);
-            RenderOptions.SetCacheInvalidationThresholdMaximum(brush, 2.0);
+            Rect bounds = brush.Drawing.Bounds;
+            Rect area = brush.ViewboxUnits == BrushMappingMode.Absolute ? brush.Viewbox : new Rect(
+                bounds.X + brush.Viewbox.X * bounds.Width, bounds.Y + brush.Viewbox.Y * bounds.Height,
+                brush.Viewbox.Width * bounds.Width, brush.Viewbox.Height * bounds.Height);
+            if (area.IsEmpty || area.Width <= 0 || area.Height <= 0)
+            {
+                brush.Freeze();
+                return brush;
+            }
+
+            double scale = size / Math.Max(area.Width, area.Height);
+            int width = Math.Max(16, (int)Math.Round(area.Width * scale));
+            int height = Math.Max(16, (int)Math.Round(area.Height * scale));
+            DrawingVisual visual = new DrawingVisual();
+            using (DrawingContext context = visual.RenderOpen())
+            {
+                context.PushTransform(new ScaleTransform(width / area.Width, height / area.Height));
+                context.PushTransform(new TranslateTransform(-area.X, -area.Y));
+                context.DrawDrawing(brush.Drawing);
+            }
+            RenderTargetBitmap bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(visual);
+            bitmap.Freeze();
+
+            ImageBrush image = new ImageBrush(bitmap)
+            {
+                Stretch = brush.Stretch,
+                AlignmentX = brush.AlignmentX,
+                AlignmentY = brush.AlignmentY,
+                TileMode = brush.TileMode,
+                Viewport = brush.Viewport,
+                ViewportUnits = brush.ViewportUnits,
+                Opacity = brush.Opacity,
+                Transform = brush.Transform,
+                RelativeTransform = brush.RelativeTransform
+            };
+            image.Freeze();
+            return image;
         }
     }
 }

@@ -289,12 +289,11 @@ namespace OOPGames
                 context.DrawRectangle(vignette, null, area);
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
+            Brush texture = B5RoomTextures.ToBitmap(brush);
 
             MaterialGroup material = new MaterialGroup();
             material.Children.Add(new DiffuseMaterial(new SolidColorBrush(Colors.Black)));
-            material.Children.Add(new EmissiveMaterial(brush));
+            material.Children.Add(new EmissiveMaterial(texture));
             material.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromRgb(120, 125, 125)), 70));
             material.Freeze();
             return material;

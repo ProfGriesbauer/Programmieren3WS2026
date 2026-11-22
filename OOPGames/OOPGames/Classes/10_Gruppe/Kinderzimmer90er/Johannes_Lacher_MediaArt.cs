@@ -68,9 +68,8 @@ namespace OOPGames
         internal static Brush Finish(DrawingGroup drawing)
         {
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            B5RoomTextures.CacheAsBitmap(brush);
-            brush.Freeze();
-            return brush;
+            Brush texture = B5RoomTextures.ToBitmap(brush);
+            return texture;
         }
 
         internal static Color Mix(Color first, Color second, double amount)
