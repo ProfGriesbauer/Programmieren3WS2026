@@ -9,8 +9,9 @@ namespace OOPGames
     // Beschreibung: Logik des Spielhallen-NPCs "Patrick" (blond, schwarzes T-Shirt, blaue Hose, weiße Schuhe;
     //               steht am mittleren Automaten, optimistisch und freundlich):
     //               - jeden Spieltag ein anderer Spieltipp (gleicher Tag = gleicher Tipp),
-    //               - einmalig 35 Chips, sobald der Spieler seinen Schlangen-Rekord (220 Punkte = 22 Früchte,
-    //                 kurz bevor die Schlange ihr Höchsttempo erreicht) übertrifft.
+    //               - einmalig 300 Chips, sobald der Spieler seinen Schlangen-Rekord (576 Punkte, also mindestens
+    //                 58 Früchte, großteils im Höchsttempo) übertrifft.
+    //               Der Rekord steht auch auf der Highscore-Tafel (G1C_GameManager.HighscoreText).
     //               Ob schon ausgezahlt wurde, steht im gespeicherten NPC-Gedächtnis (RecordRewardPaid).
     //               Reine Logik; das Gespräch läuft über G1C_Conversation (Personality.Topics).
     // =====================================================
@@ -19,8 +20,8 @@ namespace OOPGames
         public const string NpcName = "Patrick";
         public const string Skin = "pc-F0D060-F0C8A0-181818-2848A8-F8F8F8-x";   // Haare, Haut, T-Shirt, Hose, Schuhe, keine Mütze
         public const string SnakeGameName = "Schlange";
-        public const int SnakeRecord = 220;
-        public const int RecordReward = 35;
+        public const int SnakeRecord = 576;   // Änderung durch: Patrick Lupierz – 22.11.2026 (vorher 220); steht auch auf der Highscore-Tafel
+        public const int RecordReward = 300;   // Änderung durch: Patrick Lupierz – 22.11.2026 (vorher 35)
 
         public static readonly string[] Tips =
         {
@@ -66,8 +67,9 @@ namespace OOPGames
             if (best == 0)
                 return "Mein Schlangen-Rekord: " + SnakeRecord + " Punkte. Schlag ihn, dann gibt's " + RecordReward
                        + " Chips von mir. Du schaffst das!";
-            return "Mein Rekord: " + SnakeRecord + " Punkte, deiner: " + best + ". Nur noch " + (SnakeRecord - best + 10)
-                   + " Punkte bis zu " + RecordReward + " Chips. Du bist nah dran!";
+            int missing = ((SnakeRecord - best) / 10 + 1) * 10;   // Schlange zählt in 10er-Schritten
+            return "Mein Rekord: " + SnakeRecord + " Punkte, deiner: " + best + ". Noch " + missing
+                   + " Punkte bis zu " + RecordReward + " Chips. " + (missing <= 100 ? "Du bist nah dran!" : "Du schaffst das!");
         }
 
         // Entwickler: Patrick Lupierz – Gesprächsprofil (in G1C_ShopNpcRoster eingetragen)

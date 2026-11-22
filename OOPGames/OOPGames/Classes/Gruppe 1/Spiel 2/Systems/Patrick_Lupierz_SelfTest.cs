@@ -112,7 +112,7 @@ namespace OOPGames
             run("Eduard", "Eduard steht bei den Spielautomaten und besitzt spielsüchtige Dialoge", EduardSlotNpc);
             run("Eduard", "Eduard spielt am linken Automaten, blockiert ihn, gestreiftes Hemd/Mütze, viele Sprüche", EduardBlocksLeftMachine); // Patrick Lupierz – 22.11.2026
             run("Fenster", "Welt füllt jede Fenstergröße, Minispiele mittig im festen 480x320-Rahmen", WindowScaling); // Patrick Lupierz – 22.11.2026
-            run("Spielhalle", "Patrick: am mittleren Automaten, Aussehen, täglicher Tipp, 35 Chips einmalig für den Schlangen-Rekord", ArcadeMentorPatrick); // Patrick Lupierz – 22.11.2026
+            run("Spielhalle", "Patrick: am mittleren Automaten, Aussehen, täglicher Tipp, 300 Chips einmalig für den Schlangen-Rekord", ArcadeMentorPatrick); // Patrick Lupierz – 22.11.2026
             run("Geldhai", "Haustür-Begegnung wird nur beim Verlassen ausgelöst", LoanHouseExitEncounter);
 
             // ---- Spielzustände
@@ -770,7 +770,7 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz – Datum: 22.11.2026
         // Aufgabe: NPC Patrick in der Spielhalle. Steht neben dem mittleren Automaten (Front frei), blond/schwarzes
         //          T-Shirt/blaue Hose/weiße Schuhe, jeden Tag ein anderer Tipp, Rekord weder zu leicht noch unerreichbar,
-        //          35 Chips genau einmal, erst wenn der Rekord übertroffen ist.
+        //          300 Chips genau einmal, erst wenn der Rekord übertroffen ist.
         private static void ArcadeMentorPatrick()
         {
             G1C_GameManager game = RunningGame();
@@ -787,7 +787,11 @@ namespace OOPGames
 
             Check(G1C_ArcadeMentor.TipFor(1) != G1C_ArcadeMentor.TipFor(2), "Tipp wechselt nicht täglich");
             Equal(G1C_ArcadeMentor.TipFor(3), G1C_ArcadeMentor.TipFor(3), "Tipp innerhalb eines Tages gleich");
-            Check(G1C_ArcadeMentor.SnakeRecord >= 150 && G1C_ArcadeMentor.SnakeRecord <= 300, "Rekord zu leicht oder zu schwer: " + G1C_ArcadeMentor.SnakeRecord);
+            Equal(576, G1C_ArcadeMentor.SnakeRecord, "Patricks Rekord");
+            Check(game.HighscoreText().Contains("Schlange: 576 Punkte – Patrick"), "Rekord fehlt auf der Tafel: " + game.HighscoreText());
+            game.ArcadeHighscores["Schlange"] = 600;
+            Check(game.HighscoreText().Contains("Schlange: 600 Punkte – Du") && !game.HighscoreText().Contains("576"), "Gebrochener Rekord nicht auf der Tafel: " + game.HighscoreText());
+            game.ArcadeHighscores.Remove("Schlange");
 
             G1C_MoneyManager money = new G1C_MoneyManager(100);
             G1C_NpcMemory memory = new G1C_NpcMemory();
@@ -797,9 +801,9 @@ namespace OOPGames
             Equal(100, money.Balance, "Gleichstand zahlt nichts aus");
             scores["Schlange"] = G1C_ArcadeMentor.SnakeRecord + 10;
             G1C_ArcadeMentor.RecordAnswer(c);
-            Equal(135, money.Balance, "35 Chips für den gebrochenen Rekord");
+            Equal(400, money.Balance, "300 Chips für den gebrochenen Rekord");
             G1C_ArcadeMentor.RecordAnswer(c);
-            Equal(135, money.Balance, "Belohnung nur einmal");
+            Equal(400, money.Balance, "Belohnung nur einmal");
             Check(memory.RecordRewardPaid, "Auszahlung nicht im (gespeicherten) Gedächtnis");
         }
 

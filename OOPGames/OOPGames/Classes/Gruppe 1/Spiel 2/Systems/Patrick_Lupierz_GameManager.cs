@@ -1203,10 +1203,17 @@ namespace OOPGames
             State = G1C_GameState.ListMenu;
         }
 
-        private string HighscoreText()
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Patricks Schlangen-Rekord steht mit auf der Tafel,
+        // bis der Spieler ihn übertrifft; jeder Eintrag nennt den Rekordhalter.
+        public string HighscoreText()
         {
-            if (ArcadeHighscores.Count == 0) return "Noch keine Rekorde. Sei der Erste!";
-            return string.Join("\n", ArcadeHighscores.OrderByDescending(h => h.Value).Take(4).Select(h => h.Key + ": " + h.Value + " Punkte"));
+            Dictionary<string, KeyValuePair<int, string>> board = ArcadeHighscores.ToDictionary(
+                h => h.Key, h => new KeyValuePair<int, string>(h.Value, "Du"));
+            KeyValuePair<int, string> snake;
+            if (!board.TryGetValue(G1C_ArcadeMentor.SnakeGameName, out snake) || snake.Key <= G1C_ArcadeMentor.SnakeRecord)
+                board[G1C_ArcadeMentor.SnakeGameName] = new KeyValuePair<int, string>(G1C_ArcadeMentor.SnakeRecord, G1C_ArcadeMentor.NpcName);
+            return string.Join("\n", board.OrderByDescending(h => h.Value.Key).Take(4)
+                .Select(h => h.Key + ": " + h.Value.Key + " Punkte – " + h.Value.Value));
         }
 
         private G1C_WorldObject _lastGuestCabinet; // Patrick Lupierz – 18.11.2026
