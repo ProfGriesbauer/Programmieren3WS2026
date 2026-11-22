@@ -22,6 +22,12 @@ namespace OOPGames
         Border _GameFrame;
         Border _ConsoleShell;
         TextBlock _ConsoleShellTitle;
+        StackPanel _ConsoleLedPanel;
+        Ellipse _ConsoleLed;
+        TextBlock _ConsoleLedText;
+        // Space of the housing around the screen (left, top, right, bottom) and its distance to the canvas edge.
+        Thickness _ConsoleBezel;
+        double _ConsoleOuterMargin;
         Border _Sidebar;
         StackPanel _Cards;
         TextBlock _DeviceTitle;
@@ -231,22 +237,37 @@ namespace OOPGames
             _GameFrame.SetValue(Panel.ZIndexProperty, 2);
             _Root.Children.Add(_GameFrame);
 
+            // Console housing around the screen: brand label bottom left, power LED bottom right.
             Grid shellContent = new Grid();
             _ConsoleShellTitle = new TextBlock
             {
-                FontFamily = new FontFamily("Consolas"),
-                FontSize = 14,
-                FontWeight = FontWeights.Bold,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(0, 9, 0, 0)
+                FontFamily = new FontFamily("Arial Black, Arial"),
+                FontWeight = FontWeights.Black,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Bottom
             };
             shellContent.Children.Add(_ConsoleShellTitle);
+            _ConsoleLed = new Ellipse { Width = 9, Height = 9, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+            _ConsoleLedText = new TextBlock
+            {
+                FontFamily = new FontFamily("Arial"),
+                FontWeight = FontWeights.Bold,
+                FontSize = 10,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _ConsoleLedPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Bottom
+            };
+            _ConsoleLedPanel.Children.Add(_ConsoleLed);
+            _ConsoleLedPanel.Children.Add(_ConsoleLedText);
+            shellContent.Children.Add(_ConsoleLedPanel);
             _ConsoleShell = new Border
             {
-                BorderThickness = new Thickness(4),
                 HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Top,
                 Child = shellContent,
                 Visibility = Visibility.Collapsed
             };
@@ -1455,73 +1476,88 @@ namespace OOPGames
             _LastOverlayDevice = field.SelectedDevice;
             _LastOverlayMonitor = monitor;
 
-            _GameFrame.BorderThickness = new Thickness(8);
-            _ConsoleShell.BorderThickness = new Thickness(4);
-            _ConsoleShellTitle.FontSize = 14;
-            _ConsoleShellTitle.VerticalAlignment = VerticalAlignment.Top;
-            _ConsoleShellTitle.Margin = new Thickness(0, 9, 0, 0);
             _ScreenEffect.Visibility = monitor ? Visibility.Visible : Visibility.Collapsed;
 
             if (monitor)
             {
-                // Beige CRT monitor: thin plastic bezel, dark glass edge, label at the bottom.
-                _GameFrame.BorderThickness = new Thickness(MonitorGlass);
-                _GameFrame.BorderBrush = GetFrozenBrush(Color.FromRgb(22, 22, 24));
-                _GameFrame.Background = GetFrozenBrush(Color.FromRgb(10, 10, 12));
-                _GameFrame.CornerRadius = new CornerRadius(14);
-                _ConsoleShell.BorderThickness = new Thickness(2);
-                _ConsoleShell.BorderBrush = GetFrozenBrush(Color.FromRgb(120, 112, 96));
-                _ConsoleShell.Background = GetFrozenBrush(Color.FromRgb(200, 191, 166));
-                _ConsoleShell.CornerRadius = new CornerRadius(18);
-                _ConsoleShellTitle.Text = "COMMODORE";
-                _ConsoleShellTitle.FontSize = 11;
-                _ConsoleShellTitle.Foreground = GetFrozenBrush(Color.FromRgb(92, 86, 74));
-                _ConsoleShellTitle.VerticalAlignment = VerticalAlignment.Bottom;
-                _ConsoleShellTitle.Margin = new Thickness(0, 0, 0, 3);
-                _Root.Background = GetFrozenBrush(Color.FromRgb(28, 27, 31));
+                // Beige CRT monitor filling the canvas: thin plastic bezel, dark glass edge.
+                StyleConsole(new Thickness(MonitorBezelSide, MonitorBezelTop, MonitorBezelSide, MonitorBezelBottom), MonitorOuterMargin,
+                    Color.FromRgb(214, 205, 180), Color.FromRgb(190, 181, 156), Color.FromRgb(120, 112, 96), 2, new CornerRadius(18),
+                    MonitorGlass, Color.FromRgb(22, 22, 24), Color.FromRgb(10, 10, 12), new CornerRadius(14),
+                    "COMMODORE", 11, Color.FromRgb(92, 86, 74), "", Color.FromRgb(70, 76, 82),
+                    Color.FromRgb(44, 42, 50), Color.FromRgb(12, 11, 14));
                 return;
             }
-
-            // Back to the normal console view: the shell sizes itself again like before the monitor view.
-            _ConsoleShell.Width = double.NaN;
-            _ConsoleShell.Height = double.NaN;
 
             switch (field.Device.Kind)
             {
                 case B5RoomDeviceKind.Atari:
-                    _GameFrame.BorderBrush = GetFrozenBrush(Color.FromRgb(151, 92, 54));
-                    _GameFrame.Background = GetFrozenBrush(Color.FromRgb(43, 30, 25));
-                    _GameFrame.CornerRadius = new CornerRadius(2);
-                    _ConsoleShell.BorderBrush = GetFrozenBrush(Color.FromRgb(93, 54, 38));
-                    _ConsoleShell.Background = GetFrozenBrush(Color.FromRgb(111, 73, 52));
-                    _ConsoleShell.CornerRadius = new CornerRadius(10);
-                    _ConsoleShellTitle.Text = "ATARI";
-                    _ConsoleShellTitle.Foreground = GetFrozenBrush(Color.FromRgb(244, 208, 145));
-                    _Root.Background = GetFrozenBrush(Color.FromRgb(47, 35, 31));
+                    // Wooden TV cabinet like the KOSMOS set in the room, black picture tube surround.
+                    StyleConsole(new Thickness(30, 28, 30, 54), 18,
+                        Color.FromRgb(132, 86, 55), Color.FromRgb(84, 51, 32), Color.FromRgb(52, 31, 19), 3, new CornerRadius(22),
+                        14, Color.FromRgb(26, 24, 22), Color.FromRgb(8, 8, 8), new CornerRadius(20),
+                        "KOSMOS  COLOR 17", 16, Color.FromRgb(238, 212, 160), "POWER", Color.FromRgb(238, 212, 160),
+                        Color.FromRgb(74, 52, 40), Color.FromRgb(18, 13, 11));
                     break;
                 case B5RoomDeviceKind.Gameboy:
-                    _GameFrame.BorderBrush = GetFrozenBrush(Color.FromRgb(146, 160, 104));
-                    _GameFrame.Background = GetFrozenBrush(Color.FromRgb(42, 52, 33));
-                    _GameFrame.CornerRadius = new CornerRadius(10);
-                    _ConsoleShell.BorderBrush = GetFrozenBrush(Color.FromRgb(78, 88, 55));
-                    _ConsoleShell.Background = GetFrozenBrush(Color.FromRgb(157, 166, 112));
-                    _ConsoleShell.CornerRadius = new CornerRadius(24);
-                    _ConsoleShellTitle.Text = "GAME BOY";
-                    _ConsoleShellTitle.Foreground = GetFrozenBrush(Color.FromRgb(45, 59, 35));
-                    _Root.Background = GetFrozenBrush(Color.FromRgb(34, 45, 31));
+                    // Light grey handheld with the rounded lower right corner and a dark grey screen surround.
+                    StyleConsole(new Thickness(34, 30, 34, 70), 18,
+                        Color.FromRgb(220, 218, 210), Color.FromRgb(182, 180, 172), Color.FromRgb(132, 130, 124), 3,
+                        new CornerRadius(18, 18, 72, 18),
+                        18, Color.FromRgb(88, 92, 110), Color.FromRgb(42, 52, 33), new CornerRadius(10, 10, 34, 10),
+                        "GAME BOY", 20, Color.FromRgb(42, 52, 128), "BATTERY", Color.FromRgb(90, 92, 110),
+                        Color.FromRgb(58, 70, 50), Color.FromRgb(12, 16, 12));
+                    _ConsoleShellTitle.FontStyle = FontStyles.Italic;
                     break;
                 case B5RoomDeviceKind.Commodore:
-                    _GameFrame.BorderBrush = GetFrozenBrush(Color.FromRgb(181, 159, 119));
-                    _GameFrame.Background = GetFrozenBrush(Color.FromRgb(24, 25, 28));
-                    _GameFrame.CornerRadius = new CornerRadius(3);
-                    _ConsoleShell.BorderBrush = GetFrozenBrush(Color.FromRgb(107, 101, 88));
-                    _ConsoleShell.Background = GetFrozenBrush(Color.FromRgb(190, 185, 169));
-                    _ConsoleShell.CornerRadius = new CornerRadius(7);
-                    _ConsoleShellTitle.Text = "COMMODORE 64";
-                    _ConsoleShellTitle.Foreground = GetFrozenBrush(Color.FromRgb(54, 52, 48));
-                    _Root.Background = GetFrozenBrush(Color.FromRgb(45, 47, 55));
+                    // Beige monitor case.
+                    StyleConsole(new Thickness(26, 26, 26, 50), 18,
+                        Color.FromRgb(216, 208, 186), Color.FromRgb(182, 174, 152), Color.FromRgb(128, 120, 102), 3, new CornerRadius(14),
+                        10, Color.FromRgb(30, 30, 34), Color.FromRgb(24, 25, 28), new CornerRadius(12),
+                        "COMMODORE 64", 15, Color.FromRgb(84, 78, 66), "POWER", Color.FromRgb(96, 90, 78),
+                        Color.FromRgb(60, 62, 80), Color.FromRgb(14, 14, 20));
                     break;
             }
+        }
+
+        // Look of the housing and screen surround, plus the room background behind it (a soft vignette).
+        void StyleConsole(Thickness bezel, double outerMargin, Color shellTop, Color shellBottom, Color shellEdge, double shellEdgeWidth,
+            CornerRadius shellCorners, double screenEdgeWidth, Color screenEdge, Color screenBackground, CornerRadius screenCorners,
+            string label, double labelSize, Color labelColor, string ledLabel, Color ledLabelColor, Color backdropCenter, Color backdropEdge)
+        {
+            _ConsoleBezel = bezel;
+            _ConsoleOuterMargin = outerMargin;
+
+            LinearGradientBrush shell = new LinearGradientBrush(shellTop, shellBottom, 90);
+            shell.Freeze();
+            _ConsoleShell.Background = shell;
+            _ConsoleShell.BorderBrush = GetFrozenBrush(shellEdge);
+            _ConsoleShell.BorderThickness = new Thickness(shellEdgeWidth);
+            _ConsoleShell.CornerRadius = shellCorners;
+
+            _GameFrame.BorderThickness = new Thickness(screenEdgeWidth);
+            _GameFrame.BorderBrush = GetFrozenBrush(screenEdge);
+            _GameFrame.Background = GetFrozenBrush(screenBackground);
+            _GameFrame.CornerRadius = screenCorners;
+
+            // Label and LED sit centered in the bottom part of the housing.
+            double bottom = Math.Max(1, (bezel.Bottom - labelSize * 1.35) / 2 - shellEdgeWidth);
+            _ConsoleShellTitle.Text = label;
+            _ConsoleShellTitle.FontSize = labelSize;
+            _ConsoleShellTitle.FontStyle = FontStyles.Normal;
+            _ConsoleShellTitle.Foreground = GetFrozenBrush(labelColor);
+            _ConsoleShellTitle.Margin = new Thickness(bezel.Left - shellEdgeWidth, 0, 0, bottom);
+            double ledBottom = Math.Max(1, (bezel.Bottom - 12) / 2 - shellEdgeWidth);
+            _ConsoleLedPanel.Margin = new Thickness(0, 0, bezel.Right - shellEdgeWidth, ledBottom);
+            _ConsoleLed.Fill = GetFrozenBrush(Color.FromRgb(255, 72, 52));
+            _ConsoleLed.Stroke = GetFrozenBrush(Color.FromArgb(120, 255, 190, 170));
+            _ConsoleLed.StrokeThickness = 1.5;
+            _ConsoleLedText.Text = ledLabel;
+            _ConsoleLedText.Foreground = GetFrozenBrush(ledLabelColor);
+
+            RadialGradientBrush backdrop = new RadialGradientBrush(backdropCenter, backdropEdge) { RadiusX = 0.75, RadiusY = 0.75 };
+            backdrop.Freeze();
+            _Root.Background = backdrop;
         }
 
         const double MonitorGlass = 5;
@@ -1541,20 +1577,28 @@ namespace OOPGames
             if (double.IsNaN(element.Height) || Math.Abs(element.Height - value) > 0.1) element.Height = value;
         }
 
-        // Monitor view: the screen fills the canvas except for a thin bezel. The scale is not rounded,
-        // so the game grows with the window (1920x1080 when there is enough room).
-        void SizeMonitorFrame(int gameWidth, int gameHeight)
+        // Screen and housing are sized together, so the whole console fits the canvas and sits in its middle.
+        // The monitor view (Tower Defense) is capped at the game's own size (1920x1080 when there is enough
+        // room); the consoles scale up freely.
+        void SizeGameFrame(B5RoomField field, int gameWidth, int gameHeight)
         {
+            bool monitor = IsMonitorView(field);
+            Thickness bezel = _ConsoleBezel;
             double rootWidth = Math.Max(1, _Root.ActualWidth);
             double rootHeight = Math.Max(1, _Root.ActualHeight);
-            double glass = MonitorGlass * 2;
-            double availableWidth = rootWidth - MonitorOuterMargin * 2 - MonitorBezelSide * 2 - glass;
-            double availableHeight = rootHeight - MonitorOuterMargin * 2 - MonitorBezelTop - MonitorBezelBottom - glass;
-            double scale = Math.Max(0.05, Math.Min(1.0, Math.Min(availableWidth / gameWidth, availableHeight / gameHeight)));
-            double frameWidth = gameWidth * scale + glass;
-            double frameHeight = gameHeight * scale + glass;
-            double shellWidth = frameWidth + MonitorBezelSide * 2;
-            double shellHeight = frameHeight + MonitorBezelTop + MonitorBezelBottom;
+            double border = _GameFrame.BorderThickness.Left + _GameFrame.BorderThickness.Right;
+            double verticalBorder = _GameFrame.BorderThickness.Top + _GameFrame.BorderThickness.Bottom;
+            double availableWidth = rootWidth - _ConsoleOuterMargin * 2 - bezel.Left - bezel.Right - border;
+            double availableHeight = rootHeight - _ConsoleOuterMargin * 2 - bezel.Top - bezel.Bottom - verticalBorder;
+            double scale = Math.Min(availableWidth / gameWidth, availableHeight / gameHeight);
+            if (monitor) scale = Math.Max(0.05, Math.Min(1.0, scale));
+            else if (field.ActiveGame is B5RoomTowerDefenseGame && scale >= 1) scale = Math.Floor(scale);
+            else scale = Math.Max(0.1, scale);
+
+            double frameWidth = gameWidth * scale + border;
+            double frameHeight = gameHeight * scale + verticalBorder;
+            double shellWidth = frameWidth + bezel.Left + bezel.Right;
+            double shellHeight = frameHeight + bezel.Top + bezel.Bottom;
             double shellLeft = Math.Max(0, (rootWidth - shellWidth) / 2);
             double shellTop = Math.Max(0, (rootHeight - shellHeight) / 2);
 
@@ -1564,50 +1608,9 @@ namespace OOPGames
             SetHeight(_ConsoleShell, shellHeight);
             if (_GameFrame.VerticalAlignment != VerticalAlignment.Top) _GameFrame.VerticalAlignment = VerticalAlignment.Top;
             if (_ConsoleShell.VerticalAlignment != VerticalAlignment.Top) _ConsoleShell.VerticalAlignment = VerticalAlignment.Top;
-            Thickness frameMargin = new Thickness(shellLeft + MonitorBezelSide, shellTop + MonitorBezelTop, 0, 0);
+            Thickness frameMargin = new Thickness(shellLeft + bezel.Left, shellTop + bezel.Top, 0, 0);
             Thickness shellMargin = new Thickness(shellLeft, shellTop, 0, 0);
             if (_GameFrame.Margin != frameMargin) _GameFrame.Margin = frameMargin;
-            if (_ConsoleShell.Margin != shellMargin) _ConsoleShell.Margin = shellMargin;
-        }
-
-        void SizeGameFrame(B5RoomField field, int gameWidth, int gameHeight)
-        {
-            if (IsMonitorView(field))
-            {
-                SizeMonitorFrame(gameWidth, gameHeight);
-                return;
-            }
-            if (_GameFrame.VerticalAlignment != VerticalAlignment.Center) _GameFrame.VerticalAlignment = VerticalAlignment.Center;
-            if (_ConsoleShell.VerticalAlignment != VerticalAlignment.Center) _ConsoleShell.VerticalAlignment = VerticalAlignment.Center;
-            double rootWidth = Math.Max(1, _Root.ActualWidth);
-            double rootHeight = Math.Max(1, _Root.ActualHeight);
-            bool sidebarVisible = _Sidebar.Visibility == Visibility.Visible;
-            double usableWidth = Math.Max(1, rootWidth - (sidebarVisible ? _Sidebar.Width : 0) - 32);
-            double barHeight = _ControlBar.OccupiedHeight;
-            double usableHeight = Math.Max(1, rootHeight - barHeight - 32);
-            double border = _GameFrame.BorderThickness.Left + _GameFrame.BorderThickness.Right;
-            double verticalBorder = _GameFrame.BorderThickness.Top + _GameFrame.BorderThickness.Bottom;
-            double scale = Math.Min(
-                (usableWidth - border) / gameWidth,
-                (usableHeight - verticalBorder) / gameHeight);
-            if (field.ActiveGame is B5RoomTowerDefenseGame && scale >= 1)
-                scale = Math.Floor(scale);
-            else
-                scale = Math.Max(0.1, scale);
-            double frameWidth = gameWidth * scale + border;
-            double frameHeight = gameHeight * scale + verticalBorder;
-            double marginLeft = Math.Max(0, (usableWidth - frameWidth) / 2);
-            double shellHorizontalPadding = field.Device.Kind == B5RoomDeviceKind.Atari ? 52 : 38;
-            double shellVerticalPadding = 32;
-            SetWidth(_GameFrame, frameWidth);
-            SetHeight(_GameFrame, frameHeight);
-            Thickness frameMargin = new Thickness(marginLeft, 0, 0, barHeight);
-            if (_GameFrame.Margin != frameMargin) _GameFrame.Margin = frameMargin;
-            double shellWidth = frameWidth + shellHorizontalPadding * 2;
-            double shellHeight = frameHeight + shellVerticalPadding * 2;
-            Thickness shellMargin = new Thickness(Math.Max(0, marginLeft - shellHorizontalPadding), 0, 0, barHeight);
-            if (Math.Abs(_ConsoleShell.Width - shellWidth) > 0.1) _ConsoleShell.Width = shellWidth;
-            if (Math.Abs(_ConsoleShell.Height - shellHeight) > 0.1) _ConsoleShell.Height = shellHeight;
             if (_ConsoleShell.Margin != shellMargin) _ConsoleShell.Margin = shellMargin;
         }
 
