@@ -95,3 +95,116 @@
 > WPF Viewport3D (empfohlen, passend zum Framework)
 
 **Ergebnis:** Umsetzung der 3D-Spielszene mit WPF Viewport3D bestätigt.
+
+## 22.11.2026
+
+**Werkzeug:** Copilot SDK in VS Code
+**Modell:** gpt-6-luna
+
+### Prompt 6 - Spielkonzept aktualisieren und alten Ordner entfernen
+
+> kannst du bitte das Spielkonzept nach dem aktuellen Stand von Tain Run bitte anpassen und das in den Gruppe2 Ordner bei Gruppe2_TrainRun abspeichern und die alte Datei mit dem alten Ordner löschen
+
+**Ergebnis:** Das aktuelle Spielkonzept wurde auf Grundlage des Train-Run-Standes in `Classes/Gruppe2/Train Run/Spielkonzept.md` erstellt. Die veraltete Datei und der leere Ordner `Classes/Gruppe_2_Train_Run` wurden entfernt.
+
+### Prompt 7 - Leeren Subway-Surfer-Ordner löschen
+
+> kannst du bitte den leeren Ordner Subway Surfer in Gruppe2 löschen
+
+**Ergebnis:** Der leere Ordner `Classes/Gruppe2/Subway Surfer` wurde entfernt.
+
+### Prompt 8 - Leeren Gruppe_2-Ordner löschen
+
+> kannst du mir bitte den Ordner Gruppe_2 löschen, in dem .gitkeep gespeichert ist, da dieser Ordner leer ist
+
+**Ergebnis:** Der leere Ordner `Classes/Gruppe_2` einschließlich `.gitkeep` wurde entfernt.
+
+### Prompt 9 - Leeren Train-Run-Plans-Ordner löschen
+
+> kannst du mir bitte den Ordner Gruppe_2_Train_Run\Plans auch löschen, da dieser auch leer ist
+
+**Ergebnis:** Der leere Unterordner `Classes/Gruppe_2_Train_Run/Plans` wurde entfernt.
+
+### Prompt 10 - Verbleibenden Train-Run-Duplikatordner löschen
+
+> kannst du mir bitte den leeren Ordner Gruppe_2_Train_Run auch löschen
+
+**Ergebnis:** Der leere restliche Ordner `Classes/Gruppe_2_Train_Run` wurde entfernt.
+
+### Prompt 11 - Veraltete Gruppe2-Plans-Dateien löschen
+
+> kannst du bitte den unterordner Plans bei Gruppe2 mit den beiden Dateien Stefanie_Kolb_... löschen
+
+**Ergebnis:** Der Unterordner `Classes/Gruppe2/Plans` mit den beiden Stefanie-Kolb-Train-Run-Plänen wurde gelöscht.
+
+### Prompt 12 - Prompts dokumentieren
+
+> Projektanforderungen OOPGames – Kurzfassung
+> Programmieren 3 · Wintersemester 2026/27 · Josef Griesbauer · ausführliche Fassung:
+> Projektanforderungen_OOPGames.pdf
+> Alle Gruppen arbeiten am WPF-Framework
+> OOPGames (C#, .NET 6). Jedes Spiel besteht aus den austauschbaren
+> IPaintGame ), Rules (
+> IGameRules , 
+> IGameField ) und Player (
+> IComputerGamePlayer ). Die Kompatibilität wird über 
+> IHumanGamePlayer ,
+> CanBePaintedBy / 
+> CanBeRuledBy immer gegen Interfaces
+> geprüft – Muster: Beispiel 
+> X_Griesbauer .
+> Generelle Anforderungen
+> Eigene Verzeichnisse: Jede Gruppe arbeitet ausschließlich in 
+> (analog 
+> Classes/<Gruppe>/ und 
+> X_Griesbauer ). Dateien: 
+> Interfaces/<Gruppe>/
+> Vorname_Nachname_<Inhalt>.cs ; Klassen/Interfaces mit Gruppenpräfix;
+> eindeutige 
+> Name-Properties. Außerhalb davon ist nur das Registrieren der eigenen Klassen im Block
+> //REGISTER YOUR CLASSES HERE in 
+> MainWindow.xaml.cs erlaubt.
+> Jedes Teammitglied committet und pusht selbst (eigener GitHub-Account) – die Historie zeigt die
+> Aufteilung im Team. Kleine Commits mit aussagekräftigen Messages; vor dem Push 
+> build ; kein --force , keine fremden Dateien, kein 
+> bin/ /
+> git pull und 
+> obj/ .
+> dotnet
+> Prompts dokumentieren: Für jeden Studierenden eine eigene Datei 
+> Vorname_Nachname_Prompts.md im
+> Hauptverzeichnis der Gruppe (
+> Classes/<Gruppe>/ ) mit jedem Prompt im Wortlaut, Datum, Werkzeug/Modell
+> und kurzem Ergebnisvermerk.
+> Pläne dokumentieren: Alle Pläne (vom Agenten erzeugt oder eigene) als Markdown in
+> Classes/<Gruppe>/Plans/ . Prompts und Pläne werden zusammen mit dem zugehörigen Code committet.
+> Framework-Dateien sind tabu – auch für Agenten. Die Basis-Interfaces in 
+> Interfaces/ ,
+> Classes/OOPGames.cs , 
+> MainWindow.* (außer Registrierung), 
+> App.* , 
+> .csproj /
+> .sln , 
+> .vscode/ ,
+> X_Griesbauer und fremde Gruppenordner werden nicht verändert. Ist eine Framework-Erweiterung nötig,
+> MUSS sie vorab mit dem Dozenten abgeklärt werden. Der Agent ist entsprechend anzuweisen („Ändere nur
+> Dateien in Classes/<Gruppe>/ und Interfaces/<Gruppe>/; ist eine Framework-Änderung nötig, brich ab und
+> beschreibe sie.“); vor jedem Commit mit 
+> git status / 
+> git diff prüfen
+>
+> Jede Gruppe entwickelt mit Hilfe von Agenten ein eigenes, komplexes bzw. innovatives Spiel; Kompatibilität
+> mit anderen Gruppen ist nicht nötig. Erwartet wird deutlich mehr als ein einfacher Brettspielklon (z. B. Echtzeit
+> über 
+> IGameRules2 /
+> IPaintGame2 , starker KI-Gegner, Levels/Phasen).
+> Spielkonzept (eine Seite in 
+> Plans/ ) vor Beginn dem Dozenten vorstellen.
+> Harte Vorgabe: Das Spiel läuft vollständig im vorgegebenen Framework – Auswahl und Start über das
+> Hauptfenster, Eingaben nur über Klick-/Tasten-Selections, Zeichnen nur auf das übergebene Canvas, kein
+> eigenes Fenster oder eigene Hauptschleife. Framework-Erweiterungen nur nach Absprache (siehe oben).
+> Sauberer OO-Entwurf; das Team muss den gesamten Code erklären können, auch den agentisch erzeugten.
+>
+> bitte erweitere mir meine Promts datei mit den heutigen erstellten Prompts
+
+**Ergebnis:** Diese Prompts-Datei wurde um die heutigen Prompts vom 22.11.2026, die verwendeten Werkzeuge und kurze Ergebnisvermerke ergänzt.
