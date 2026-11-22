@@ -10,10 +10,37 @@ namespace OOPGames
 {
     public sealed class G5_FabrikPainter : IG5_FabrikPainter
     {
+        private sealed class GebaeuderegisterEintrag
+        {
+            internal GebaeuderegisterEintrag(string taste, string name, G5_Bauwerkzeug werkzeug)
+            {
+                Taste = taste;
+                Name = name;
+                Werkzeug = werkzeug;
+            }
+
+            internal string Taste { get; }
+            internal string Name { get; }
+            internal G5_Bauwerkzeug Werkzeug { get; }
+        }
+
         private const double StandardKachelGroesse = 32.0;
         private const double HudZeilenHoehe = 28.0;
         private const double HudHoehe = HudZeilenHoehe * 2;
         private const double VollbildSeitenverhaeltnis = 1.3;
+        private const int GebaeuderegisterSichtbareEintraege = 6;
+
+        private static readonly GebaeuderegisterEintrag[] GebaeuderegisterEintraege =
+        {
+            new GebaeuderegisterEintrag("F", "Förderer", G5_Bauwerkzeug.Foerderer),
+            new GebaeuderegisterEintrag("S", "Schmelze", G5_Bauwerkzeug.Schmelze),
+            new GebaeuderegisterEintrag("B", "Förderband", G5_Bauwerkzeug.Foerderband),
+            new GebaeuderegisterEintrag("C", "Konstruktor", G5_Bauwerkzeug.Konstruktor),
+            new GebaeuderegisterEintrag("A", "Assembler", G5_Bauwerkzeug.Assembler),
+            new GebaeuderegisterEintrag("G", "Generator", G5_Bauwerkzeug.Verbrennungsgenerator),
+            new GebaeuderegisterEintrag("P", "Strommast", G5_Bauwerkzeug.Strommast),
+            new GebaeuderegisterEintrag("L", "Lager", G5_Bauwerkzeug.Lager)
+        };
 
         private static readonly Brush HoverPanelBrush = CreateBrush(245, 20, 30, 31);
         private static readonly Brush HoverAccentBrush = CreateBrush(255, 142, 230, 120);
@@ -201,12 +228,14 @@ namespace OOPGames
                 _zielCanvas.MouseMove -= Canvas_MouseMove;
                 _zielCanvas.MouseLeave -= Canvas_MouseLeave;
                 _zielCanvas.MouseDown -= Canvas_MouseDown;
+                _zielCanvas.MouseWheel -= Canvas_MouseWheel;
             }
 
             _zielCanvas = canvas;
             _zielCanvas.MouseMove += Canvas_MouseMove;
             _zielCanvas.MouseLeave += Canvas_MouseLeave;
             _zielCanvas.MouseDown += Canvas_MouseDown;
+            _zielCanvas.MouseWheel += Canvas_MouseWheel;
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -240,6 +269,19 @@ namespace OOPGames
             }
 
             Point position = e.GetPosition(_zielCanvas);
+            if (_hoverWelt is SatisfactoryFieldView registerField &&
+                IstImGebaeuderegister(position, registerField.GebaeuderegisterGeoeffnet))
+            {
+                double registerTop = HudHoehe + 10;
+                if (position.Y <= registerTop + 40)
+                {
+                    registerField.ToggleGebaeuderegister();
+                }
+
+                e.Handled = true;
+                return;
+            }
+
             double panelWidth = _inventarGeoeffnet ? 190 : 34;
             double left = _zielCanvas.ActualWidth - panelWidth - 10;
             if (position.X >= left && position.X <= left + panelWidth &&
@@ -247,6 +289,28 @@ namespace OOPGames
             {
                 _inventarGeoeffnet = !_inventarGeoeffnet;
             }
+        }
+
+        private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (!ReferenceEquals(sender, _zielCanvas) ||
+                !(_hoverWelt is SatisfactoryFieldView registerField) ||
+                !registerField.GebaeuderegisterGeoeffnet ||
+                !IstImGebaeuderegister(e.GetPosition(_zielCanvas), isOpen: true))
+            {
+                return;
+            }
+
+            registerField.ScrollGebaeuderegister(e.Delta < 0 ? 1 : -1);
+            e.Handled = true;
+        }
+
+        private static bool IstImGebaeuderegister(Point position, bool isOpen)
+        {
+            double width = isOpen ? 220 : 38;
+            double height = isOpen ? 253 : 42;
+            return position.X >= 10 && position.X <= 10 + width &&
+                position.Y >= HudHoehe + 10 && position.Y <= HudHoehe + 10 + height;
         }
 
         private void AktualisiereGebaeudeHover(Point mausposition)
@@ -527,7 +591,11 @@ namespace OOPGames
             canvas.Children.Add(abbildung);
 
             if (gebaeude.Typ == G5_FabrikGebaeudeTyp.Laufband &&
-                gebaeude.Status == G5_BuildingStatus.Working)
+                welt is SatisfactoryFieldView satisfactoryItems &&
+                satisfactoryItems.TryGetConveyorItem(
+                    gebaeude.X,
+                    gebaeude.Y,
+                    out G5_Item carriedItem))
             {
                 ZeichneTransportgut(
                     canvas,
@@ -536,7 +604,8 @@ namespace OOPGames
                     hoehe,
                     animationTick,
                     conveyorVertical,
-                    conveyorReversed);
+                    conveyorReversed,
+                    carriedItem);
             }
 
             Brush levelFarbe = gebaeude.Level >= 3
@@ -577,35 +646,124 @@ namespace OOPGames
             double height,
             long animationTick,
             bool isVertical,
-            bool isReversed)
+            bool isReversed,
+            G5_Item item)
         {
-            double itemSize = Math.Max(3, Math.Min(8, Math.Min(width, height) * 0.28));
-            double fraction = (animationTick % 8) / 7.0;
+            double itemSize = Math.Max(6, Math.Min(18, Math.Min(width, height) * 0.58));
+            double fraction = (animationTick % 12) / 11.0;
             if (isReversed)
             {
                 fraction = 1 - fraction;
             }
 
-            Rectangle item = new Rectangle
+            Brush iconBrush = OreItemBrush(item);
+            Polygon oreShape = new Polygon
             {
-                Width = itemSize,
-                Height = itemSize * 0.7,
-                Fill = new SolidColorBrush(Color.FromRgb(255, 205, 76)),
-                Stroke = Brushes.White,
-                StrokeThickness = 0.6,
-                RadiusX = 1.5,
-                RadiusY = 1.5,
+                Points = new PointCollection
+                {
+                    new Point(itemSize * 0.5, 0),
+                    new Point(itemSize * 0.92, itemSize * 0.28),
+                    new Point(itemSize * 0.82, itemSize * 0.78),
+                    new Point(itemSize * 0.5, itemSize),
+                    new Point(itemSize * 0.12, itemSize * 0.76),
+                    new Point(itemSize * 0.06, itemSize * 0.28)
+                },
+                Fill = iconBrush,
+                Stroke = new SolidColorBrush(Color.FromRgb(242, 238, 220)),
+                StrokeThickness = 1,
                 IsHitTestVisible = false
             };
+            TextBlock symbol = new TextBlock
+            {
+                Text = ItemSymbol(item),
+                Width = itemSize,
+                Height = itemSize,
+                Foreground = item == G5_Item.Kohle ? Brushes.White : Brushes.Black,
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = Math.Max(6, itemSize * 0.42),
+                FontWeight = FontWeights.Black,
+                TextAlignment = TextAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                IsHitTestVisible = false
+            };
+            Grid icon = new Grid
+            {
+                Width = itemSize,
+                Height = itemSize,
+                IsHitTestVisible = false
+            };
+            icon.Children.Add(oreShape);
+            icon.Children.Add(symbol);
             double itemX = isVertical
-                ? position.X + width * 0.43
-                : position.X + 2 + fraction * Math.Max(0, width - itemSize - 4);
+                ? position.X + (width - itemSize) / 2
+                : position.X + 3 + fraction * Math.Max(0, width - itemSize - 6);
             double itemY = isVertical
-                ? position.Y + 2 + fraction * Math.Max(0, height - itemSize - 4)
-                : position.Y + height * 0.43;
-            Canvas.SetLeft(item, itemX);
-            Canvas.SetTop(item, itemY);
-            canvas.Children.Add(item);
+                ? position.Y + 3 + fraction * Math.Max(0, height - itemSize - 6)
+                : position.Y + (height - itemSize) / 2;
+            Canvas.SetLeft(icon, itemX);
+            Canvas.SetTop(icon, itemY);
+            canvas.Children.Add(icon);
+        }
+
+        private static Brush OreItemBrush(G5_Item item)
+        {
+            switch (item)
+            {
+                case G5_Item.Kupfererz:
+                case G5_Item.Kupferbarren:
+                case G5_Item.Kupferdraht:
+                    return new SolidColorBrush(Color.FromRgb(205, 112, 67));
+                case G5_Item.Kohle:
+                    return new SolidColorBrush(Color.FromRgb(65, 69, 67));
+                case G5_Item.Kalkstein:
+                    return new SolidColorBrush(Color.FromRgb(225, 214, 174));
+                case G5_Item.Quarz:
+                    return new SolidColorBrush(Color.FromRgb(210, 225, 226));
+                case G5_Item.Schwefel:
+                    return new SolidColorBrush(Color.FromRgb(230, 202, 72));
+                case G5_Item.Uran:
+                    return new SolidColorBrush(Color.FromRgb(112, 190, 104));
+                case G5_Item.Eisenplatte:
+                case G5_Item.Eisenstange:
+                case G5_Item.Schraube:
+                case G5_Item.Rotor:
+                case G5_Item.Eisenbarren:
+                case G5_Item.Eisenerz:
+                default:
+                    return new SolidColorBrush(Color.FromRgb(176, 184, 178));
+            }
+        }
+
+        private static string ItemSymbol(G5_Item item)
+        {
+            switch (item)
+            {
+                case G5_Item.Eisenerz:
+                case G5_Item.Eisenbarren:
+                case G5_Item.Eisenplatte:
+                case G5_Item.Eisenstange:
+                    return "Fe";
+                case G5_Item.Kupfererz:
+                case G5_Item.Kupferbarren:
+                case G5_Item.Kupferdraht:
+                    return "Cu";
+                case G5_Item.Kohle:
+                    return "C";
+                case G5_Item.Kalkstein:
+                    return "Ca";
+                case G5_Item.Quarz:
+                    return "Si";
+                case G5_Item.Schwefel:
+                    return "S";
+                case G5_Item.Uran:
+                    return "U";
+                case G5_Item.Schraube:
+                    return "Sc";
+                case G5_Item.Rotor:
+                    return "Ro";
+                default:
+                    return "?";
+            }
         }
 
         private static string GebaeudeName(G5_FabrikGebaeudeTyp typ)
@@ -626,6 +784,8 @@ namespace OOPGames
                     return "Verbrennungsgenerator";
                 case G5_FabrikGebaeudeTyp.Strommast:
                     return "Strommast";
+                case G5_FabrikGebaeudeTyp.Lager:
+                    return "Lager";
                 case G5_FabrikGebaeudeTyp.Laufband:
                     return "Förderband";
                 case G5_FabrikGebaeudeTyp.Splitter:
@@ -672,6 +832,16 @@ namespace OOPGames
                     return "Förderband";
                 case G5_Bauwerkzeug.GebaeudeVerschieben:
                     return "Verschieben";
+                case G5_Bauwerkzeug.Konstruktor:
+                    return "Konstruktor";
+                case G5_Bauwerkzeug.Assembler:
+                    return "Assembler";
+                case G5_Bauwerkzeug.Verbrennungsgenerator:
+                    return "Generator";
+                case G5_Bauwerkzeug.Strommast:
+                    return "Strommast";
+                case G5_Bauwerkzeug.Lager:
+                    return "Lager";
                 default:
                     return "Keines";
             }
@@ -691,7 +861,7 @@ namespace OOPGames
             canvas.Children.Add(hintergrund);
 
             string steuerung = info is SatisfactoryFieldView
-                ? "F: Förderer    S: Schmelze    B: Förderband    M: Gebäude verschieben    Esc: Werkzeug abwählen"
+                ? "F: Förderer    S: Schmelze    B: Förderband    Tab: Bauauswahl    M: Gebäude verschieben    T: Tutorial"
                 : "F: Förderer platzieren    S: Schmelze platzieren    Esc: Werkzeug abwählen    Mausklick: Gebäude platzieren";
             ZeichneHudZeile(canvas, viewportBreite, steuerung, 0);
             ZeichneHudZeile(
@@ -699,7 +869,139 @@ namespace OOPGames
                 viewportBreite,
                 "Werkzeug: " + werkzeug + "    |    " + info.StatusMeldung,
                 HudZeilenHoehe);
+            if (info is SatisfactoryFieldView fieldView)
+            {
+                ZeichneGebaeuderegister(canvas, fieldView);
+            }
+
             ZeichneInventar(canvas, viewportBreite, info);
+        }
+
+        private static void ZeichneGebaeuderegister(Canvas canvas, SatisfactoryFieldView fieldView)
+        {
+            double left = 10;
+            double top = HudHoehe + 10;
+            bool isOpen = fieldView.GebaeuderegisterGeoeffnet;
+            double width = isOpen ? 220 : 38;
+            double height = isOpen ? 253 : 42;
+            Border panel = new Border
+            {
+                Width = width,
+                Height = height,
+                Padding = new Thickness(isOpen ? 7 : 3),
+                Background = HoverPanelBrush,
+                BorderBrush = HoverAccentBrush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10),
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = Colors.Black,
+                    BlurRadius = 9,
+                    ShadowDepth = 2,
+                    Opacity = 0.35
+                },
+                IsHitTestVisible = false
+            };
+
+            if (!isOpen)
+            {
+                panel.Child = new TextBlock
+                {
+                    Text = "BAU\nTAB",
+                    Foreground = HoverAccentBrush,
+                    FontFamily = new FontFamily("Segoe UI"),
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    TextAlignment = TextAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+            }
+            else
+            {
+                StackPanel content = new StackPanel();
+                content.Children.Add(new TextBlock
+                {
+                    Text = "BAUGEBÄUDE  ·  TAB SCHLIESST",
+                    Foreground = HoverAccentBrush,
+                    FontFamily = new FontFamily("Segoe UI"),
+                    FontSize = 10,
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(3, 0, 0, 5)
+                });
+
+                for (int rowIndex = 0; rowIndex < GebaeuderegisterSichtbareEintraege; rowIndex++)
+                {
+                    int entryIndex = fieldView.GebaeuderegisterOffset + rowIndex;
+                    if (entryIndex >= GebaeuderegisterEintraege.Length)
+                    {
+                        break;
+                    }
+
+                    GebaeuderegisterEintrag entry = GebaeuderegisterEintraege[entryIndex];
+                    bool selected = entry.Werkzeug == ((IG5_FabrikSpielInfo)fieldView).AktuellesWerkzeug;
+                    Grid rowContent = new Grid();
+                    rowContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(34) });
+                    rowContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    Border keyBadge = new Border
+                    {
+                        Width = 25,
+                        Height = 23,
+                        Margin = new Thickness(2),
+                        Background = selected
+                            ? HoverAccentBrush
+                            : new SolidColorBrush(Color.FromArgb(150, 48, 65, 58)),
+                        CornerRadius = new CornerRadius(5),
+                        Child = new TextBlock
+                        {
+                            Text = entry.Taste,
+                            Foreground = selected ? Brushes.Black : Brushes.White,
+                            FontSize = 11,
+                            FontWeight = FontWeights.Bold,
+                            TextAlignment = TextAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center
+                        }
+                    };
+                    rowContent.Children.Add(keyBadge);
+
+                    TextBlock name = new TextBlock
+                    {
+                        Text = entry.Name,
+                        Foreground = Brushes.White,
+                        FontFamily = new FontFamily("Segoe UI"),
+                        FontSize = 11,
+                        FontWeight = selected ? FontWeights.Bold : FontWeights.Normal,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(5, 0, 0, 0)
+                    };
+                    Grid.SetColumn(name, 1);
+                    rowContent.Children.Add(name);
+
+                    Border row = new Border
+                    {
+                        Height = 29,
+                        Margin = new Thickness(0, 1, 0, 1),
+                        Padding = new Thickness(2),
+                        Background = new SolidColorBrush(Color.FromArgb(115, 42, 58, 52)),
+                        CornerRadius = new CornerRadius(6),
+                        Child = rowContent
+                    };
+                    content.Children.Add(row);
+                }
+
+                content.Children.Add(new TextBlock
+                {
+                    Text = "Mausrad oder ↑ / ↓ zum Scrollen",
+                    Foreground = new SolidColorBrush(Color.FromRgb(190, 205, 198)),
+                    FontFamily = new FontFamily("Segoe UI"),
+                    FontSize = 9,
+                    Margin = new Thickness(3, 4, 0, 0)
+                });
+                panel.Child = content;
+            }
+
+            Canvas.SetLeft(panel, left);
+            Canvas.SetTop(panel, top);
+            canvas.Children.Add(panel);
         }
 
         private void ZeichneInventar(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)

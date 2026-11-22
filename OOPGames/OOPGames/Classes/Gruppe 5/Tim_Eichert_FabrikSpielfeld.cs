@@ -12,6 +12,8 @@ namespace OOPGames
         private readonly G5_Storage _hub;
         private G5_Bauwerkzeug _aktuellesWerkzeug;
         private string _statusMeldung;
+        private bool _gebaeuderegisterGeoeffnet;
+        private int _gebaeuderegisterOffset;
 
         internal G5_FabrikSpielfeld(G5_WeltSpielfeld welt, int hubX, int hubY)
         {
@@ -27,6 +29,8 @@ namespace OOPGames
         internal G5_FactorySimulation Simulation => _simulation;
         internal G5_Storage Hub => _hub;
         internal IReadOnlyList<G5_Building> InterneGebaeude => _simulation.Buildings;
+        internal bool GebaeuderegisterGeoeffnet => _gebaeuderegisterGeoeffnet;
+        internal int GebaeuderegisterOffset => _gebaeuderegisterOffset;
 
         int IG5_WeltSpielfeld.Breite => ((IG5_WeltSpielfeld)_welt).Breite;
 
@@ -54,7 +58,9 @@ namespace OOPGames
             get
             {
                 IG5_GebaeudeInfo[] gebaeude = _simulation.Buildings
-                    .Select(building => (IG5_GebaeudeInfo)new G5_GebaeudeInfo(building))
+                    .Select(building => (IG5_GebaeudeInfo)new G5_GebaeudeInfo(
+                        building,
+                        ReferenceEquals(building, _hub)))
                     .ToArray();
                 return new ReadOnlyCollection<IG5_GebaeudeInfo>(gebaeude);
             }
@@ -64,7 +70,8 @@ namespace OOPGames
 
         int IG5_FabrikSpielInfo.HubMenge(G5_Item item)
         {
-            return _hub.CountOf(item);
+            return _simulation.Buildings.OfType<G5_Storage>()
+                .Sum(storage => storage.CountOf(item));
         }
 
         bool IGameField.CanBePaintedBy(IPaintGame painter)
@@ -106,15 +113,27 @@ namespace OOPGames
         {
             _simulation.AddBuilding(gebaeude);
         }
+
+        internal void ToggleGebaeuderegister()
+        {
+            _gebaeuderegisterGeoeffnet = !_gebaeuderegisterGeoeffnet;
+        }
+
+        internal void ScrollGebaeuderegister(int schritte)
+        {
+            _gebaeuderegisterOffset = Math.Max(0, Math.Min(2, _gebaeuderegisterOffset + schritte));
+        }
     }
 
     internal sealed class G5_GebaeudeInfo : IG5_GebaeudeInfo
     {
         private readonly G5_Building _gebaeude;
+        private readonly bool _istHub;
 
-        internal G5_GebaeudeInfo(G5_Building gebaeude)
+        internal G5_GebaeudeInfo(G5_Building gebaeude, bool istHub)
         {
             _gebaeude = gebaeude ?? throw new ArgumentNullException(nameof(gebaeude));
+            _istHub = istHub;
         }
 
         G5_FabrikGebaeudeTyp IG5_GebaeudeInfo.Typ
@@ -123,7 +142,9 @@ namespace OOPGames
             {
                 if (_gebaeude is G5_Storage)
                 {
-                    return G5_FabrikGebaeudeTyp.Hub;
+                    return _istHub
+                        ? G5_FabrikGebaeudeTyp.Hub
+                        : G5_FabrikGebaeudeTyp.Lager;
                 }
 
                 if (_gebaeude is G5_Miner)

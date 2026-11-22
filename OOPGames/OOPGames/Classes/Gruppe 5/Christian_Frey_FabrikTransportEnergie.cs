@@ -8,8 +8,10 @@ namespace OOPGames
 
     public sealed class G5_Conveyor : G5_Building
     {
+        private const int TransportIntervalTicks = 12;
         private readonly G5_ItemBuffer _items;
         private int _itemsPerTick;
+        private int _ticksUntilTransport;
         private IG5_ItemEndpoint _source;
         private IG5_ItemEndpoint _destination;
 
@@ -77,6 +79,15 @@ namespace OOPGames
                 return;
             }
 
+            if (_ticksUntilTransport > 0)
+            {
+                _ticksUntilTransport--;
+                SetStatus(_items.UsedCapacity > 0
+                    ? G5_BuildingStatus.Working
+                    : G5_BuildingStatus.Idle);
+                return;
+            }
+
             int moved = 0;
             foreach (KeyValuePair<G5_Item, int> stack in _items.Contents)
             {
@@ -115,12 +126,24 @@ namespace OOPGames
                 }
             }
 
+            if (moved > 0)
+            {
+                _ticksUntilTransport = TransportIntervalTicks;
+            }
+
             SetStatus(moved > 0 ? G5_BuildingStatus.Working : G5_BuildingStatus.Idle);
         }
 
         public override bool TryReceive(G5_Item item, int amount)
         {
-            return _items.TryAdd(item, amount);
+            bool wasEmpty = _items.UsedCapacity == 0;
+            bool received = _items.TryAdd(item, amount);
+            if (received && wasEmpty)
+            {
+                _ticksUntilTransport = TransportIntervalTicks;
+            }
+
+            return received;
         }
 
         public override bool CanReceive(G5_Item item, int amount)
@@ -130,7 +153,13 @@ namespace OOPGames
 
         public override bool TryExtract(G5_Item item, int amount)
         {
-            return _items.TryRemove(item, amount);
+            bool extracted = _items.TryRemove(item, amount);
+            if (extracted && _items.UsedCapacity == 0)
+            {
+                _ticksUntilTransport = 0;
+            }
+
+            return extracted;
         }
 
         public override bool TryRestoreExtracted(G5_Item item, int amount)

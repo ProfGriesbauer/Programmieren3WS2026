@@ -34,9 +34,12 @@ namespace OOPGames
         private TutorialStep _step = TutorialStep.Inactive;
         private long _initialDeposit;
         private int _conveyorIndex;
-
-        private static readonly int[] ConveyorX = { 7, 8, 9 };
-        private const int ConveyorY = 2;
+        private int _minerX;
+        private int _minerY;
+        private const int SmelterStartX = 20;
+        private const int SmelterStartY = 14;
+        private int _smelterDestinationX;
+        private int _smelterDestinationY;
 
         internal bool IsActive
         {
@@ -48,12 +51,22 @@ namespace OOPGames
 
         internal string Message { get; private set; }
 
-        internal void Begin(long initialDeposit)
+        internal void Begin(long initialDeposit, G5_GridPosition minerPosition)
         {
             _initialDeposit = initialDeposit;
             _conveyorIndex = 0;
+            _minerX = minerPosition.X;
+            _minerY = minerPosition.Y;
+            _smelterDestinationX = _minerX + 5;
+            _smelterDestinationY = _minerY;
             _step = TutorialStep.SelectMinerTool;
             Message = "Willkommen! Ich begleite dich durch deine ersten Fabrikschritte.";
+        }
+
+        internal void Skip()
+        {
+            _step = TutorialStep.Complete;
+            Message = "Tutorial übersprungen. Du kannst jetzt frei spielen.";
         }
 
         internal void Reset()
@@ -133,33 +146,33 @@ namespace OOPGames
 
             if (_step == TutorialStep.PlaceMiner &&
                 tool == G5_Bauwerkzeug.Foerderer &&
-                x == 5 && y == 2)
+                x == _minerX && y == _minerY)
             {
                 return true;
             }
 
             if (_step == TutorialStep.PlaceSmelter &&
                 tool == G5_Bauwerkzeug.Schmelze &&
-                x == 20 && y == 14)
+                x == SmelterStartX && y == SmelterStartY)
             {
                 return true;
             }
 
             if (_step == TutorialStep.PlaceConveyor &&
                 tool == G5_Bauwerkzeug.Foerderband &&
-                _conveyorIndex < ConveyorX.Length &&
-                x == ConveyorX[_conveyorIndex] && y == ConveyorY)
+                _conveyorIndex < 3 &&
+                x == ConveyorX() && y == _minerY)
             {
                 return true;
             }
 
             message = _step == TutorialStep.PlaceMiner
-                ? "Platziere den Förderer auf dem markierten Eisenerzfeld."
+                ? "Platziere den Förderer auf dem markierten Rohstofffeld."
                 : _step == TutorialStep.PlaceSmelter
                     ? "Platziere die Schmelze auf dem markierten freien Feld."
                     : _step == TutorialStep.PlaceConveyor
                         ? "Setze das Förderband auf das vom Mentor markierte Feld."
-                        : "Folge dem markierten Lernschritt. Die Anleitung lässt sich anfangs nicht überspringen.";
+                        : "Folge dem markierten Lernschritt oder drücke T, um das Tutorial zu überspringen.";
             return false;
         }
 
@@ -167,7 +180,7 @@ namespace OOPGames
         {
             if (_step == TutorialStep.PlaceMiner &&
                 tool == G5_Bauwerkzeug.Foerderer &&
-                x == 5 && y == 2)
+                x == _minerX && y == _minerY)
             {
                 _initialDeposit = depositAmount;
                 _step = TutorialStep.WaitForMining;
@@ -175,18 +188,18 @@ namespace OOPGames
             }
             else if (_step == TutorialStep.PlaceSmelter &&
                 tool == G5_Bauwerkzeug.Schmelze &&
-                x == 20 && y == 14)
+                x == SmelterStartX && y == SmelterStartY)
             {
                 _step = TutorialStep.SelectMoveTool;
                 Message = "Schmelze gebaut! Drücke M und klicke sie an, damit du sie versetzen kannst.";
             }
             else if (_step == TutorialStep.PlaceConveyor &&
                 tool == G5_Bauwerkzeug.Foerderband &&
-                _conveyorIndex < ConveyorX.Length &&
-                x == ConveyorX[_conveyorIndex] && y == ConveyorY)
+                _conveyorIndex < 3 &&
+                x == ConveyorX() && y == _minerY)
             {
                 _conveyorIndex++;
-                if (_conveyorIndex == ConveyorX.Length)
+                if (_conveyorIndex == 3)
                 {
                     _step = TutorialStep.WaitForTransport;
                     Message = "Förderbänder verbunden! Beobachte, wie Erz auf dem Band zur Schmelze transportiert wird.";
@@ -206,7 +219,8 @@ namespace OOPGames
                 return true;
             }
 
-            if (_step == TutorialStep.SelectMoveSource && x == 20 && y == 14)
+            if (_step == TutorialStep.SelectMoveSource &&
+                x == SmelterStartX && y == SmelterStartY)
             {
                 _step = TutorialStep.MoveSmelter;
                 Message = "Jetzt klicke auf das markierte freie Feld, um die Schmelze dorthin zu versetzen.";
@@ -228,7 +242,8 @@ namespace OOPGames
                 return true;
             }
 
-            if (_step == TutorialStep.MoveSmelter && x == 22 && y == 14)
+            if (_step == TutorialStep.MoveSmelter &&
+                x == _smelterDestinationX && y == _smelterDestinationY)
             {
                 return true;
             }
@@ -317,7 +332,9 @@ namespace OOPGames
             AddText(canvas, StepTitle(), TextBrush,
                 panelLeft + 68, panelTop + 51, panelWidth - 88, 24, 16, FontWeights.Bold);
             AddText(canvas, Message ?? string.Empty, MutedBrush,
-                panelLeft + 68, panelTop + 80, panelWidth - 88, 34, 12, FontWeights.Normal);
+                panelLeft + 68, panelTop + 80, panelWidth - 210, 34, 12, FontWeights.Normal);
+            AddText(canvas, "T: Tutorial überspringen", AccentBrush,
+                panelLeft + panelWidth - 142, panelTop + 99, 126, 16, 10, FontWeights.Bold);
         }
 
         private static void DrawAvatar(Canvas canvas, double left, double top)
@@ -339,31 +356,31 @@ namespace OOPGames
                 case TutorialStep.SelectMinerTool:
                 case TutorialStep.PlaceMiner:
                 case TutorialStep.WaitForMining:
-                    targetX = 5;
-                    targetY = 2;
+                    targetX = _minerX;
+                    targetY = _minerY;
                     break;
                 case TutorialStep.SelectSmelterTool:
                 case TutorialStep.PlaceSmelter:
-                    targetX = 20;
-                    targetY = 14;
+                    targetX = SmelterStartX;
+                    targetY = SmelterStartY;
                     break;
                 case TutorialStep.SelectMoveTool:
                 case TutorialStep.SelectMoveSource:
-                    targetX = 20;
-                    targetY = 14;
+                    targetX = SmelterStartX;
+                    targetY = SmelterStartY;
                     break;
                 case TutorialStep.MoveSmelter:
-                    targetX = 22;
-                    targetY = 14;
+                    targetX = _smelterDestinationX;
+                    targetY = _smelterDestinationY;
                     break;
                 case TutorialStep.SelectConveyorTool:
                 case TutorialStep.PlaceConveyor:
-                    targetX = ConveyorX[Math.Min(_conveyorIndex, ConveyorX.Length - 1)];
-                    targetY = ConveyorY;
+                    targetX = ConveyorX();
+                    targetY = _minerY;
                     break;
                 case TutorialStep.WaitForTransport:
-                    targetX = 8;
-                    targetY = ConveyorY;
+                    targetX = _minerX + 3;
+                    targetY = _minerY;
                     break;
                 case TutorialStep.InspectHub:
                     targetX = 1;
@@ -512,6 +529,11 @@ namespace OOPGames
                 case TutorialStep.InspectHub: return "Sieh dir das Hub an";
                 default: return string.Empty;
             }
+        }
+
+        private int ConveyorX()
+        {
+            return _minerX + 2 + Math.Min(_conveyorIndex, 2);
         }
 
         private static void AddRoundedRectangle(

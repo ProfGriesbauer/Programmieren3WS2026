@@ -136,3 +136,5 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-19 12:09:02] Ändere den Mentor so, dass dieser wirklich mit schönen pfeilen auf die gebäude un d
 
 [2026-11-19 12:09:14] Mach die Anleitung noch Länger sodass man auch gezeigt bekommt wie die Förderbänderplatziert werden. Gebäude sollen zudem auch verschoben werden können und visualisiere auch den Transport der Rohstoffe auf den Förderbändern
+
+[2026-11-22 16:22:43] Btte schreibe weiterhin alle Prompts von mir in die Datei Maxi_Prompts und führe anschließend Pull, Push und Commit durch

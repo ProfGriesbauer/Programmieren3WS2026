@@ -8,7 +8,12 @@ namespace OOPGames
         Foerderer,
         Schmelze,
         Foerderband,
-        GebaeudeVerschieben
+        GebaeudeVerschieben,
+        Konstruktor,
+        Assembler,
+        Verbrennungsgenerator,
+        Strommast,
+        Lager
     }
 
     public enum G5_FabrikGebaeudeTyp
@@ -20,6 +25,7 @@ namespace OOPGames
         Assembler,
         Verbrennungsgenerator,
         Strommast,
+        Lager,
         Laufband,
         Splitter,
         Merger
@@ -28,7 +34,10 @@ namespace OOPGames
     public enum G5_FabrikAktionstyp
     {
         WerkzeugWaehlen,
-        GebaeudePlatzieren
+        GebaeudePlatzieren,
+        TutorialUeberspringen,
+        GebaeuderegisterUmschalten,
+        GebaeuderegisterScrollen
     }
 
     public interface IG5_GebaeudeInfo

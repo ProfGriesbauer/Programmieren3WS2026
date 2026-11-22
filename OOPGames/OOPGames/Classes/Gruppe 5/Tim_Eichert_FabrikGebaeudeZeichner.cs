@@ -50,6 +50,7 @@ namespace OOPGames
             switch (typ)
             {
                 case G5_FabrikGebaeudeTyp.Hub:
+                case G5_FabrikGebaeudeTyp.Lager:
                     ZeichneLager(zeichnung);
                     break;
                 case G5_FabrikGebaeudeTyp.Foerderer:
