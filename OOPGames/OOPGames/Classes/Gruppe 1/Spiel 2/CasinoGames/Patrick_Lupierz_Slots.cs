@@ -212,7 +212,7 @@ namespace OOPGames
             _coins.Clear();
             int count = CoinsForBet(bet);
             for (int i = 0; i < count; i++)
-                _coins.Add(new double[] { 8 + Random.NextDouble() * 464, -10 - Random.NextDouble() * 260, 2 + Random.NextDouble() * 3, Random.NextDouble() * 6 });
+                _coins.Add(new double[] { 8 + Random.NextDouble() * 464, G1C_Renderer.WindowTop - 10 - Random.NextDouble() * 260, 2 + Random.NextDouble() * 3, Random.NextDouble() * 6 });
             _rainTicks = 0;
         }
 
@@ -222,7 +222,8 @@ namespace OOPGames
             _rainTicks++;
             foreach (double[] coin in _coins)
             {
-                double floor = 250 + (coin[0] * 7 % 10);
+                // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Münzen landen am unteren Fensterrand (auch im Vollbild)
+                double floor = G1C_Renderer.WindowBottom - 14 + (coin[0] * 7 % 10);
                 if (coin[1] < floor) { coin[1] = Math.Min(floor, coin[1] + coin[2]); coin[2] += 0.15; }
                 coin[3] += 0.3;
             }
@@ -266,8 +267,10 @@ namespace OOPGames
             foreach (double[] coin in _coins)
             {
                 double w = 5 * Math.Abs(Math.Cos(coin[3])) + 1;
-                r.FillEllipse(coin[0], coin[1], w + 1, 6, Color.FromRgb(0xB0, 0x80, 0x10));
-                r.FillEllipse(coin[0], coin[1], w, 5, G1C_UiColors.Gold);
+                // Münzen über die ganze Fensterbreite verteilt (x wurde für 480 Einheiten gewürfelt)
+                double cx = G1C_Renderer.WindowLeft + coin[0] / G1C_Renderer.BaseScreenWidth * (G1C_Renderer.WindowRight - G1C_Renderer.WindowLeft);
+                r.FillEllipse(cx, coin[1], w + 1, 6, Color.FromRgb(0xB0, 0x80, 0x10));
+                r.FillEllipse(cx, coin[1], w, 5, G1C_UiColors.Gold);
             }
             if (_coins.Count > 0 && _rainTicks % 10 < 7) r.Text("JACKPOT!", machineX, 66, 36, G1C_UiColors.Gold, machineWidth);
 

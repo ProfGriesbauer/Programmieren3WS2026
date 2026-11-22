@@ -18,6 +18,10 @@ namespace OOPGames
         public Random Random { get; set; } = new Random();
         public bool ViaPhone { get; set; }
         public int TimesAsked { get; set; }
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – für Patrick (Spielhalle): Rekorde, Gedächtnis des NPCs, Hinweis
+        public System.Collections.Generic.IReadOnlyDictionary<string, int> Highscores { get; set; }
+        public G1C_NpcMemory Memory { get; set; }
+        public Action<string> Notice { get; set; }
     }
 
     // =====================================================

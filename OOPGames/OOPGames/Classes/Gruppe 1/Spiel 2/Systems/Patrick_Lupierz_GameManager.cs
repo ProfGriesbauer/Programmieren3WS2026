@@ -95,6 +95,7 @@ namespace OOPGames
             Npcs.OnNurseTreat = TreatBrokenLegs;
             Npcs.OnLoanRepaid = ApplyLoanRepaidConsequences;
             Npcs.Clock = Clock; // Änderung durch: Patrick Lupierz – 15.11.2026
+            Npcs.ArcadeHighscores = () => ArcadeHighscores; // Änderung durch: Patrick Lupierz – 22.11.2026 – Patricks Rekord
             Npcs.IsPresent = npc => World.IsPresent(npc); // Änderung durch: Patrick Lupierz – 18.11.2026 – Tagesablauf
             _exteriorNpcRoaming = new G1C_ExteriorNpcRoamingSystem(Exterior, Player, _random); // Erweiterung durch Denis Mock
             Phone = new G1C_Phone(Npcs);

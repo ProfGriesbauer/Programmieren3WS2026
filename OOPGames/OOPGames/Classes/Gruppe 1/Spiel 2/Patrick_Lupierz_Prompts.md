@@ -2398,3 +2398,23 @@ Am Ende gib eine kurze Übersicht aus:
 ```
 
 Ergebnisvermerk: �nderungen 15 bis 20 wurden in der bestehenden Casino-Codebasis implementiert und werden validiert. �bernommen von: Patrick Lupierz nach Pr�fung.
+
+### Prompt 22-11-2026 (Claude Code)
+
+```text
+füg zu den shop und home sound die neuste audio datei hinzu / es soll random in den songs starten und auch verschiedene immer sein
+es gibt einen rechschreib fehler ... "Du fährst jetzt mit dem Rotes Fahrrad..."
+fenster automatisch anpassen an die größe auch an alle fenster größen anpassen da dieses auch wieder ruckelt und nicht passt, npc eduard an den ganz linken spiel automat setzen sodass er immer am spielen ist und den automaten auch blockeren für den spieler, er soll auch ein gestreifteshemd haben und eine schwarze mütze und mehr speech bubble sprüche, poker bei vollbild die eigenen karten anpassen sodass diese wieder auf 100% größe sind und an der ursprungsstelle, beim jackpot in slotts soll die animation an boden vom fenster sein
+nur hand im vollbild kleiner
+```
+
+Ergebnisvermerk: Home/Shop-Musik = "AmbientSound house.mp3", Musik startet an zufälliger Stelle, erstes Stück zufällig. Fahrrad-Meldung im Dativ ("dem roten Fahrrad"). Welt/HUD füllen wieder jede Fenstergröße; Minispiele in festem, zentriertem 480x320-Rahmen (G1C_Renderer.UseFixedFrame), Hintergrund/Kopfzeile bis zum Fensterrand. Eduard vor dem linken Automaten (gesperrt), Skin "gambler_eduard" (Streifen, schwarze Mütze), 14 neue Sprüche. Pokerhand 1,5-fach in jeder Fenstergröße gleich groß. Münzregen bis zum unteren Fensterrand. Build 0/0, Selbsttest 87/87, Offscreen-Bilder geprüft; nicht geprüft: Hören, echtes Hauptfenster/Ruckeln. Übernommen von: Patrick Lupierz nach Prüfung.
+
+### Prompt 22-11-2026 (2) (Claude Code)
+
+```text
+in der vollbild ansicht soll es kleiner sein
+füge einen npc patrick hinzu der in in der arcade steht und wenn man mit ihm redet einem täglich tipps zum spielen gibt und 35 coins wenn man seinen rekord in schlange bricht der rekord soll angenehm hoch sein sodas es nicht sofort brechbar ist aber nicht unmöglich er soll blonde haare haben ein schwarzes tshirt blaue hose und weise schuhe und an dem mitleren automaten stehen optimistisch und freundlich
+```
+
+Ergebnisvermerk: Pokerhand im Vollbild (Fenster ohne Rahmen) 1,0-fach, sonst 1,5-fach. NPC Patrick (G1C_ArcadeMentor) neben dem Gast-Automaten, täglicher Tipp nach Spieltag, Schlangen-Rekord 220, einmalig 35 Chips (NpcMemory.RecordRewardPaid, wird mitgespeichert). Build 0/0, Selbsttest 88/88, Spielhallen-Bild geprüft. Übernommen von: Patrick Lupierz nach Prüfung.

@@ -58,8 +58,12 @@ namespace OOPGames
 
             G1C_Renderer r = _renderer;
             r.BeginFrame(canvas);
-            field.Viewport = r.Viewport;
             G1C_GameManager game = field.Manager;
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Minispiele im festen, zentrierten Rahmen;
+            // der Viewport für die Mausumrechnung wird erst danach übernommen.
+            bool minigame = game.State != G1C_GameState.Title && !game.IsWorldVisible && game.ActiveGame != null;
+            if (minigame) r.UseFixedFrame();
+            field.Viewport = r.Viewport;
 
             if (game.State == G1C_GameState.Title)
             {

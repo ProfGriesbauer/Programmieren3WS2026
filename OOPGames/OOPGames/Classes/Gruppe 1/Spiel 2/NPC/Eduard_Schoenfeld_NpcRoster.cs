@@ -38,12 +38,30 @@ namespace OOPGames
                     "Gleich gewinnt garantiert. Außer das Ding spinnt.",
                     "Ich wäre ja pünktlich gewesen, aber die Walzen waren wichtiger.",
                     "Ich habe ein System. Das funktioniert immer. Fast immer.",
-                    "Die anderen sagen, ich sei unbeliebt. Das stimmt nicht. Die mögen mich nur nicht."
+                    "Die anderen sagen, ich sei unbeliebt. Das stimmt nicht. Die mögen mich nur nicht.",
+                    // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – mehr Sprüche am Automaten
+                    "*klack* *klack* ... Kirsche, Zitrone, Glocke. Knapp!",
+                    "Der linke Automat ist meiner. Den hab ich warmgespielt.",
+                    "Noch zehn Chips. Das reicht für mindestens drei Jackpots.",
+                    "Hörst du das? So klingt ein Automat kurz vorm Auszahlen.",
+                    "Zwei Siebenen! Die dritte war nur schüchtern.",
+                    "Ich spiel nicht aus Spaß. Ich spiel aus Überzeugung.",
+                    "Wer aufhört, verpasst den Jackpot. Das ist Mathematik.",
+                    "Ich drück einfach fester. Das hilft. Glaub ich.",
+                    "Meine Glückssocken sind in der Wäsche. Das erklärt einiges.",
+                    "Heute Nacht schlafe ich hier. Der Automat braucht mich.",
+                    "Nicht drängeln, ich bin gleich fertig. Seit drei Stunden.",
+                    "Rosa sagt, ich soll mal Pause machen. Rosa hat keine Ahnung.",
+                    "BAR, BAR, ... Banane? Ach nein, Zitrone.",
+                    "Ich leih dir nichts. Ich brauch alles für die nächste Runde."
                 }
             };
-            p.MoodMonologues[G1C_NpcMood.Happy] = new[] { "Heute zahlt der Automat bestimmt alles zurück!" };
-            p.MoodMonologues[G1C_NpcMood.Nervous] = new[] { "Nur noch eine Runde. Dann wirklich Schluss." };
-            p.MoodMonologues[G1C_NpcMood.Angry] = new[] { "Das war kein Verlust. Das war technisches Pech!" };
+            p.MoodMonologues[G1C_NpcMood.Happy] = new[] { "Heute zahlt der Automat bestimmt alles zurück!",
+                "JAAA! ... ach, nur zwei Kirschen.", "Siehst du? Mein System funktioniert!" };
+            p.MoodMonologues[G1C_NpcMood.Nervous] = new[] { "Nur noch eine Runde. Dann wirklich Schluss.",
+                "Nur noch eine. Und dann noch eine.", "Wo sind meine Chips hin? Die waren eben noch da." };
+            p.MoodMonologues[G1C_NpcMood.Angry] = new[] { "Das war kein Verlust. Das war technisches Pech!",
+                "Dieser Automat ist manipuliert! ... Ich spiel trotzdem weiter.", "Hör auf, mir über die Schulter zu schauen!" };
             p.Topics.Add(new G1C_DialogueTopic("Wie läuft dein Gewinnsystem?", G1C_DialogueTopic.Cycle(
                 "Ich setze immer denselben Betrag. Das ist Wissenschaft.",
                 "Gestern hatte ich fast einen Jackpot. Der Automat hat sich nur vertan.",
@@ -58,7 +76,8 @@ namespace OOPGames
                 "Das zählt nicht. Ich habe investiert.",
                 "Viele. Sehr viele. Aber der nächste Gewinn gleicht das bestimmt aus."),
                 G1C_NpcExpression.Neutral));
-            return new G1C_NpcCharacter("Eduard", "guest", p, 220, 25, 10);
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – eigenes Aussehen (gestreiftes Hemd, schwarze Mütze)
+            return new G1C_NpcCharacter("Eduard", G1C_CasinoWorld.EduardSkin, p, 220, 25, 10);
         }
 
         // Croupier: professionell, zurückhaltend, regelorientiert

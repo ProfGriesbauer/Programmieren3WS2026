@@ -110,6 +110,9 @@ namespace OOPGames
             run("Angler", "Angler-NPC und vorhandene Fischdaten aus Inventory/Fishing verwenden", AnglerFishData);
             run("Angler", "Fischliste ist dynamisch und enthält alle Angelarten", AnglerFishScrollData);
             run("Eduard", "Eduard steht bei den Spielautomaten und besitzt spielsüchtige Dialoge", EduardSlotNpc);
+            run("Eduard", "Eduard spielt am linken Automaten, blockiert ihn, gestreiftes Hemd/Mütze, viele Sprüche", EduardBlocksLeftMachine); // Patrick Lupierz – 22.11.2026
+            run("Fenster", "Welt füllt jede Fenstergröße, Minispiele mittig im festen 480x320-Rahmen", WindowScaling); // Patrick Lupierz – 22.11.2026
+            run("Spielhalle", "Patrick: am mittleren Automaten, Aussehen, täglicher Tipp, 35 Chips einmalig für den Schlangen-Rekord", ArcadeMentorPatrick); // Patrick Lupierz – 22.11.2026
             run("Geldhai", "Haustür-Begegnung wird nur beim Verlassen ausgelöst", LoanHouseExitEncounter);
 
             // ---- Spielzustände
@@ -740,7 +743,88 @@ namespace OOPGames
             G1C_Npc worldEduard = game.World.Objects.OfType<G1C_Npc>().FirstOrDefault(n => n.Name == "Eduard");
             Check(worldEduard != null, "Eduard steht nicht im Casino");
             if (worldEduard != null)
-                Check(worldEduard.X >= 2 && worldEduard.X <= 6 && worldEduard.Y == 8, "Eduard steht nicht bei den Spielautomaten");
+                Check(worldEduard.X >= 2 && worldEduard.X <= 6 && worldEduard.Y >= 8 && worldEduard.Y <= 9, "Eduard steht nicht bei den Spielautomaten"); // Patrick Lupierz – 22.11.2026: steht jetzt davor (Y 9)
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 22.11.2026
+        // Aufgabe: Eduard steht vor dem linken Automaten (Blick zum Automaten), dieser ist für den Spieler gesperrt,
+        //          die übrigen Automaten bleiben spielbar; eigenes Aussehen und genug Sprechblasen-Sprüche.
+        private static void EduardBlocksLeftMachine()
+        {
+            G1C_GameManager game = RunningGame();
+            G1C_Npc eduard = game.World.Objects.OfType<G1C_Npc>().FirstOrDefault(n => n.Name == "Eduard");
+            Check(eduard != null, "Eduard fehlt");
+            int machineX = game.World.Objects.Where(o => o.SpriteId == "obj_slot_machine").Min(o => o.X);
+            Equal(G1C_CasinoWorld.EduardMachineX, machineX, "linker Automat");
+            Check(eduard.X == machineX && eduard.Y == 9 && eduard.Facing == G1C_Direction.Up, "Eduard steht nicht vor dem linken Automaten: " + eduard.X + "/" + eduard.Y + " " + eduard.Facing);
+            Check(eduard.Solid, "Eduard ist kein Hindernis");
+            G1C_WorldObject left = game.World.Objects.First(o => o.SpriteId == "obj_slot_machine" && o.X == machineX);
+            Check(left.Interaction != G1C_InteractionType.Slots, "Linker Automat ist für den Spieler nicht gesperrt");
+            Check(game.World.Objects.Count(o => o.Interaction == G1C_InteractionType.Slots) >= 3, "zu wenige freie Automaten");
+            Equal(G1C_CasinoWorld.EduardSkin, eduard.Skin, "Eduards Aussehen");
+            Check(G1C_BuiltInSprites.Create(G1C_CasinoWorld.EduardSkin + "_down_0") != null, "Grafik für Eduard fehlt");
+            G1C_NpcCharacter profile = game.Npcs.Find("Eduard");
+            Check(profile.Personality.GeneralMonologues.Length >= 15, "zu wenige Sprüche: " + profile.Personality.GeneralMonologues.Length);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 22.11.2026
+        // Aufgabe: NPC Patrick in der Spielhalle. Steht neben dem mittleren Automaten (Front frei), blond/schwarzes
+        //          T-Shirt/blaue Hose/weiße Schuhe, jeden Tag ein anderer Tipp, Rekord weder zu leicht noch unerreichbar,
+        //          35 Chips genau einmal, erst wenn der Rekord übertroffen ist.
+        private static void ArcadeMentorPatrick()
+        {
+            G1C_GameManager game = RunningGame();
+            G1C_Npc patrick = game.Arcade.Objects.OfType<G1C_Npc>().FirstOrDefault(n => n.Name == G1C_ArcadeMentor.NpcName);
+            Check(patrick != null, "Patrick steht nicht in der Spielhalle");
+            G1C_ArcadeCabinet middle = G1C_ArcadeCatalog.Cabinets.First(c => c.IsGuestCabinet);
+            Check(Math.Abs(patrick.X - middle.X) + Math.Abs(patrick.Y - middle.Y) == 1, "Patrick steht nicht am mittleren Automaten");
+            Check(game.Arcade.ObjectAt(middle.X, middle.Y + 1) == null && game.Arcade.Map.IsWalkable(middle.X, middle.Y + 1), "Vorderseite des Automaten blockiert");
+            Equal("pc-F0D060-F0C8A0-181818-2848A8-F8F8F8-x", patrick.Skin, "Aussehen (blond, schwarz, blau, weiß)");
+            Check(G1C_BuiltInSprites.Create(patrick.Skin + "_down_0") != null, "Grafik fehlt");
+            G1C_NpcCharacter profile = game.Npcs.Find(G1C_ArcadeMentor.NpcName);
+            Check(profile != null && profile.Personality.BaseMood == G1C_NpcMood.Happy, "Profil fehlt oder nicht optimistisch");
+            Check(game.Npcs.ArcadeHighscores != null, "Rekorde nicht ans NPC-System angebunden");
+
+            Check(G1C_ArcadeMentor.TipFor(1) != G1C_ArcadeMentor.TipFor(2), "Tipp wechselt nicht täglich");
+            Equal(G1C_ArcadeMentor.TipFor(3), G1C_ArcadeMentor.TipFor(3), "Tipp innerhalb eines Tages gleich");
+            Check(G1C_ArcadeMentor.SnakeRecord >= 150 && G1C_ArcadeMentor.SnakeRecord <= 300, "Rekord zu leicht oder zu schwer: " + G1C_ArcadeMentor.SnakeRecord);
+
+            G1C_MoneyManager money = new G1C_MoneyManager(100);
+            G1C_NpcMemory memory = new G1C_NpcMemory();
+            Dictionary<string, int> scores = new Dictionary<string, int> { { "Schlange", G1C_ArcadeMentor.SnakeRecord } };
+            G1C_TopicContext c = new G1C_TopicContext { Money = money, Memory = memory, Highscores = scores };
+            G1C_ArcadeMentor.RecordAnswer(c);
+            Equal(100, money.Balance, "Gleichstand zahlt nichts aus");
+            scores["Schlange"] = G1C_ArcadeMentor.SnakeRecord + 10;
+            G1C_ArcadeMentor.RecordAnswer(c);
+            Equal(135, money.Balance, "35 Chips für den gebrochenen Rekord");
+            G1C_ArcadeMentor.RecordAnswer(c);
+            Equal(135, money.Balance, "Belohnung nur einmal");
+            Check(memory.RecordRewardPaid, "Auszahlung nicht im (gespeicherten) Gedächtnis");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 22.11.2026
+        // Aufgabe: Fensteranpassung. Ein hohes Fenster (960x1100): die Welt nutzt die volle Höhe (kein Rand, kein
+        //          Versatz); Minispiele liegen exakt mittig im 480x320-Rahmen, das Fenster reicht darüber hinaus.
+        private static void WindowScaling()
+        {
+            System.Windows.Controls.Canvas canvas = new System.Windows.Controls.Canvas();
+            canvas.Measure(new System.Windows.Size(960, 1100));
+            canvas.Arrange(new System.Windows.Rect(0, 0, 960, 1100));
+            G1C_Renderer r = new G1C_Renderer(new G1C_SpriteLibrary());
+            r.BeginFrame(canvas);
+            Equal(2.0, r.Viewport.Scale, "Skalierung");
+            Equal(0.0, r.Viewport.OffsetY, "Welt ohne Versatz");
+            Equal(480.0, G1C_Renderer.ScreenWidth, "Weltbreite");
+            Equal(550.0, G1C_Renderer.ScreenHeight, "Welt nutzt die ganze Höhe");
+            r.UseFixedFrame();
+            Equal(320.0, G1C_Renderer.ScreenHeight, "Minispiel-Rahmen");
+            Equal(230.0, r.Viewport.OffsetY, "Rahmen mittig");
+            Equal(435.0, G1C_Renderer.WindowBottom, "Fensterunterkante im Rahmen");
+            Equal(-115.0, G1C_Renderer.WindowTop, "Fensteroberkante im Rahmen");
+            Equal(240.0, r.Viewport.ToVirtualY(230 + 480), "Mausumrechnung im Rahmen");
+            Equal(172.0, G1C_Poker.PlayerHandTop, "Pokerhand im Rahmen");
+            r.BeginFrame(canvas);   // zurück, damit andere Tests die Weltmaße sehen
         }
 
         private static void LoanHouseExitEncounter()
@@ -1569,9 +1653,11 @@ namespace OOPGames
 
         private static void CasinoPokerFan()
         {
-            // Änderung durch: Patrick Lupierz – 18.11.2026 – Skalierung wird im Team angepasst (jetzt 1,5); geprüft wird nur "größer"
-            Check(G1C_Poker.PlayerHandScale > 1.0, "Eigene Hand nicht vergrößert: " + G1C_Poker.PlayerHandScale);
+            // Änderung durch: Patrick Lupierz – 22.11.2026 – Hand 1,5-fach, in jeder Fenstergröße gleich, nicht unter dem Meldungsfeld
+            Equal(1.5, G1C_Poker.NormalHandScale, "Eigene Hand vergrößert");
+            Check(G1C_Poker.FullscreenHandScale < G1C_Poker.NormalHandScale, "Hand im Vollbild nicht kleiner");
             Check(G1C_Poker.PlayerHandTop > 166, "Hand nicht tiefer als vorher (166)");
+            Check(G1C_Poker.PlayerHandTop + G1C_CardView.CardHeight * G1C_Poker.NormalHandScale <= G1C_Renderer.BaseScreenHeight - 58, "Hand liegt unter dem Meldungsfeld");
             Check(G1C_CardView.FanAngle(0, 2) < 0 && G1C_CardView.FanAngle(1, 2) > 0 &&
                   Math.Abs(G1C_CardView.FanAngle(0, 2) + G1C_CardView.FanAngle(1, 2)) < 0.001, "Fächer nicht symmetrisch");
             Equal(0.0, G1C_CardView.FanAngle(2, 5), "Mittlere Karte gerade");

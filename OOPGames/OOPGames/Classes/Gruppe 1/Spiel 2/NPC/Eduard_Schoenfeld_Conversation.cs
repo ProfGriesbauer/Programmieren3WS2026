@@ -386,7 +386,11 @@ namespace OOPGames
                 Hour = _system.Clock != null ? _system.Clock.Hour : 12,
                 Money = _system.Money,
                 Random = _system.Random,
-                ViaPhone = ViaPhone
+                ViaPhone = ViaPhone,
+                // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Rekorde, Gedächtnis und Chips-Hinweis für Patrick
+                Highscores = _system.ArcadeHighscores != null ? _system.ArcadeHighscores() : null,
+                Memory = Memory,
+                Notice = text => AddNotice(text, true)
             };
             Say(topic.Ask(context), topic.Expression);
             if (firstTime) GrantSocialTrust(1); // neue Themen festigen die Beziehung ein wenig

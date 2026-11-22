@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq; // Patrick Lupierz – 22.11.2026
 
 namespace OOPGames
 {
@@ -181,6 +182,11 @@ namespace OOPGames
                                      G1C_Direction.Down, G1C_InteractionType.Talk));
             AddFurniture("Stuhl", "obj_chair", 10, 9, 1, 1);
             AddFurniture("Pflanze", "obj_plant", 14, 10, 1, 1);
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Patrick steht neben dem mittleren Automaten (Gast-Automat)
+            // und schaut darauf; die Vorderseite bleibt frei, damit der Spieler den Automaten weiter benutzen kann.
+            G1C_ArcadeCabinet middle = G1C_ArcadeCatalog.Cabinets.First(c => c.IsGuestCabinet);
+            _objects.Add(new G1C_Npc(G1C_ArcadeMentor.NpcName, G1C_ArcadeMentor.Skin, middle.X + 1, middle.Y,
+                                     G1C_Direction.Left, G1C_InteractionType.Talk));
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026

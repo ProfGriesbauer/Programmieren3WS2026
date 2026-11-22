@@ -66,6 +66,9 @@ namespace OOPGames
         /// <summary>Änderung durch: Patrick Lupierz – 18.11.2026 – ist ein Casino-NPC laut Tagesablauf gerade da?</summary>
         public Func<G1C_Npc, bool> IsPresent { get; set; }
 
+        /// <summary>Änderung durch: Patrick Lupierz – 22.11.2026 – Rekorde der Spielhalle (für Patrick, vom GameManager gesetzt)</summary>
+        public Func<IReadOnlyDictionary<string, int>> ArcadeHighscores { get; set; }
+
         public IEnumerable<KeyValuePair<G1C_Npc, G1C_NpcCharacter>> PlacedNpcs
         {
             get

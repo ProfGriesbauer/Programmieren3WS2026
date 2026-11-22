@@ -280,9 +280,15 @@ namespace OOPGames
 
         protected override Color BackgroundColor { get { return Color.FromRgb(0x1E, 0x5A, 0x50); } }
 
-        public const double PlayerHandScale = 1.5;   // Patrick Lupierz – 16.11.2026
-        public static double PlayerHandTop { get { return G1C_Renderer.ScreenHeight - 68; } }
-        public static double PlayerHandCenterX { get { return G1C_Renderer.ScreenWidth / 2; } }
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – im Vollbild war die Hand kleiner. Minispiele laufen jetzt
+        // in einem festen 480x320-Rahmen (G1C_Renderer.UseFixedFrame): die Hand ist in jeder Fenstergröße gleich groß
+        // (1,5-fach wie in der normalen Ansicht) und liegt unter "Du", über dem Meldungsfeld.
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – im Vollbild kleiner (100 %), sonst 1,5-fach.
+        public const double NormalHandScale = 1.5;
+        public const double FullscreenHandScale = 1.0;
+        public static double PlayerHandScale { get { return G1C_Renderer.IsFullscreen ? FullscreenHandScale : NormalHandScale; } }
+        public const double PlayerHandTop = 172;
+        public const double PlayerHandCenterX = 228;
 
         protected override void DrawGame(G1C_Renderer r)
         {

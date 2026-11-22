@@ -16,7 +16,8 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz
         public static List<G1C_NpcCharacter> Create()
         {
-            return new List<G1C_NpcCharacter> { Jana(), Olli(), Mia(), Karl(), Bodo(), Rudi(), Paula() };
+            return new List<G1C_NpcCharacter> { Jana(), Olli(), Mia(), Karl(), Bodo(), Rudi(), Paula(),
+                                                G1C_ArcadeMentor.Create() }; // Patrick Lupierz – 22.11.2026: Patrick in der Spielhalle
         }
 
         // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Bankberater, Wachmann, Radhändler, Spielhallen-Aufsicht.
