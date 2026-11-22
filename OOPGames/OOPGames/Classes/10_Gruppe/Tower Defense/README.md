@@ -195,8 +195,11 @@ Alles liegt in `%LOCALAPPDATA%\Programmieren3WS2026\Kinderzimmer90er\towerdefens
 ## Wellen und Kampf
 
 Jede Karte hat 50 Wellen (`Waves.cs`). Zwischen den Wellen ist Bauphase; mit `Leertaste`
-oder dem Button `WELLE STARTEN` beginnt die naechste. `T` bzw. `TEMPO` schaltet 1x/2x/3x.
-`R` bzw. der Button `AUTO AN`/`AUTO AUS` schaltet den Autostart: 2 Spielsekunden nach einer
+oder dem Button `WELLE STARTEN` beginnt die naechste. `T` bzw. `TEMPO` schaltet x1/x2/x3.
+TEMPO x1 laeuft 1,5-mal so schnell wie Echtzeit, x2 und x3 entsprechend 3- und 4,5-mal so schnell
+(`BaseSpeed`); die Spielzeit pro Tick wird dabei in gleich grosse Teilschritte von hoechstens 40 ms
+aufgeteilt, damit hohe Tempi genauso exakt rechnen wie x1.
+`R` bzw. der Button `AUTO AN`/`AUTO AUS` schaltet den Autostart: 3 Spielsekunden (bei x1 etwa 2 echte Sekunden) nach einer
 geschafften Welle startet die naechste von selbst (bei Tempo x2/x3 entsprechend schneller). Der
 Start-Button zeigt dann `START IN 2`/`START IN 1` und startet bei Klick sofort. Bau- und
 Upgrade-Menue sowie das Esc-Menue halten den Countdown an. Die Einstellung wird pro Spielstand

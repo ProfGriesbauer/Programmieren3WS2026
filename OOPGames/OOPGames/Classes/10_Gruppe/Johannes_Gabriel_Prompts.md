@@ -581,3 +581,15 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 
 > Wenn man die nächste Gegner Info öffnet im EndlosModus kommt es öfter vor, dass nicht alle Gegner angezeigt werden. Es wäre gut, wenn eine zweite Reihe aufgemacht wird, wenn zu viele Gegner angezeigt werden würden. Also rechts neben den angezeigten Gegner noch eine Reihe nach unten mit dem Rest.
 > Dazu möchte ich die Armor von dem ArcaneTitan von 90 auf 75 setzen, da er zu viel aushält, sobald man in den Endlos Modus kommt
+
+## Prompt 82
+
+**Datum:** 2026-11-22
+
+> Mir ist aufgefallen, dass im Endlos Modus Tempo 1 sehr langsam ist. Ich hätte gerne, dass die Spielgeschwindigkeit auf Tempo 1 etwa der derzeitigen Mitte von Tempo 1 und 2 darstellt und die neuen Tempo 2 und 3 genauso von dem neuen Tempo 1 steigen wie aktuell
+
+## Prompt 83
+
+**Datum:** 2026-11-22
+
+> Mir ist noch etwas aufgefallen. Wenn man eine Karte schafft und zur nächsten Karte auswählt, sieht man im Hintergrund immer nur die erste Karte und nicht die Karte, welche als nächstes gespielt werden würde

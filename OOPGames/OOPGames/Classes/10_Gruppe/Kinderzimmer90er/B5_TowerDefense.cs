@@ -257,8 +257,9 @@ namespace OOPGames
         }
 
         // Pause between a beaten wave and the automatic start of the next one, in game seconds (so it
-        // gets shorter with TEMPO x2/x3). Long enough to read the banner and let the last gold drop land.
-        const double AutoStartDelay = 2.0;
+        // gets shorter with TEMPO x2/x3): 3 game seconds = 2 real seconds at TEMPO x1. Long enough to read
+        // the banner and let the last gold drop land.
+        const double AutoStartDelay = 3.0;
 
         bool AutoStart { get { return _SlotIndex >= 0 && CurrentSlot.AutoStart; } }
 
@@ -518,10 +519,15 @@ namespace OOPGames
             if (_Battle == null || _Screen != TowerDefenseScreen.Map || _Paused || _ShowHelp || _Dialog != TowerDefenseDialog.None)
                 return;
 
-            for (int step = 0; step < _GameSpeed; step++)
+            // Game time per tick: TEMPO x1 = 1.5 x real time, x2 and x3 double and triple that. The time is
+            // split into equal sub-steps of at most one tick (40 ms), so fast tempos stay as exact as x1.
+            double gameSeconds = TickSeconds * BaseSpeed * _GameSpeed;
+            int steps = (int)Math.Ceiling(gameSeconds / TickSeconds - 1e-9);
+            double stepSeconds = gameSeconds / steps;
+            for (int step = 0; step < steps; step++)
             {
-                StepAutoStart(TickSeconds);
-                _Battle.Step(TickSeconds);
+                StepAutoStart(stepSeconds);
+                _Battle.Step(stepSeconds);
                 if (_Battle.ConsumeWaveCompleted())
                 {
                     CompleteWave();
@@ -549,6 +555,10 @@ namespace OOPGames
             else
                 ShowBanner(_Endless ? "ENDLOS  WELLE " + _Wave : "WELLE " + _Wave + " / " + TowerDefenseWaves.WaveCount);
         }
+
+        // Game speed of TEMPO x1 relative to real time (the middle between the former x1 and x2).
+        // TEMPO x2 / x3 are 2 / 3 times this value.
+        const double BaseSpeed = 1.5;
 
         void ToggleSpeed()
         {
@@ -1430,9 +1440,13 @@ namespace OOPGames
 
         // ---------------- menu background ----------------
 
+        // Map behind the menus: in the map and difficulty selection the selected map (so after "next map"
+        // its own landscape shows), otherwise the first map.
         void DrawMenuBackground()
         {
-            TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[0];
+            bool choosing = _Screen == TowerDefenseScreen.MapSelection || _Screen == TowerDefenseScreen.DifficultySelection;
+            int index = choosing ? Math.Max(0, Math.Min(TowerDefenseMaps.Maps.Count - 1, _MapSelection)) : 0;
+            TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[index];
             Surface.Rect(0, 0, DesignWidth, DesignHeight, Color.FromRgb(30, 40, 26));
             Surface.Sprite(TowerDefenseSprites.MapLayer(map.Id, "komplett"), 0, 0,
                 UX(TowerDefenseMaps.MapWidth), UX(TowerDefenseMaps.MapHeight));
