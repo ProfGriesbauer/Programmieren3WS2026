@@ -6,6 +6,21 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
+    internal static class SatisfactoryTutorialLayout
+    {
+        internal const int ConstructorX = 26;
+        internal const int AssemblerX = 30;
+        internal const int GeneratorX = 34;
+        internal const int StorageX = 38;
+        internal const int BuildingY = 24;
+        internal const int PowerPoleX = 31;
+        internal const int PowerPoleY = 27;
+        internal const int AreaX = 26;
+        internal const int AreaY = 24;
+        internal const int AreaWidth = 14;
+        internal const int AreaHeight = 6;
+    }
+
     internal sealed class SatisfactoryGameMentor
     {
         private enum TutorialStep
@@ -23,6 +38,20 @@ namespace OOPGames
             PlaceConveyor,
             WaitForTransport,
             InspectHub,
+            SelectConstructorTool,
+            PlaceConstructor,
+            SelectAssemblerTool,
+            PlaceAssembler,
+            SelectCoalMinerTool,
+            PlaceCoalMiner,
+            WaitForCoal,
+            SelectGeneratorTool,
+            PlaceGenerator,
+            SelectPowerPoleTool,
+            PlacePowerPole,
+            WaitForPower,
+            SelectStorageTool,
+            PlaceStorage,
             Complete
         }
 
@@ -36,6 +65,8 @@ namespace OOPGames
         private int _conveyorIndex;
         private int _minerX;
         private int _minerY;
+        private int _coalMinerX;
+        private int _coalMinerY;
         private const int SmelterStartX = 20;
         private const int SmelterStartY = 14;
         private int _smelterDestinationX;
@@ -51,12 +82,17 @@ namespace OOPGames
 
         internal string Message { get; private set; }
 
-        internal void Begin(long initialDeposit, G5_GridPosition minerPosition)
+        internal void Begin(
+            long initialDeposit,
+            G5_GridPosition minerPosition,
+            G5_GridPosition coalDepositPosition)
         {
             _initialDeposit = initialDeposit;
             _conveyorIndex = 0;
             _minerX = minerPosition.X;
             _minerY = minerPosition.Y;
+            _coalMinerX = coalDepositPosition.X;
+            _coalMinerY = coalDepositPosition.Y;
             _smelterDestinationX = _minerX + 5;
             _smelterDestinationY = _minerY;
             _step = TutorialStep.SelectMinerTool;
@@ -118,17 +154,55 @@ namespace OOPGames
                 return true;
             }
 
-            message = _step == TutorialStep.SelectMinerTool
-                ? "Wähle zuerst mit F den Förderer aus."
-                : _step == TutorialStep.WaitForMining
-                    ? "Lass den Förderer zuerst ein Erz abbauen. Danach geht es weiter."
-                    : _step == TutorialStep.SelectSmelterTool
-                        ? "Wähle jetzt mit S eine Schmelze aus."
-                        : _step == TutorialStep.SelectMoveTool
-                            ? "Drücke M, um das Verschieben zu lernen."
-                            : _step == TutorialStep.SelectConveyorTool
-                                ? "Drücke B, um ein Förderband auszuwählen."
-                        : "Folge dem markierten Lernschritt, bevor du fortfährst.";
+            if (_step == TutorialStep.SelectConstructorTool && tool == G5_Bauwerkzeug.Konstruktor)
+            {
+                _step = TutorialStep.PlaceConstructor;
+                Message = "Konstruktor gewählt. Platziere ihn auf dem markierten Feld.";
+                message = Message;
+                return true;
+            }
+
+            if (_step == TutorialStep.SelectAssemblerTool && tool == G5_Bauwerkzeug.Assembler)
+            {
+                _step = TutorialStep.PlaceAssembler;
+                Message = "Assembler gewählt. Platziere ihn auf dem markierten Feld.";
+                message = Message;
+                return true;
+            }
+
+            if (_step == TutorialStep.SelectCoalMinerTool && tool == G5_Bauwerkzeug.Foerderer)
+            {
+                _step = TutorialStep.PlaceCoalMiner;
+                Message = "Platziere einen Förderer direkt auf dem Kohlevorkommen.";
+                message = Message;
+                return true;
+            }
+
+            if (_step == TutorialStep.SelectGeneratorTool && tool == G5_Bauwerkzeug.Verbrennungsgenerator)
+            {
+                _step = TutorialStep.PlaceGenerator;
+                Message = "Generator gewählt. Platziere ihn auf dem markierten Feld.";
+                message = Message;
+                return true;
+            }
+
+            if (_step == TutorialStep.SelectPowerPoleTool && tool == G5_Bauwerkzeug.Strommast)
+            {
+                _step = TutorialStep.PlacePowerPole;
+                Message = "Platziere den Strommast zwischen Generator und Maschinen.";
+                message = Message;
+                return true;
+            }
+
+            if (_step == TutorialStep.SelectStorageTool && tool == G5_Bauwerkzeug.Lager)
+            {
+                _step = TutorialStep.PlaceStorage;
+                Message = "Lager gewählt. Platziere es auf dem markierten Feld.";
+                message = Message;
+                return true;
+            }
+
+            message = CurrentInstruction();
             return false;
         }
 
@@ -166,13 +240,54 @@ namespace OOPGames
                 return true;
             }
 
-            message = _step == TutorialStep.PlaceMiner
-                ? "Platziere den Förderer auf dem markierten Rohstofffeld."
-                : _step == TutorialStep.PlaceSmelter
-                    ? "Platziere die Schmelze auf dem markierten freien Feld."
-                    : _step == TutorialStep.PlaceConveyor
-                        ? "Setze das Förderband auf das vom Mentor markierte Feld."
-                        : "Folge dem markierten Lernschritt oder drücke T, um das Tutorial zu überspringen.";
+            if (_step == TutorialStep.PlaceCoalMiner &&
+                tool == G5_Bauwerkzeug.Foerderer &&
+                x == _coalMinerX && y == _coalMinerY)
+            {
+                return true;
+            }
+
+            if (_step == TutorialStep.PlaceConstructor &&
+                tool == G5_Bauwerkzeug.Konstruktor &&
+                x == SatisfactoryTutorialLayout.ConstructorX &&
+                y == SatisfactoryTutorialLayout.BuildingY)
+            {
+                return true;
+            }
+
+            if (_step == TutorialStep.PlaceAssembler &&
+                tool == G5_Bauwerkzeug.Assembler &&
+                x == SatisfactoryTutorialLayout.AssemblerX &&
+                y == SatisfactoryTutorialLayout.BuildingY)
+            {
+                return true;
+            }
+
+            if (_step == TutorialStep.PlaceGenerator &&
+                tool == G5_Bauwerkzeug.Verbrennungsgenerator &&
+                x == SatisfactoryTutorialLayout.GeneratorX &&
+                y == SatisfactoryTutorialLayout.BuildingY)
+            {
+                return true;
+            }
+
+            if (_step == TutorialStep.PlacePowerPole &&
+                tool == G5_Bauwerkzeug.Strommast &&
+                x == SatisfactoryTutorialLayout.PowerPoleX &&
+                y == SatisfactoryTutorialLayout.PowerPoleY)
+            {
+                return true;
+            }
+
+            if (_step == TutorialStep.PlaceStorage &&
+                tool == G5_Bauwerkzeug.Lager &&
+                x == SatisfactoryTutorialLayout.StorageX &&
+                y == SatisfactoryTutorialLayout.BuildingY)
+            {
+                return true;
+            }
+
+            message = CurrentInstruction();
             return false;
         }
 
@@ -208,6 +323,43 @@ namespace OOPGames
                 {
                     Message = "Gut! Setze das nächste Förderband direkt an das vorherige, auf das markierte Feld.";
                 }
+            }
+            else if (_step == TutorialStep.PlaceConstructor &&
+                tool == G5_Bauwerkzeug.Konstruktor)
+            {
+                _step = TutorialStep.SelectAssemblerTool;
+                Message = "Konstruktor fertigt Bauteile aus Barren. Jetzt lernst du den Assembler kennen.";
+            }
+            else if (_step == TutorialStep.PlaceAssembler &&
+                tool == G5_Bauwerkzeug.Assembler)
+            {
+                _step = TutorialStep.SelectCoalMinerTool;
+                Message = "Assembler kombiniert mehrere Bauteile. Beide Maschinen brauchen Strom; dafür bauen wir Kohle ab.";
+            }
+            else if (_step == TutorialStep.PlaceCoalMiner &&
+                tool == G5_Bauwerkzeug.Foerderer &&
+                x == _coalMinerX && y == _coalMinerY)
+            {
+                _step = TutorialStep.WaitForCoal;
+                Message = "Der Förderer bringt Kohle ins gemeinsame Lager. Warte auf den ersten Vorrat.";
+            }
+            else if (_step == TutorialStep.PlaceGenerator &&
+                tool == G5_Bauwerkzeug.Verbrennungsgenerator)
+            {
+                _step = TutorialStep.SelectPowerPoleTool;
+                Message = "Der Generator verbrennt Kohle aus dem Lager und erzeugt Strom. Wähle P für einen Strommast.";
+            }
+            else if (_step == TutorialStep.PlacePowerPole &&
+                tool == G5_Bauwerkzeug.Strommast)
+            {
+                _step = TutorialStep.WaitForPower;
+                Message = "Der Mast verbindet Generator und Maschinen in Reichweite. Warte, bis beide versorgt sind.";
+            }
+            else if (_step == TutorialStep.PlaceStorage &&
+                tool == G5_Bauwerkzeug.Lager)
+            {
+                _step = TutorialStep.Complete;
+                Message = "Lager erweitern den gemeinsamen Vorrat. Du hast jetzt alle Gebäude kennengelernt!";
             }
         }
 
@@ -290,6 +442,30 @@ namespace OOPGames
             return true;
         }
 
+        internal bool ObserveCoalStock(int amountInStorage)
+        {
+            if (_step != TutorialStep.WaitForCoal || amountInStorage <= 0)
+            {
+                return false;
+            }
+
+            _step = TutorialStep.SelectGeneratorTool;
+            Message = "Kohle ist im Lager. Drücke G, um den Generator zu bauen.";
+            return true;
+        }
+
+        internal bool ObservePower(bool constructorPowered, bool assemblerPowered)
+        {
+            if (_step != TutorialStep.WaitForPower || !constructorPowered || !assemblerPowered)
+            {
+                return false;
+            }
+
+            _step = TutorialStep.SelectStorageTool;
+            Message = "Strom fließt! Konstruktor und Assembler sind angebunden. Drücke L für ein Lager.";
+            return true;
+        }
+
         internal bool TryInspectHub(int x, int y)
         {
             if (_step != TutorialStep.InspectHub ||
@@ -298,9 +474,43 @@ namespace OOPGames
                 return false;
             }
 
-            _step = TutorialStep.Complete;
-            Message = "Geschafft! Du hast gebaut, ein Gebäude versetzt und Rohstoffe über Förderbänder transportiert. Ab jetzt kannst du frei spielen.";
+            _step = TutorialStep.SelectConstructorTool;
+            Message = "Hub geöffnet! Als Nächstes: C wählen und den Konstruktor platzieren.";
             return true;
+        }
+
+        private string CurrentInstruction()
+        {
+            switch (_step)
+            {
+                case TutorialStep.SelectMinerTool: return "Wähle zuerst mit F den Förderer aus.";
+                case TutorialStep.PlaceMiner: return "Platziere den Förderer auf dem markierten Rohstofffeld.";
+                case TutorialStep.WaitForMining: return "Lass den Förderer zuerst Erz abbauen.";
+                case TutorialStep.SelectSmelterTool: return "Wähle jetzt mit S eine Schmelze aus.";
+                case TutorialStep.PlaceSmelter: return "Platziere die Schmelze auf dem markierten Feld.";
+                case TutorialStep.SelectMoveTool: return "Drücke M, um das Verschieben zu lernen.";
+                case TutorialStep.SelectMoveSource: return "Klicke auf die markierte Schmelze.";
+                case TutorialStep.MoveSmelter: return "Versetze die Schmelze auf das markierte Zielfeld.";
+                case TutorialStep.SelectConveyorTool: return "Drücke B, um ein Förderband auszuwählen.";
+                case TutorialStep.PlaceConveyor: return "Setze das Förderband auf das markierte Feld.";
+                case TutorialStep.WaitForTransport: return "Beobachte den Erztransport zur Schmelze.";
+                case TutorialStep.InspectHub: return "Klicke auf das markierte Hub.";
+                case TutorialStep.SelectConstructorTool: return "Drücke C für den Konstruktor.";
+                case TutorialStep.PlaceConstructor: return "Platziere den Konstruktor auf dem markierten Feld.";
+                case TutorialStep.SelectAssemblerTool: return "Drücke A für den Assembler.";
+                case TutorialStep.PlaceAssembler: return "Platziere den Assembler auf dem markierten Feld.";
+                case TutorialStep.SelectCoalMinerTool: return "Drücke F für einen Förderer auf Kohle.";
+                case TutorialStep.PlaceCoalMiner: return "Platziere den Förderer auf dem markierten Kohlevorkommen.";
+                case TutorialStep.WaitForCoal: return "Warte, bis der Förderer Kohle ins Lager geliefert hat.";
+                case TutorialStep.SelectGeneratorTool: return "Drücke G für den Generator.";
+                case TutorialStep.PlaceGenerator: return "Platziere den Generator auf dem markierten Feld.";
+                case TutorialStep.SelectPowerPoleTool: return "Drücke P für den Strommast.";
+                case TutorialStep.PlacePowerPole: return "Setze den Strommast auf das markierte Feld.";
+                case TutorialStep.WaitForPower: return "Warte, bis Generator und Maschinen verbunden sind.";
+                case TutorialStep.SelectStorageTool: return "Drücke L für ein zusätzliches Lager.";
+                case TutorialStep.PlaceStorage: return "Platziere das Lager auf dem markierten Feld.";
+                default: return "Folge dem markierten Lernschritt oder drücke T, um das Tutorial zu überspringen.";
+            }
         }
 
         internal void Paint(
@@ -385,6 +595,38 @@ namespace OOPGames
                 case TutorialStep.InspectHub:
                     targetX = 1;
                     targetY = 1;
+                    break;
+                case TutorialStep.SelectConstructorTool:
+                case TutorialStep.PlaceConstructor:
+                    targetX = SatisfactoryTutorialLayout.ConstructorX;
+                    targetY = SatisfactoryTutorialLayout.BuildingY;
+                    break;
+                case TutorialStep.SelectAssemblerTool:
+                case TutorialStep.PlaceAssembler:
+                    targetX = SatisfactoryTutorialLayout.AssemblerX;
+                    targetY = SatisfactoryTutorialLayout.BuildingY;
+                    break;
+                case TutorialStep.SelectCoalMinerTool:
+                case TutorialStep.PlaceCoalMiner:
+                case TutorialStep.WaitForCoal:
+                    targetX = _coalMinerX;
+                    targetY = _coalMinerY;
+                    break;
+                case TutorialStep.SelectGeneratorTool:
+                case TutorialStep.PlaceGenerator:
+                    targetX = SatisfactoryTutorialLayout.GeneratorX;
+                    targetY = SatisfactoryTutorialLayout.BuildingY;
+                    break;
+                case TutorialStep.SelectPowerPoleTool:
+                case TutorialStep.PlacePowerPole:
+                case TutorialStep.WaitForPower:
+                    targetX = SatisfactoryTutorialLayout.PowerPoleX;
+                    targetY = SatisfactoryTutorialLayout.PowerPoleY;
+                    break;
+                case TutorialStep.SelectStorageTool:
+                case TutorialStep.PlaceStorage:
+                    targetX = SatisfactoryTutorialLayout.StorageX;
+                    targetY = SatisfactoryTutorialLayout.BuildingY;
                     break;
                 default:
                     return;
@@ -505,10 +747,24 @@ namespace OOPGames
                 case TutorialStep.PlaceConveyor: number = 10 + _conveyorIndex; break;
                 case TutorialStep.WaitForTransport: number = 13; break;
                 case TutorialStep.InspectHub: number = 14; break;
+                case TutorialStep.SelectConstructorTool: number = 15; break;
+                case TutorialStep.PlaceConstructor: number = 16; break;
+                case TutorialStep.SelectAssemblerTool: number = 17; break;
+                case TutorialStep.PlaceAssembler: number = 18; break;
+                case TutorialStep.SelectCoalMinerTool: number = 19; break;
+                case TutorialStep.PlaceCoalMiner: number = 20; break;
+                case TutorialStep.WaitForCoal: number = 21; break;
+                case TutorialStep.SelectGeneratorTool: number = 22; break;
+                case TutorialStep.PlaceGenerator: number = 23; break;
+                case TutorialStep.SelectPowerPoleTool: number = 24; break;
+                case TutorialStep.PlacePowerPole: number = 25; break;
+                case TutorialStep.WaitForPower: number = 26; break;
+                case TutorialStep.SelectStorageTool: number = 27; break;
+                case TutorialStep.PlaceStorage: number = 28; break;
                 default: return string.Empty;
             }
 
-            return number + " / 14";
+            return number + " / 28";
         }
 
         private string StepTitle()
@@ -527,6 +783,20 @@ namespace OOPGames
                 case TutorialStep.PlaceConveyor: return "Förderband " + (_conveyorIndex + 1) + " von 3 platzieren";
                 case TutorialStep.WaitForTransport: return "Rohstoffe auf dem Band";
                 case TutorialStep.InspectHub: return "Sieh dir das Hub an";
+                case TutorialStep.SelectConstructorTool: return "Baue einen Konstruktor";
+                case TutorialStep.PlaceConstructor: return "Konstruktor platzieren";
+                case TutorialStep.SelectAssemblerTool: return "Baue einen Assembler";
+                case TutorialStep.PlaceAssembler: return "Assembler platzieren";
+                case TutorialStep.SelectCoalMinerTool: return "Kohle für den Generator";
+                case TutorialStep.PlaceCoalMiner: return "Förderer auf Kohle setzen";
+                case TutorialStep.WaitForCoal: return "Kohle wird gesammelt";
+                case TutorialStep.SelectGeneratorTool: return "Wähle den Generator";
+                case TutorialStep.PlaceGenerator: return "Generator platzieren";
+                case TutorialStep.SelectPowerPoleTool: return "Stromnetz verbinden";
+                case TutorialStep.PlacePowerPole: return "Strommast platzieren";
+                case TutorialStep.WaitForPower: return "Stromnetz prüfen";
+                case TutorialStep.SelectStorageTool: return "Erweitere das Lager";
+                case TutorialStep.PlaceStorage: return "Zusätzliches Lager setzen";
                 default: return string.Empty;
             }
         }

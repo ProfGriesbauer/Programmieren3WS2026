@@ -27,6 +27,7 @@ namespace OOPGames
         private SatisfactoryFieldView _fieldView;
         private G5_Building _buildingToMove;
         private G5_GridPosition _tutorialDepositPosition;
+        private G5_GridPosition _tutorialCoalDepositPosition;
         private bool _gameStarted;
 
         public SatisfactoryGameRules()
@@ -68,7 +69,8 @@ namespace OOPGames
                     {
                         _mentor.Begin(
                             _deposits[_tutorialDepositPosition].RemainingAmount.Value,
-                            _tutorialDepositPosition);
+                            _tutorialDepositPosition,
+                            _tutorialCoalDepositPosition);
                     }
                     else
                     {
@@ -200,6 +202,23 @@ namespace OOPGames
             TransferMaterials();
             if (_deposits.TryGetValue(_tutorialDepositPosition, out G5_ResourceDeposit deposit) &&
                 _mentor.ObserveMining(deposit.RemainingAmount.Value))
+            {
+                _field.SetStatusMeldung(_mentor.Message);
+            }
+            if (_mentor.ObserveCoalStock(
+                ((IG5_FabrikSpielInfo)_field).HubMenge(G5_Item.Kohle)))
+            {
+                _field.SetStatusMeldung(_mentor.Message);
+            }
+            if (_mentor.ObservePower(
+                _field.InterneGebaeude.OfType<G5_Constructor>().Any(constructor =>
+                    constructor.Position.X == SatisfactoryTutorialLayout.ConstructorX &&
+                    constructor.Position.Y == SatisfactoryTutorialLayout.BuildingY &&
+                    constructor.IsPowered),
+                _field.InterneGebaeude.OfType<G5_Assembler>().Any(assembler =>
+                    assembler.Position.X == SatisfactoryTutorialLayout.AssemblerX &&
+                    assembler.Position.Y == SatisfactoryTutorialLayout.BuildingY &&
+                    assembler.IsPowered)))
             {
                 _field.SetStatusMeldung(_mentor.Message);
             }
@@ -675,6 +694,27 @@ namespace OOPGames
                 G5_Item.Eisenerz,
                 _resourceAmount);
 
+            bool coalDepositCreated = false;
+            for (int attempt = 0; attempt < 2500 && !coalDepositCreated; attempt++)
+            {
+                int x = _random.Next(2, MapWidth - 2);
+                int y = _random.Next(2, MapHeight - 2);
+                if (!IsRandomDepositPositionAvailable(x, y, reserved))
+                {
+                    continue;
+                }
+
+                _tutorialCoalDepositPosition = new G5_GridPosition(x, y);
+                AddDeposit(x, y, G5_Rohstofftyp.Kohle, G5_Item.Kohle, _resourceAmount);
+                AddReservedRectangle(reserved, x, y, BuildingWidth, BuildingHeight);
+                coalDepositCreated = true;
+            }
+
+            if (!coalDepositCreated)
+            {
+                throw new InvalidOperationException("Für das Tutorial konnte kein Kohlevorkommen reserviert werden.");
+            }
+
             (G5_Rohstofftyp Rohstoff, G5_Item Item)[] resources =
             {
                 (G5_Rohstofftyp.Eisen, G5_Item.Eisenerz),
@@ -711,7 +751,16 @@ namespace OOPGames
             if (!IsBuildableArea(x, y, BuildingWidth, BuildingHeight, null) ||
                 !IsBuildableArea(x + 5, y, BuildingWidth, BuildingHeight, null) ||
                 AreasOverlap(x, y, BuildingWidth, BuildingHeight, 20, 14, BuildingWidth, BuildingHeight) ||
-                AreasOverlap(x + 5, y, BuildingWidth, BuildingHeight, 20, 14, BuildingWidth, BuildingHeight))
+                AreasOverlap(x + 5, y, BuildingWidth, BuildingHeight, 20, 14, BuildingWidth, BuildingHeight) ||
+                AreasOverlap(
+                    x,
+                    y,
+                    BuildingWidth + 5,
+                    BuildingHeight,
+                    SatisfactoryTutorialLayout.AreaX,
+                    SatisfactoryTutorialLayout.AreaY,
+                    SatisfactoryTutorialLayout.AreaWidth,
+                    SatisfactoryTutorialLayout.AreaHeight))
             {
                 return false;
             }
@@ -739,6 +788,12 @@ namespace OOPGames
 
             AddReservedRectangle(reserved, minerPosition.X + 5, minerPosition.Y, 2, 2);
             AddReservedRectangle(reserved, 20, 14, 2, 2);
+            AddReservedRectangle(
+                reserved,
+                SatisfactoryTutorialLayout.AreaX,
+                SatisfactoryTutorialLayout.AreaY,
+                SatisfactoryTutorialLayout.AreaWidth,
+                SatisfactoryTutorialLayout.AreaHeight);
             return reserved;
         }
 

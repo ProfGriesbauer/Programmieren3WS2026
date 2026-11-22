@@ -57,7 +57,6 @@ namespace OOPGames
         private string _hoverName;
         private Point _letzteMausposition;
         private bool _hatMausposition;
-        private bool _inventarGeoeffnet = true;
         private double _hintergrundViewportBreite = -1;
         private double _hintergrundViewportHoehe = -1;
 
@@ -133,15 +132,11 @@ namespace OOPGames
             _dynamischeEbene.Children.Clear();
             _hoverWelt = currentField;
             _hoverGebaeude = fabrikInfo.Gebaeude;
-            long animationTick = currentField is SatisfactoryFieldView satisfactoryField
-                ? satisfactoryField.SimulationTickNumber
-                : 0;
-
             ZeichneVorkommen(_dynamischeEbene, currentField);
 
             foreach (IG5_GebaeudeInfo gebaeude in _hoverGebaeude)
             {
-                ZeichneGebaeude(_dynamischeEbene, currentField, gebaeude, animationTick);
+                ZeichneGebaeude(_dynamischeEbene, currentField, gebaeude);
             }
 
             ZeichneHud(_dynamischeEbene, canvas.ActualWidth, fabrikInfo);
@@ -282,12 +277,22 @@ namespace OOPGames
                 return;
             }
 
-            double panelWidth = _inventarGeoeffnet ? 190 : 34;
-            double left = _zielCanvas.ActualWidth - panelWidth - 10;
-            if (position.X >= left && position.X <= left + panelWidth &&
-                position.Y >= HudHoehe + 10 && position.Y <= HudHoehe + 190)
+            if (_hoverWelt is SatisfactoryFieldView inventoryField)
             {
-                _inventarGeoeffnet = !_inventarGeoeffnet;
+                double panelWidth = inventoryField.InventarGeoeffnet ? 190 : 34;
+                double panelHeight = inventoryField.InventarGeoeffnet ? 196 : 34;
+                double left = _zielCanvas.ActualWidth - panelWidth - 10;
+                double top = HudHoehe + 10;
+                if (position.X >= left && position.X <= left + panelWidth &&
+                    position.Y >= top && position.Y <= top + panelHeight)
+                {
+                    if (position.Y <= top + 34)
+                    {
+                        inventoryField.ToggleInventar();
+                    }
+
+                    e.Handled = true;
+                }
             }
         }
 
@@ -556,8 +561,7 @@ namespace OOPGames
         private static void ZeichneGebaeude(
             Canvas canvas,
             IG5_WeltSpielfeld welt,
-            IG5_GebaeudeInfo gebaeude,
-            long animationTick)
+            IG5_GebaeudeInfo gebaeude)
         {
             if (!welt.TryRasterZuBildschirm(gebaeude.X, gebaeude.Y, out Point position) ||
                 !TryGetKachelGroesse(welt, gebaeude.X, gebaeude.Y, out double kachelBreite, out double kachelHoehe))
@@ -595,16 +599,17 @@ namespace OOPGames
                 satisfactoryItems.TryGetConveyorItem(
                     gebaeude.X,
                     gebaeude.Y,
-                    out G5_Item carriedItem))
+                    out G5_Item carriedItem,
+                    out double transportProgress))
             {
                 ZeichneTransportgut(
                     canvas,
                     position,
                     breite,
                     hoehe,
-                    animationTick,
                     conveyorVertical,
                     conveyorReversed,
+                    transportProgress,
                     carriedItem);
             }
 
@@ -644,13 +649,13 @@ namespace OOPGames
             Point position,
             double width,
             double height,
-            long animationTick,
             bool isVertical,
             bool isReversed,
+            double progress,
             G5_Item item)
         {
             double itemSize = Math.Max(6, Math.Min(18, Math.Min(width, height) * 0.58));
-            double fraction = (animationTick % 12) / 11.0;
+            double fraction = Math.Max(0, Math.Min(1, progress));
             if (isReversed)
             {
                 fraction = 1 - fraction;
@@ -1006,15 +1011,22 @@ namespace OOPGames
 
         private void ZeichneInventar(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)
         {
-            double width = _inventarGeoeffnet ? 190 : 34;
+            SatisfactoryFieldView fieldView = info as SatisfactoryFieldView;
+            bool isOpen = fieldView == null || fieldView.InventarGeoeffnet;
+            double width = isOpen ? 190 : 34;
             double left = viewportBreite - width - 10;
             double top = HudHoehe + 10;
+            double height = isOpen ? 196 : 34;
+            if (fieldView != null)
+            {
+                fieldView.SetInventarBereich(new Rect(left, top, width, height));
+            }
 
             Border panel = new Border
             {
                 Width = width,
-                Height = _inventarGeoeffnet ? 196 : 34,
-                Padding = new Thickness(_inventarGeoeffnet ? 8 : 3),
+                Height = height,
+                Padding = new Thickness(isOpen ? 8 : 3),
                 Background = new SolidColorBrush(Color.FromArgb(238, 20, 30, 27)),
                 BorderBrush = HoverAccentBrush,
                 BorderThickness = new Thickness(1),
@@ -1033,19 +1045,19 @@ namespace OOPGames
             Border toggle = new Border
             {
                 Padding = new Thickness(0),
-                Margin = new Thickness(0, 0, 0, _inventarGeoeffnet ? 5 : 0),
+                Margin = new Thickness(0, 0, 0, isOpen ? 5 : 0),
                 Child = new TextBlock
                 {
-                    Text = _inventarGeoeffnet ? "‹ INVENTAR" : "›",
+                    Text = isOpen ? "‹ INVENTAR" : "›",
                     Foreground = HoverAccentBrush,
                     FontSize = 11,
                     FontWeight = FontWeights.Bold,
-                    TextAlignment = _inventarGeoeffnet ? TextAlignment.Left : TextAlignment.Center
+                    TextAlignment = isOpen ? TextAlignment.Left : TextAlignment.Center
                 }
             };
             content.Children.Add(toggle);
 
-            if (_inventarGeoeffnet)
+            if (isOpen)
             {
                 G5_Item[] items =
                 {

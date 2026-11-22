@@ -36,6 +36,10 @@ namespace OOPGames
         public override IReadOnlyDictionary<G5_Item, int> TransferableContents => _items.Contents;
         internal IG5_ItemEndpoint Source => _source;
         internal IG5_ItemEndpoint Destination => _destination;
+        internal double TransportProgress => _items.UsedCapacity == 0
+            ? 0
+            : Math.Max(0, Math.Min(1,
+                (TransportIntervalTicks - _ticksUntilTransport) / (double)TransportIntervalTicks));
 
         public void Connect(IG5_ItemEndpoint source, IG5_ItemEndpoint destination)
         {
@@ -153,6 +157,11 @@ namespace OOPGames
 
         public override bool TryExtract(G5_Item item, int amount)
         {
+            if (_ticksUntilTransport > 0)
+            {
+                return false;
+            }
+
             bool extracted = _items.TryRemove(item, amount);
             if (extracted && _items.UsedCapacity == 0)
             {

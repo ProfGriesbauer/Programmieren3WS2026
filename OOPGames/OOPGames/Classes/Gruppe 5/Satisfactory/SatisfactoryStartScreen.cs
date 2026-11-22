@@ -522,6 +522,8 @@ namespace OOPGames
         private readonly G5_FabrikSpielfeld _field;
         private readonly SatisfactoryStartScreen _startScreen;
         private readonly SatisfactoryGameMentor _mentor;
+        private Rect _inventarBereich;
+        private bool _inventarGeoeffnet = true;
 
         internal SatisfactoryFieldView(
             G5_FabrikSpielfeld field,
@@ -540,9 +542,9 @@ namespace OOPGames
         internal SatisfactoryStartScreen StartScreen { get { return _startScreen; } }
         internal SatisfactoryGameMentor Mentor { get { return _mentor; } }
         internal Canvas MentorOverlay { get; }
-        internal long SimulationTickNumber { get { return _field.Simulation.TickNumber; } }
         internal bool GebaeuderegisterGeoeffnet => _field.GebaeuderegisterGeoeffnet;
         internal int GebaeuderegisterOffset => _field.GebaeuderegisterOffset;
+        internal bool InventarGeoeffnet => _inventarGeoeffnet;
 
         internal void ToggleGebaeuderegister()
         {
@@ -552,6 +554,21 @@ namespace OOPGames
         internal void ScrollGebaeuderegister(int schritte)
         {
             _field.ScrollGebaeuderegister(schritte);
+        }
+
+        internal void ToggleInventar()
+        {
+            _inventarGeoeffnet = !_inventarGeoeffnet;
+        }
+
+        internal void SetInventarBereich(Rect bereich)
+        {
+            _inventarBereich = bereich;
+        }
+
+        internal bool IsInventarBereich(int screenX, int screenY)
+        {
+            return _inventarBereich.Contains(new Point(screenX, screenY));
         }
 
         internal bool TryGetConveyorFlow(int x, int y, out bool isVertical, out bool isReversed)
@@ -576,7 +593,7 @@ namespace OOPGames
             return false;
         }
 
-        internal bool TryGetConveyorItem(int x, int y, out G5_Item item)
+        internal bool TryGetConveyorItem(int x, int y, out G5_Item item, out double progress)
         {
             foreach (G5_Conveyor conveyor in _field.InterneGebaeude.OfType<G5_Conveyor>())
             {
@@ -587,12 +604,14 @@ namespace OOPGames
                     if (first.Value > 0)
                     {
                         item = first.Key;
+                        progress = conveyor.TransportProgress;
                         return true;
                     }
                 }
             }
 
             item = default;
+            progress = 0;
             return false;
         }
 
@@ -631,6 +650,13 @@ namespace OOPGames
             double registerHeight = _field.GebaeuderegisterGeoeffnet ? 253 : 42;
             if (screenX >= 10 && screenX <= 10 + registerWidth &&
                 screenY >= 66 && screenY <= 66 + registerHeight)
+            {
+                x = -1;
+                y = -1;
+                return false;
+            }
+
+            if (IsInventarBereich(screenX, screenY))
             {
                 x = -1;
                 y = -1;
