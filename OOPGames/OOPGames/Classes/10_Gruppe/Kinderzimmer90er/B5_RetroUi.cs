@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace OOPGames
@@ -54,13 +56,37 @@ namespace OOPGames
         }
     }
 
+    // One entry of the control bar: the keys, what they do and, if the entry can be clicked, the key a click sends.
+    sealed class B5ControlHint
+    {
+        public B5ControlHint(string keys, string label, Key? action = null)
+        {
+            Keys = keys;
+            Label = label;
+            Action = action;
+        }
+
+        public string Keys { get; private set; }
+        public string Label { get; private set; }
+        public Key? Action { get; private set; }
+    }
+
     // Control bar at the bottom of the canvas: device tabs and the keys that work in the current phase.
+    // Tabs and hints with an action can also be clicked.
     sealed class B5ControlBar
     {
+        static readonly Brush HoverFill = Frozen(Color.FromRgb(38, 58, 130));
+
         readonly Border _Element;
         readonly StackPanel _Hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
         readonly List<Border> _Tabs = new List<Border>();
         B5RoomPhase? _HintPhase;
+
+        // A device tab was clicked (device index).
+        public event Action<int> TabClicked;
+
+        // A hint with an action was clicked (the key it stands for).
+        public event Action<Key> HintClicked;
 
         public B5ControlBar()
         {
@@ -68,10 +94,16 @@ namespace OOPGames
             TextBlock caption = B5RetroStyle.CreateText("GERAET:", 15, B5RetroStyle.Dim);
             caption.VerticalAlignment = VerticalAlignment.Center;
             tabs.Children.Add(caption);
-            foreach (B5RoomDevice device in B5RoomRegistry.Devices)
+            for (int i = 0; i < B5RoomRegistry.Devices.Count; i++)
             {
-                Border tab = B5RetroStyle.CreateSelectable(B5RetroStyle.CreateText(device.Name, 15, B5RetroStyle.Text));
+                int device = i;
+                Border tab = B5RetroStyle.CreateSelectable(B5RetroStyle.CreateText(B5RoomRegistry.Devices[i].Name, 15, B5RetroStyle.Text));
                 tab.Margin = new Thickness(8, 0, 0, 0);
+                tab.Cursor = Cursors.Hand;
+                tab.MouseLeftButtonDown += (sender, e) =>
+                {
+                    if (TabClicked != null) TabClicked(device);
+                };
                 tabs.Children.Add(tab);
                 _Tabs.Add(tab);
             }
@@ -100,7 +132,7 @@ namespace OOPGames
             if (_HintPhase == field.Phase) return;
             _HintPhase = field.Phase;
             _Hints.Children.Clear();
-            foreach (string[] hint in HintsFor(field.Phase))
+            foreach (B5ControlHint hint in HintsFor(field.Phase))
             {
                 Border key = new Border
                 {
@@ -108,33 +140,72 @@ namespace OOPGames
                     BorderThickness = new Thickness(1.5),
                     Padding = new Thickness(6, 0, 6, 0),
                     Margin = new Thickness(14, 0, 6, 0),
-                    Child = B5RetroStyle.CreateText(hint[0], 13, B5RetroStyle.Text)
+                    Child = B5RetroStyle.CreateText(hint.Keys, 13, B5RetroStyle.Text)
                 };
-                _Hints.Children.Add(key);
-                TextBlock label = B5RetroStyle.CreateText(hint[1], 13, B5RetroStyle.Dim);
+                TextBlock label = B5RetroStyle.CreateText(hint.Label, 13, B5RetroStyle.Dim);
                 label.VerticalAlignment = VerticalAlignment.Center;
-                _Hints.Children.Add(label);
+                if (hint.Action.HasValue)
+                {
+                    // Key box and label together form one button.
+                    StackPanel content = new StackPanel { Orientation = Orientation.Horizontal };
+                    content.Children.Add(key);
+                    content.Children.Add(label);
+                    label.Margin = new Thickness(0, 0, 6, 0);
+                    Border button = new Border { Background = Brushes.Transparent, Cursor = Cursors.Hand, Child = content };
+                    Key action = hint.Action.Value;
+                    button.MouseEnter += (sender, e) => button.Background = HoverFill;
+                    button.MouseLeave += (sender, e) => button.Background = Brushes.Transparent;
+                    button.MouseLeftButtonDown += (sender, e) =>
+                    {
+                        if (HintClicked != null) HintClicked(action);
+                    };
+                    _Hints.Children.Add(button);
+                }
+                else
+                {
+                    _Hints.Children.Add(key);
+                    _Hints.Children.Add(label);
+                }
             }
         }
 
-        // Pairs of { key, action }.
-        static string[][] HintsFor(B5RoomPhase phase)
+        static B5ControlHint[] HintsFor(B5RoomPhase phase)
         {
             switch (phase)
             {
                 case B5RoomPhase.Room:
-                    return new[] { new[] { "← → / A D", "Geraet waehlen" }, new[] { "ENTER / Z", "oeffnen" } };
+                    return new[]
+                    {
+                        new B5ControlHint("← → / A D / MAUS", "Geraet waehlen"),
+                        new B5ControlHint("ENTER / Z / KLICK", "oeffnen", Key.Enter)
+                    };
                 case B5RoomPhase.Device:
-                    return new[] { new[] { "↑ ↓ / W S / 1-3", "Spiel waehlen" }, new[] { "ENTER / Z", "Modul" }, new[] { "ESC / X", "zurueck" } };
+                    return new[]
+                    {
+                        new B5ControlHint("↑ ↓ / W S / 1-3 / MAUS", "Spiel waehlen"),
+                        new B5ControlHint("ENTER / Z / KLICK", "Modul", Key.Enter),
+                        new B5ControlHint("ESC / X / RECHTSKLICK", "zurueck", Key.Escape)
+                    };
                 case B5RoomPhase.Playing:
-                    return new[] { new[] { "PFEILE / WASD", "steuern" }, new[] { "ESC / X", "zurueck zur Geraeteauswahl" } };
+                    return new[]
+                    {
+                        new B5ControlHint("PFEILE / WASD", "steuern"),
+                        new B5ControlHint("ESC / X", "zurueck zur Geraeteauswahl", Key.Escape)
+                    };
                 case B5RoomPhase.Ejecting:
-                    return new[] { new[] { "ESC", "abbrechen" }, new[] { "...", "Modul wird ausgeworfen" } };
+                    return new[] { new B5ControlHint("ESC", "abbrechen", Key.Escape), new B5ControlHint("...", "Modul wird ausgeworfen") };
                 case B5RoomPhase.Focusing:
-                    return new[] { new[] { "ESC / X", "zurueck" }, new[] { "...", "Bildschirm wird fokussiert" } };
+                    return new[] { new B5ControlHint("ESC / X", "zurueck", Key.Escape), new B5ControlHint("...", "Bildschirm wird fokussiert") };
                 default:
-                    return new[] { new[] { "ESC", "abbrechen" }, new[] { "...", "Modul wird eingesteckt" } };
+                    return new[] { new B5ControlHint("ESC", "abbrechen", Key.Escape), new B5ControlHint("...", "Modul wird eingesteckt") };
             }
+        }
+
+        static Brush Frozen(Color color)
+        {
+            SolidColorBrush brush = new SolidColorBrush(color);
+            brush.Freeze();
+            return brush;
         }
     }
 }

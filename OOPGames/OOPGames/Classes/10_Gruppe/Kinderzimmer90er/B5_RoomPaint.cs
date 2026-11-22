@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
@@ -31,6 +32,8 @@ namespace OOPGames
         readonly List<Border> _CardBorders = new List<Border>();
         readonly List<TextBlock> _CardTitles = new List<TextBlock>();
         readonly Model3DGroup[] _DeviceControls = { new Model3DGroup(), new Model3DGroup(), new Model3DGroup() };
+        // Mouse picking: per device the boxes around its 3D parts (furniture included), in room coordinates.
+        readonly List<Rect3D>[] _PickBoxes = { new List<Rect3D>(), new List<Rect3D>(), new List<Rect3D>() };
         static readonly Dictionary<Color, Brush> SolidBrushCache = new Dictionary<Color, Brush>();
         static readonly Dictionary<Color, Material> BoxMaterialCache = new Dictionary<Color, Material>();
         static readonly Dictionary<(Color Color, Color Highlight), Material> EllipsoidMaterialCache =
@@ -125,6 +128,7 @@ namespace OOPGames
                 BuildInterface();
                 BuildRoom();
                 OptimizeStaticScene();
+                HookMouse();
                 // Cartridges and disks with their device parts, in device order. Added after the optimisation,
                 // which would freeze the moving parts.
                 _Media = new B5MediaAnimation[3];
@@ -328,6 +332,8 @@ namespace OOPGames
             AddBox(1.8, 0.12, -0.9, 0.75, 0.08, 0.75, Color.FromRgb(90, 91, 94));
             BuildTelevisionDetails();
 
+            foreach (List<Rect3D> boxes in _PickBoxes) boxes.Clear();
+            int atariStart = _Scene.Children.Count;
             AddWoodBox(-3.6, 1.0, -1.8, 2, 0.08, 1.1);
             // Lower shelf sits low, so a cartridge fits upright into the console under the table top.
             AddWoodBox(-3.6, B5AtariConsoleModel.ShelfTop - 0.035, -1.8, 1.8, 0.07, 0.95);
@@ -337,12 +343,19 @@ namespace OOPGames
             AddBox(-2.75, 0.48, -1.35, 0.08, 0.96, 0.08, Color.FromRgb(100, 67, 45));
             B5AtariTelevisionModel.Build(_Scene);
             B5AtariConsoleModel.Build(_Scene);
+            _PickBoxes[(int)B5RoomDeviceKind.Atari].Add(BoundsSince(atariStart));
             AddBox(-2.4, 0.15, -0.8, 0.12, 0.3, 0.12, Color.FromRgb(35, 35, 39));
 
+            int gameBoyStart = _Scene.Children.Count;
             B5GameBoyModel.Build(_Scene);
+            _PickBoxes[(int)B5RoomDeviceKind.Gameboy].Add(BoundsSince(gameBoyStart));
 
+            int commodoreStart = _Scene.Children.Count;
             B5CommodoreModel.Build(_Scene);
+            _PickBoxes[(int)B5RoomDeviceKind.Commodore].Add(BoundsSince(commodoreStart));
+            int controllerStart = _Scene.Children.Count;
             B5AtariControllerModel.Build(_Scene);
+            _PickBoxes[(int)B5RoomDeviceKind.Atari].Add(BoundsSince(controllerStart));
             BuildComputerCaseDetails();
             BuildDesktopWear();
 
@@ -373,6 +386,83 @@ namespace OOPGames
             _Highlights.Add(AddFrame(-3.6, 0.03, -1.8, 1.9, 1.2, 0.03));
             _Highlights.Add(AddFrame(0.8, 1.608, B5GameBoyModel.Center.Z, 0.5, 0.28, 0.02));
             _Highlights.Add(AddFrame(2.815, 1.608, -2.3225, 2.87, 1.235, 0.03));
+        }
+
+        // Bounding box of all scene parts added since the given child index.
+        Rect3D BoundsSince(int start)
+        {
+            Rect3D bounds = Rect3D.Empty;
+            for (int i = start; i < _Scene.Children.Count; i++) bounds.Union(_Scene.Children[i].Bounds);
+            return bounds;
+        }
+
+        // Device under the mouse in the 3D view, or -1. The nearest surface under the mouse is looked up and
+        // assigned to the smallest device box containing it (a little larger, so edges count too).
+        int PickDevice(Point position)
+        {
+            RayHitTestResult hit = VisualTreeHelper.HitTest(_Viewport, position) as RayHitTestResult;
+            if (hit == null) return -1;
+            Point3D point = hit.PointHit;
+            const double margin = 0.03;
+            int best = -1;
+            double bestVolume = double.MaxValue;
+            for (int device = 0; device < _PickBoxes.Length; device++)
+            {
+                foreach (Rect3D box in _PickBoxes[device])
+                {
+                    if (box.IsEmpty) continue;
+                    bool inside = point.X >= box.X - margin && point.X <= box.X + box.SizeX + margin &&
+                        point.Y >= box.Y - margin && point.Y <= box.Y + box.SizeY + margin &&
+                        point.Z >= box.Z - margin && point.Z <= box.Z + box.SizeZ + margin;
+                    double volume = box.SizeX * box.SizeY * box.SizeZ;
+                    if (inside && volume < bestVolume)
+                    {
+                        best = device;
+                        bestVolume = volume;
+                    }
+                }
+            }
+            return best;
+        }
+
+        void HookMouse()
+        {
+            _Viewport.MouseMove += (sender, e) =>
+            {
+                B5RoomField field = _LastField;
+                if (field == null) return;
+                int device = PickDevice(e.GetPosition(_Viewport));
+                bool clickable = device >= 0 && (field.Phase == B5RoomPhase.Room || field.Phase == B5RoomPhase.Device);
+                Cursor cursor = clickable ? Cursors.Hand : null;
+                if (_Viewport.Cursor != cursor) _Viewport.Cursor = cursor;
+                if (device >= 0) field.HoverDevice(device);
+            };
+            _Viewport.MouseLeave += (sender, e) => _Viewport.Cursor = null;
+            // Not marked as handled: the framework's canvas handler still has to get the click (keyboard focus).
+            _Viewport.MouseLeftButtonDown += (sender, e) =>
+            {
+                B5RoomField field = _LastField;
+                if (field == null) return;
+                int device = PickDevice(e.GetPosition(_Viewport));
+                if (device < 0) return;
+                // A click on the open device inserts or starts the selected game, like Enter.
+                if (field.Phase == B5RoomPhase.Device && device == field.SelectedDevice) field.LatchKey(Key.Enter);
+                else field.OpenDevice(device);
+            };
+            // Right click = back. Not while a game runs: games use the right button themselves (Tower Defense).
+            _Root.MouseRightButtonDown += (sender, e) =>
+            {
+                B5RoomField field = _LastField;
+                if (field != null && field.Phase != B5RoomPhase.Playing) field.LatchKey(Key.Escape);
+            };
+            _ControlBar.TabClicked += device =>
+            {
+                if (_LastField != null) _LastField.OpenDevice(device);
+            };
+            _ControlBar.HintClicked += key =>
+            {
+                if (_LastField != null) _LastField.LatchKey(key);
+            };
         }
 
         void BuildRoomDecor()
@@ -1288,8 +1378,10 @@ namespace OOPGames
                 _Cards.Children.Clear();
                 _CardBorders.Clear();
                 _CardTitles.Clear();
-                foreach (B5RoomGameEntry game in device.Games)
+                for (int i = 0; i < device.Games.Count; i++)
                 {
+                    B5RoomGameEntry game = device.Games[i];
+                    int index = i;
                     TextBlock title = B5RetroStyle.CreateText(game.Title, 16, B5RetroStyle.Text);
                     title.TextWrapping = TextWrapping.Wrap;
                     title.VerticalAlignment = VerticalAlignment.Center;
@@ -1300,6 +1392,18 @@ namespace OOPGames
                     row.Children.Add(title);
                     Border card = B5RetroStyle.CreateSelectable(row);
                     card.Margin = new Thickness(0, 2, 0, 2);
+                    // Mouse: pointing selects the game, a click inserts or starts it (like Enter).
+                    card.Cursor = Cursors.Hand;
+                    card.MouseEnter += (sender, e) =>
+                    {
+                        if (_LastField != null) _LastField.HoverGame(index);
+                    };
+                    card.MouseLeftButtonDown += (sender, e) =>
+                    {
+                        if (_LastField == null) return;
+                        _LastField.HoverGame(index);
+                        _LastField.LatchKey(Key.Enter);
+                    };
                     _Cards.Children.Add(card);
                     _CardBorders.Add(card);
                     _CardTitles.Add(title);

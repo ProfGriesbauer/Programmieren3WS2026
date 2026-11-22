@@ -116,6 +116,33 @@ namespace OOPGames
             return keys;
         }
 
+        // Mouse: pointing at a device in the room view selects it, like the arrow keys.
+        internal void HoverDevice(int device)
+        {
+            if (Phase != B5RoomPhase.Room || device == SelectedDevice) return;
+            SelectedDevice = device;
+            SelectedGame = 0;
+        }
+
+        // Mouse: a click on a device (3D or tab) opens it from the room view, or switches to it in the device view.
+        internal void OpenDevice(int device)
+        {
+            if (Phase != B5RoomPhase.Room && Phase != B5RoomPhase.Device) return;
+            if (device != SelectedDevice)
+            {
+                SelectedDevice = device;
+                SelectedGame = 0;
+                _ShowTitle = false;
+            }
+            Phase = B5RoomPhase.Device;
+        }
+
+        // Mouse: pointing at a game in the list selects it, like the up/down keys.
+        internal void HoverGame(int index)
+        {
+            if (Phase == B5RoomPhase.Device && index >= 0 && index < Device.Games.Count) SelectedGame = index;
+        }
+
         internal void BeginInsert(int gameIndex)
         {
             PendingGame = gameIndex;
