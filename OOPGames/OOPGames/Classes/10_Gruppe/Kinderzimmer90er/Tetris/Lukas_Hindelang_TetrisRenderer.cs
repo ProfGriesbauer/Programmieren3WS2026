@@ -103,7 +103,17 @@ namespace OOPGames
         static readonly Brush OverlayFill = Solid(Color.FromArgb(215, 8, 10, 24));
         static readonly Brush PausedFill = Linear(Color.FromRgb(20, 24, 54), Color.FromRgb(10, 12, 30), 90);
         static readonly Brush Shine = Solid(Color.FromArgb(150, 255, 255, 255));
-        static readonly G10_TetrisBlockStyle GrayStyle = new G10_TetrisBlockStyle(Color.FromRgb(96, 102, 128));
+        static readonly Dictionary<G10_TetrominoKind, Color> PieceColors = new Dictionary<G10_TetrominoKind, Color>
+        {
+            { G10_TetrominoKind.I, Color.FromRgb(66, 214, 236) },
+            { G10_TetrominoKind.O, Color.FromRgb(248, 208, 72) },
+            { G10_TetrominoKind.T, Color.FromRgb(178, 106, 232) },
+            { G10_TetrominoKind.S, Color.FromRgb(104, 214, 112) },
+            { G10_TetrominoKind.Z, Color.FromRgb(240, 86, 100) },
+            { G10_TetrominoKind.J, Color.FromRgb(74, 128, 240) },
+            { G10_TetrominoKind.L, Color.FromRgb(248, 150, 58) }
+        };
+        static readonly G10_TetrisBlockStyle GrayStyle =new G10_TetrisBlockStyle(Color.FromRgb(96, 102, 128));
 
         readonly Dictionary<Color, G10_TetrisBlockStyle> _Styles = new Dictionary<Color, G10_TetrisBlockStyle>();
         readonly G10_TetrisEffects _Effects = new G10_TetrisEffects();
@@ -192,7 +202,7 @@ namespace OOPGames
                 if (trail.ToRow <= fromRow) continue;
                 double age = (session.PlaySeconds - trail.StartSeconds) / G10_TetrisEffects.TrailSeconds;
                 drawing.PushOpacity(Math.Max(0, 1 - age));
-                drawing.DrawRectangle(StyleFor(trail.Color).Trail, null, new Rect(
+                drawing.DrawRectangle(StyleFor(trail.Kind).Trail, null, new Rect(
                     CellX(trail.Column) + 0.6, CellY(fromRow), Cell - 1.2, (trail.ToRow - fromRow) * Cell));
                 drawing.Pop();
             }
@@ -447,7 +457,12 @@ namespace OOPGames
 
         G10_TetrisBlockStyle StyleFor(G10_Tetromino shape)
         {
-            return StyleFor(shape.Color);
+            return StyleFor(shape.Kind);
+        }
+
+        G10_TetrisBlockStyle StyleFor(G10_TetrominoKind kind)
+        {
+            return StyleFor(PieceColors[kind]);
         }
 
         G10_TetrisBlockStyle StyleFor(Color color)

@@ -16,6 +16,8 @@ namespace OOPGames
         public const float PlayerMinimumY = 28;
         public const float PlayerMaximumY = 135;
         public const float PlayerSpeed = 92;
+        public const float EnemyMinimumX = 7;
+        public const float EnemyMaximumX = 153;
         public const float BossStartX = 80;
         public const float BossStartY = 35;
         public const int MaximumLives = 3;

@@ -97,6 +97,18 @@ namespace OOPGames
             Color.FromRgb(107, 42, 94), new Point(0, 0), new Point(0, 1));
         static readonly Brush BulwarkHull = Linear(Color.FromRgb(255, 210, 148),
             Color.FromRgb(142, 48, 60), new Point(0, 0), new Point(0, 1));
+        // How each enemy kind looks. Appearance is a rendering concern, so it lives here and
+        // the enemy classes only expose their Kind.
+        static readonly Dictionary<G10_ShooterEnemyKind, G10_ShooterEnemyStyle> EnemyStyles =
+            new Dictionary<G10_ShooterEnemyKind, G10_ShooterEnemyStyle>
+            {
+                { G10_ShooterEnemyKind.Driftling,
+                    new G10_ShooterEnemyStyle(EnemyShapes[0], EnemyHull, 7, 6, 1.2, false, false) },
+                { G10_ShooterEnemyKind.Needlewing,
+                    new G10_ShooterEnemyStyle(EnemyShapes[1], EnemyHull, 7, 6, 1.2, false, true) },
+                { G10_ShooterEnemyKind.Bulwark,
+                    new G10_ShooterEnemyStyle(EnemyShapes[2], BulwarkHull, 10, 8, 1.6, true, false) }
+            };
         static readonly Brush EnemyGlow = Radial(Color.FromArgb(75, 255, 94, 72),
             Color.FromArgb(28, 255, 58, 85), Color.FromArgb(0, 150, 25, 92));
         static readonly Brush BossHull = Linear(Color.FromRgb(255, 219, 152),
@@ -110,7 +122,7 @@ namespace OOPGames
 
         readonly G10_EffectSystem _Effects = new G10_EffectSystem();
         float _BossHitFlash;
-        G10_SolarShooterVisualHost _Host;
+        G10_DrawingVisualHost _Host;
         IG10_ShooterView _ObservedSession;
 
         public void Draw(
@@ -118,8 +130,9 @@ namespace OOPGames
             IG10_ShooterView session,
             G10_SolarShooterMenu menu,
             G10_SolarShooterModeSave modeSave,
-            G10_MissionDirector missionDirector)
+            IG10_ModeHud modeHud)
         {
+            if (modeHud == null) modeHud = G10_EmptyModeHud.Instance;
             EnsureHost(canvas);
             if (menu.Screen != G10_SolarShooterMenuScreen.Playing &&
                 menu.Screen != G10_SolarShooterMenuScreen.Paused)
@@ -143,7 +156,7 @@ namespace OOPGames
                 drawing.PushClip(new RectangleGeometry(new Rect(0, 0, Width, Height)));
                 DrawBackdrop(drawing, session);
                 DrawHud(drawing, session);
-                DrawMissionHud(drawing, session, missionDirector);
+                DrawModeHud(drawing, session, modeHud);
 
                 foreach (G10_SolarShooterProjectile projectile in session.PlayerProjectiles)
                     DrawProjectile(drawing, projectile, true);
@@ -157,7 +170,7 @@ namespace OOPGames
                     DrawBoss(drawing, session.Boss, session.StageIndex, session.TickNumber);
                 DrawBursts(drawing);
                 DrawPlayer(drawing, session);
-                DrawStateOverlay(drawing, session, missionDirector);
+                DrawStateOverlay(drawing, session, modeHud);
                 if (menu.Screen == G10_SolarShooterMenuScreen.Paused)
                     DrawPauseMenu(drawing, menu);
                 drawing.Pop();
@@ -276,7 +289,7 @@ namespace OOPGames
         {
             if (_Host != null && canvas.Children.Contains(_Host)) return;
 
-            _Host = new G10_SolarShooterVisualHost { Width = Width, Height = Height };
+            _Host = new G10_DrawingVisualHost { Width = Width, Height = Height };
             canvas.Children.Clear();
             canvas.Children.Add(_Host);
         }
@@ -423,24 +436,20 @@ namespace OOPGames
         void DrawEnemy(DrawingContext drawing, G10_SolarShooterEnemy enemy, int tick)
         {
             drawing.PushTransform(new TranslateTransform(enemy.X, enemy.Y));
-            G10_ShooterEnemyAppearance appearance = enemy.Appearance;
-            drawing.DrawEllipse(EnemyGlow, null, new Point(0, 0),
-                appearance.GlowWidth, appearance.GlowHeight);
-            Geometry hull = EnemyShapes[appearance.ShapeIndex];
-            Brush enemyHull = appearance.UseBulwarkHull ? BulwarkHull : EnemyHull;
-            drawing.DrawGeometry(enemyHull, new Pen(Solid(Color.FromRgb(255, 200, 190)), 0.55), hull);
+            G10_ShooterEnemyStyle style = EnemyStyles[enemy.Kind];
+            drawing.DrawEllipse(EnemyGlow, null, new Point(0, 0), style.GlowWidth, style.GlowHeight);
+            drawing.DrawGeometry(style.HullBrush, new Pen(Solid(Color.FromRgb(255, 200, 190)), 0.55), style.Hull);
             drawing.DrawGeometry(HullDark, null, Polygon(new Point(-5, 0), new Point(-8, 1), new Point(-5, 2)));
             drawing.DrawGeometry(HullDark, null, Polygon(new Point(5, 0), new Point(8, 1), new Point(5, 2)));
-            drawing.DrawEllipse(Glass, null, new Point(0, -1.3),
-                appearance.UseBulwarkHull ? 1.6 : 1.2, 1.3);
+            drawing.DrawEllipse(Glass, null, new Point(0, -1.3), style.CockpitWidth, 1.3);
             drawing.DrawEllipse(Amber, null, new Point(-2.4, 3.3), 0.65, 0.5);
             drawing.DrawEllipse(Amber, null, new Point(2.4, 3.3), 0.65, 0.5);
-            if (appearance.HasArmorLines)
+            if (style.HasArmorLines)
             {
                 drawing.DrawLine(new Pen(Gold, 0.7), new Point(-3.5, -1.5), new Point(-1.8, 1.2));
                 drawing.DrawLine(new Pen(Gold, 0.7), new Point(3.5, -1.5), new Point(1.8, 1.2));
             }
-            if (appearance.HasTrail && tick % 16 < 5)
+            if (style.HasTrail && tick % 16 < 5)
                 drawing.DrawLine(new Pen(Solid(Color.FromArgb(130, 255, 130, 104)), 0.55),
                     new Point(-4, 5.5), new Point(4, 5.5));
             drawing.Pop();
@@ -526,45 +535,39 @@ namespace OOPGames
             }
         }
 
-        void DrawMissionHud(
+        void DrawModeHud(
             DrawingContext drawing,
             IG10_ShooterView session,
-            G10_MissionDirector missionDirector)
+            IG10_ModeHud modeHud)
         {
-            if (missionDirector == null) return;
-
-            if (!string.IsNullOrEmpty(missionDirector.BannerText))
+            if (!string.IsNullOrEmpty(modeHud.BannerTitle))
             {
                 drawing.DrawRoundedRectangle(Panel,
                     new Pen(Solid(Color.FromArgb(210, 89, 205, 244)), 0.6),
                     new Rect(14, 31, 132, 19), 2, 2);
-                DrawText(drawing, missionDirector.BannerText, 0, 33, 3.8, Cyan, true, true);
-                DrawText(drawing, missionDirector.BannerDetails, 0, 40, 3.2, White, false, true);
+                DrawText(drawing, modeHud.BannerTitle, 0, 33, 3.8, Cyan, true, true);
+                DrawText(drawing, modeHud.BannerDetails ?? "", 0, 40, 3.2, White, false, true);
             }
 
-            IG10_Mission mission = missionDirector.CurrentMission;
-            if (mission == null || mission.Status != G10_MissionStatus.Active) return;
+            if (session.ShieldSeconds > 0)
+                DrawText(drawing, "SHIELD " + session.ShieldSeconds.ToString("0.0") + "s",
+                    119, 2, 3.4, Cyan);
+            if (!string.IsNullOrEmpty(modeHud.ComboText))
+                DrawText(drawing, modeHud.ComboText, 66, 11, 3.5, Amber, true);
+
+            if (string.IsNullOrEmpty(modeHud.TaskTitle)) return;
 
             drawing.DrawRoundedRectangle(Panel,
                 new Pen(Solid(Color.FromArgb(190, 83, 169, 214)), 0.55),
                 new Rect(17, 127, 126, 14), 2, 2);
-            DrawText(drawing, mission.Title + ": " + mission.ProgressText,
-                21, 129, 4.2, White, true);
-            DrawText(drawing, mission.Description, 21, 135, 3.5, MutedText);
-            if (session.ShieldSeconds > 0)
-                DrawText(drawing, "SHIELD " + session.ShieldSeconds.ToString("0.0") + "s",
-                    119, 2, 3.4, Cyan);
-            if (missionDirector.ComboCount > 1)
-                DrawText(drawing, "COMBO x" + Math.Min(
-                    missionDirector.ComboCount,
-                    G10_SolarShooterMissionConfig.MaximumComboMultiplier),
-                    66, 11, 3.5, Amber, true);
+            DrawText(drawing, modeHud.TaskTitle, 21, 129, 4.2, White, true);
+            DrawText(drawing, modeHud.TaskDescription ?? "", 21, 135, 3.5, MutedText);
         }
 
         void DrawStateOverlay(
             DrawingContext drawing,
             IG10_ShooterView session,
-            G10_MissionDirector missionDirector)
+            IG10_ModeHud modeHud)
         {
             if (session.IsGameOver)
                 Overlay(drawing, "SHIP LOST", G10_ShooterKeyBindings.Default.RestartPrompt, Red);
@@ -586,11 +589,8 @@ namespace OOPGames
                 DrawText(drawing, "SECTOR CLEAR", 48, 66, 6.4, White, true);
             }
 
-            if (missionDirector != null && (session.IsGameOver || session.IsVictory))
-                DrawText(drawing,
-                    "MISSIONEN GESCHAFFT: " + missionDirector.MissionsCompleted +
-                    "/" + missionDirector.MissionsAttempted,
-                    0, 85, 4.2, Cyan, true, true);
+            if (!string.IsNullOrEmpty(modeHud.SummaryText) && (session.IsGameOver || session.IsVictory))
+                DrawText(drawing, modeHud.SummaryText, 0, 85, 4.2, Cyan, true, true);
         }
 
         void Overlay(DrawingContext drawing, string title, string prompt, Brush accent)
@@ -672,6 +672,35 @@ namespace OOPGames
 
     }
 
+    internal sealed class G10_ShooterEnemyStyle
+    {
+        public G10_ShooterEnemyStyle(
+            Geometry hull,
+            Brush hullBrush,
+            double glowWidth,
+            double glowHeight,
+            double cockpitWidth,
+            bool hasArmorLines,
+            bool hasTrail)
+        {
+            Hull = hull;
+            HullBrush = hullBrush;
+            GlowWidth = glowWidth;
+            GlowHeight = glowHeight;
+            CockpitWidth = cockpitWidth;
+            HasArmorLines = hasArmorLines;
+            HasTrail = hasTrail;
+        }
+
+        public Geometry Hull { get; }
+        public Brush HullBrush { get; }
+        public double GlowWidth { get; }
+        public double GlowHeight { get; }
+        public double CockpitWidth { get; }
+        public bool HasArmorLines { get; }
+        public bool HasTrail { get; }
+    }
+
     internal sealed class G10_SolarShooterBurst
     {
         public G10_SolarShooterBurst(float x, float y, bool large, int seed)
@@ -687,31 +716,5 @@ namespace OOPGames
         public bool Large { get; private set; }
         public int Seed { get; private set; }
         public double Age { get; set; }
-    }
-
-    internal sealed class G10_SolarShooterVisualHost : FrameworkElement
-    {
-        readonly VisualCollection _Children;
-        readonly DrawingVisual _Visual = new DrawingVisual();
-
-        public G10_SolarShooterVisualHost()
-        {
-            _Children = new VisualCollection(this) { _Visual };
-            SnapsToDevicePixels = true;
-        }
-
-        protected override int VisualChildrenCount { get { return _Children.Count; } }
-
-        protected override Visual GetVisualChild(int index)
-        {
-            if (index < 0 || index >= _Children.Count) throw new ArgumentOutOfRangeException(nameof(index));
-            return _Children[index];
-        }
-
-        public void Render(Action<DrawingContext> draw)
-        {
-            using (DrawingContext drawing = _Visual.RenderOpen())
-                draw(drawing);
-        }
     }
 }
