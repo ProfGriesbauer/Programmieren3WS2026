@@ -101,58 +101,6 @@ namespace OOPGames
         protected void Fail() { Status = G10_MissionStatus.Failed; }
     }
 
-    internal interface IG10_MissionReward
-    {
-        string Description { get; }
-        void Apply(G10_SolarShooterSession session);
-    }
-
-    internal interface IG10_MissionPenalty
-    {
-        string Description { get; }
-        void Apply(G10_SolarShooterSession session);
-    }
-
-    internal sealed class G10_MissionScoreReward : IG10_MissionReward
-    {
-        readonly int _Points;
-        public G10_MissionScoreReward(int points) { _Points = points; }
-        public string Description { get { return "+" + _Points + " PUNKTE"; } }
-        public void Apply(G10_SolarShooterSession session) { session.AddScore(_Points); }
-    }
-
-    internal sealed class G10_MissionExtraLifeReward : IG10_MissionReward
-    {
-        public string Description { get { return "EXTRA-LEBEN"; } }
-        public void Apply(G10_SolarShooterSession session) { session.GrantExtraLife(); }
-    }
-
-    internal sealed class G10_MissionWeaponReward : IG10_MissionReward
-    {
-        public string Description { get { return "WAFFENSTUFE"; } }
-        public void Apply(G10_SolarShooterSession session) { session.Player.UpgradeWeapon(); }
-    }
-
-    internal sealed class G10_MissionShieldReward : IG10_MissionReward
-    {
-        public string Description { get { return "SCHILD"; } }
-        public void Apply(G10_SolarShooterSession session) { session.ActivateShield(5); }
-    }
-
-    internal sealed class G10_NoMissionPenalty : IG10_MissionPenalty
-    {
-        public string Description { get { return "KEINE STRAFE"; } }
-        public void Apply(G10_SolarShooterSession session) { }
-    }
-
-    internal sealed class G10_ScoreMissionPenalty : IG10_MissionPenalty
-    {
-        readonly int _Points;
-        public G10_ScoreMissionPenalty(int points) { _Points = points; }
-        public string Description { get { return "-" + _Points + " PUNKTE"; } }
-        public void Apply(G10_SolarShooterSession session) { session.ApplyScorePenalty(_Points); }
-    }
-
     internal sealed class G10_NoShotMission : G10_SolarShooterMission
     {
         public G10_NoShotMission()
@@ -216,7 +164,14 @@ namespace OOPGames
 
     internal sealed class G10_TargetEnemyMission : G10_SolarShooterMission
     {
-        readonly string _TargetType;
+        static readonly G10_ShooterEnemyKind[] Targets =
+        {
+            G10_ShooterEnemyKind.Driftling,
+            G10_ShooterEnemyKind.Needlewing,
+            G10_ShooterEnemyKind.Bulwark
+        };
+
+        readonly G10_ShooterEnemyKind _Target;
         int _TargetDestroyed;
 
         public G10_TargetEnemyMission(Random random)
@@ -224,17 +179,21 @@ namespace OOPGames
                 new G10_MissionScoreReward(G10_SolarShooterMissionConfig.TargetEnemyReward),
                 new G10_ScoreMissionPenalty(G10_SolarShooterMissionConfig.TargetEnemyPenalty))
         {
-            string[] enemyTypes = { "Driftling", "Needlewing", "Bulwark" };
-            _TargetType = enemyTypes[random.Next(enemyTypes.Length)];
+            _Target = Targets[random.Next(Targets.Length)];
         }
 
+        string TargetName { get { return _Target.ToString().ToUpperInvariant(); } }
+
         public override string Id { get { return "target-enemy"; } }
-        public override string Title { get { return "PRIORIZIERE " + _TargetType.ToUpperInvariant(); } }
-        public override string Description {         get
+        public override string Title { get { return "PRIORIZIERE " + TargetName; } }
+        public override string Description
         {
-            return "ZERSTOERE " + G10_SolarShooterMissionConfig.TargetEnemiesToDestroy +
-                " " + _TargetType.ToUpperInvariant();
-        } }
+            get
+            {
+                return "ZERSTOERE " + G10_SolarShooterMissionConfig.TargetEnemiesToDestroy +
+                    " " + TargetName;
+            }
+        }
         public override string ProgressText
         {
             get
@@ -245,7 +204,7 @@ namespace OOPGames
         }
         public override void OnEnemyDestroyed(G10_EntityDestroyedEventArgs args)
         {
-            if (args.EnemyType == _TargetType)
+            if (args.EnemyKind == _Target)
             {
                 _TargetDestroyed++;
                 if (_TargetDestroyed >= G10_SolarShooterMissionConfig.TargetEnemiesToDestroy) Succeed();
@@ -340,171 +299,6 @@ namespace OOPGames
         public override void OnEnemyDestroyed(G10_EntityDestroyedEventArgs args)
         {
             if (args.WeaponLevel >= 3) Fail();
-        }
-    }
-
-    internal sealed class G10_MissionDirector
-    {
-        readonly Func<Random, IG10_Mission>[] _Factories =
-        {
-            random => new G10_NoShotMission(),
-            random => new G10_DestroyFiveMission(),
-            random => new G10_SurviveMission(),
-            random => new G10_TargetEnemyMission(random),
-            random => new G10_CollectPowerCellsMission(),
-            random => new G10_StayLowMission(),
-            random => new G10_SingleShotMission()
-        };
-        readonly Random _Random = new Random();
-        readonly G10_SolarShooterSession _Session;
-        string _PreviousMissionId;
-        float _NextMissionDelay = G10_SolarShooterMissionConfig.FirstMissionDelay;
-        float _BannerSeconds;
-        float _ComboSeconds;
-        bool _OutcomeApplied;
-
-        public G10_MissionDirector(
-            G10_SolarShooterSession session,
-            int missionsCompleted,
-            int missionsAttempted,
-            string previousMissionId)
-        {
-            _Session = session;
-            MissionsCompleted = Math.Max(0, missionsCompleted);
-            MissionsAttempted = Math.Max(MissionsCompleted, missionsAttempted);
-            _PreviousMissionId = previousMissionId;
-            _Session.ShotFired += OnShotFired;
-            _Session.EnemyDestroyed += OnEnemyDestroyed;
-            _Session.PlayerHit += OnPlayerHit;
-            _Session.PowerCellCollected += OnPowerCellCollected;
-            _Session.PowerCellEscaped += OnPowerCellEscaped;
-        }
-
-        public IG10_Mission CurrentMission { get; private set; }
-        public string BannerText { get; private set; }
-        public string BannerDetails { get; private set; }
-        public int MissionsCompleted { get; private set; }
-        public int MissionsAttempted { get; private set; }
-        public int ComboCount { get; private set; }
-        public string PreviousMissionId { get { return _PreviousMissionId; } }
-
-        public void Update(float deltaSeconds)
-        {
-            if (_Session.IsGameOver || _Session.IsVictory) return;
-            if (_ComboSeconds > 0)
-            {
-                _ComboSeconds = Math.Max(0, _ComboSeconds - deltaSeconds);
-                if (_ComboSeconds == 0) ComboCount = 0;
-            }
-            if (CurrentMission != null && CurrentMission.Status == G10_MissionStatus.Active)
-            {
-                CurrentMission.Update(deltaSeconds, _Session);
-                ResolveMission();
-            }
-
-            if (_BannerSeconds > 0)
-            {
-                _BannerSeconds = Math.Max(0, _BannerSeconds - deltaSeconds);
-                if (_BannerSeconds == 0)
-                {
-                    BannerText = null;
-                    BannerDetails = null;
-                    if (CurrentMission != null &&
-                        CurrentMission.Status != G10_MissionStatus.Active)
-                    {
-                        CurrentMission = null;
-                        _NextMissionDelay = Math.Max(
-                            G10_SolarShooterMissionConfig.MinimumMissionGap,
-                            G10_SolarShooterMissionConfig.MissionGap -
-                            _Session.StageIndex * G10_SolarShooterMissionConfig.StageGapReduction);
-                    }
-                }
-                return;
-            }
-
-            if (CurrentMission != null) return;
-            _NextMissionDelay -= deltaSeconds;
-            if (_NextMissionDelay <= 0) StartNextMission();
-        }
-
-        void StartNextMission()
-        {
-            List<IG10_Mission> choices = new List<IG10_Mission>();
-            foreach (Func<Random, IG10_Mission> factory in _Factories)
-            {
-                IG10_Mission candidate = factory(_Random);
-                if (candidate.Id != _PreviousMissionId) choices.Add(candidate);
-            }
-            CurrentMission = choices[_Random.Next(choices.Count)];
-            _PreviousMissionId = CurrentMission.Id;
-            MissionsAttempted++;
-            BannerText = "MISSION: " + CurrentMission.Title + " / " +
-                CurrentMission.TimeLimitSeconds.ToString("0") + "s";
-            BannerDetails = CurrentMission.Description + " / " +
-                CurrentMission.Reward.Description;
-            _BannerSeconds = G10_SolarShooterMissionConfig.BannerDuration;
-            _OutcomeApplied = false;
-        }
-
-        void OnShotFired(object sender, G10_ShotFiredEventArgs args)
-        {
-            if (CurrentMission != null) CurrentMission.OnShotFired(args);
-            ResolveMission();
-        }
-
-        void OnEnemyDestroyed(object sender, G10_EntityDestroyedEventArgs args)
-        {
-            if (_ComboSeconds <= 0) ComboCount = 0;
-            ComboCount = Math.Min(
-                ComboCount + 1, G10_SolarShooterMissionConfig.MaximumComboMultiplier);
-            _ComboSeconds = G10_SolarShooterMissionConfig.ComboWindowSeconds;
-            int multiplier = ComboCount;
-            if (multiplier > 1)
-                _Session.AddScore(args.PointValue * (multiplier - 1));
-
-            if (CurrentMission != null) CurrentMission.OnEnemyDestroyed(args);
-            ResolveMission();
-        }
-
-        void OnPlayerHit(object sender, G10_EntityDestroyedEventArgs args)
-        {
-            ComboCount = 0;
-            _ComboSeconds = 0;
-            if (CurrentMission != null) CurrentMission.OnPlayerHit();
-            ResolveMission();
-        }
-
-        void OnPowerCellCollected(object sender, EventArgs args)
-        {
-            if (CurrentMission != null) CurrentMission.OnPowerCellCollected();
-            ResolveMission();
-        }
-
-        void OnPowerCellEscaped(object sender, EventArgs args)
-        {
-            if (CurrentMission != null) CurrentMission.OnPowerCellEscaped();
-            ResolveMission();
-        }
-
-        void ResolveMission()
-        {
-            if (CurrentMission == null || CurrentMission.Status == G10_MissionStatus.Active ||
-                _OutcomeApplied) return;
-            _OutcomeApplied = true;
-            if (CurrentMission.Status == G10_MissionStatus.Succeeded)
-            {
-                CurrentMission.Reward.Apply(_Session);
-                MissionsCompleted++;
-                BannerText = "ERFOLG: " + CurrentMission.Reward.Description;
-                BannerDetails = CurrentMission.Title;
-            }
-            else
-            {
-                CurrentMission.Penalty.Apply(_Session);
-                BannerText = "MISSION FEHLGESCHLAGEN";
-                BannerDetails = "STRAFE: " + CurrentMission.Penalty.Description;
-            }
-            _BannerSeconds = G10_SolarShooterMissionConfig.BannerDuration;
         }
     }
 }

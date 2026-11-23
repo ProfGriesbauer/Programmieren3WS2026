@@ -10,6 +10,7 @@ namespace OOPGames
         readonly G10_SolarShooterRenderer _Renderer;
         readonly G10_ShooterInputMapper _InputMapper;
         readonly G10_SolarShooterMenu _Menu;
+        readonly IG10_ShooterSaveStore _Saves;
         G10_SolarShooterSession _Session;
         G10_SolarShooterMode _Mode;
         float _AutosaveTimer;
@@ -18,14 +19,20 @@ namespace OOPGames
             : this(new G10_SolarShooterRenderer(),
                 new G10_ShooterInputMapper(
                     new G10_WpfKeyStateSource(),
-                    G10_ShooterKeyBindings.Default)) { }
+                    G10_ShooterKeyBindings.Default),
+                new G10_FileShooterSaveStore()) { }
 
         internal G10_SolarShooterGame(
             G10_SolarShooterRenderer renderer,
-            G10_ShooterInputMapper inputMapper)
+            G10_ShooterInputMapper inputMapper,
+            IG10_ShooterSaveStore saves)
         {
+            if (renderer == null) throw new ArgumentNullException("renderer");
+            if (inputMapper == null) throw new ArgumentNullException("inputMapper");
+            if (saves == null) throw new ArgumentNullException("saves");
             _Renderer = renderer;
             _InputMapper = inputMapper;
+            _Saves = saves;
             _Menu = new G10_SolarShooterMenu(G10_SolarShooterModeCatalog.CreateModes());
             _Menu.NewGameRequested += StartNewGame;
             _Menu.ContinueRequested += ContinueGame;
@@ -90,11 +97,10 @@ namespace OOPGames
 
         public void Draw(Canvas canvas)
         {
-            G10_SolarShooterModeSave save =
-                G10_SolarShooterSaves.Data.GetMode(_Menu.SelectedMode.Id);
+            G10_SolarShooterModeSave save = _Saves.GetMode(_Menu.SelectedMode.Id);
             _Renderer.Draw(
                 canvas, _Session, _Menu, save,
-                _Mode == null ? null : _Mode.MissionDirector);
+                _Mode == null ? G10_EmptyModeHud.Instance : _Mode.Hud);
         }
 
         void StartNewGame()
@@ -110,7 +116,7 @@ namespace OOPGames
         void ContinueGame()
         {
             _Mode = _Menu.SelectedMode;
-            G10_SolarShooterModeSave save = G10_SolarShooterSaves.Data.GetMode(_Mode.Id);
+            G10_SolarShooterModeSave save = _Saves.GetMode(_Mode.Id);
             if (!save.HasResume)
             {
                 _Menu.SetStatusMessage("KEIN SPIELSTAND FUER " + _Mode.Name);
@@ -126,22 +132,8 @@ namespace OOPGames
         void SaveProgress(bool canResume)
         {
             if (_Session == null || _Mode == null) return;
-            G10_SolarShooterModeSave save = G10_SolarShooterSaves.Data.GetMode(_Mode.Id);
-            save.HasResume = canResume;
-            save.ResumeStageIndex = _Session.StageIndex;
-            save.ResumeScore = _Session.Score;
-            save.ResumeWeaponLevel = _Session.Player.WeaponLevel;
-            save.ResumeMissionsCompleted = _Mode.MissionsCompleted;
-            save.ResumeMissionsAttempted = _Mode.MissionDirector == null
-                ? 0 : _Mode.MissionDirector.MissionsAttempted;
-            save.ResumePreviousMissionId = _Mode.MissionDirector == null
-                ? null : _Mode.MissionDirector.PreviousMissionId;
-            save.BestScore = Math.Max(save.BestScore, _Session.Score);
-            save.BestStage = Math.Max(save.BestStage, _Session.StageIndex + 1);
-            save.BestWeaponLevel = Math.Max(save.BestWeaponLevel, _Session.Player.WeaponLevel);
-            save.BestMissionsCompleted = Math.Max(
-                save.BestMissionsCompleted, _Mode.MissionsCompleted);
-            G10_SolarShooterSaves.Save();
+            _Mode.WriteSave(_Saves.GetMode(_Mode.Id), _Session, canResume);
+            _Saves.Save();
         }
 
         void ReturnToMenu()

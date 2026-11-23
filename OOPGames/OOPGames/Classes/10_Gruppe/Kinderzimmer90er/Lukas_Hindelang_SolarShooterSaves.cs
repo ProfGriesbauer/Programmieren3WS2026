@@ -37,17 +37,34 @@ namespace OOPGames
         }
     }
 
-    internal static class G10_SolarShooterSaves
+    // Persistence is injected into the game (like IG10_HighscoreStore in Tetris), so the
+    // game logic can be tested with an in-memory store instead of the real save file.
+    internal interface IG10_ShooterSaveStore
     {
-        static readonly string Folder = Path.Combine(
+        G10_SolarShooterModeSave GetMode(string modeId);
+        void Save();
+    }
+
+    internal sealed class G10_FileShooterSaveStore : IG10_ShooterSaveStore
+    {
+        public static readonly string DefaultFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Programmieren3WS2026", "Kinderzimmer90er");
-        static G10_SolarShooterSaveData _Data;
+            "Programmieren3WS2026", "Kinderzimmer90er", "solarshooter_saves.json");
 
-        internal static string FilePath { get; set; } =
-            Path.Combine(Folder, "solarshooter_saves.json");
+        readonly string _FilePath;
+        G10_SolarShooterSaveData _Data;
 
-        public static G10_SolarShooterSaveData Data
+        public G10_FileShooterSaveStore()
+            : this(DefaultFilePath) { }
+
+        public G10_FileShooterSaveStore(string filePath)
+        {
+            if (string.IsNullOrEmpty(Path.GetDirectoryName(filePath)))
+                throw new ArgumentException("The SolarShooter save path must include a directory.", "filePath");
+            _FilePath = filePath;
+        }
+
+        G10_SolarShooterSaveData Data
         {
             get
             {
@@ -56,23 +73,25 @@ namespace OOPGames
             }
         }
 
-        public static void Save()
+        public G10_SolarShooterModeSave GetMode(string modeId)
         {
-            string directory = Path.GetDirectoryName(FilePath);
-            if (string.IsNullOrEmpty(directory))
-                throw new InvalidOperationException("The SolarShooter save path must include a directory.");
-            Directory.CreateDirectory(directory);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(
+            return Data.GetMode(modeId);
+        }
+
+        public void Save()
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_FilePath));
+            File.WriteAllText(_FilePath, JsonSerializer.Serialize(
                 Data, new JsonSerializerOptions { WriteIndented = true }));
         }
 
-        static G10_SolarShooterSaveData Load()
+        G10_SolarShooterSaveData Load()
         {
-            if (!File.Exists(FilePath)) return new G10_SolarShooterSaveData();
+            if (!File.Exists(_FilePath)) return new G10_SolarShooterSaveData();
             G10_SolarShooterSaveData data =
-                JsonSerializer.Deserialize<G10_SolarShooterSaveData>(File.ReadAllText(FilePath));
+                JsonSerializer.Deserialize<G10_SolarShooterSaveData>(File.ReadAllText(_FilePath));
             if (data == null || data.Modes == null)
-                throw new InvalidDataException("Der SolarShooter-Spielstand ist ungueltig: " + FilePath);
+                throw new InvalidDataException("Der SolarShooter-Spielstand ist ungueltig: " + _FilePath);
             return data;
         }
     }

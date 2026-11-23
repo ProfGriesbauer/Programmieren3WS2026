@@ -30,19 +30,19 @@ namespace OOPGames
 
     internal readonly struct G10_TetrisDropTrail
     {
-        public G10_TetrisDropTrail(int column, int fromRow, int toRow, Color color, float startSeconds)
+        public G10_TetrisDropTrail(int column, int fromRow, int toRow, G10_TetrominoKind kind, float startSeconds)
         {
             Column = column;
             FromRow = fromRow;
             ToRow = toRow;
-            Color = color;
+            Kind = kind;
             StartSeconds = startSeconds;
         }
 
         public int Column { get; }
         public int FromRow { get; }
         public int ToRow { get; }
-        public Color Color { get; }
+        public G10_TetrominoKind Kind { get; }
         public float StartSeconds { get; }
     }
 
@@ -115,7 +115,7 @@ namespace OOPGames
                     if (piece.X + cell.X == column) top = Math.Min(top, piece.Y + cell.Y);
                 if (top == int.MaxValue) continue;
                 _Trails.Add(new G10_TetrisDropTrail(column, top - args.Distance, top,
-                    piece.Shape.Color, _Session.PlaySeconds));
+                    piece.Shape.Kind, _Session.PlaySeconds));
             }
         }
     }

@@ -1,8 +1,19 @@
 using System.Collections.Generic;
-using System.Windows.Media;
 
 namespace OOPGames
 {
+    // The seven shapes. The model only knows the kind; the renderer chooses the colour.
+    internal enum G10_TetrominoKind
+    {
+        I,
+        O,
+        T,
+        S,
+        Z,
+        J,
+        L
+    }
+
     internal readonly struct G10_TetrominoCell
     {
         public G10_TetrominoCell(int x, int y)
@@ -82,8 +93,8 @@ namespace OOPGames
         }
 
         public int BoxSize { get; }
-        public abstract string Name { get; }
-        public abstract Color Color { get; }
+        public abstract G10_TetrominoKind Kind { get; }
+        public string Name { get { return Kind.ToString(); } }
         public virtual bool CanRotate { get { return true; } }
         public virtual G10_TetrisKickTable Kicks { get { return G10_TetrisKickTable.Standard; } }
 
@@ -115,51 +126,44 @@ namespace OOPGames
     internal sealed class G10_ITetromino : G10_Tetromino
     {
         public G10_ITetromino() : base(4, C(0, 1), C(1, 1), C(2, 1), C(3, 1)) { }
-        public override string Name { get { return "I"; } }
-        public override Color Color { get { return Color.FromRgb(66, 214, 236); } }
+        public override G10_TetrominoKind Kind { get { return G10_TetrominoKind.I; } }
         public override G10_TetrisKickTable Kicks { get { return G10_TetrisKickTable.IPiece; } }
     }
 
     internal sealed class G10_OTetromino : G10_Tetromino
     {
         public G10_OTetromino() : base(4, C(1, 0), C(2, 0), C(1, 1), C(2, 1)) { }
-        public override string Name { get { return "O"; } }
-        public override Color Color { get { return Color.FromRgb(248, 208, 72); } }
+        public override G10_TetrominoKind Kind { get { return G10_TetrominoKind.O; } }
         public override bool CanRotate { get { return false; } }
     }
 
     internal sealed class G10_TTetromino : G10_Tetromino
     {
         public G10_TTetromino() : base(3, C(1, 0), C(0, 1), C(1, 1), C(2, 1)) { }
-        public override string Name { get { return "T"; } }
-        public override Color Color { get { return Color.FromRgb(178, 106, 232); } }
+        public override G10_TetrominoKind Kind { get { return G10_TetrominoKind.T; } }
     }
 
     internal sealed class G10_STetromino : G10_Tetromino
     {
         public G10_STetromino() : base(3, C(1, 0), C(2, 0), C(0, 1), C(1, 1)) { }
-        public override string Name { get { return "S"; } }
-        public override Color Color { get { return Color.FromRgb(104, 214, 112); } }
+        public override G10_TetrominoKind Kind { get { return G10_TetrominoKind.S; } }
     }
 
     internal sealed class G10_ZTetromino : G10_Tetromino
     {
         public G10_ZTetromino() : base(3, C(0, 0), C(1, 0), C(1, 1), C(2, 1)) { }
-        public override string Name { get { return "Z"; } }
-        public override Color Color { get { return Color.FromRgb(240, 86, 100); } }
+        public override G10_TetrominoKind Kind { get { return G10_TetrominoKind.Z; } }
     }
 
     internal sealed class G10_JTetromino : G10_Tetromino
     {
         public G10_JTetromino() : base(3, C(0, 0), C(0, 1), C(1, 1), C(2, 1)) { }
-        public override string Name { get { return "J"; } }
-        public override Color Color { get { return Color.FromRgb(74, 128, 240); } }
+        public override G10_TetrominoKind Kind { get { return G10_TetrominoKind.J; } }
     }
 
     internal sealed class G10_LTetromino : G10_Tetromino
     {
         public G10_LTetromino() : base(3, C(2, 0), C(0, 1), C(1, 1), C(2, 1)) { }
-        public override string Name { get { return "L"; } }
-        public override Color Color { get { return Color.FromRgb(248, 150, 58); } }
+        public override G10_TetrominoKind Kind { get { return G10_TetrominoKind.L; } }
     }
 }
