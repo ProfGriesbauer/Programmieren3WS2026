@@ -26,6 +26,9 @@ namespace OOPGames
         public const string BodoSkin = "pc-201810-C89068-384858-282838-101010-202838";
         public const string RudiSkin = "pc-A06030-E8B890-38A050-404858-603020-F0C030";
         public const string PaulaSkin = "pc-F860D0-F0C8A0-282838-383848-F8F8F8-x";
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Studentin Lea: blond, helle Haut, hellgrün gekleidet (statt der
+        // geteilten Vorlage "dealer_blue" mit Weste und Krawatte); Stadt-Figur und Gesprächsporträt nutzen diese ID.
+        public const string LeaSkin = "student_lea";
 
         private static G1C_NpcCharacter Karl()
         {

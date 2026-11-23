@@ -72,8 +72,10 @@ namespace OOPGames
                     double y = listY + (i - first) * OptionHeight;
                     if (i == c.FishScrollIndex)
                         r.DrawRect(OptionX - 2, y, optionWidth, OptionHeight - 1, SelectedRow, G1C_UiColors.PanelInner, 1);
-                    r.Text("> " + item.Name + "  " + item.SellValue + " Chips", OptionX + 2, y + 2, 8.5,
-                        G1C_UiColors.Text, optionWidth - 6);
+                    // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – kleine Fischgrafik links neben dem Namen
+                    r.Sprite("item_" + item.Id, OptionX + 1, y, OptionHeight - 2, OptionHeight - 2);
+                    r.Text(item.Name + "  " + item.SellValue + " Chips", OptionX + OptionHeight + 2, y + 2, 8.5,
+                        G1C_UiColors.Text);
                 }
                 r.Text("[W/S] scrollen  [Q] zurück", OptionX, panelY + 122, 8, G1C_UiColors.Disabled);
                 return;

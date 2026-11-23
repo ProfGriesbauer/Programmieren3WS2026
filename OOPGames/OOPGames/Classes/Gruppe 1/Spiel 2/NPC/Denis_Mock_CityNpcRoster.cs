@@ -35,7 +35,7 @@ namespace OOPGames
                     PersonalStory = "Ich kümmere mich um die Grünflächen zwischen den Häusern.",
                     GeneralMonologues = new[] { "Die Blumen brauchen heute Wasser.", "In der Stadt ist es erstaunlich grün." }
                 }, 55, 55, 30),
-                new G1C_NpcCharacter("Studentin Lea", "dealer_blue", new G1C_NpcPersonality
+                new G1C_NpcCharacter("Studentin Lea", G1C_ShopNpcRoster.LeaSkin /* Änderung durch: Patrick Lupierz – 23.11.2026 – eigenes Aussehen */, new G1C_NpcPersonality
                 {
                     Role = "Studentin",
                     Traits = "neugierig, ruhig",
@@ -122,8 +122,9 @@ namespace OOPGames
                 return text.ToString();
             }, G1C_NpcExpression.Thoughtful));
             p.Topics.Add(new G1C_DialogueTopic("Wofuer sind die Fische?", context =>
-                "Gefangene Fische werden ins Inventar gelegt und koennen in jedem Laden verkauft werden.\n" +
-                "Der verkaufte Wert steht in der Fischliste. Weitere Quests oder Rezepte koennen spaeter dieselben Fischdaten verwenden.", G1C_NpcExpression.Thoughtful));
+                // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Angeln macht Spaß und bringt nebenbei Chips
+                "Angeln kannst du einfach zum Spaß – am Wasser sitzen, abschalten, schauen, was anbeißt.\n" +
+                "Und die Fische sind nicht umsonst: Du kannst sie in jedem Laden verkaufen, und das bringt dir Chips.", G1C_NpcExpression.Happy));
             p.Topics.Add(new G1C_DialogueTopic("Wann kann ich hier am besten angeln?", context =>
                 "Am ruhigsten ist es am frühen Morgen und am späten Abend. Dann beißt es zwar nicht immer, aber die seltenen Fische kommen eher.", G1C_NpcExpression.Happy));
             p.Topics.Add(new G1C_DialogueTopic("Hast du einen besonderen Tipp?", context =>

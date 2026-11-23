@@ -2435,3 +2435,12 @@ beim poker duell wird automatisch gegen max gespielt laut ausgabe der dealer sol
 ```
 
 Ergebnisvermerk: Gespielt wurde schon gegen den Duellanten (eigene KI mit dessen Namen), aber sechs Poker-Texte nannten fest "Max" (Showdown, Hand-Info, Setzen, Überlegen, Knopf). Jetzt alle über _ai.Name; im Duell heißt auch die KI-Überlegung nach dem Namen. Test spielt sechs Duell-Hände und prüft, dass nie "Max" erscheint. Build 0/0, Selbsttest 90/90. Übernommen von: Patrick Lupierz nach Prüfung.
+
+### Prompt 23-11-2026 (4) (Claude Code)
+
+```text
+füge in der liste der fische wenn man mit denis redet links neben dem namen eine kleine verson von den fischen sodass man weis welcher fisch wie aussieht
+```
+
+Ergebnisvermerk: In der Fischliste im Gespräch mit Denis (Welche Fische gibt es?) steht links neben jedem Namen die kleine Fischgrafik (dasselbe Sprite wie im Inventar). Nur Darstellung in Eduard Schoenfelds ConversationView geändert. Build 0/0, Selbsttest 90/90, Bild geprüft. Übernommen von: Patrick Lupierz nach Prüfung.
+

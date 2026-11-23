@@ -96,7 +96,7 @@ namespace OOPGames
             AddTownNpc("Gast Lena", "guest", G1C_WorldLocation.Home);
             AddTownNpc("Kurier Paul", "dealer_green", G1C_WorldLocation.Hospital);
             AddTownNpc("Gärtner Sam", "bartender", G1C_WorldLocation.Market);
-            AddTownNpc("Studentin Lea", "dealer_blue", G1C_WorldLocation.Casino);
+            AddTownNpc("Studentin Lea", G1C_ShopNpcRoster.LeaSkin, G1C_WorldLocation.Casino); // Änderung durch: Patrick Lupierz – 23.11.2026 – blond, hellgrün
             AddTownNpc("Geldhai Viktor", "dealer_red", G1C_WorldLocation.Bank, G1C_InteractionType.LoanShark);
 
             // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Enten sind nicht mehr begehbar

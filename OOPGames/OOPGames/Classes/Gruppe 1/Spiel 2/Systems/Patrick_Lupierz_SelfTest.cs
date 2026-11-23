@@ -111,6 +111,8 @@ namespace OOPGames
             run("Angler", "Fischliste ist dynamisch und enthält alle Angelarten", AnglerFishScrollData);
             run("Eduard", "Eduard steht bei den Spielautomaten und besitzt spielsüchtige Dialoge", EduardSlotNpc);
             run("Eduard", "Eduard spielt am linken Automaten, blockiert ihn, gestreiftes Hemd/Mütze, viele Sprüche", EduardBlocksLeftMachine); // Patrick Lupierz – 22.11.2026
+            run("NPC", "Studentin Lea: eigenes Aussehen (blond, hellgrün, keine Krawatte), nicht mehr die geteilte Vorlage", LeaOwnLook); // Patrick Lupierz – 23.11.2026
+            run("Angler", "Denis: 'Wofuer sind die Fische?' antwortet (Spaß, verkaufen), nur 'Welche Fische gibt es?' öffnet das Lexikon", AnglerFishQuestions); // Patrick Lupierz – 23.11.2026
             run("Fenster", "Welt füllt jede Fenstergröße, Minispiele mittig im festen 480x320-Rahmen", WindowScaling); // Patrick Lupierz – 22.11.2026
             run("NPC", "Duell: NPC ansprechen, herausfordern, Pong spielen; Einsatz, Geldbeutel und Duell-Gedächtnis", NpcDuel); // Patrick Lupierz – 23.11.2026
             run("NPC", "Duell: Spielauswahl Pong/Poker/Blackjack, Poker und Blackjack gegen den NPC werden ausgewertet", NpcDuelGameChoice); // Patrick Lupierz – 23.11.2026
@@ -825,6 +827,53 @@ namespace OOPGames
                 all.Npcs.Conversation.Close();
             }
             Check(familyChecked >= 2, "Mutter und Oma wurden nicht geprüft");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Denis' Fischfragen im echten Gespräch. "Wofuer sind die Fische?" gibt eine Antwort (Angeln zum Spaß,
+        //          Fische verkaufen) und öffnet kein Lexikon; "Welche Fische gibt es?" öffnet das Lexikon.
+        private static void AnglerFishQuestions()
+        {
+            foreach (bool lexicon in new[] { false, true })
+            {
+                G1C_GameManager game = RunningGame();
+                G1C_Conversation c = game.Npcs.Conversation;
+                c.Open(game.Npcs.Find("Denis der Angler"), null);
+                int ask = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Ich hab da eine Frage"));
+                Check(ask >= 0, "Keine Fragen-Option bei Denis");
+                c.Choose(ask);
+                string wanted = lexicon ? "Welche Fische gibt es?" : "Wofuer sind die Fische?";
+                for (int page = 0; page < 4 && !c.Options.Any(o => o.Text == wanted); page++)
+                {
+                    int more = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Weitere Fragen"));
+                    Check(more >= 0, "Frage nicht gefunden: " + wanted);
+                    c.Choose(more);
+                }
+                c.Choose(c.Options.ToList().FindIndex(o => o.Text == wanted));
+                if (lexicon) Check(c.FishScrollMode, "Lexikon öffnet sich nicht");
+                else
+                {
+                    Check(!c.FishScrollMode, "Lexikon überdeckt die Antwort");
+                    Check(c.Line.Contains("Spaß") && c.Line.Contains("verkaufen"), "Antwort nennt Spaß/Verkaufen nicht: " + c.Line);
+                }
+            }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Studentin Lea hat ihr eigenes Aussehen in Stadt, Casino-Besuch und Gespräch (Porträt), ohne goldene Krawatte.
+        private static void LeaOwnLook()
+        {
+            G1C_GameManager game = RunningGame();
+            Equal(G1C_ShopNpcRoster.LeaSkin, game.Npcs.Find("Studentin Lea").Skin, "Skin im Profil");
+            G1C_Npc town = game.Exterior.TownNpcs.First(n => n.Name == "Studentin Lea");
+            Equal(G1C_ShopNpcRoster.LeaSkin, town.Skin, "Skin in der Stadt");
+            Check(G1C_ShopNpcRoster.LeaSkin != "dealer_blue", "Lea nutzt noch die geteilte Vorlage");
+            System.Windows.Media.Imaging.BitmapSource lea = G1C_BuiltInSprites.Create(G1C_ShopNpcRoster.LeaSkin + "_down_0");
+            Check(lea != null, "Grafik für Lea fehlt");
+            int[] pixels = new int[lea.PixelWidth * lea.PixelHeight];
+            System.Windows.Media.Imaging.BitmapSource bgra = new System.Windows.Media.Imaging.FormatConvertedBitmap(lea, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+            bgra.CopyPixels(pixels, lea.PixelWidth * 4, 0);
+            Check(!pixels.Contains(unchecked((int)0xFFD8A848)), "Goldene Krawatte noch sichtbar");
         }
 
         // Entwickler: Patrick Lupierz – Datum: 23.11.2026

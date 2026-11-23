@@ -29,6 +29,7 @@ namespace OOPGames
         {
             public Color Hair, Skin, Shirt, Vest, Pants, Shoes;
             public Color? Hat; // nur Spielfigur
+            public bool NoTie; // Änderung durch: Patrick Lupierz – 23.11.2026 – keine goldene Krawatte (Studentin Lea)
             public Color? Stripes; // Änderung durch: Patrick Lupierz – 22.11.2026 – quergestreiftes Hemd (Eduard)
         }
 
@@ -43,6 +44,8 @@ namespace OOPGames
             { "guest",        new CharacterPalette { Hair = Hex(0xF0D060), Skin = Hex(0xF8D0A8), Shirt = Hex(0x40A060), Vest = Hex(0x40A060), Pants = Hex(0x6A4A2A), Shoes = Hex(0x402010) } },
             // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Eduard am Spielautomaten: gestreiftes Hemd, schwarze Mütze
             { "gambler_eduard", new CharacterPalette { Hair = Hex(0x5A3A20), Skin = Hex(0xF0C090), Shirt = White, Vest = White, Pants = Hex(0x283048), Shoes = Hex(0x181818), Hat = Hex(0x141418), Stripes = Hex(0x203070) } },
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Studentin Lea: blond, helle Haut, hellgrün, ohne Krawatte
+            { "student_lea",  new CharacterPalette { Hair = Hex(0xF2D870), Skin = Hex(0xF8D4B0), Shirt = Hex(0xA8E4A0), Vest = Hex(0xA8E4A0), Pants = Hex(0x78B880), Shoes = White, NoTie = true } },
         };
 
         public static BitmapSource Create(string id)
@@ -671,7 +674,7 @@ namespace OOPGames
                 c.FillRect(7, 10, 2, 8, p.Vest);
                 c.FillRect(15, 10, 2, 8, p.Vest);
                 c.FillRect(10, 10, 4, 2, White);
-                if (!p.Stripes.HasValue) c.FillRect(11, 12, 2, 5, GoldColor);   // gestreiftes Hemd ohne Krawatte
+                if (!p.Stripes.HasValue && !p.NoTie) c.FillRect(11, 12, 2, 5, GoldColor);   // gestreiftes Hemd ohne Krawatte
                 c.Set(9, 15, Darken(p.Vest, 0.75));
                 c.Set(15, 15, Darken(p.Vest, 0.75));
             }
@@ -733,7 +736,7 @@ namespace OOPGames
             c.FillRect(9, 10, 8, 8, p.Shirt);
             c.FillRect(15, 10, 2, 8, p.Vest);
             c.FillRect(11, 10, 4, 2, White);
-            if (!p.Stripes.HasValue) c.FillRect(12, 12, 2, 5, GoldColor);
+            if (!p.Stripes.HasValue && !p.NoTie) c.FillRect(12, 12, 2, 5, GoldColor);
 
             // Arm
             int handX = frame == 1 ? 10 : (frame == 2 ? 13 : 12);

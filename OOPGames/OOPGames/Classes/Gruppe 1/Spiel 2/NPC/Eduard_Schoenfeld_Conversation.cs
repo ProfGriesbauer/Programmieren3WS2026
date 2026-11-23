@@ -397,7 +397,9 @@ namespace OOPGames
             };
             Say(topic.Ask(context), topic.Expression);
             if (firstTime) GrantSocialTrust(1); // neue Themen festigen die Beziehung ein wenig
-            if (Npc.Name == "Denis der Angler" && topic.Question.Contains("Fische"))
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – nur "Welche Fische gibt es?" öffnet das Lexikon;
+            // "Wofuer sind die Fische?" bleibt eine normale Antwort (vorher wurde sie vom Lexikon überdeckt).
+            if (Npc.Name == "Denis der Angler" && topic.Question == "Welche Fische gibt es?")
             {
                 OpenFishScroll();
                 return;
