@@ -80,7 +80,7 @@ namespace OOPGames
             // Speeds are distances per regular tick; convert the remaining game time to ticks.
             double travel = EffectiveSpeed * WanderSpeedMultiplier
                 * _wanderRemainingSeconds / ArenaField.GameTickDurationSeconds;
-            return ClampToMovementBounds(currentPosition,
+            return ClampToMovementBounds(field, currentPosition,
                 _wanderDirectionX, _wanderDirectionY, travel);
         }
 
@@ -125,19 +125,19 @@ namespace OOPGames
             PlayerCharacter player = field.Player;
             if (!IsAlive || !player.IsAlive)
             {
-                Move(0, 0, ArenaField.MovementBounds, speedScale);
+                Move(0, 0, field.MovementArea, speedScale);
                 return;
             }
 
             double offsetX = player.PositionX - PositionX;
             double offsetY = player.PositionY - PositionY;
-            System.Windows.Rect movementBounds = ArenaField.MovementBounds;
+            System.Windows.Rect movementBounds = field.MovementArea;
 
             double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
             if (distance > CurrentSightRange)
             {
                 _hasSeenPlayer = false;
-                UpdateWanderBehavior(movementBounds, speedScale);
+                UpdateWanderBehavior(field, movementBounds, speedScale);
                 return;
             }
 
@@ -164,6 +164,7 @@ namespace OOPGames
         }
 
         private void UpdateWanderBehavior(
+            ArenaField field,
             System.Windows.Rect movementBounds, double speedScale)
         {
             if (EffectiveSpeed == 0)
@@ -184,7 +185,7 @@ namespace OOPGames
                 speedScale);
             if (PositionX == previousX && PositionY == previousY)
             {
-                TurnTowardArenaCenter();
+                TurnTowardArenaCenter(field);
                 Move(_wanderDirectionX * WanderSpeedMultiplier,
                     _wanderDirectionY * WanderSpeedMultiplier, movementBounds,
                     speedScale);
@@ -192,13 +193,14 @@ namespace OOPGames
         }
 
         private Point ClampToMovementBounds(
+            ArenaField field,
             Point start, double directionX, double directionY, double distance)
         {
             double radius = Size / 2;
             double minimumX = ArenaField.WallThickness + radius;
-            double maximumX = ArenaField.MapWidth - ArenaField.WallThickness - radius;
+            double maximumX = field.WorldWidth - ArenaField.WallThickness - radius;
             double minimumY = ArenaField.WallThickness + radius;
-            double maximumY = ArenaField.MapHeight - ArenaField.WallThickness - radius;
+            double maximumY = field.WorldHeight - ArenaField.WallThickness - radius;
             double destinationX = start.X + directionX * distance;
             double destinationY = start.Y + directionY * distance;
             return new Point(
@@ -214,10 +216,10 @@ namespace OOPGames
             ScheduleNextWanderDirectionChange();
         }
 
-        private void TurnTowardArenaCenter()
+        private void TurnTowardArenaCenter(ArenaField field)
         {
-            double directionX = ArenaField.MapWidth / 2 - PositionX;
-            double directionY = ArenaField.MapHeight / 2 - PositionY;
+            double directionX = field.WorldWidth / 2 - PositionX;
+            double directionY = field.WorldHeight / 2 - PositionY;
             double distance = Math.Sqrt(directionX * directionX + directionY * directionY);
             if (distance == 0)
             {

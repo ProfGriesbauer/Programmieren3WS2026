@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
@@ -25,7 +26,6 @@ namespace OOPGames
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
         private Canvas _zoomInputCanvas;
-        private BitmapSource _arenaBackground;
 
         // Reusable brushes avoid creating new colors for every frame.
         private static readonly Brush FloorBrush = new SolidColorBrush(Color.FromRgb(55, 93, 65));
@@ -63,6 +63,8 @@ namespace OOPGames
         private bool _lastGameStarted;
         private double _pauseMenuCanvasWidth;
         private double _pauseMenuCanvasHeight;
+        private Canvas _fullScreenMenuCanvas;
+        private Border _fullScreenMenuPanel;
 
         public string Name { get { return "Arena Survival"; } }
 
@@ -130,6 +132,7 @@ namespace OOPGames
                 }
             }
 
+            DetachFullScreenMenu();
             AttachZoomInput(canvas, field);
 
             // Remove the previous frame and clip drawings to the visible viewport.
@@ -155,33 +158,32 @@ namespace OOPGames
             AddRectangle(worldCanvas, FloorBrush,
                 mapLeft + ArenaField.WallThickness,
                 mapTop + ArenaField.WallThickness,
-                ArenaField.MapWidth - 2 * ArenaField.WallThickness,
-                ArenaField.MapHeight - 2 * ArenaField.WallThickness);
-            if (_arenaBackground == null)
-            {
-                _arenaBackground = LoadArenaBackground();
-            }
+                field.WorldWidth - 2 * ArenaField.WallThickness,
+                field.WorldHeight - 2 * ArenaField.WallThickness);
             Image backgroundImage = new Image
             {
-                Source = _arenaBackground,
-                Width = ArenaField.MapWidth - 2 * ArenaField.WallThickness,
-                Height = ArenaField.MapHeight - 2 * ArenaField.WallThickness,
+                Source = field.MapImage,
+                Width = field.WorldWidth,
+                Height = field.WorldHeight,
                 Stretch = Stretch.Fill,
                 IsHitTestVisible = false
             };
-            Canvas.SetLeft(backgroundImage, mapLeft + ArenaField.WallThickness);
-            Canvas.SetTop(backgroundImage, mapTop + ArenaField.WallThickness);
+            Canvas.SetLeft(backgroundImage, mapLeft);
+            Canvas.SetTop(backgroundImage, mapTop);
             worldCanvas.Children.Add(backgroundImage);
 
             // Draw the four wall segments over the floor to frame the playable area.
-            AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop, ArenaField.MapWidth, ArenaField.WallThickness);
-            AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop + ArenaField.MapHeight - ArenaField.WallThickness,
-                ArenaField.MapWidth, ArenaField.WallThickness);
+            AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop,
+                field.WorldWidth, ArenaField.WallThickness);
+            AddRectangle(worldCanvas, WallBrush,
+                mapLeft, mapTop + field.WorldHeight - ArenaField.WallThickness,
+                field.WorldWidth, ArenaField.WallThickness);
             AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop + ArenaField.WallThickness,
-                ArenaField.WallThickness, ArenaField.MapHeight - 2 * ArenaField.WallThickness);
-            AddRectangle(worldCanvas, WallBrush, mapLeft + ArenaField.MapWidth - ArenaField.WallThickness,
+                ArenaField.WallThickness, field.WorldHeight - 2 * ArenaField.WallThickness);
+            AddRectangle(worldCanvas, WallBrush,
+                mapLeft + field.WorldWidth - ArenaField.WallThickness,
                 mapTop + ArenaField.WallThickness, ArenaField.WallThickness,
-                ArenaField.MapHeight - 2 * ArenaField.WallThickness);
+                field.WorldHeight - 2 * ArenaField.WallThickness);
 
             _debugRenderer.PaintWorldOverlays(worldCanvas, field, left, top);
 
@@ -482,6 +484,11 @@ namespace OOPGames
 
         private void OnZoomKeyDown(object sender, KeyEventArgs e)
         {
+            if (IsTextEntryFocused())
+            {
+                return;
+            }
+
             if (!e.IsRepeat)
             {
                 if (_keyBindingCaptureAction.HasValue
@@ -555,6 +562,10 @@ namespace OOPGames
 
         private void OnZoomKeyUp(object sender, KeyEventArgs e)
         {
+            if (IsTextEntryFocused())
+            {
+                return;
+            }
             if (_zoomInputField != null
                 && _zoomInputField.HandleKeyUp(e.Key))
             {
@@ -564,6 +575,27 @@ namespace OOPGames
                 }
                 e.Handled = true;
             }
+        }
+
+        private static bool IsTextEntryFocused()
+        {
+            DependencyObject focusedElement =
+                Keyboard.FocusedElement as DependencyObject;
+            while (focusedElement != null)
+            {
+                if (focusedElement
+                    is System.Windows.Controls.Primitives.TextBoxBase)
+                {
+                    return true;
+                }
+
+                DependencyObject parent =
+                    focusedElement is Visual || focusedElement is Visual3D
+                        ? VisualTreeHelper.GetParent(focusedElement)
+                        : null;
+                focusedElement = parent ?? LogicalTreeHelper.GetParent(focusedElement);
+            }
+            return false;
         }
 
         private void OnZoomWindowClosed(object sender, EventArgs e)
@@ -664,18 +696,6 @@ namespace OOPGames
                 FindAssetPath(profile.AnimationMetadataPath));
         }
 
-        private static BitmapSource LoadArenaBackground()
-        {
-            BitmapImage background = new BitmapImage();
-            background.BeginInit();
-            background.UriSource = new Uri(
-                FindAssetPath("Background", "Background1.png"), UriKind.Absolute);
-            background.CacheOption = BitmapCacheOption.OnLoad;
-            background.EndInit();
-            background.Freeze();
-            return background;
-        }
-
         // Locate project assets both when launched from the project and from its build output.
         internal static string FindAssetPath(params string[] relativePath)
         {
@@ -770,18 +790,36 @@ namespace OOPGames
                 Background = new SolidColorBrush(Color.FromRgb(27, 38, 52))
             };
             StackPanel contents = new StackPanel();
+            if (_menuPage == MenuPage.DevTools)
+            {
+                DrawStartMenuFullScreen(canvas,
+                    new ArenaDevToolsControl(field, () =>
+                    {
+                        _menuPage = MenuPage.Main;
+                        canvas.Tag = null;
+                    }),
+                    width, height);
+                return;
+            }
+
             if (_menuPage == MenuPage.SkillTree)
             {
-                contents.Children.Add(_progressionMenuRenderer.CreateSkillTree(
-                    field, () => canvas.Tag = null));
-                contents.Children.Add(CreateMenuButton("Back",
+                Grid skillTreePage = new Grid();
+                skillTreePage.RowDefinitions.Add(
+                    new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                skillTreePage.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                skillTreePage.Children.Add(_progressionMenuRenderer.CreateSkillTree(
+                    field, () => canvas.Tag = null,
+                    Math.Max(0, width - 48), Math.Max(0, height - 48)));
+                Button backButton = CreateMenuButton("Back",
                     () =>
                     {
                         _menuPage = MenuPage.Main;
                         canvas.Tag = null;
-                    }));
-                panel.Child = contents;
-                DrawStartMenuPanel(canvas, panel, width, height);
+                    });
+                Grid.SetRow(backButton, 1);
+                skillTreePage.Children.Add(backButton);
+                DrawStartMenuFullScreen(canvas, skillTreePage, width, height);
                 return;
             }
 
@@ -986,6 +1024,12 @@ namespace OOPGames
                     _menuPage = MenuPage.Animation;
                     canvas.Tag = null;
                 }));
+            contents.Children.Add(CreateMenuButton("Dev Tool",
+                () =>
+                {
+                    _menuPage = MenuPage.DevTools;
+                    canvas.Tag = null;
+                }));
             if (field.HasActiveGame && !field.IsGameOver)
             {
                 // Split row: left toggles godmode, right buys every upgrade (godmode only).
@@ -1090,13 +1134,60 @@ namespace OOPGames
             canvas.Children.Add(flash);
         }
 
-        private static void DrawStartMenuPanel(Canvas canvas, Border panel, double width, double height)
+        private void DrawStartMenuPanel(Canvas canvas, Border panel, double width, double height)
         {
+            DetachFullScreenMenu();
             panel.Measure(new Size(width, height));
             Canvas.SetLeft(panel, (width - panel.DesiredSize.Width) / 2);
             Canvas.SetTop(panel, (height - panel.DesiredSize.Height) / 2);
             canvas.Children.Add(panel);
             canvas.Tag = StartMenuTag;
+        }
+
+        private void DrawStartMenuFullScreen(
+            Canvas canvas, UIElement content, double width, double height)
+        {
+            DetachFullScreenMenu();
+            Border panel = new Border
+            {
+                Width = Math.Max(0, width - 24),
+                Height = Math.Max(0, height - 24),
+                Padding = new Thickness(12),
+                CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(77, 94, 113)),
+                Background = new SolidColorBrush(Color.FromRgb(27, 38, 52)),
+                Child = content
+            };
+            Canvas.SetLeft(panel, 12);
+            Canvas.SetTop(panel, 12);
+            canvas.Children.Add(panel);
+            _fullScreenMenuCanvas = canvas;
+            _fullScreenMenuPanel = panel;
+            canvas.SizeChanged += OnFullScreenMenuCanvasSizeChanged;
+            canvas.Tag = StartMenuTag;
+        }
+
+        private void OnFullScreenMenuCanvasSizeChanged(
+            object sender, SizeChangedEventArgs e)
+        {
+            if (!ReferenceEquals(sender, _fullScreenMenuCanvas)
+                || _fullScreenMenuPanel == null)
+            {
+                return;
+            }
+            _fullScreenMenuPanel.Width = Math.Max(0, e.NewSize.Width - 24);
+            _fullScreenMenuPanel.Height = Math.Max(0, e.NewSize.Height - 24);
+        }
+
+        private void DetachFullScreenMenu()
+        {
+            if (_fullScreenMenuCanvas != null)
+            {
+                _fullScreenMenuCanvas.SizeChanged -= OnFullScreenMenuCanvasSizeChanged;
+            }
+            _fullScreenMenuCanvas = null;
+            _fullScreenMenuPanel = null;
         }
 
         private bool IsSelectedAnimationProfile(AnimationProfile profile)
@@ -1149,6 +1240,7 @@ namespace OOPGames
             Equipment,
             Animation,
             SkillTree,
+            DevTools,
             WeaponUpgrades,
             KeyBindings
         }

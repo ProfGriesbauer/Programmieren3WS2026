@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace OOPGames
 {
@@ -39,6 +40,7 @@ namespace OOPGames
         private int _spinSwingsRaised;
         private double _motionReferenceX;
         private double _motionReferenceY;
+        private ArenaMapDefinition _map;
         // Ctrl toggles sprint on release, unless it was used for Ctrl + mouse-wheel zoom.
         private bool _sprintKeyDown;
         private bool _sprintKeyUsedForZoom;
@@ -71,6 +73,10 @@ namespace OOPGames
         public bool IsPlayerInMotion { get; private set; }
         public bool IsPlayerSprinting { get { return IsPlayerInMotion && IsSprintEnabled; } }
         public IReadOnlyList<PursuerEnemy> Enemies { get { return _enemies; } }
+        public double WorldWidth { get { return _map.Width; } }
+        public double WorldHeight { get { return _map.Height; } }
+        public BitmapSource MapImage { get { return _map.Image; } }
+        public string MapFileName { get { return _map.FileName; } }
         public Weapon SelectedPlayerWeapon
         {
             get { return Player == null ? _selectedPlayerWeapon : Player.EquippedWeapon; }
@@ -163,12 +169,57 @@ namespace OOPGames
                     MapWidth - 2 * WallThickness, MapHeight - 2 * WallThickness);
             }
         }
+        public Rect MovementArea
+        {
+            get
+            {
+                return new Rect(WallThickness, WallThickness,
+                    WorldWidth - 2 * WallThickness,
+                    WorldHeight - 2 * WallThickness);
+            }
+        }
 
         public ArenaField()
         {
+            _map = ArenaMapAssets.LoadSelectedMap();
             _combatSystem.EntityDefeated += OnEntityDefeated;
             // Create the player in the middle when a new field is constructed.
             ResetPlayer();
+        }
+
+        public void SelectMap(string fileName)
+        {
+            ArenaMapDefinition map = ArenaMapAssets.LoadMap(fileName);
+            ArenaMapAssets.SetDefaultMap(map.FileName);
+            bool mapChanged = !String.Equals(
+                _map.FileName, map.FileName, StringComparison.OrdinalIgnoreCase);
+            _map = map;
+            if (HasActiveGame)
+            {
+                RestartRunAtMenu();
+            }
+            else if (mapChanged)
+            {
+                ResetPlayer();
+            }
+        }
+
+        public void SelectSkillTree(string name)
+        {
+            ArenaSkillTreeDocument skillTree =
+                ArenaSkillTreeRepository.LoadTreeByName(name);
+            ArenaSkillTreeRepository.SelectTree(name);
+            _progression.SetSkillTree(skillTree);
+            if (HasActiveGame)
+            {
+                RestartRunAtMenu();
+            }
+        }
+
+        private void RestartRunAtMenu()
+        {
+            RestartGame();
+            ReturnToStartMenu();
         }
 
         public void ResetPlayer()
@@ -179,7 +230,7 @@ namespace OOPGames
             {
                 Player.Damaged -= OnPlayerDamaged;
             }
-            Player = new PlayerCharacter(MapWidth / 2, MapHeight / 2);
+            Player = new PlayerCharacter(WorldWidth / 2, WorldHeight / 2);
             Player.Damaged += OnPlayerDamaged;
             Player.EquippedWeapon = _selectedPlayerWeapon;
             Player.IsInvulnerable = IsGodMode;
@@ -628,7 +679,7 @@ namespace OOPGames
             if (_keyBindings.IsDown(ArenaAction.MoveLeft) || Keyboard.IsKeyDown(Key.Left)) directionX -= 1;
             if (_keyBindings.IsDown(ArenaAction.MoveRight) || Keyboard.IsKeyDown(Key.Right)) directionX += 1;
 
-            Rect movementBounds = MovementBounds;
+            Rect movementBounds = MovementArea;
             double sprintScale = IsSprintEnabled ? 1.5 : 1;
             Player.Move(directionX, directionY, movementBounds,
                 speedScale * sprintScale);
@@ -650,7 +701,7 @@ namespace OOPGames
                 return;
             }
 
-            Rect movementBounds = MovementBounds;
+            Rect movementBounds = MovementArea;
             foreach (PursuerEnemy enemy in _enemies)
             {
                 if (!enemy.IsAlive)
@@ -701,7 +752,7 @@ namespace OOPGames
 
             PlayerCharacter player = Player;
             _combatSystem.Update(
-                GetCombatEntities(), MovementBounds,
+                GetCombatEntities(), MovementArea,
                 entity => ReferenceEquals(entity, player)
                     ? playerDeltaSeconds
                     : deltaSeconds);
@@ -777,9 +828,9 @@ namespace OOPGames
         {
             double radius = PursuerEnemy.HitboxSize / 2;
             double minimumX = WallThickness + radius;
-            double maximumX = MapWidth - WallThickness - radius;
+            double maximumX = WorldWidth - WallThickness - radius;
             double minimumY = WallThickness + radius;
-            double maximumY = MapHeight - WallThickness - radius;
+            double maximumY = WorldHeight - WallThickness - radius;
             double minimumDistance = PursuerEnemy.SightRange + EnemySpawnVisibilityMargin;
             double minimumDistanceSquared = minimumDistance * minimumDistance;
 

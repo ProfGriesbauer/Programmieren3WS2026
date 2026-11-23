@@ -6,6 +6,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Polygon = System.Windows.Shapes.Polygon;
+using Polyline = System.Windows.Shapes.Polyline;
 using OOPGames;
 
 internal static class Program
@@ -15,8 +18,16 @@ internal static class Program
     [STAThread]
     private static int Main()
     {
+        string selectionPath = Path.Combine(
+            ArenaSkillTreeRepository.TreeDirectory, "SelectedSkillTree.txt");
+        bool hadSelection = File.Exists(selectionPath);
+        string previousSelection = hadSelection
+            ? File.ReadAllText(selectionPath)
+            : null;
         try
         {
+            ArenaSkillTreeRepository.SelectTree(
+                ArenaSkillTreeRepository.DefaultTreeName);
             TestDamageHealingAndDeath();
             TestSlowAndFreezeExpire();
             TestMeleeTargetsAndCooldown();
@@ -28,6 +39,14 @@ internal static class Program
             TestBowAutoAimAndUpgrades();
             TestSwordUpgradesAndSpin();
             TestMultiplePlayerAbilities();
+            TestArenaSkillTreeDependencies();
+            TestArenaSkillTreeStartNode();
+            TestArenaSkillTreeForcedFork();
+            TestArenaMapDimensionInput();
+            TestArenaEditorAssets();
+            TestArenaDevToolMenu();
+            TestArenaMapRestart();
+            TestArenaSkillTreeRestart();
             TestKeyBindingPersistenceAndConflicts();
             TestInputSeparatesAbilityTypes();
             TestWeaponWheelHoldAndReleaseSelection();
@@ -57,6 +76,17 @@ internal static class Program
         {
             Console.Error.WriteLine(exception);
             return 1;
+        }
+        finally
+        {
+            if (hadSelection)
+            {
+                File.WriteAllText(selectionPath, previousSelection);
+            }
+            else if (File.Exists(selectionPath))
+            {
+                File.Delete(selectionPath);
+            }
         }
     }
 
@@ -1145,9 +1175,474 @@ internal static class Program
             Assert(!field.IsGodMode,
                 "main menu can disable god mode");
         }
+
         finally
         {
             Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    private static void TestArenaSkillTreeDependencies()
+    {
+        ArenaProgression progression = new ArenaProgression();
+        ArenaSkillTreeDocument tree = new ArenaSkillTreeDocument
+        {
+            Name = "Dependency test",
+            Nodes = new List<ArenaSkillTreeNode>
+            {
+                new ArenaSkillTreeNode
+                {
+                    SkillId = ArenaProgression.MaximumHealth, X = 0, Y = 0
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = ArenaProgression.MaximumSpeed, X = 128, Y = 0
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.PowerBlast, X = 256, Y = 0
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.HealingPulse, X = 384, Y = 0
+                }
+            },
+            Connections = new List<ArenaSkillTreeConnection>
+            {
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = ArenaProgression.MaximumHealth,
+                    ToSkillId = PlayerAbilityCatalog.PowerBlast
+                },
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = ArenaProgression.MaximumSpeed,
+                    ToSkillId = PlayerAbilityCatalog.PowerBlast
+                },
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = PlayerAbilityCatalog.PowerBlast,
+                    ToSkillId = PlayerAbilityCatalog.HealingPulse
+                }
+            }
+        };
+        progression.SetSkillTree(tree);
+        progression.SetGodMode(true);
+
+        Assert(!progression.CanUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && !progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast),
+            "a skill with multiple prerequisites stays locked until every parent is bought");
+        Assert(progression.TryUpgradePlayerStat(ArenaProgression.MaximumHealth)
+            && !progression.CanUpgradeSkill(PlayerAbilityCatalog.PowerBlast),
+            "one of two prerequisites is not enough to unlock a skill");
+        Assert(progression.TryUpgradePlayerStat(ArenaProgression.MaximumSpeed)
+            && progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse)
+            && progression.TryUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
+            "purchasing prerequisite skills unlocks the next nodes in order");
+
+        tree.Connections.Add(new ArenaSkillTreeConnection
+        {
+            FromSkillId = PlayerAbilityCatalog.HealingPulse,
+            ToSkillId = ArenaProgression.MaximumHealth
+        });
+        bool rejectedCycle = false;
+        try
+        {
+            ArenaSkillTreeRepository.ValidateTree(tree);
+        }
+        catch (InvalidDataException)
+        {
+            rejectedCycle = true;
+        }
+        Assert(rejectedCycle,
+            "skill tree validation rejects circular unlock dependencies");
+    }
+
+    private static void TestArenaEditorAssets()
+    {
+        IReadOnlyList<ArenaMapElement> mapElements = ArenaMapAssets.LoadMapElements();
+        Assert(mapElements.Count == 11
+            && mapElements.Any(element => element.Name == "GrassBush")
+            && mapElements.Any(element => element.Name == "WayStraight"),
+            "map editor reads the sprite names from the BackgroundElements atlas metadata");
+
+        BitmapSource baseImage = ArenaMapAssets.LoadMapBase();
+        Assert(baseImage.PixelWidth > 0 && baseImage.PixelHeight > 0,
+            "map editor loads the selected BackgroundColour PNG");
+        Assert(ArenaSkillTreeRepository.GetImplementedSkills().Count == 5,
+            "skilltree editor exposes implemented player stats and abilities");
+
+        bool rejectedLargeMap = false;
+        try
+        {
+            ArenaMapAssets.ValidateDimensions(8192, 8192);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            rejectedLargeMap = true;
+        }
+        Assert(rejectedLargeMap,
+            "map size validation rejects dimensions exceeding the pixel budget");
+    }
+
+    private static void TestArenaSkillTreeStartNode()
+    {
+        ArenaProgression progression = new ArenaProgression();
+        ArenaSkillTreeDocument tree = new ArenaSkillTreeDocument
+        {
+            Name = "Start node test",
+            Nodes = new List<ArenaSkillTreeNode>
+            {
+                new ArenaSkillTreeNode
+                {
+                    SkillId = ArenaSkillTreeRepository.StartNodeId, X = 0, Y = 0
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.PowerBlast, X = 300, Y = 0
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.HealingPulse, X = 600, Y = 0
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = ArenaProgression.MaximumHealth, X = 300, Y = 200
+                }
+            },
+            Connections = new List<ArenaSkillTreeConnection>
+            {
+                ArenaSkillTreeRepository.CreateStartConnection(
+                    PlayerAbilityCatalog.PowerBlast),
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = PlayerAbilityCatalog.PowerBlast,
+                    ToSkillId = PlayerAbilityCatalog.HealingPulse
+                }
+            }
+        };
+        ArenaSkillTreeRepository.ValidateTree(tree);
+        progression.SetSkillTree(tree);
+        progression.SetGodMode(true);
+
+        Assert(progression.CanUpgradeSkill(PlayerAbilityCatalog.PowerBlast),
+            "a skill connected to the tree start can be unlocked immediately");
+        Assert(!progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse)
+            && !progression.CanUpgradePlayerStat(ArenaProgression.MaximumHealth),
+            "skills behind a prerequisite or disconnected from the start remain locked");
+        Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
+            "buying a start-unlocked skill unlocks its dependent skill");
+
+        tree.Connections.Add(new ArenaSkillTreeConnection
+        {
+            FromSkillId = PlayerAbilityCatalog.HealingPulse,
+            ToSkillId = ArenaSkillTreeRepository.StartNodeId
+        });
+        bool rejectedIncomingStartConnection = false;
+        try
+        {
+            ArenaSkillTreeRepository.ValidateTree(tree);
+        }
+        catch (InvalidDataException)
+        {
+            rejectedIncomingStartConnection = true;
+        }
+        Assert(rejectedIncomingStartConnection,
+            "the tree start cannot depend on another skill");
+        tree.Connections.RemoveAt(tree.Connections.Count - 1);
+
+        Canvas connectionCanvas = new Canvas
+        {
+            Width = 900,
+            Height = 300,
+            Background = Brushes.Black
+        };
+        ArenaSkillTreeVisuals.DrawConnections(
+            connectionCanvas, tree,
+            connection => Brushes.DeepSkyBlue);
+        Assert(connectionCanvas.Children.OfType<Polyline>().Count() >= 4
+            && connectionCanvas.Children.OfType<Polygon>().Count() >= 4,
+            "skill connections render as visible outlined wires with arrowheads");
+        connectionCanvas.Measure(new Size(900, 300));
+        connectionCanvas.Arrange(new Rect(0, 0, 900, 300));
+        RenderTargetBitmap renderedConnections = new RenderTargetBitmap(
+            900, 300, 96, 96, PixelFormats.Pbgra32);
+        renderedConnections.Render(connectionCanvas);
+        int wireStride = renderedConnections.PixelWidth * 4;
+        byte[] wirePixels = new byte[wireStride * renderedConnections.PixelHeight];
+        renderedConnections.CopyPixels(wirePixels, wireStride, 0);
+        Assert(wirePixels.Where((value, index) => index % 4 != 3 && value > 32).Any(),
+            "skill connection lines produce visible pixels on the editor canvas");
+
+        Border vectorTile = ArenaSkillTreeVisuals.CreateNodeTile(
+            "Kraftstoß", "Fähigkeit", ArenaSkillTreeTileState.Available);
+        Assert(vectorTile.Width == ArenaSkillTreeVisuals.NodeWidth
+            && vectorTile.Height == ArenaSkillTreeVisuals.NodeHeight
+            && vectorTile.Child is StackPanel,
+            "skill tiles use crisp vector surfaces instead of upscaled sprite pixels");
+
+        ArenaSkillTreeDocument defaultTree =
+            ArenaSkillTreeRepository.CreateDefaultTree();
+        Assert(defaultTree.Nodes.Any(node =>
+                ArenaSkillTreeRepository.IsStartNode(node.SkillId))
+            && ArenaSkillTreeRepository.GetImplementedSkills().All(skill =>
+                ArenaSkillTreeRepository.ArePrerequisitesMet(
+                    defaultTree, skill.Id, id => 0)),
+            "the default tree exposes every original skill from its start node");
+
+        string legacyTreeName = "LegacyStartMigration" + Guid.NewGuid().ToString("N");
+        string legacyTreePath = Path.Combine(
+            ArenaSkillTreeRepository.TreeDirectory, legacyTreeName + ".json");
+        try
+        {
+            ArenaSkillTreeRepository.SaveTree(legacyTreeName, new ArenaSkillTreeDocument
+            {
+                Name = legacyTreeName,
+                Nodes = new List<ArenaSkillTreeNode>
+                {
+                    new ArenaSkillTreeNode
+                    {
+                        SkillId = ArenaProgression.MaximumHealth, X = 100, Y = 100
+                    },
+                    new ArenaSkillTreeNode
+                    {
+                        SkillId = PlayerAbilityCatalog.PowerBlast, X = 400, Y = 100
+                    }
+                },
+                Connections = new List<ArenaSkillTreeConnection>
+                {
+                    new ArenaSkillTreeConnection
+                    {
+                        FromSkillId = ArenaProgression.MaximumHealth,
+                        ToSkillId = PlayerAbilityCatalog.PowerBlast
+                    }
+                }
+            });
+            ArenaSkillTreeDocument migrated =
+                ArenaSkillTreeRepository.LoadTreeByName(legacyTreeName);
+            Assert(migrated.Nodes.Any(node =>
+                    ArenaSkillTreeRepository.IsStartNode(node.SkillId))
+                && migrated.Connections.Any(connection =>
+                    ArenaSkillTreeRepository.IsStartNode(connection.FromSkillId)
+                    && connection.ToSkillId == ArenaProgression.MaximumHealth)
+                && !migrated.Connections.Any(connection =>
+                    ArenaSkillTreeRepository.IsStartNode(connection.FromSkillId)
+                    && connection.ToSkillId == PlayerAbilityCatalog.PowerBlast),
+                "legacy trees gain a start edge only for skills that were initially available");
+        }
+        finally
+        {
+            if (File.Exists(legacyTreePath))
+            {
+                File.Delete(legacyTreePath);
+            }
+        }
+    }
+
+    private static void TestArenaSkillTreeForcedFork()
+    {
+        ArenaSkillTreeNode fork = new ArenaSkillTreeNode
+        {
+            SkillId = ArenaSkillTreeRepository.CreateForkNodeId(),
+            X = 250,
+            Y = 100,
+            IsFork = true,
+            ForceDecision = true
+        };
+        ArenaSkillTreeDocument tree = new ArenaSkillTreeDocument
+        {
+            Name = "Forced fork test",
+            Nodes = new List<ArenaSkillTreeNode>
+            {
+                new ArenaSkillTreeNode
+                {
+                    SkillId = ArenaSkillTreeRepository.StartNodeId, X = 0, Y = 100
+                },
+                fork,
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.PowerBlast, X = 550, Y = 0
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.HealingPulse, X = 550, Y = 200
+                }
+            },
+            Connections = new List<ArenaSkillTreeConnection>
+            {
+                ArenaSkillTreeRepository.CreateStartConnection(fork.SkillId),
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = fork.SkillId,
+                    ToSkillId = PlayerAbilityCatalog.PowerBlast
+                },
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = fork.SkillId,
+                    ToSkillId = PlayerAbilityCatalog.HealingPulse
+                }
+            }
+        };
+        ArenaSkillTreeRepository.ValidateTree(tree);
+
+        ArenaProgression progression = new ArenaProgression();
+        progression.SetSkillTree(tree);
+        progression.SetGodMode(true);
+        Assert(progression.CanUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
+            "both exits of a forced fork are available before the player chooses");
+        Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && !progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse)
+            && !progression.TryUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
+            "buying one forced-fork exit permanently locks the other exit for the run");
+
+        progression.Reset();
+        progression.SetGodMode(true);
+        Assert(progression.CanUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
+            "resetting the run clears its forced-fork choice");
+
+        fork.ForceDecision = false;
+        progression.SetSkillTree(tree);
+        Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse)
+            && progression.TryUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
+            "a non-exclusive fork allows the player to choose both exits");
+    }
+
+    private static void TestArenaMapDimensionInput()
+    {
+        ArenaIntegerTextBox input = new ArenaIntegerTextBox
+        {
+            Text = "1800",
+            CaretIndex = 2
+        };
+        Assert(input.ProcessEditorKey(Key.D5, ModifierKeys.None)
+            && input.Text == "18500",
+            "map dimensions accept digits at the caret");
+        Assert(input.ProcessEditorKey(Key.Back, ModifierKeys.None)
+            && input.Text == "1800",
+            "map dimensions can delete digits with backspace");
+        Assert(input.ProcessEditorKey(Key.A, ModifierKeys.Control)
+            && input.ProcessEditorKey(Key.NumPad7, ModifierKeys.None)
+            && input.Text == "7",
+            "map dimensions support replacing the selection with numpad digits");
+    }
+
+    private static void TestArenaDevToolMenu()
+    {
+        ArenaField field = new ArenaField();
+        PainterG9 painter = new PainterG9();
+        Canvas canvas = new Canvas { Width = 1024, Height = 768 };
+        canvas.Measure(new Size(1024, 768));
+        canvas.Arrange(new Rect(0, 0, 1024, 768));
+
+        painter.PaintGameField(canvas, field);
+        FindMenuButton(canvas, "Dev Tool").RaiseEvent(
+            new RoutedEventArgs(Button.ClickEvent));
+        painter.PaintGameField(canvas, field);
+        Assert(FindMenuButton(canvas, "Zurück zum Startmenü") != null,
+            "start menu opens the full-area map and skilltree editor");
+
+        FindMenuButton(canvas, "Zurück zum Startmenü").RaiseEvent(
+            new RoutedEventArgs(Button.ClickEvent));
+        painter.PaintGameField(canvas, field);
+        Assert(FindMenuButton(canvas, "Dev Tool") != null,
+            "dev tool can return to the arena start menu");
+
+        field.StartNewGame();
+        field.ReturnToStartMenu();
+        painter.PaintGameField(canvas, field);
+        Assert(FindMenuButton(canvas, "Dev Tool") != null,
+            "pause menu exposes the dev tool during an active run");
+        FindMenuButton(canvas, "Dev Tool").RaiseEvent(
+            new RoutedEventArgs(Button.ClickEvent));
+        painter.PaintGameField(canvas, field);
+        Assert(FindMenuButton(canvas, "Zurück zum Startmenü") != null,
+            "dev tool opens from the pause menu without restarting the OOP window");
+    }
+
+    private static void TestArenaMapRestart()
+    {
+        string directory = ArenaMapAssets.BackgroundDirectory;
+        string selectionPath = Path.Combine(directory, "ArenaMapSelection.json");
+        bool hadSelection = File.Exists(selectionPath);
+        string previousSelection = hadSelection
+            ? File.ReadAllText(selectionPath)
+            : null;
+        string mapFileName = "ArenaTest-" + Guid.NewGuid().ToString("N") + ".png";
+
+        try
+        {
+            string savedFileName = ArenaMapAssets.SaveMap(
+                Path.GetFileNameWithoutExtension(mapFileName),
+                512, 768, ArenaMapAssets.LoadMapBase(),
+                Array.Empty<ArenaMapPlacement>());
+            ArenaField field = new ArenaField();
+            field.StartNewGame();
+            field.Progression.AwardKill(WeaponCatalog.Sword);
+            field.ReturnToStartMenu();
+
+            field.SelectMap(savedFileName);
+            Assert(field.MapFileName == savedFileName
+                && field.WorldWidth == 512 && field.WorldHeight == 768
+                && field.HasActiveGame && !field.IsGameStarted
+                && field.Progression.TotalKills == 0,
+                "applying a map from the pause menu resets the arena run and returns to pause");
+        }
+        finally
+        {
+            string savedPath = Path.Combine(directory, mapFileName);
+            if (File.Exists(savedPath))
+            {
+                File.Delete(savedPath);
+            }
+            if (hadSelection)
+            {
+                File.WriteAllText(selectionPath, previousSelection);
+            }
+            else if (File.Exists(selectionPath))
+            {
+                File.Delete(selectionPath);
+            }
+        }
+    }
+
+    private static void TestArenaSkillTreeRestart()
+    {
+        string directory = ArenaSkillTreeRepository.TreeDirectory;
+        string selectionPath = Path.Combine(directory, "SelectedSkillTree.txt");
+        bool hadSelection = File.Exists(selectionPath);
+        string previousSelection = hadSelection
+            ? File.ReadAllText(selectionPath)
+            : null;
+
+        try
+        {
+            ArenaField field = new ArenaField();
+            field.StartNewGame();
+            field.Progression.AwardKill(WeaponCatalog.Sword);
+            field.ReturnToStartMenu();
+
+            field.SelectSkillTree(ArenaSkillTreeRepository.DefaultTreeName);
+            Assert(field.HasActiveGame && !field.IsGameStarted
+                && field.Progression.TotalKills == 0
+                && field.Progression.SkillTree.Name
+                    == ArenaSkillTreeRepository.DefaultTreeName,
+                "applying a skilltree from the pause menu resets the run and returns to pause");
+        }
+        finally
+        {
+            if (hadSelection)
+            {
+                File.WriteAllText(selectionPath, previousSelection);
+            }
+            else if (File.Exists(selectionPath))
+            {
+                File.Delete(selectionPath);
+            }
         }
     }
 
@@ -1230,6 +1725,7 @@ internal static class Program
             "each weapon upgrade adjusts its range and hit knockback");
 
         ArenaField field = new ArenaField();
+        field.Progression.SetSkillTree(ArenaSkillTreeRepository.CreateDefaultTree());
         field.StartNewGame();
         Assert(field.TryUpgradePlayerStat(ArenaProgression.MaximumHealth)
             && field.Player.MaxHitPoints == PlayerCharacter.BaseMaxHitPoints
@@ -1330,6 +1826,7 @@ internal static class Program
     private static void TestDeathEnemyAndPurchaseSoundEvents()
     {
         ArenaField field = new ArenaField();
+        field.Progression.SetSkillTree(ArenaSkillTreeRepository.CreateDefaultTree());
         int playerDeaths = 0;
         List<int> enemyDamage = new List<int>();
         List<Entity> enemyDeaths = new List<Entity>();

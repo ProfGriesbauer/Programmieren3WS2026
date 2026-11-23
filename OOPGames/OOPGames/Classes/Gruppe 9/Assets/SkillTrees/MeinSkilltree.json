@@ -1,0 +1,30 @@
+{
+  "Name": "MeinSkilltree",
+  "Nodes": [
+    {
+      "SkillId": "__tree_start__",
+      "X": 100,
+      "Y": 300
+    },
+    {
+      "SkillId": "power-blast",
+      "X": 658.4000000000001,
+      "Y": 326.95666666666665
+    },
+    {
+      "SkillId": "healing-pulse",
+      "X": 669.6000000000001,
+      "Y": 555.7566666666667
+    }
+  ],
+  "Connections": [
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "power-blast"
+    },
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "healing-pulse"
+    }
+  ]
+}

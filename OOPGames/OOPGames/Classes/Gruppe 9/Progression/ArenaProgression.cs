@@ -38,10 +38,13 @@ namespace OOPGames
             new Dictionary<string, int>();
         private readonly Dictionary<string, int> _weaponUpgradeRanks =
             new Dictionary<string, int>();
+        private readonly Dictionary<string, string> _forcedForkChoices =
+            new Dictionary<string, string>(StringComparer.Ordinal);
         private readonly string[] _entityAbilities =
             new string[AbilitySlotCount];
         private readonly Dictionary<string, string[]> _weaponAbilities =
             new Dictionary<string, string[]>();
+        private ArenaSkillTreeDocument _skillTree;
         private int _universalPoints;
         private bool _isBuyingEverything;
 
@@ -113,7 +116,17 @@ namespace OOPGames
 
         public ArenaProgression()
         {
+            _skillTree = ArenaSkillTreeRepository.LoadSelectedTree();
             Reset();
+        }
+
+        internal ArenaSkillTreeDocument SkillTree { get { return _skillTree; } }
+
+        internal void SetSkillTree(ArenaSkillTreeDocument skillTree)
+        {
+            ArenaSkillTreeRepository.ValidateTree(skillTree);
+            _skillTree = skillTree;
+            _forcedForkChoices.Clear();
         }
 
         public void Reset()
@@ -124,6 +137,7 @@ namespace OOPGames
             _weaponPoints.Clear();
             _skillRanks.Clear();
             _weaponUpgradeRanks.Clear();
+            _forcedForkChoices.Clear();
             _weaponAbilities.Clear();
             Array.Clear(_entityAbilities, 0, _entityAbilities.Length);
         }
@@ -159,17 +173,11 @@ namespace OOPGames
             PlayerAbilityDefinition definition =
                 PlayerAbilityCatalog.GetDefinition(skillId);
             int currentRank = GetSkillRank(skillId);
-            if (currentRank >= definition.MaximumRank)
+            if (!CanUpgradeSkill(skillId))
             {
                 return false;
             }
-
             int cost = definition.GetNextRankCost(currentRank);
-            if (!IsGodMode && _universalPoints < cost)
-            {
-                return false;
-            }
-
             if (!IsGodMode)
             {
                 _universalPoints -= cost;
@@ -177,10 +185,27 @@ namespace OOPGames
             _skillRanks[skillId] = currentRank + 1;
             if (currentRank == 0)
             {
+                RecordForkChoices(skillId);
                 AssignToFirstFreeSlot(_entityAbilities, skillId);
             }
             RaiseUpgradePurchased();
             return true;
+        }
+
+        public bool CanUpgradeSkill(string skillId)
+        {
+            PlayerAbilityDefinition definition =
+                PlayerAbilityCatalog.GetDefinition(skillId);
+            int currentRank = GetSkillRank(skillId);
+            return currentRank < definition.MaximumRank
+                && (currentRank > 0 || AreSkillPrerequisitesMet(skillId))
+                && (IsGodMode
+                    || _universalPoints >= definition.GetNextRankCost(currentRank));
+        }
+
+        public bool HasSkillPrerequisites(string skillId)
+        {
+            return AreSkillPrerequisitesMet(skillId);
         }
 
         // Godmode helper: buys every skill, ability modifier, player stat and weapon upgrade
@@ -293,6 +318,8 @@ namespace OOPGames
         {
             ValidatePlayerStatId(statId);
             return GetSkillRank(statId) < PlayerStatMaximumRank
+                && (GetSkillRank(statId) > 0
+                    || HasSkillPrerequisites(statId))
                 && (IsGodMode || _universalPoints >= GetPlayerStatNextRankCost(statId));
         }
 
@@ -308,6 +335,10 @@ namespace OOPGames
                 _universalPoints -= GetPlayerStatNextRankCost(statId);
             }
             _skillRanks[statId] = GetSkillRank(statId) + 1;
+            if (GetSkillRank(statId) == 1)
+            {
+                RecordForkChoices(statId);
+            }
             RaiseUpgradePurchased();
             return true;
         }
@@ -384,6 +415,30 @@ namespace OOPGames
                     "Unknown ability modifier: " + modifierId, nameof(modifierId));
             }
             return owner;
+        }
+
+        private bool AreSkillPrerequisitesMet(string skillId)
+        {
+            return ArenaSkillTreeRepository.ArePrerequisitesMet(
+                _skillTree, skillId, GetSkillRank,
+                forkId => _forcedForkChoices.TryGetValue(
+                    forkId, out string choice) ? choice : null);
+        }
+
+        private void RecordForkChoices(string skillId)
+        {
+            foreach (ArenaSkillTreeNode fork in _skillTree.Nodes.Where(
+                node => node.IsFork && node.ForceDecision))
+            {
+                bool isDirectBranch = _skillTree.Connections.Any(
+                    connection => connection.FromSkillId == fork.SkillId
+                        && connection.ToSkillId == skillId);
+                if (isDirectBranch
+                    && !_forcedForkChoices.ContainsKey(fork.SkillId))
+                {
+                    _forcedForkChoices.Add(fork.SkillId, skillId);
+                }
+            }
         }
 
         public bool TryAssignEntityAbility(int slotIndex, string abilityId)
