@@ -391,3 +391,12 @@ Renderer). Prompts 26–34 hier nachgetragen. Build ohne Fehler und Warnungen.
 
 **Ergebnis:** Umbau der Prompts 30-34 zusammen mit diesem Prompt-Protokoll
 auf einem eigenen Branch committet.
+
+### 36
+
+**Prompt:**
+> dann mach das bitte
+
+**Ergebnis:** master aktualisiert (git pull), Branch
+`lukas/oop-refactor-solarshooter-tetris` ohne Konflikte gemergt, Build ohne
+Fehler und Warnungen, gepusht.
