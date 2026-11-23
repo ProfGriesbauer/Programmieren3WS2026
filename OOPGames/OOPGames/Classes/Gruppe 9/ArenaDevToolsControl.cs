@@ -90,6 +90,7 @@ namespace OOPGames
     internal sealed class ArenaMapEditorControl : UserControl
     {
         private const string MapDragFormat = "OOPGames.ArenaMapElement";
+        private const int MapGridSize = 256;
         private readonly ArenaField _field;
         private readonly List<ArenaMapElement> _elements;
         private readonly List<ArenaMapPlacement> _placements =
@@ -102,14 +103,24 @@ namespace OOPGames
         private readonly TextBox _heightInput;
         private readonly TextBox _mapNameInput;
         private readonly TextBlock _status;
+        private readonly TextBlock _mapZoomLabel;
+        private readonly ScaleTransform _mapZoomTransform = new ScaleTransform(1, 1);
+        private readonly Button _rotatePendingButton;
+        private readonly Button _flipPendingHorizontalButton;
+        private readonly Button _flipPendingVerticalButton;
+        private readonly CheckBox _mapGridCheckBox;
         private BitmapSource _baseImage;
         private ArenaMapElement _draggedElement;
+        private ArenaMapPlacement _pendingPlacement;
         private Image _mapDragPreview;
         private Point _dragStart;
+        private double _mapZoom = 1.0;
+        private bool _isMovingPendingPlacement;
 
         public ArenaMapEditorControl(ArenaField field)
         {
             _field = field;
+            PreviewKeyDown += OnMapEditorPreviewKeyDown;
             _elements = ArenaMapAssets.LoadMapElements().ToList();
             _baseImage = ArenaMapAssets.LoadMapBase();
 
@@ -195,12 +206,17 @@ namespace OOPGames
                 Height = 1200,
                 Background = Brushes.Black,
                 AllowDrop = true,
+                Focusable = true,
+                LayoutTransform = _mapZoomTransform,
                 ClipToBounds = true
             };
             _mapCanvas.DragEnter += OnMapDragOver;
             _mapCanvas.DragOver += OnMapDragOver;
             _mapCanvas.DragLeave += OnMapDragLeave;
             _mapCanvas.Drop += OnMapDrop;
+            _mapCanvas.MouseMove += OnMapMouseMove;
+            _mapCanvas.PreviewMouseLeftButtonUp += OnPendingPlacementMouseUp;
+            _mapCanvas.LostMouseCapture += OnMapLostMouseCapture;
             _mapCanvas.MouseRightButtonDown += OnMapRightButtonDown;
             ScrollViewer mapScroll = new ScrollViewer
             {
@@ -210,8 +226,76 @@ namespace OOPGames
                 Margin = new Thickness(4),
                 Background = new SolidColorBrush(Color.FromRgb(17, 23, 31))
             };
-            Grid.SetColumn(mapScroll, 1);
-            workspace.Children.Add(mapScroll);
+            mapScroll.PreviewMouseWheel += OnMapPreviewMouseWheel;
+            Grid mapWorkspace = new Grid();
+            mapWorkspace.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            mapWorkspace.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            mapWorkspace.PreviewKeyDown += OnMapKeyDown;
+            StackPanel mapTools = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(4, 2, 4, 0)
+            };
+            mapTools.Children.Add(new TextBlock
+            {
+                Text = "Zoom",
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 5, 0)
+            });
+            Button zoomOut = CreateButton("−");
+            zoomOut.Click += (sender, args) => ChangeMapZoom(1.0 / 1.2);
+            mapTools.Children.Add(zoomOut);
+            _mapZoomLabel = new TextBlock
+            {
+                Text = "100%",
+                Foreground = Brushes.White,
+                MinWidth = 48,
+                TextAlignment = TextAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            mapTools.Children.Add(_mapZoomLabel);
+            Button zoomIn = CreateButton("+");
+            zoomIn.Click += (sender, args) => ChangeMapZoom(1.2);
+            mapTools.Children.Add(zoomIn);
+            Button resetZoom = CreateButton("100%");
+            resetZoom.Click += (sender, args) => SetMapZoom(1.0);
+            mapTools.Children.Add(resetZoom);
+            _mapGridCheckBox = new CheckBox
+            {
+                Content = "Raster / Einrasten (256 px)",
+                IsChecked = true,
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 4, 0)
+            };
+            _mapGridCheckBox.Checked += OnMapGridChanged;
+            _mapGridCheckBox.Unchecked += OnMapGridChanged;
+            mapTools.Children.Add(_mapGridCheckBox);
+            mapTools.Children.Add(new TextBlock
+            {
+                Text = "Vorschau:",
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 4, 0)
+            });
+            _rotatePendingButton = CreateButton("Drehen (R)");
+            _rotatePendingButton.Click += (sender, args) => RotatePendingPlacement();
+            mapTools.Children.Add(_rotatePendingButton);
+            _flipPendingHorizontalButton = CreateButton("Horizontal spiegeln (H)");
+            _flipPendingHorizontalButton.Click +=
+                (sender, args) => FlipPendingPlacement(true);
+            mapTools.Children.Add(_flipPendingHorizontalButton);
+            _flipPendingVerticalButton = CreateButton("Vertikal spiegeln (V)");
+            _flipPendingVerticalButton.Click +=
+                (sender, args) => FlipPendingPlacement(false);
+            mapTools.Children.Add(_flipPendingVerticalButton);
+            Grid.SetRow(mapTools, 0);
+            mapWorkspace.Children.Add(mapTools);
+            Grid.SetRow(mapScroll, 1);
+            mapWorkspace.Children.Add(mapScroll);
+            Grid.SetColumn(mapWorkspace, 1);
+            workspace.Children.Add(mapWorkspace);
             Grid.SetRow(workspace, 1);
             root.Children.Add(workspace);
 
@@ -255,6 +339,7 @@ namespace OOPGames
             root.Children.Add(footer);
 
             Content = root;
+            UpdatePendingPlacementControls();
             RedrawMap();
         }
 
@@ -291,6 +376,13 @@ namespace OOPGames
 
         private void OnPaletteMouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (_pendingPlacement != null)
+            {
+                _draggedElement = null;
+                SetStatus("Platziere oder verwirf zuerst die aktuelle Vorschau.");
+                return;
+            }
+
             _dragStart = e.GetPosition(_palette);
             ListBoxItem item = ItemsControl.ContainerFromElement(
                 _palette, e.OriginalSource as DependencyObject) as ListBoxItem;
@@ -332,7 +424,7 @@ namespace OOPGames
             }
 
             Point point = e.GetPosition(_mapCanvas);
-            Point position = GetMapPlacementPosition(point, element);
+            Point position = GetMapPlacementPosition(point, element.Image);
             ShowMapDragPreview(element, position);
             e.Effects = DragDropEffects.Copy;
             e.Handled = true;
@@ -353,11 +445,81 @@ namespace OOPGames
 
             HideMapDragPreview();
             Point position = GetMapPlacementPosition(
-                e.GetPosition(_mapCanvas), element);
-            _placements.Add(new ArenaMapPlacement(
-                element.Image, position.X, position.Y));
+                e.GetPosition(_mapCanvas), element.Image);
+            _pendingPlacement = new ArenaMapPlacement(
+                element.Image, position.X, position.Y);
+            UpdatePendingPlacementControls();
             RedrawMap();
+            Keyboard.Focus(_mapCanvas);
+            SetStatus("Zum Verschieben Vorschau mit gedrückter Maustaste ziehen. "
+                + "Enter: platzieren · Esc: verwerfen · R: drehen · H/V: spiegeln.");
             e.Handled = true;
+        }
+
+        private void OnMapMouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isMovingPendingPlacement
+                || e.LeftButton != MouseButtonState.Pressed
+                || _pendingPlacement == null
+                || _mapDragPreview == null)
+            {
+                return;
+            }
+
+            MovePendingPlacementTo(e.GetPosition(_mapCanvas));
+        }
+
+        private void OnPendingPlacementMouseDown(
+            object sender, MouseButtonEventArgs e)
+        {
+            if (_pendingPlacement == null)
+            {
+                return;
+            }
+
+            _isMovingPendingPlacement = true;
+            _mapCanvas.CaptureMouse();
+            MovePendingPlacementTo(e.GetPosition(_mapCanvas));
+            e.Handled = true;
+        }
+
+        private void OnPendingPlacementMouseUp(
+            object sender, MouseButtonEventArgs e)
+        {
+            if (!_isMovingPendingPlacement)
+            {
+                return;
+            }
+
+            _isMovingPendingPlacement = false;
+            if (_mapCanvas.IsMouseCaptured)
+            {
+                _mapCanvas.ReleaseMouseCapture();
+            }
+            e.Handled = true;
+        }
+
+        private void OnMapLostMouseCapture(object sender, MouseEventArgs e)
+        {
+            _isMovingPendingPlacement = false;
+        }
+
+        private void MovePendingPlacementTo(Point pointer)
+        {
+            if (_pendingPlacement == null || _mapDragPreview == null)
+            {
+                return;
+            }
+
+            Point position = GetMapPlacementPosition(
+                pointer, _pendingPlacement.Image,
+                _pendingPlacement.RotationDegrees);
+            _pendingPlacement = new ArenaMapPlacement(
+                _pendingPlacement.Image, position.X, position.Y,
+                _pendingPlacement.RotationDegrees,
+                _pendingPlacement.FlipHorizontal,
+                _pendingPlacement.FlipVertical);
+            SetPlacementImagePosition(_mapDragPreview, _pendingPlacement);
         }
 
         private ArenaMapElement GetDraggedMapElement(IDataObject data)
@@ -371,15 +533,38 @@ namespace OOPGames
                 item => String.Equals(item.Name, name, StringComparison.Ordinal));
         }
 
-        private Point GetMapPlacementPosition(Point pointer, ArenaMapElement element)
+        private Point GetMapPlacementPosition(
+            Point pointer, BitmapSource image, int rotationDegrees = 0)
         {
-            double x = Math.Max(0, Math.Min(
-                _mapCanvas.Width - element.Image.PixelWidth,
-                pointer.X - element.Image.PixelWidth / 2.0));
-            double y = Math.Max(0, Math.Min(
-                _mapCanvas.Height - element.Image.PixelHeight,
-                pointer.Y - element.Image.PixelHeight / 2.0));
+            double width = GetPlacementWidth(image, rotationDegrees);
+            double height = GetPlacementHeight(image, rotationDegrees);
+            double x = pointer.X - width / 2.0;
+            double y = pointer.Y - height / 2.0;
+            if (_mapGridCheckBox.IsChecked == true)
+            {
+                x = SnapGridCoordinate(x, _mapCanvas.Width - width);
+                y = SnapGridCoordinate(y, _mapCanvas.Height - height);
+            }
+            else
+            {
+                x = ClampPlacementPosition(x, _mapCanvas.Width - width);
+                y = ClampPlacementPosition(y, _mapCanvas.Height - height);
+            }
             return new Point(x, y);
+        }
+
+        internal static double SnapGridCoordinate(double coordinate, double maximum)
+        {
+            double maxGridCoordinate = Math.Floor(
+                Math.Max(0, maximum) / MapGridSize) * MapGridSize;
+            double snappedCoordinate =
+                Math.Round(coordinate / MapGridSize) * MapGridSize;
+            return ClampPlacementPosition(snappedCoordinate, maxGridCoordinate);
+        }
+
+        private void OnMapGridChanged(object sender, RoutedEventArgs e)
+        {
+            RedrawMap();
         }
 
         private void ShowMapDragPreview(ArenaMapElement element, Point position)
@@ -394,13 +579,228 @@ namespace OOPGames
                     Width = element.Image.PixelWidth,
                     Height = element.Image.PixelHeight,
                     Opacity = 0.6,
-                    IsHitTestVisible = false
+                    IsHitTestVisible = false,
+                    RenderTransformOrigin = new Point(0.5, 0.5)
                 };
                 _mapCanvas.Children.Add(_mapDragPreview);
             }
 
             Canvas.SetLeft(_mapDragPreview, position.X);
             Canvas.SetTop(_mapDragPreview, position.Y);
+            ApplyPlacementTransform(_mapDragPreview, 0, false, false);
+        }
+
+        private void OnMapKeyDown(object sender, KeyEventArgs e)
+        {
+            if (_pendingPlacement == null)
+            {
+                return;
+            }
+
+            switch (e.Key)
+            {
+                case Key.Enter:
+                    CommitPendingPlacement(e);
+                    e.Handled = true;
+                    break;
+                case Key.Escape:
+                    _pendingPlacement = null;
+                    UpdatePendingPlacementControls();
+                    RedrawMap();
+                    SetStatus("Vorschau verworfen.");
+                    e.Handled = true;
+                    break;
+                case Key.R:
+                    RotatePendingPlacement();
+                    e.Handled = true;
+                    break;
+                case Key.H:
+                    FlipPendingPlacement(true);
+                    e.Handled = true;
+                    break;
+                case Key.V:
+                    FlipPendingPlacement(false);
+                    e.Handled = true;
+                    break;
+            }
+        }
+
+        private void OnMapEditorPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && _pendingPlacement != null)
+            {
+                CommitPendingPlacement(e);
+            }
+        }
+
+        private void CommitPendingPlacement(KeyEventArgs e)
+        {
+            _placements.Add(_pendingPlacement);
+            _pendingPlacement = null;
+            UpdatePendingPlacementControls();
+            RedrawMap();
+            SetStatus("Element auf der Karte platziert.");
+            e.Handled = true;
+        }
+
+        private void OnMapPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == 0)
+            {
+                return;
+            }
+
+            ChangeMapZoom(e.Delta > 0 ? 1.2 : 1.0 / 1.2);
+            e.Handled = true;
+        }
+
+        private void ChangeMapZoom(double multiplier)
+        {
+            SetMapZoom(_mapZoom * multiplier);
+        }
+
+        private void SetMapZoom(double zoom)
+        {
+            _mapZoom = Math.Max(0.2, Math.Min(3.0, zoom));
+            _mapZoomTransform.ScaleX = _mapZoom;
+            _mapZoomTransform.ScaleY = _mapZoom;
+            _mapZoomLabel.Text = Math.Round(_mapZoom * 100).ToString() + "%";
+        }
+
+        private void RotatePendingPlacement()
+        {
+            if (_pendingPlacement == null)
+            {
+                return;
+            }
+
+            double centerX = _pendingPlacement.X
+                + GetPlacementWidth(_pendingPlacement.Image,
+                    _pendingPlacement.RotationDegrees) / 2.0;
+            double centerY = _pendingPlacement.Y
+                + GetPlacementHeight(_pendingPlacement.Image,
+                    _pendingPlacement.RotationDegrees) / 2.0;
+            int rotation = (_pendingPlacement.RotationDegrees + 90) % 360;
+            double width = GetPlacementWidth(_pendingPlacement.Image, rotation);
+            double height = GetPlacementHeight(_pendingPlacement.Image, rotation);
+            _pendingPlacement = new ArenaMapPlacement(
+                _pendingPlacement.Image,
+                ClampPlacementPosition(centerX - width / 2.0, _mapCanvas.Width - width),
+                ClampPlacementPosition(centerY - height / 2.0, _mapCanvas.Height - height),
+                rotation,
+                _pendingPlacement.FlipHorizontal,
+                _pendingPlacement.FlipVertical);
+            RedrawMap();
+            SetStatus("Vorschau gedreht. Enter: platzieren · Esc: verwerfen.");
+        }
+
+        private void FlipPendingPlacement(bool horizontal)
+        {
+            if (_pendingPlacement == null)
+            {
+                return;
+            }
+
+            _pendingPlacement = new ArenaMapPlacement(
+                _pendingPlacement.Image, _pendingPlacement.X, _pendingPlacement.Y,
+                _pendingPlacement.RotationDegrees,
+                horizontal
+                    ? !_pendingPlacement.FlipHorizontal
+                    : _pendingPlacement.FlipHorizontal,
+                horizontal
+                    ? _pendingPlacement.FlipVertical
+                    : !_pendingPlacement.FlipVertical);
+            RedrawMap();
+            SetStatus(horizontal
+                ? "Vorschau horizontal gespiegelt."
+                : "Vorschau vertikal gespiegelt.");
+        }
+
+        private void UpdatePendingPlacementControls()
+        {
+            bool hasPendingPlacement = _pendingPlacement != null;
+            _rotatePendingButton.IsEnabled = hasPendingPlacement;
+            _flipPendingHorizontalButton.IsEnabled = hasPendingPlacement;
+            _flipPendingVerticalButton.IsEnabled = hasPendingPlacement;
+        }
+
+        private void ShowPendingPlacementPreview()
+        {
+            if (_pendingPlacement == null)
+            {
+                return;
+            }
+
+            Image image = CreatePlacementImage(_pendingPlacement, 0.65, true);
+            image.PreviewMouseLeftButtonDown += OnPendingPlacementMouseDown;
+            _mapCanvas.Children.Add(image);
+            _mapDragPreview = image;
+        }
+
+        private static Image CreatePlacementImage(
+            ArenaMapPlacement placement, double opacity,
+            bool isPendingPlacement = false)
+        {
+            Image image = new Image
+            {
+                Source = placement.Image,
+                Width = placement.Image.PixelWidth,
+                Height = placement.Image.PixelHeight,
+                Opacity = opacity,
+                IsHitTestVisible = isPendingPlacement,
+                RenderTransformOrigin = new Point(0.5, 0.5)
+            };
+            SetPlacementImagePosition(image, placement);
+            ApplyPlacementTransform(image, placement.RotationDegrees,
+                placement.FlipHorizontal, placement.FlipVertical);
+            return image;
+        }
+
+        private static void SetPlacementImagePosition(
+            Image image, ArenaMapPlacement placement)
+        {
+            Canvas.SetLeft(image, placement.X
+                + GetPlacementWidth(placement.Image, placement.RotationDegrees) / 2.0
+                - placement.Image.PixelWidth / 2.0);
+            Canvas.SetTop(image, placement.Y
+                + GetPlacementHeight(placement.Image, placement.RotationDegrees) / 2.0
+                - placement.Image.PixelHeight / 2.0);
+        }
+
+        private static void ApplyPlacementTransform(
+            Image image, int rotationDegrees, bool flipHorizontal,
+            bool flipVertical)
+        {
+            image.RenderTransform = new TransformGroup
+            {
+                Children = new TransformCollection
+                {
+                    new ScaleTransform(
+                        flipHorizontal ? -1 : 1, flipVertical ? -1 : 1),
+                    new RotateTransform(rotationDegrees)
+                }
+            };
+        }
+
+        private static double GetPlacementWidth(
+            BitmapSource image, int rotationDegrees)
+        {
+            return rotationDegrees % 180 == 0
+                ? image.PixelWidth
+                : image.PixelHeight;
+        }
+
+        private static double GetPlacementHeight(
+            BitmapSource image, int rotationDegrees)
+        {
+            return rotationDegrees % 180 == 0
+                ? image.PixelHeight
+                : image.PixelWidth;
+        }
+
+        private static double ClampPlacementPosition(double position, double maximum)
+        {
+            return Math.Max(0, Math.Min(maximum, position));
         }
 
         private void HideMapDragPreview()
@@ -418,9 +818,12 @@ namespace OOPGames
             for (int i = _placements.Count - 1; i >= 0; i--)
             {
                 ArenaMapPlacement placement = _placements[i];
-                if (point.X >= placement.X && point.X < placement.X + placement.Image.PixelWidth
+                if (point.X >= placement.X
+                    && point.X < placement.X
+                        + GetPlacementWidth(placement.Image, placement.RotationDegrees)
                     && point.Y >= placement.Y
-                    && point.Y < placement.Y + placement.Image.PixelHeight)
+                    && point.Y < placement.Y
+                        + GetPlacementHeight(placement.Image, placement.RotationDegrees))
                 {
                     _placements.RemoveAt(i);
                     RedrawMap();
@@ -445,16 +848,44 @@ namespace OOPGames
             _mapCanvas.Children.Add(background);
             foreach (ArenaMapPlacement placement in _placements)
             {
-                Image image = new Image
+                _mapCanvas.Children.Add(CreatePlacementImage(placement, 1.0));
+            }
+            if (_mapGridCheckBox.IsChecked == true)
+            {
+                DrawMapGrid();
+            }
+            ShowPendingPlacementPreview();
+        }
+
+        private void DrawMapGrid()
+        {
+            Brush gridBrush = new SolidColorBrush(
+                Color.FromArgb(90, 220, 232, 244));
+            for (double x = MapGridSize; x < _mapCanvas.Width; x += MapGridSize)
+            {
+                _mapCanvas.Children.Add(new System.Windows.Shapes.Line
                 {
-                    Source = placement.Image,
-                    Width = placement.Image.PixelWidth,
-                    Height = placement.Image.PixelHeight,
+                    X1 = x,
+                    Y1 = 0,
+                    X2 = x,
+                    Y2 = _mapCanvas.Height,
+                    Stroke = gridBrush,
+                    StrokeThickness = 1,
                     IsHitTestVisible = false
-                };
-                Canvas.SetLeft(image, placement.X);
-                Canvas.SetTop(image, placement.Y);
-                _mapCanvas.Children.Add(image);
+                });
+            }
+            for (double y = MapGridSize; y < _mapCanvas.Height; y += MapGridSize)
+            {
+                _mapCanvas.Children.Add(new System.Windows.Shapes.Line
+                {
+                    X1 = 0,
+                    Y1 = y,
+                    X2 = _mapCanvas.Width,
+                    Y2 = y,
+                    Stroke = gridBrush,
+                    StrokeThickness = 1,
+                    IsHitTestVisible = false
+                });
             }
         }
 
@@ -477,7 +908,10 @@ namespace OOPGames
                 _mapSelection.ItemsSource = ArenaMapAssets.GetMapFileNames();
                 _mapSelection.SelectedItem = fileName;
                 SetStatus("Gespeichert: Assets\\Background\\" + fileName
-                    + ". Wähle „Als Spielhintergrund verwenden“, um die Karte zu aktivieren.");
+                    + ". Wähle „Als Spielhintergrund verwenden“, um die Karte zu aktivieren."
+                    + (_pendingPlacement == null
+                        ? String.Empty
+                        : " Die offene Vorschau wurde nicht gespeichert; Enter platziert sie."));
             }
             catch (ArgumentException exception)
             {
@@ -530,6 +964,8 @@ namespace OOPGames
         private void StartNewMap()
         {
             _placements.Clear();
+            _pendingPlacement = null;
+            UpdatePendingPlacementControls();
             _mapNameInput.Text = "NeueMap";
             _widthInput.Text = "1800";
             _heightInput.Text = "1200";

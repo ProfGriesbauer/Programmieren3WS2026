@@ -44,6 +44,8 @@ internal static class Program
             TestArenaSkillTreeForcedFork();
             TestArenaMapDimensionInput();
             TestArenaEditorAssets();
+            TestArenaMapGridSnapping();
+            TestArenaMapPlacementTransforms();
             TestArenaDevToolMenu();
             TestArenaMapRestart();
             TestArenaSkillTreeRestart();
@@ -1286,6 +1288,14 @@ internal static class Program
             "map size validation rejects dimensions exceeding the pixel budget");
     }
 
+    private static void TestArenaMapGridSnapping()
+    {
+        Assert(ArenaMapEditorControl.SnapGridCoordinate(390, 1544) == 512,
+            "map placements snap to the nearest 256-pixel grid coordinate");
+        Assert(ArenaMapEditorControl.SnapGridCoordinate(1790, 1544) == 1536,
+            "map grid snapping keeps an element inside the map boundary");
+    }
+
     private static void TestArenaSkillTreeStartNode()
     {
         ArenaProgression progression = new ArenaProgression();
@@ -1606,6 +1616,57 @@ internal static class Program
             else if (File.Exists(selectionPath))
             {
                 File.Delete(selectionPath);
+            }
+        }
+    }
+
+    private static void TestArenaMapPlacementTransforms()
+    {
+        string directory = ArenaMapAssets.BackgroundDirectory;
+        string mapFileName = "ArenaTransformTest-"
+            + Guid.NewGuid().ToString("N") + ".png";
+        BitmapSource sprite = BitmapSource.Create(
+            2, 1, 96, 96, PixelFormats.Bgra32, null,
+            new byte[] { 0, 0, 255, 255, 255, 0, 0, 255 }, 8);
+        sprite.Freeze();
+
+        try
+        {
+            ArenaMapAssets.SaveMap(
+                Path.GetFileNameWithoutExtension(mapFileName),
+                512, 512, ArenaMapAssets.LoadMapBase(),
+                new[]
+                {
+                    new ArenaMapPlacement(sprite, 10, 10, 0, true),
+                    new ArenaMapPlacement(sprite, 20, 20, 90)
+                });
+            ArenaMapDefinition map = ArenaMapAssets.LoadMap(mapFileName);
+            byte[] pixels = new byte[512 * 512 * 4];
+            map.Image.CopyPixels(pixels, 512 * 4, 0);
+
+            bool IsRed(int x, int y)
+            {
+                int offset = (y * 512 + x) * 4;
+                return pixels[offset] == 0 && pixels[offset + 2] == 255;
+            }
+            bool IsBlue(int x, int y)
+            {
+                int offset = (y * 512 + x) * 4;
+                return pixels[offset] == 255 && pixels[offset + 2] == 0;
+            }
+
+            Assert(IsBlue(10, 10) && IsRed(11, 10),
+                "saved map placements preserve horizontal mirroring");
+            Assert((IsRed(20, 20) && IsBlue(20, 21))
+                || (IsBlue(20, 20) && IsRed(20, 21)),
+                "saved map placements preserve 90-degree rotation");
+        }
+        finally
+        {
+            string savedPath = Path.Combine(directory, mapFileName);
+            if (File.Exists(savedPath))
+            {
+                File.Delete(savedPath);
             }
         }
     }

@@ -190,10 +190,30 @@ namespace OOPGames
                         throw new InvalidDataException(
                             "A map element is missing its sprite image.");
                     }
+
+                    double placementWidth = placement.RotationDegrees % 180 == 0
+                        ? placement.Image.PixelWidth
+                        : placement.Image.PixelHeight;
+                    double placementHeight = placement.RotationDegrees % 180 == 0
+                        ? placement.Image.PixelHeight
+                        : placement.Image.PixelWidth;
+                    drawing.PushTransform(new TranslateTransform(
+                        placement.X + placementWidth / 2.0,
+                        placement.Y + placementHeight / 2.0));
+                    drawing.PushTransform(
+                        new RotateTransform(placement.RotationDegrees));
+                    drawing.PushTransform(new ScaleTransform(
+                        placement.FlipHorizontal ? -1 : 1,
+                        placement.FlipVertical ? -1 : 1));
                     drawing.DrawImage(
                         placement.Image,
-                        new Rect(placement.X, placement.Y,
-                            placement.Image.PixelWidth, placement.Image.PixelHeight));
+                        new Rect(-placement.Image.PixelWidth / 2.0,
+                            -placement.Image.PixelHeight / 2.0,
+                            placement.Image.PixelWidth,
+                            placement.Image.PixelHeight));
+                    drawing.Pop();
+                    drawing.Pop();
+                    drawing.Pop();
                 }
             }
 
@@ -322,16 +342,24 @@ namespace OOPGames
 
     internal sealed class ArenaMapPlacement
     {
-        public ArenaMapPlacement(BitmapSource image, double x, double y)
+        public ArenaMapPlacement(
+            BitmapSource image, double x, double y, int rotationDegrees = 0,
+            bool flipHorizontal = false, bool flipVertical = false)
         {
             Image = image;
             X = x;
             Y = y;
+            RotationDegrees = ((rotationDegrees % 360) + 360) % 360;
+            FlipHorizontal = flipHorizontal;
+            FlipVertical = flipVertical;
         }
 
         public BitmapSource Image { get; }
         public double X { get; }
         public double Y { get; }
+        public int RotationDegrees { get; }
+        public bool FlipHorizontal { get; }
+        public bool FlipVertical { get; }
     }
 
     internal sealed class ArenaAtlasSprite
