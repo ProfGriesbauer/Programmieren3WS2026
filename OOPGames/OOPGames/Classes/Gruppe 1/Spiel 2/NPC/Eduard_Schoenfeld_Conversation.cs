@@ -5,7 +5,7 @@ using System.Windows.Input;
 namespace OOPGames
 {
     // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Shop: Warenliste nach Gespräch mit einem Verkäufer
-    public enum G1C_ConversationAction { None, BankMenu, FurnitureShop, Shop }
+    public enum G1C_ConversationAction { None, BankMenu, FurnitureShop, Shop, Duel /* Patrick Lupierz – 23.11.2026 */ }
 
     // =====================================================
     // Klasse: G1C_ConversationOption
@@ -347,6 +347,9 @@ namespace OOPGames
             else if (Npc.Personality.HasPauseTask && !Memory.HelpedByPlayer) AddOption("Du wirkst nervös. Alles okay?", AskAboutNerves);
 
             if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0)); // Patrick Lupierz – 15.11.2026
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – jeden (nicht feindlichen) NPC zum Pong-Duell herausfordern
+            // Mutter und Oma werden nie herausgefordert (Familie wird nie zum Gegner, auch nicht zum Rivalen)
+            if (!Npc.Personality.IsFamily) AddOption("Zum Duell herausfordern!", ChallengeToDuel);
             AddOption("Lass uns plaudern.", SmallTalk);
             bool goodFriendOffer = Status == G1C_RelationshipStatus.GoodFriend && PlayerBroke && !Npc.Personality.IsFamily;
             AddOption(Npc.Personality.IsFamily ? "Hast du Taschengeld für mich?" // Patrick Lupierz – 15.11.2026
@@ -461,6 +464,40 @@ namespace OOPGames
         }
 
         // ------------------------------------------------------------------ Antworten
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Duell-Herausforderung. Beide setzen G1C_PongDuel.DuelStake Chips ein; der NPC lehnt ab, wenn er (oder
+        //          der Spieler) zu wenig Chips hat, sonst startet das Duell (GameManager.StartDuel) nach dem Gespräch.
+        private void ChallengeToDuel()
+        {
+            if (Npc.Personality.IsFamily) return;   // Sicherung: Familie nie herausfordern
+            int stake = G1C_PongDuel.DuelStake;
+            if (_system.Money.Balance < stake)
+            {
+                Say("Du hast keine " + stake + " Chips für den Einsatz. Komm wieder, wenn du welche hast.", G1C_NpcExpression.Neutral);
+                ShowRoot();
+                return;
+            }
+            if (Npc.Purse < stake)
+            {
+                Say("Ich hab gerade keine " + stake + " Chips übrig. Ein andermal!", G1C_NpcExpression.Sad);
+                ShowRoot();
+                return;
+            }
+            _duelNpc = Npc;
+            RequestedAction = G1C_ConversationAction.Duel;
+            Close();
+        }
+
+        private G1C_NpcCharacter _duelNpc;
+
+        /// <summary>NPC, der zum Duell herausgefordert wurde (einmal abholbar).</summary>
+        public G1C_NpcCharacter TakeDuelNpc()
+        {
+            G1C_NpcCharacter npc = _duelNpc;
+            _duelNpc = null;
+            return npc;
+        }
 
         // Entwickler: Eduard Schoenfeld
         private void PlayGame()

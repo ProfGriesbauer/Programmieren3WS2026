@@ -112,6 +112,7 @@ namespace OOPGames
             run("Eduard", "Eduard steht bei den Spielautomaten und besitzt spielsüchtige Dialoge", EduardSlotNpc);
             run("Eduard", "Eduard spielt am linken Automaten, blockiert ihn, gestreiftes Hemd/Mütze, viele Sprüche", EduardBlocksLeftMachine); // Patrick Lupierz – 22.11.2026
             run("Fenster", "Welt füllt jede Fenstergröße, Minispiele mittig im festen 480x320-Rahmen", WindowScaling); // Patrick Lupierz – 22.11.2026
+            run("NPC", "Duell: NPC ansprechen, herausfordern, Pong spielen; Einsatz, Geldbeutel und Duell-Gedächtnis", NpcDuel); // Patrick Lupierz – 23.11.2026
             run("Spielhalle", "Patrick: am mittleren Automaten, Aussehen, täglicher Tipp, 300 Chips einmalig für den Schlangen-Rekord", ArcadeMentorPatrick); // Patrick Lupierz – 22.11.2026
             run("Geldhai", "Haustür-Begegnung wird nur beim Verlassen ausgelöst", LoanHouseExitEncounter);
 
@@ -765,6 +766,62 @@ namespace OOPGames
             Check(G1C_BuiltInSprites.Create(G1C_CasinoWorld.EduardSkin + "_down_0") != null, "Grafik für Eduard fehlt");
             G1C_NpcCharacter profile = game.Npcs.Find("Eduard");
             Check(profile.Personality.GeneralMonologues.Length >= 15, "zu wenige Sprüche: " + profile.Personality.GeneralMonologues.Length);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Echter Ablauf eines NPC-Duells: Gast Lena im Casino ansprechen, "Zum Duell herausfordern!" wählen,
+        //          Pong starten (Einsatz 20), gewinnen bzw. verlieren, Ergebnis prüfen (Chips, Geldbeutel, Gedächtnis).
+        //          Außerdem: jeder nicht feindliche Gesprächspartner bietet das Duell an (Optionsgrenze 4 beachtet).
+        private static void NpcDuel()
+        {
+            for (int round = 0; round < 2; round++)
+            {
+                bool win = round == 0;
+                G1C_GameManager game = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+                G1C_NpcCharacter lena = game.Npcs.Find("Gast Lena");
+                int purse = lena.Purse, balance = game.Money.Balance;
+                game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                Equal(G1C_GameState.Conversation, game.State, "Gespräch mit Lena");
+                int index = game.Npcs.Conversation.Options.ToList().FindIndex(o => o.Text == "Zum Duell herausfordern!");
+                Check(index >= 0, "Keine Duell-Option: " + string.Join(" | ", game.Npcs.Conversation.Options.Select(o => o.Text)));
+                game.HandleInput(G1C_InputEvent.FromKey(Key.D1 + index));
+                G1C_PongDuel duel = game.ActiveGame as G1C_PongDuel;
+                Check(duel != null && duel.IsDuel && duel.DuelOpponent == "Gast Lena", "Duell startet nicht (Zustand " + game.State + ")");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                Equal(balance - G1C_PongDuel.DuelStake, game.Money.Balance, "Einsatz abgebucht");
+                for (int i = 0; i < G1C_PongDuel.WinningScore; i++) { duel.DebugShoot(win); duel.MoveBall(); }
+                Check(duel.IsOver && duel.PlayerWon == win, "Duell nicht entschieden");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+                Equal(G1C_GameState.Result, game.State, "Ergebnisanzeige");
+                Equal(balance + (win ? 1 : -1) * G1C_PongDuel.DuelStake, game.Money.Balance, "Chips nach dem Duell");
+                Equal(purse - (win ? 1 : -1) * G1C_PongDuel.DuelStake, lena.Purse, "Lenas Geldbeutel");
+                Equal(win ? 1 : 0, lena.Memory.DuelsWonByPlayer, "Siege gemerkt");
+                Equal(win ? 0 : 1, lena.Memory.DuelsLostByPlayer, "Niederlagen gemerkt");
+                Check(!game.ArcadeHighscores.Keys.Any(k => k.StartsWith("Duell")), "Duell landet auf der Highscore-Tafel");
+            }
+
+            // Duell ohne Start verlassen: kein Einsatz, kein Ergebnis
+            G1C_GameManager quit = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+            int before = quit.Money.Balance;
+            quit.StartDuel(quit.Npcs.Find("Gast Lena"));
+            quit.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+            Check(quit.ActiveGame == null && quit.State == G1C_GameState.MainGame && quit.Money.Balance == before, "Abbruch vor dem Start kostet etwas");
+            Equal(0, quit.Npcs.Find("Gast Lena").Memory.DuelsTotal, "Abbruch zählt als Duell");
+
+            // Alle nicht feindlichen NPCs ohne Dienst bieten das Duell an – nur Mutter und Oma nie
+            G1C_GameManager all = RunningGame();
+            int familyChecked = 0;
+            foreach (G1C_NpcCharacter c in all.Npcs.Characters)
+            {
+                all.Npcs.Conversation.Open(c, null);
+                if (G1C_NpcRelationship.IsHostile(c.Relationship.Status)) continue;
+                bool offers = all.Npcs.Conversation.Options.Any(o => o.Text == "Zum Duell herausfordern!");
+                if (c.Personality.IsFamily) Check(!offers, c.Name + " (Familie) darf nicht herausgefordert werden");
+                else Check(offers, c.Name + " bietet kein Duell an");
+                familyChecked += c.Personality.IsFamily ? 1 : 0;
+                all.Npcs.Conversation.Close();
+            }
+            Check(familyChecked >= 2, "Mutter und Oma wurden nicht geprüft");
         }
 
         // Entwickler: Patrick Lupierz – Datum: 22.11.2026

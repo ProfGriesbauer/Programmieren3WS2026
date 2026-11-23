@@ -26,7 +26,33 @@ namespace OOPGames
             _ai = new G1C_PongAI(Random);
         }
 
-        public override string Name { get { return "Pong-Duell"; } }
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Duell gegen einen angesprochenen NPC: beide setzen
+        // Chips ein, der Sieger bekommt beide Einsätze (siehe G1C_Conversation "Zum Duell herausfordern").
+        public const int DuelStake = 20;
+        public string DuelOpponent { get; private set; }
+        public bool IsDuel { get { return DuelOpponent != null; } }
+        public bool PlayerWon { get { return IsOver && PlayerPoints >= WinningScore; } }
+
+        public void ConfigureDuel(string opponent)
+        {
+            DuelOpponent = opponent;
+            Message = "[E] Duell starten (Einsatz " + DuelStake + " Chips), [Q] Verlassen.";
+        }
+
+        protected override int EntryCost { get { return IsDuel ? DuelStake : EntryFee; } }
+        protected override int ComputeReward() { return IsDuel ? (PlayerWon ? 2 * DuelStake : 0) : base.ComputeReward(); }
+
+        private string RightLabel
+        {
+            get
+            {
+                if (!IsDuel) return "KI";
+                string[] parts = DuelOpponent.Split(' ');
+                return parts[parts.Length - 1];
+            }
+        }
+
+        public override string Name { get { return IsDuel ? "Duell gegen " + DuelOpponent : "Pong-Duell"; } }
         protected override string Instructions { get { return "[W]/[S] bewegen. Erster mit " + WinningScore + " Punkten gewinnt."; } }
         protected override int PointsPerChip { get { return 25; } }
         public int PlayerPoints { get; private set; }
@@ -98,8 +124,9 @@ namespace OOPGames
 
         private void AfterPoint(int scorer)
         {
-            if (PlayerPoints >= WinningScore) { Score += 200; EndRound("Gewonnen gegen die KI!"); return; }
-            if (AiPoints >= WinningScore) { EndRound("Die KI hat gewonnen."); return; }
+            string rival = IsDuel ? DuelOpponent : "die KI";
+            if (PlayerPoints >= WinningScore) { Score += 200; EndRound("Gewonnen gegen " + rival + "!"); return; }
+            if (AiPoints >= WinningScore) { EndRound(IsDuel ? DuelOpponent + " hat gewonnen." : "Die KI hat gewonnen."); return; }
             Serve(-scorer);
         }
 
@@ -122,7 +149,7 @@ namespace OOPGames
             r.FillRect(x + _ballX - BallR, y + _ballY - BallR, BallR * 2, BallR * 2, white);
             r.Text(PlayerPoints + " : " + AiPoints, x, y + 14, 16, white, FieldW);
             r.Text("DU", x + 20, y + FieldH - 14, 9, Color.FromRgb(0x50, 0xE0, 0xF8));
-            r.Text("KI", x + FieldW - 34, y + FieldH - 14, 9, Color.FromRgb(0xF8, 0x60, 0xD0));
+            r.Text(RightLabel, x + FieldW - 64, y + FieldH - 14, 9, Color.FromRgb(0xF8, 0x60, 0xD0), 60);
         }
     }
 }

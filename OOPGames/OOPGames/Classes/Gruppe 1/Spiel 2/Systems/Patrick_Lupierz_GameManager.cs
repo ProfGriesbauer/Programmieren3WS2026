@@ -431,6 +431,13 @@ namespace OOPGames
             if (conversation.IsOpen) return;
             G1C_InteractionType? game = conversation.TakeRequestedGame();
             G1C_ConversationAction action = conversation.TakeRequestedAction();
+            if (action == G1C_ConversationAction.Duel)
+            {
+                // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Pong-Duell gegen den angesprochenen NPC
+                State = G1C_GameState.MainGame;
+                StartDuel(conversation.TakeDuelNpc());
+                return;
+            }
             if (action == G1C_ConversationAction.BankMenu)
             {
                 OpenBankMenu();
@@ -1230,6 +1237,20 @@ namespace OOPGames
             State = G1C_GameState.Arcade;
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Duell gegen einen NPC starten (Pong, Einsatz je 20 Chips). Das Ergebnis wertet EndMinigame aus
+        //          (Chips aus dem NPC-Geldbeutel, G1C_CasinoEventReactor.RecordDuel für Respekt/Rivalität).
+        public G1C_NpcCharacter DuelNpc { get; private set; }
+
+        public void StartDuel(G1C_NpcCharacter npc)
+        {
+            if (npc == null) return;
+            G1C_PongDuel duel = new G1C_PongDuel(Money, _random);
+            duel.ConfigureDuel(npc.Name);
+            DuelNpc = npc;
+            StartArcadeGame(duel);
+        }
+
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026 – Fahrradständer vor dem Haus
         private void UseParkedBike()
         {
@@ -1241,6 +1262,28 @@ namespace OOPGames
         {
             // Änderung durch: Patrick Lupierz – 18.11.2026 – Gast-Automat: [Esc] führt zurück zur Spielauswahl,
             // damit direkt ein anderes Spiel einer anderen Gruppe gewählt werden kann.
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Duell gegen einen NPC auswerten
+            G1C_PongDuel duel = ActiveGame as G1C_PongDuel;
+            if (duel != null && duel.IsDuel && DuelNpc != null)
+            {
+                G1C_NpcCharacter rival = DuelNpc;
+                DuelNpc = null;
+                if (!duel.IsOver)   // nie gestartet: kein Einsatz, kein Ergebnis
+                {
+                    ActiveGame = null;
+                    State = G1C_GameState.MainGame;
+                    return;
+                }
+                if (duel.PlayerWon) rival.TryPay(G1C_PongDuel.DuelStake);
+                else rival.Restore(rival.Purse + G1C_PongDuel.DuelStake, rival.Mood, rival.Memory);
+                Npcs.Events.RecordDuel(rival, duel.PlayerWon);
+                PlayResultSound();
+                Result.Show(duel.Name, _gameStartBalance, Money.Balance);
+                ActiveGame = null;
+                GamesPlayed++;
+                State = G1C_GameState.Result;
+                return;
+            }
             G1C_GuestGameHost guest = ActiveGame as G1C_GuestGameHost;
             if (guest != null && _lastGuestCabinet != null)
             {

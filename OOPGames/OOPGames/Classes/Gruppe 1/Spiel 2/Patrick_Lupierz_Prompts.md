@@ -2397,7 +2397,7 @@ Am Ende gib eine kurze Übersicht aus:
 **Nicht einfach nur beschreiben, wie es umgesetzt werden könnte. Die Änderungen sollen tatsächlich in der bestehenden Codebasis implementiert werden.**
 ```
 
-Ergebnisvermerk: �nderungen 15 bis 20 wurden in der bestehenden Casino-Codebasis implementiert und werden validiert. �bernommen von: Patrick Lupierz nach Pr�fung.
+Ergebnisvermerk: �nderungen 15 bis 20 wurden in der bestehenden Casino-Codebasis implementiert und werden validiert. �bernommen von: Patrick Lupierz nach Pr�fung.
 
 ### Prompt 22-11-2026 (Claude Code)
 
@@ -2418,3 +2418,4 @@ füge einen npc patrick hinzu der in in der arcade steht und wenn man mit ihm re
 ```
 
 Ergebnisvermerk: Pokerhand im Vollbild (Fenster ohne Rahmen) 1,0-fach, sonst 1,5-fach. NPC Patrick (G1C_ArcadeMentor) neben dem Gast-Automaten, täglicher Tipp nach Spieltag, Schlangen-Rekord 220, einmalig 35 Chips (NpcMemory.RecordRewardPaid, wird mitgespeichert). Build 0/0, Selbsttest 88/88, Spielhallen-Bild geprüft. Übernommen von: Patrick Lupierz nach Prüfung.
+
