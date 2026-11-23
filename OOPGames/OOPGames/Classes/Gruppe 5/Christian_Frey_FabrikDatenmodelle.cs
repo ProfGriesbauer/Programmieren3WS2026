@@ -6,6 +6,7 @@ using System.Linq;
 namespace OOPGames
 {
 
+    // Gemeinsame Gegenstands-IDs fuer Rezepte, Lager, Hub, Bander und Inventar.
     public enum G5_Item
     {
         Holz,

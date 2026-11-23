@@ -7,6 +7,7 @@ using System.Windows.Media.Imaging;
 
 namespace OOPGames
 {
+    // Visualisierung des Wiesenhintergrundes und zufaellig erscheinender Kartendetails.
     /// <summary>
     /// Hintergrund-Design "Lebendige Wiese" für das Fabrik-Spielfeld.
     ///

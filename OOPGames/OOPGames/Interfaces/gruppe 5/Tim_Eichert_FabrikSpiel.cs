@@ -2,13 +2,19 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
+    // Bauwerkzeuge sind Befehlswerte fuer die Auswahl im Player und die Platzierung in den Rules.
     public enum G5_Bauwerkzeug
     {
         Keines,
         Foerderer,
         Schmelze,
         Foerderband,
-        GebaeudeVerschieben
+        GebaeudeVerschieben,
+        Konstruktor,
+        Assembler,
+        Verbrennungsgenerator,
+        Strommast,
+        Lager
     }
 
     public enum G5_FabrikGebaeudeTyp
@@ -20,6 +26,7 @@ namespace OOPGames
         Assembler,
         Verbrennungsgenerator,
         Strommast,
+        Lager,
         Laufband,
         Splitter,
         Merger
@@ -28,7 +35,10 @@ namespace OOPGames
     public enum G5_FabrikAktionstyp
     {
         WerkzeugWaehlen,
-        GebaeudePlatzieren
+        GebaeudePlatzieren,
+        TutorialUeberspringen,
+        GebaeuderegisterUmschalten,
+        GebaeuderegisterScrollen
     }
 
     public interface IG5_GebaeudeInfo

@@ -32,6 +32,7 @@ namespace OOPGames
         StackPanel _Cards;
         TextBlock _DeviceTitle;
         B5ControlBar _ControlBar;
+        B5VolumeControl _VolumeControl;
         B5MediaAnimation[] _Media;
         readonly List<GeometryModel3D> _Highlights = new List<GeometryModel3D>();
         readonly List<GeometryModel3D> _Screens = new List<GeometryModel3D>();
@@ -293,6 +294,11 @@ namespace OOPGames
             _ControlBar = new B5ControlBar();
             _ControlBar.Element.SetValue(Panel.ZIndexProperty, 4);
             _Root.Children.Add(_ControlBar.Element);
+
+            // Volume of all games, top left in the room; above the game frame for short hints while playing.
+            _VolumeControl = new B5VolumeControl();
+            _VolumeControl.Element.SetValue(Panel.ZIndexProperty, 5);
+            _Root.Children.Add(_VolumeControl.Element);
         }
 
         void BuildRoom()
@@ -1370,6 +1376,7 @@ namespace OOPGames
             bool focusing = field.Phase == B5RoomPhase.Focusing;
             bool playing = field.Phase == B5RoomPhase.Playing;
             _ControlBar.Update(field);
+            _VolumeControl.Update(!focusing && !playing);
             Visibility sidebarVisibility = deviceView && !focusing && !playing ? Visibility.Visible : Visibility.Collapsed;
             Visibility frameVisibility = playing ? Visibility.Visible : Visibility.Collapsed;
             Visibility roomVisibility = playing ? Visibility.Collapsed : Visibility.Visible;

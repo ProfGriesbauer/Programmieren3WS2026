@@ -3,6 +3,7 @@ using System.Windows;
 
 namespace OOPGames
 {
+    // Eigentlicher Weltzustand: Raster, sichtbares Gelaende und Kartenansicht.
     public sealed class G5_WeltSpielfeld : IG5_WeltSpielfeld, IG5_KartenansichtSteuerung
     {
         private readonly int _breite;

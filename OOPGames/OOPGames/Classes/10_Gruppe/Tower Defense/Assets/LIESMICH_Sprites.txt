@@ -1,0 +1,18 @@
+Tower-Defense Sprites (Pixel Art)
+==================================
+Ordner:
+  1080p/  native Pixel, direkt fuer 1920x1080 (Kachel = 96 px, Karte 20 x 11 Kacheln)
+  4k/     doppelte Groesse fuer 3840x2160 (Kachel = 192 px)
+Jedes PNG ist ein Spritesheet: Zeilen = Animationen, Spalten = Frames (transparenter Hintergrund).
+sprites.json enthaelt pro Sprite Framegroesse, Animationen (Zeile, Frameanzahl, fps, loop) und den Pivot (Fusspunkt) in 1080p-Pixeln.
+
+Tuerme      96x160   idle (6), attack (6)        Pivot = Turmfuss. schuss_ursprung = Punkt fuer Projektile.
+Schloss     320x288  intakt / beschaedigt / ruine (je 6 Frames, Schleife)
+Gegner      96/128/160 walk (6, Schleife), death (6, einmalig)
+Mini-Bosse  192x192  walk, death
+Bosse       256x256  walk, death
+Effekte     Projektile und Flaecheneffekte
+
+Alle Figuren schauen nach rechts. Fuer Laufrichtung links horizontal spiegeln.
+Skalierung im Spiel immer mit Nearest Neighbor (kein Filtern), sonst wird es unscharf.
+Treffer-Feedback: Sprite kurz weiss einfaerben (Shader/Modulate), death-Frame 0 ist bereits ein weisser Blitz.

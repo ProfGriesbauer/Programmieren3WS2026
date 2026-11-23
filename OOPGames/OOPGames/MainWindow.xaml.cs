@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -39,7 +42,9 @@ namespace OOPGames
         Thickness _SavedCanvasMargin;
 
         public MainWindow()
-        {
+        {   
+            ArenaGameRegistration.RegisterArenaGame();
+
             //REGISTER YOUR CLASSES HERE
             //Painters
             OOPGamesManager.Singleton.RegisterPainter(new X_TicTacToePaint());
@@ -48,7 +53,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new G9_VierGewinntPainter());
             OOPGamesManager.Singleton.RegisterPainter(new FG_ConnectFourPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_ConnectFourPainter());
-            OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_SubwayPainter());
+            OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_TrainRunPainter());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
             OOPGamesManager.Singleton.RegisterPainter(new B5RoomPaint());
@@ -64,7 +69,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new G9_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new FG_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_ConnectFourRules());
-            OOPGamesManager.Singleton.RegisterRules(new Gruppe2_SubwayRules());
+            OOPGamesManager.Singleton.RegisterRules(new Gruppe2_TrainRunRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
             OOPGamesManager.Singleton.RegisterRules(new B5RoomRules());
@@ -86,7 +91,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new FG_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_ConnectFourHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_ConnectFourComputerPlayer());
-            OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_SubwayHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new Gruppe2_TrainRunHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWHumanPlayer());
@@ -106,10 +111,83 @@ namespace OOPGames
             Player2List.ItemsSource = OOPGamesManager.Singleton.Players;
             RulesList.ItemsSource = OOPGamesManager.Singleton.Rules;
 
+            // LOCAL ARENA AUTOSTART: optional helper is excluded from Git.
+            Loaded += StartArenaLocalScript;
+
             _PaintTimer = new System.Windows.Threading.DispatcherTimer();
             _PaintTimer.Interval = new TimeSpan(0, 0, 0, 0, 40);
             _PaintTimer.Tick += _PaintTimer_Tick;
             _PaintTimer.Start();
+        }
+
+        private void StartArenaLocalScript(object sender, RoutedEventArgs e)
+        {
+            Loaded -= StartArenaLocalScript;
+
+            string scriptPath = FindLocalArenaStartupScript();
+            if (scriptPath == null)
+            {
+                return;
+            }
+
+            string powerShellPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = powerShellPath,
+                WorkingDirectory = System.IO.Path.GetDirectoryName(scriptPath),
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-ExecutionPolicy");
+            startInfo.ArgumentList.Add("Bypass");
+            startInfo.ArgumentList.Add("-File");
+            startInfo.ArgumentList.Add(scriptPath);
+            startInfo.ArgumentList.Add("-TargetProcessId");
+            startInfo.ArgumentList.Add(Environment.ProcessId.ToString());
+
+            try
+            {
+                using (Process process = Process.Start(startInfo))
+                {
+                    if (process == null)
+                    {
+                        MessageBox.Show("Das Arena-Startskript konnte nicht gestartet werden.",
+                            "Arena-Autostart", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+            catch (Win32Exception ex)
+            {
+                MessageBox.Show("Das Arena-Startskript konnte nicht gestartet werden:\n" + ex.Message,
+                    "Arena-Autostart", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show("Das Arena-Startskript konnte nicht gestartet werden:\n" + ex.Message,
+                    "Arena-Autostart", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static string FindLocalArenaStartupScript()
+        {
+            DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null)
+            {
+                string candidate = System.IO.Path.Combine(
+                    directory.FullName, "start-arena.local.ps1");
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                directory = directory.Parent;
+            }
+
+            return null;
         }
 
         private void _PaintTimer_Tick(object sender, EventArgs e)
@@ -178,12 +256,32 @@ namespace OOPGames
             }
         }
 
+        private void ShowGameState()
+        {
+            if (_CurrentRules == null)
+            {
+                return;
+            }
+
+            int winner = _CurrentRules.CheckIfPLayerWon();
+            if (winner > 0)
+            {
+                Status.Text = "Player " + winner + " Won!";
+                return;
+            }
+
+            if (!_CurrentRules.MovesPossible)
+            {
+                Status.Text = "Game Over!";
+            }
+        }
+
         private void DoComputerMoves()
         {
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
             {
-                Status.Text = "Player " + winner + " Won!";
+                ShowGameState();
             }
             else
             {
@@ -206,7 +304,11 @@ namespace OOPGames
                     winner = _CurrentRules.CheckIfPLayerWon();
                     if (winner > 0)
                     {
-                        Status.Text = "Player " + winner + " Won!";
+                        ShowGameState();
+                    }
+                    else if (!_CurrentRules.MovesPossible)
+                    {
+                        ShowGameState();
                     }
                 }
             }
@@ -236,7 +338,11 @@ namespace OOPGames
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
             {
-                Status.Text = "Player " + winner + " Won!";
+                ShowGameState();
+            }
+            else if (!_CurrentRules.MovesPossible)
+            {
+                ShowGameState();
             }
             else
             {
@@ -296,7 +402,11 @@ namespace OOPGames
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
             {
-                Status.Text = "Player" + winner + " Won!";
+                ShowGameState();
+            }
+            else if (!_CurrentRules.MovesPossible)
+            {
+                ShowGameState();
             }
             else
             {

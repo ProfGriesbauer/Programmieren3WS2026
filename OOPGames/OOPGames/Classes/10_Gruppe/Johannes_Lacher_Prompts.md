@@ -704,3 +704,17 @@ Rückfragen beantwortet: Merge statt Rebase (Branch ist geteilt und gepusht, Reb
 > merge our branch into master if there are no conflicts
 
 **Ergebnis:** übernommen – Probe-Merge ohne Konflikte; die 3 eigenen Commits (Tetris, Bomberman, Pong/Snake/Münzen) ändern nur Dateien in `Classes/10_Gruppe` und `Interfaces/10_Gruppe`. `origin/master` (12 neue Commits anderer Gruppen) per Merge in `gruppe10` übernommen, Build ohne Fehler/Warnungen, Testprogramm 48.065/48.065 bestanden. Danach erneut geholt, `gruppe10` gepusht und `master` per Fast-Forward auf `gruppe10` gesetzt (kein Force-Push).
+
+## 2026-11-23 – Claude Code (Modell: Claude Opus 5.5) – Branch `gruppe10`
+
+### 115
+**Prompt:**
+> merge our branch into master if there are no conflicts
+
+**Ergebnis:** abgebrochen wie verlangt – Probe-Merge mit einem Konflikt in `Kinderzimmer90er/B5_RetroUi.cs`: Auf `master` hatte ein Commit (Skeletnking, `41b5548`) die Steuerungshinweise im Raum und in der Geräteansicht um „+ / -“ Lautstärke ergänzt, unser Commit „add mouse support for the 3d scene“ dieselben Zeilen auf `B5ControlHint` mit Maus-Angaben umgestellt. Nichts gemerged oder gepusht; Lösung vorgeschlagen. Unsere 3 Commits ändern nur Dateien in den Gruppenordnern.
+
+### 116
+**Prompt:**
+> yes
+
+**Ergebnis:** übernommen – `origin/master` (63 Commits) per Merge in `gruppe10` übernommen; Konflikt gelöst, indem unsere `B5ControlHint`-Fassung mit Maus-Angaben bleibt und in beiden Zeilen der Hinweis „+ / -“ Lautstärke (ohne Klick-Taste, der Regler oben links hat eigene Mausbedienung) ergänzt ist. Build ohne Fehler/Warnungen, Testprogramm 48.066/48.066 bestanden, Bildschirmfotos von Raum und Geräteansicht: Lautstärkeregler und alle Hinweise passen in die Leiste. Danach erneut geholt, `gruppe10` gepusht und `master` per Fast-Forward auf `gruppe10` gesetzt (kein Force-Push).

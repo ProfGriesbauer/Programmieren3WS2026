@@ -38,12 +38,11 @@ Oberflaeche statt viele WPF-Rechtecke pro Frame zu erzeugen. Die bestehenden
 Minispiele verwenden weiterhin ihre unveraenderten Canvas-Zeichenroutinen.
 Wiederverwendete Farbpinsel und Nearest-Neighbor-Skalierung reduzieren dabei
 unnoetige Frame-Allocations.
-Die gesamte Tower-Defense-Grafik stammt aus Spritesheets in
-`Tower Defense/Assets` (Tower, Kartenhintergrund, Hauptgebaeude, Gegner, Bosse,
-UI-Icons). `B5_TowerDefenseSprites.cs` laedt die Sheets einmalig und schneidet
-die einzelnen Frames zu; die Pixel-Oberflaeche zeichnet sie mit
-Nearest-Neighbor-Skalierung. Layouts und Generator sind in
-`Tower Defense/SpriteGenerator/README.md` beschrieben.
+Die gesamte Tower-Defense-Grafik stammt aus dem 1080p-Sprite-Paket in
+`Tower Defense/Assets` (animierte Tower, Gegner, Bosse, Burg, Effekte, fuenf Karten).
+`B5_TowerDefenseSprites.cs` liest `sprites.json` und schneidet die Frames zu,
+`B5_TowerDefenseMaps.cs` laedt die Karten-JSONs; die Pixel-Oberflaeche zeichnet in
+1920x1080 mit Nearest-Neighbor-Skalierung. Details stehen in `Tower Defense/README.md`.
 
 Die Szene verwendet prozedural erzeugte WPF-Materialien und Geometrie, keine
 externen Texturen oder Modelle. Das WPF-3D-Rendering bietet keine physikalisch
@@ -79,7 +78,7 @@ erhalten.
 - Im Spiel: Pfeiltasten oder WASD steuern; Esc oder X geht zur Geraeteansicht zurueck.
   Ausnahme: Spiele mit `IB5RoomOwnBackKey` (Tower Defense) erhalten Esc/X selbst und
   oeffnen damit ein eigenes Menue; sie werden ueber `ExitRequested` verlassen.
-- Void Courier: Pfeiltasten oder WASD bewegen das Schiff; Z oder Leertaste feuert.
+- SolarShooter: Pfeiltasten oder WASD bewegen das Schiff; Z oder Leertaste feuert.
   Nach Game Over oder dem Sieg startet Enter oder Z eine neue Runde. Dauerfeuer
   und Bewegung puffern Tastatureingaben kurz, da das Framework kein KeyUp liefert.
 - Snake (Game Boy): Eine Pfeiltaste oder WASD startet und lenkt; Enter, Z, Leertaste
@@ -125,7 +124,7 @@ Die vier Game-Boy-Gruentoene liegen gemeinsam in `Shared/` (`G10_GameBoyColors`)
   dasselbe Interface `IG10_PaddleControl` (Strategy). Als Highscore zaehlt der
   laengste Ballwechsel gegen den Computer.
 
-Void Courier ist ein eigenstaendiger Shoot-'em-up mit einer farbigen,
+SolarShooter ist ein eigenstaendiger Shoot-'em-up mit einer farbigen,
 vektorbasierten 2.5D-Darstellung. WPF zeichnet die Szene in einem 160x144-
 Koordinatensystem und skaliert die Vektorgrafik in den vorhandenen Spielrahmen.
 Farbverlaeufe und Formen werden dadurch bei der vergroesserten Anzeige weich
@@ -143,3 +142,31 @@ Hintergruende und Bossbegegnungen. Gegner, drei Waffenstufen, sammelbare
 Energiekapseln, Leben, Punkte, Game Over und Sieg bleiben enthalten. Die
 Spielinhalte sind eigenstaendige Entwuerfe und keine Rekonstruktion bestimmter
 SolarStriker-Sprites, -Level oder -Bossmuster.
+
+## Lautstaerke
+
+Oben links im 3D-Raum (Raum- und Geraeteansicht) sitzt ein Lautstaerkeregler fuer alle Spiele
+der Gruppe 10 (`B5_VolumeControl.cs`). Bedienung: Segmente anklicken (ein erneuter Klick auf das
+einzige leuchtende Segment schaltet stumm), Buttons `-` / `+`, Mausrad ueber dem Regler oder die
+Tasten `+` / `-` (auch Ziffernblock). Die Tasten wirken in jeder Phase, auch waehrend eines
+Spiels; die Spiele selbst erhalten sie nicht. Nach einer Aenderung im Spiel wird der Regler kurz
+eingeblendet.
+
+Die Lautstaerke aendert sich in 5-%-Schritten (0-100 %, 20 Segmente). Der Wert liegt in
+`G10_SoundVolume` (`Shared/Johannes_Gabriel_SoundVolume.cs`) und wird in
+`%LOCALAPPDATA%\Programmieren3WS2026\Kinderzimmer90er\sound_settings.json` in Prozent gespeichert.
+Beim ersten Start (noch keine Datei) steht er auf 50 %, danach auf dem zuletzt eingestellten Wert.
+Aeltere Dateien mit 10-%-Stufen werden beim Laden umgerechnet.
+`G10_MediaClipOutput` startet jeden Ton mit dieser Lautstaerke und passt laufende Toene sofort
+an. Neue Spiele, die ihre Toene ueber `G10_MediaClipOutput` abspielen, folgen dem Regler
+automatisch. Die Stummschaltung einzelner Spiele (`M` in Pac-Man und Bomberman) bleibt davon
+unabhaengig.
+
+SolarShooter bietet die Modi Klassik und Missionen mit eigenem Eingangs-,
+Pausen-, Anleitungs- und Bestenlistenmenue. Im Missionsmodus waehlt ein
+separater Missionsverwalter aus sieben polymorphen Aufgabentypen; Belohnungen,
+Strafen, Missionsergebnisse und ein zeitlich begrenzter Kombo-Multiplikator
+werden dort abgewickelt. Der Missionsmodus bietet ausserdem einen zeitlich
+begrenzten Schild. Fortschritt und Bestwerte der Modi werden getrennt als JSON
+unter `%LOCALAPPDATA%\\Programmieren3WS2026\\Kinderzimmer90er\\solarshooter_saves.json`
+gespeichert.

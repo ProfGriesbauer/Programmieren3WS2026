@@ -6,10 +6,13 @@ using System.Linq;
 namespace OOPGames
 {
 
+    // Transport-, Strom- und atomarer Gegenstandsaustausch fuer die gemeinsame Fabrik.
     public sealed class G5_Conveyor : G5_Building
     {
+        private const int TransportIntervalTicks = 12;
         private readonly G5_ItemBuffer _items;
         private int _itemsPerTick;
+        private int _ticksUntilTransport;
         private IG5_ItemEndpoint _source;
         private IG5_ItemEndpoint _destination;
 
@@ -34,6 +37,10 @@ namespace OOPGames
         public override IReadOnlyDictionary<G5_Item, int> TransferableContents => _items.Contents;
         internal IG5_ItemEndpoint Source => _source;
         internal IG5_ItemEndpoint Destination => _destination;
+        internal double TransportProgress => _items.UsedCapacity == 0
+            ? 0
+            : Math.Max(0, Math.Min(1,
+                (TransportIntervalTicks - _ticksUntilTransport) / (double)TransportIntervalTicks));
 
         public void Connect(IG5_ItemEndpoint source, IG5_ItemEndpoint destination)
         {
@@ -77,6 +84,15 @@ namespace OOPGames
                 return;
             }
 
+            if (_ticksUntilTransport > 0)
+            {
+                _ticksUntilTransport--;
+                SetStatus(_items.UsedCapacity > 0
+                    ? G5_BuildingStatus.Working
+                    : G5_BuildingStatus.Idle);
+                return;
+            }
+
             int moved = 0;
             foreach (KeyValuePair<G5_Item, int> stack in _items.Contents)
             {
@@ -115,12 +131,24 @@ namespace OOPGames
                 }
             }
 
+            if (moved > 0)
+            {
+                _ticksUntilTransport = TransportIntervalTicks;
+            }
+
             SetStatus(moved > 0 ? G5_BuildingStatus.Working : G5_BuildingStatus.Idle);
         }
 
         public override bool TryReceive(G5_Item item, int amount)
         {
-            return _items.TryAdd(item, amount);
+            bool wasEmpty = _items.UsedCapacity == 0;
+            bool received = _items.TryAdd(item, amount);
+            if (received && wasEmpty)
+            {
+                _ticksUntilTransport = TransportIntervalTicks;
+            }
+
+            return received;
         }
 
         public override bool CanReceive(G5_Item item, int amount)
@@ -130,7 +158,18 @@ namespace OOPGames
 
         public override bool TryExtract(G5_Item item, int amount)
         {
-            return _items.TryRemove(item, amount);
+            if (_ticksUntilTransport > 0)
+            {
+                return false;
+            }
+
+            bool extracted = _items.TryRemove(item, amount);
+            if (extracted && _items.UsedCapacity == 0)
+            {
+                _ticksUntilTransport = 0;
+            }
+
+            return extracted;
         }
 
         public override bool TryRestoreExtracted(G5_Item item, int amount)

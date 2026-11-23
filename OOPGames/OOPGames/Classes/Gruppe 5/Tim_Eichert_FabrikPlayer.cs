@@ -3,6 +3,8 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
+    // Formt Tastatur- und Maustasten in typisierte Fabrikaktionen um.
+    // Der Controller entscheidet nicht, ob eine Platzierung erlaubt ist.
     public sealed class G5_FabrikHumanPlayer : IHumanGamePlayer
     {
         private int _playerNumber;
@@ -28,6 +30,7 @@ namespace OOPGames
 
         public IPlayMove GetMove(IMoveSelection selection, IGameField field)
         {
+            // Tastatur erzeugt Werkzeug-/Tutorialbefehle; Klick koordiniert werden zuerst in das Welt-Raster umgerechnet.
             if (!(field is IG5_FabrikSpielInfo fabrikInfo))
             {
                 return null;
@@ -37,6 +40,26 @@ namespace OOPGames
             {
                 if (field is SatisfactoryFieldView)
                 {
+                    if (keySelection.Key == Key.T)
+                    {
+                        return G5_FabrikAktion.TutorialUeberspringen(_playerNumber);
+                    }
+
+                    if (keySelection.Key == Key.Tab)
+                    {
+                        return G5_FabrikAktion.GebaeuderegisterUmschalten(_playerNumber);
+                    }
+
+                    if (keySelection.Key == Key.Up)
+                    {
+                        return G5_FabrikAktion.GebaeuderegisterScrollen(_playerNumber, -1);
+                    }
+
+                    if (keySelection.Key == Key.Down)
+                    {
+                        return G5_FabrikAktion.GebaeuderegisterScrollen(_playerNumber, 1);
+                    }
+
                     if (keySelection.Key == Key.B)
                     {
                         return G5_FabrikAktion.WerkzeugWaehlen(
@@ -49,6 +72,41 @@ namespace OOPGames
                         return G5_FabrikAktion.WerkzeugWaehlen(
                             _playerNumber,
                             G5_Bauwerkzeug.GebaeudeVerschieben);
+                    }
+
+                    if (keySelection.Key == Key.C)
+                    {
+                        return G5_FabrikAktion.WerkzeugWaehlen(
+                            _playerNumber,
+                            G5_Bauwerkzeug.Konstruktor);
+                    }
+
+                    if (keySelection.Key == Key.A)
+                    {
+                        return G5_FabrikAktion.WerkzeugWaehlen(
+                            _playerNumber,
+                            G5_Bauwerkzeug.Assembler);
+                    }
+
+                    if (keySelection.Key == Key.G)
+                    {
+                        return G5_FabrikAktion.WerkzeugWaehlen(
+                            _playerNumber,
+                            G5_Bauwerkzeug.Verbrennungsgenerator);
+                    }
+
+                    if (keySelection.Key == Key.P)
+                    {
+                        return G5_FabrikAktion.WerkzeugWaehlen(
+                            _playerNumber,
+                            G5_Bauwerkzeug.Strommast);
+                    }
+
+                    if (keySelection.Key == Key.L)
+                    {
+                        return G5_FabrikAktion.WerkzeugWaehlen(
+                            _playerNumber,
+                            G5_Bauwerkzeug.Lager);
                     }
                 }
 
@@ -130,6 +188,36 @@ namespace OOPGames
                 G5_Bauwerkzeug.Keines,
                 x,
                 y);
+        }
+
+        internal static G5_FabrikAktion TutorialUeberspringen(int playerNumber)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.TutorialUeberspringen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1);
+        }
+
+        internal static G5_FabrikAktion GebaeuderegisterUmschalten(int playerNumber)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.GebaeuderegisterUmschalten,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1);
+        }
+
+        internal static G5_FabrikAktion GebaeuderegisterScrollen(int playerNumber, int schritte)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.GebaeuderegisterScrollen,
+                G5_Bauwerkzeug.Keines,
+                schritte,
+                -1);
         }
     }
 }

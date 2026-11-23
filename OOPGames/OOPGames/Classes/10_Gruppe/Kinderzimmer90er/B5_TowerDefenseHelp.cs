@@ -154,17 +154,25 @@ namespace OOPGames
 
         void HelpEnemy(string name, double x, double y, double health, bool flip = false)
         {
+            TowerDefenseSprite sprite = TowerDefenseSprites.ForName(name);
             bool boss = TowerDefenseSprites.IsBoss(name);
-            double barWidth = boss ? 24 : 12;
-            double top = boss ? y - 31 : y - 15;
-            if (boss)
-                Surface.Sprite(TowerDefenseSprites.Boss(name, (_Tick / 6) % 2), x - 16, y - 28, 32, 32, flip);
-            else
-                Surface.Sprite(TowerDefenseSprites.Enemy(name, (_Tick / 6) % 2), x - 8, y - 13, 16, 16, flip);
+            DrawSprite(sprite, sprite.FrameAt("walk", ClockSeconds + x * 0.01), x, y, flip);
             if (health >= 1 && !boss) return;
-            Surface.Rect(x - barWidth / 2 - 1, top - 1, barWidth + 2, 3, Outline);
-            Surface.Rect(x - barWidth / 2, top, Math.Max(1, Math.Round(barWidth * health)), 1,
+            double barWidth = boss ? 28 : 12;
+            double top = y - sprite.Pivot.Y / Px * 0.85 - 2;
+            Surface.Rect(x - barWidth / 2 - 0.5, top - 0.5, barWidth + 1, 2, Outline);
+            Surface.Rect(x - barWidth / 2, top, Math.Max(0.5, barWidth * health), 1,
                 boss ? Color.FromRgb(230, 90, 220) : Color.FromRgb(120, 220, 90));
+        }
+
+        // Draws a 900x660 px part of a map at native size into the picture area. The returned functions
+        // convert map pixels to logical units inside the picture.
+        void HelpMapCrop(TowerDefenseMapDefinition map, int cropX, int cropY, out Func<double, double> hx, out Func<double, double> hy)
+        {
+            Surface.Sprite(TowerDefenseSprites.MapRegion(map.Id, "komplett", cropX, cropY, (int)(ImageWidth * Px), (int)(ImageHeight * Px)),
+                ImageX, ImageY, ImageWidth, ImageHeight);
+            hx = mx => ImageX + (mx - cropX) / Px;
+            hy = my => ImageY + (my - cropY) / Px;
         }
 
         void HelpTower(string name, double x, double y, TowerUpgrades upgrades)
@@ -191,25 +199,21 @@ namespace OOPGames
         // Map 1 near the castle: enemies on the path, towers on pedestals, the castle.
         void DrawHelpGoal()
         {
+            // Right part of map 1: the last bends of the route, a pedestal and the castle.
             TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[0];
-            const int cropX = 160, cropY = 8;
-            Func<double, double> hx = mx => ImageX + mx - cropX;
-            Func<double, double> hy = my => ImageY + my + 2 - cropY;
-
+            Func<double, double> hx, hy;
             BeginHelpImage();
-            Surface.Sprite(TowerDefenseSprites.MapRegion(map.BackgroundFile, cropX, cropY, 150, 110), ImageX, ImageY, 150, 110);
-            // Pedestals 3 and 5 of map 1 lie next to the last bends before the castle.
-            Point fire = map.TowerSpots[2], archer = map.TowerSpots[4];
-            Surface.Sprite(TowerDefenseSprites.MainBuilding(0), hx(map.MainBuilding.X) - 32, hy(map.MainBuilding.Y) - 44, 64, 48);
-            HelpTower("Fire Mage", hx(fire.X), hy(fire.Y), null);
-            HelpEnemy("Goblin", hx(228), hy(36), 1);
-            HelpEnemy("Orc", hx(228), hy(58), 0.6);
-            HelpEnemy("Goblin", hx(244), hy(90), 0.3);
-            HelpTower("Physical Archer", hx(archer.X), hy(archer.Y), null);
-            Surface.Sprite(TowerDefenseSprites.DamageIcon(DamageType.Fire), hx(fire.X + 18) - 3, hy(fire.Y - 14) - 3, 6, 6);
-            Callout(1, hx(234), hy(26));
-            Callout(2, hx(fire.X - 30), hy(fire.Y - 22));
-            Callout(3, hx(268), hy(38));
+            HelpMapCrop(map, 1020, 120, out hx, out hy);
+            DrawMainBuilding(map, 100, 1, hx(0), hy(0));
+            HelpEnemy("Goblin", hx(1150), hy(528), 1);
+            HelpEnemy("Orc", hx(1296), hy(640), 0.6);
+            HelpEnemy("Goblin", hx(1680), hy(760), 0.3);
+            HelpTower("Fire Mage", hx(1584), hy(633), null);
+            TowerDefenseSprite fireball = TowerDefenseSprites.Effect("fireball");
+            DrawCentered(fireball, fireball.FrameAt("play", ClockSeconds), hx(1640), hy(612), 0);
+            Callout(1, hx(1150) - 4, hy(528) - 24);
+            Callout(2, hx(1584) - 15, hy(633) - 30);
+            Callout(3, hx(1680) + 18, hy(399) - 36);
             EndHelpImage();
 
             HelpLines(TextX, 36,
@@ -219,16 +223,18 @@ namespace OOPGames
                 "2  Türme stehen auf Steinpodesten",
                 "   und schießen automatisch auf den",
                 "   vordersten Gegner in Reichweite.",
-                "3  Die Burg schießt mit. Erreicht ein",
-                "   Gegner sie, verliert sie Leben.",
-                "   Bei 0 % ist die Welle verloren.",
+                "3  Die Burg schießt auf nahe Gegner",
+                "   und wird jede Welle stärker (auf",
+                "   Einfach mehr als auf Gott). Bei",
+                "   0 % Leben ist das Spiel verloren.",
                 "",
                 "Jede Karte hat 50 Wellen. Wer alle",
-                "schafft, schaltet die nächste",
-                "Karte frei.");
+                "auf Normal, Schwer oder Gott schafft,",
+                "schaltet die nächste Karte frei.",
+                "Danach geht es endlos weiter.");
         }
 
-        // The real HUD cells and the footer buttons with numbered explanations.
+        // The HUD values (top bar) and the buttons in the bottom right corner with numbered explanations.
         void DrawHelpInterface()
         {
             const double hudY = 36;
@@ -253,24 +259,24 @@ namespace OOPGames
                 "   Gegner der Welle",
                 "5  Schwierigkeit und letzte Meldung");
 
-            // Footer replica.
-            const double footerY = 108;
+            // Replica of the button group in the bottom right corner.
+            const double footerY = 100;
             Surface.Rect(10, footerY, 300, 11, Color.FromArgb(200, 20, 18, 16));
-            Surface.Text("LEERTASTE  WELLE STARTEN   ENTER  BAUEN", 14, footerY + 2, 5, TextDim);
+            Surface.Text("UNTEN RECHTS IM SPIEL:", 14, footerY + 2, 5, TextDim);
+            string[] buttons = { "MENÜ", "TEMPO x1", "AUTO AUS", "WELLE STARTEN" };
             double right = 308;
-            right = FakeButton("MENÜ", right, footerY + 1);
-            double menuX = right;
-            right = FakeButton("TEMPO x1", right, footerY + 1);
-            double speedX = right;
-            right = FakeButton("WELLE STARTEN", right, footerY + 1);
-            Callout(6, right + 22, footerY + 13);
-            Callout(7, speedX + 13, footerY + 13);
-            Callout(8, menuX + 10, footerY + 13);
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                double left = FakeButton(buttons[i], right, footerY + 1) + 3;
+                Callout(9 - i, (left + right) / 2 - 4.5, footerY + 13);
+                right = left - 3;
+            }
 
-            HelpLines(14, 128,
+            HelpLines(14, 122,
                 "6  WELLE STARTEN (Leertaste): nächste Welle beginnt",
-                "7  TEMPO (T): Spielgeschwindigkeit x1, x2 oder x3",
-                "8  MENÜ (Esc): Pause, Anleitung, Hauptmenü, Verlassen");
+                "7  AUTO (R): startet nach jeder Welle nach 2 s die nächste",
+                "8  TEMPO (T): Spielgeschwindigkeit x1, x2 oder x3",
+                "9  MENÜ (Esc): Pause, Anleitung, Hauptmenü, Verlassen");
         }
 
         double FakeButton(string label, double right, double y)
@@ -286,27 +292,23 @@ namespace OOPGames
         // Map 1 left part: an empty selected pedestal, a tower with its range circle.
         void DrawHelpBuilding()
         {
+            // Left part of map 1: an ice mage with its range, a poison archer and a free, selected pedestal.
             TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[0];
-            const int cropX = 40, cropY = 2;
-            Func<double, double> hx = mx => ImageX + mx - cropX;
-            Func<double, double> hy = my => ImageY + my + 2 - cropY;
-
+            Func<double, double> hx, hy;
             BeginHelpImage();
-            Surface.Sprite(TowerDefenseSprites.MapRegion(map.BackgroundFile, cropX, cropY, 150, 110), ImageX, ImageY, 150, 110);
-            // Pedestal 2 (ice mage with range), 7 (poison archer) and 4 (free, selected) of map 1.
-            Point ice = map.TowerSpots[1], poison = map.TowerSpots[6], free = map.TowerSpots[3];
-            HelpCircle(hx(ice.X), hy(ice.Y) - 6, TowerDefenseBattle.TowerRange(new IceMage(), new TowerUpgrades()));
+            HelpMapCrop(map, 150, 120, out hx, out hy);
+            Point ice = new Point(624, 345), poison = new Point(432, 633), free = new Point(432, 345);
+            Point center = TowerDefenseBattle.RangeCenter(ice);
+            HelpCircle(hx(center.X), hy(center.Y), TowerDefenseBattle.TowerRange(new IceMage(), new TowerUpgrades()) / Px);
             HelpTower("Ice Mage", hx(ice.X), hy(ice.Y), null);
             HelpTower("Poison Archer", hx(poison.X), hy(poison.Y), null);
             double px = hx(free.X), py = hy(free.Y);
-            DrawCorner(px - 16, py - 8, 1, 1, Color.FromRgb(120, 220, 240));
-            DrawCorner(px + 13, py - 8, -1, 1, Color.FromRgb(120, 220, 240));
-            DrawCorner(px - 16, py + 6, 1, -1, Color.FromRgb(120, 220, 240));
-            DrawCorner(px + 13, py + 6, -1, -1, Color.FromRgb(120, 220, 240));
-            Icon(TowerDefenseIcon.Cursor, px - 8, py - 24, 16);
-            Callout(1, px - 22, py + 8);
-            Callout(2, hx(ice.X + 18), hy(ice.Y - 32));
-            Callout(3, hx(ice.X + 38), hy(ice.Y));
+            Color marker = Color.FromRgb(120, 220, 240);
+            DrawSelectionFrame(px, py, 0, marker);
+            Icon(TowerDefenseIcon.Cursor, px - 6, py - 20, 12);
+            Callout(1, px - 20, py - 4);
+            Callout(2, hx(ice.X) + 9, hy(ice.Y) - 30);
+            Callout(3, hx(center.X) + 36, hy(center.Y) + 8);
             EndHelpImage();
 
             HelpLines(TextX, 36,
@@ -325,82 +327,83 @@ namespace OOPGames
                 "ist, pausiert das Spiel.");
         }
 
-        // A tower at double size with tier badge and upgrade bars.
+        static int Percent(double factor) { return (int)Math.Round(factor * 100); }
+
+        // A tower at double size with tier stars and upgrade bars.
         void DrawHelpUpgrades()
         {
             BeginHelpImage();
             Surface.Rect(ImageX, ImageY, ImageWidth, ImageHeight, Color.FromRgb(98, 148, 66));
             Surface.Rect(ImageX, ImageY, ImageWidth, 62, Color.FromRgb(118, 176, 196));
             Surface.Rect(ImageX, ImageY + 58, ImageWidth, 4, Color.FromRgb(150, 196, 206));
-            double spotX = ImageX + 62, spotY = ImageY + 92;
-            Surface.Sprite(TowerDefenseSprites.Pedestal(), spotX - 32, spotY - 48, 64, 64);
-            Surface.Sprite(TowerDefenseSprites.Tower("Fire Mage"), spotX - 32, spotY - 86, 64, 96);
-            DrawTierBadge(spotX + 20, spotY - 50, 3);
+            double spotX = ImageX + 62, spotY = ImageY + 96;
+            DrawTowerSprite(CreateTower("Fire Mage"), new TowerUpgrades(), spotX, spotY, 1, -1, 2);
+            DrawTierStars(spotX, spotY, 3, 2);
 
             // Upgrade bars at double size.
-            double barX = spotX - 16, barY = spotY + 8;
+            double barX = spotX - 16, barY = spotY + 4;
             Surface.Rect(barX - 2, barY - 2, 36, 14, Outline);
             Surface.Rect(barX, barY, 4 * 4, 2, DamageColor);
             Surface.Rect(barX, barY + 4, 2 * 4, 2, RangeColor);
             Surface.Rect(barX, barY + 8, 3 * 4, 2, SpeedColor);
-            Callout(1, spotX + 33, spotY - 52);
+            Callout(1, spotX + 11, spotY - 14);
             Callout(2, barX + 38, barY);
             EndHelpImage();
 
             HelpLines(TextX, 36, "Jeder Turm hat vier Upgrade-Wege:");
             Icon(TowerDefenseIcon.Sword, TextX, 47, 8);
-            ShadowText("SCHADEN  +25 % je Stufe, max. 8", TextX + 11, 48, 5, TextLight);
+            ShadowText("SCHADEN  +" + Percent(TowerUpgrades.DamagePerLevel) + " % je Stufe, max. " + TowerUpgrades.MaxDamage, TextX + 11, 48, 5, TextLight);
             Icon(TowerDefenseIcon.Range, TextX, 57, 8);
-            ShadowText("REICHWEITE  +8 % je Stufe, max. 5", TextX + 11, 58, 5, TextLight);
+            ShadowText("REICHWEITE  +" + Percent(TowerUpgrades.RangePerLevel) + " % je Stufe, max. " + TowerUpgrades.MaxRange, TextX + 11, 58, 5, TextLight);
             Icon(TowerDefenseIcon.Speed, TextX, 67, 8);
-            ShadowText("TEMPO  +12 % je Stufe, max. 6", TextX + 11, 68, 5, TextLight);
+            ShadowText("TEMPO  +" + Percent(TowerUpgrades.SpeedPerLevel) + " % je Stufe, max. " + TowerUpgrades.MaxSpeed, TextX + 11, 68, 5, TextLight);
             Icon(TowerDefenseIcon.Star, TextX, 77, 8);
             ShadowText("TURMSTUFE II / III: hebt alle", TextX + 11, 78, 5, TextLight);
             ShadowText("Basiswerte an", TextX + 11, 86, 5, TextLight);
-            HelpLines(TextX, 98,
-                "1  Wappen: Turmstufe (Silber II,",
-                "   Gold III)",
+            ShadowText("MEISTER (alles gekauft): je Stufe", TextX + 11, 96, 5, MasteryColor);
+            ShadowText("+" + Percent(TowerUpgrades.MasteryDamagePerLevel) + " % Schaden, +" + Percent(TowerUpgrades.MasterySpeedPerLevel) +
+                " % Tempo, endlos", TextX + 11, 104, 5, MasteryColor);
+            HelpLines(TextX, 114,
+                "1  Sterne: Turmstufe (2 Silber = II,",
+                "   3 Gold = III, Lila = Meister)",
                 "2  Balken: Schaden rot, Reichweite",
                 "   grün, Tempo gelb",
-                "Verkaufen gibt die Hälfte aller",
-                "Ausgaben zurück.");
+                "Verkaufen: Hälfte aller Ausgaben.");
         }
 
         // Map 2 path start with walking enemies, a boss and the wave preview.
         void DrawHelpEnemies()
         {
+            // Start of the route on map 2 with walking enemies, a boss and the wave preview.
             TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[1];
-            const int cropX = 0, cropY = 12;
-            Func<double, double> hx = mx => ImageX + mx - cropX;
-            Func<double, double> hy = my => ImageY + my + 2 - cropY;
-
+            Func<double, double> hx, hy;
             BeginHelpImage();
-            Surface.Sprite(TowerDefenseSprites.MapRegion(map.BackgroundFile, cropX, cropY, 150, 110), ImageX, ImageY, 150, 110);
-            HelpEnemy("Goblin", hx(14), hy(40), 1);
-            HelpEnemy("Goblin Archer", hx(40), hy(40), 0.5);
-            ShadowText("+5", hx(56), hy(22), 5, TitleGold);
-            HelpEnemy("Orc", hx(100), hy(66), 0.7);
-            double dotX = hx(100) + 8, dotY = hy(66) - 16;
+            HelpMapCrop(map, 0, 0, out hx, out hy);
+            HelpEnemy("Goblin", hx(336), hy(160), 1);
+            HelpEnemy("Goblin Archer", hx(336), hy(330), 0.5);
+            ShadowText("+5", hx(336) + 9, hy(330) - 12, 5, TitleGold);
+            HelpEnemy("Orc", hx(144), hy(520), 0.7);
+            double dotX = hx(144) + 7.5, dotY = hy(520) - 15;
             Surface.Rect(dotX, dotY, 2, 2, Color.FromRgb(255, 140, 40));
-            Surface.Rect(dotX + 3, dotY, 2, 2, Color.FromRgb(150, 220, 255));
-            HelpEnemy("Orc Lord", hx(100), hy(110), 0.9);
+            Surface.Rect(dotX + 2.5, dotY, 2, 2, Color.FromRgb(150, 220, 255));
+            HelpEnemy("Orc Lord", hx(600), hy(240), 0.9, true);
 
             // Small preview window.
-            double wx = ImageX + 3, wy = ImageY + 49;
+            double wx = ImageX + 103, wy = ImageY + 50;
             Surface.Rect(wx, wy, 44, 58, Outline);
             Surface.Rect(wx + 1, wy + 1, 42, 56, PanelInside);
             Surface.Text("WELLE 10", wx + 3, wy + 2, 5, TitleGold);
-            Surface.Sprite(TowerDefenseSprites.Enemy("Orc", 0), wx + 3, wy + 11, 14, 14);
-            Surface.Sprite(TowerDefenseSprites.Enemy("Goblin", 0), wx + 3, wy + 25, 14, 14);
-            Surface.Sprite(TowerDefenseSprites.Boss("Orc Lord", 0), wx + 3, wy + 39, 16, 16);
+            DrawSpriteIcon("Orc", wx + 3, wy + 11, 14);
+            DrawSpriteIcon("Goblin", wx + 3, wy + 25, 14);
+            DrawSpriteIcon("Orc Lord", wx + 3, wy + 39, 16);
             Surface.Text("ORC", wx + 20, wy + 15, 5, TextLight);
             Surface.Text("GOBLIN", wx + 18, wy + 29, 5, TextLight);
             Surface.Text("BOSS", wx + 22, wy + 44, 5, Color.FromRgb(230, 110, 200));
-            Callout(1, hx(40) - 16, hy(40) - 22);
+            Callout(1, hx(336) - 18, hy(330) - 20);
             Callout(2, dotX + 6, dotY - 4);
-            Callout(3, hx(56) + 10, hy(22) - 2);
-            Callout(4, hx(100) + 15, hy(110) - 30);
-            Callout(5, wx + 46, wy + 2);
+            Callout(3, hx(336) + 18, hy(330) - 14);
+            Callout(4, hx(600) - 24, hy(240) - 40);
+            Callout(5, wx - 11, wy + 2);
             EndHelpImage();
 
             HelpLines(TextX, 36,
@@ -450,7 +453,7 @@ namespace OOPGames
             Enemy enemy = TowerDefenseWaves.CreateEnemy(enemyName, 1);
             Surface.Rect(x, y, 156, 24, Outline);
             Surface.Rect(x + 1, y + 1, 154, 22, PanelInsideDark);
-            Surface.Sprite(TowerDefenseSprites.Enemy(enemyName, 0), x + 3, y + 4, 16, 16);
+            DrawSpriteIcon(enemyName, x + 3, y + 4, 16);
             ShadowText(enemyName.ToUpperInvariant(), x + 22, y + 2, 5, TitleGold);
             ShadowText("SCHWACH", x + 22, y + 12, 5, Color.FromRgb(120, 220, 90));
             double ix = x + 52;
@@ -470,6 +473,7 @@ namespace OOPGames
                 new[] { "ENTER / Z", "bestätigen, bauen, kaufen" },
                 new[] { "BACKSPACE", "zurück, Menü schließen" },
                 new[] { "LEERTASTE", "Welle starten" },
+                new[] { "R", "Autostart an / aus" },
                 new[] { "T", "Tempo x1 / x2 / x3" },
                 new[] { "E", "Gegnervorschau" },
                 new[] { "ENTF", "Spielstand löschen" },
@@ -477,7 +481,7 @@ namespace OOPGames
             };
             for (int i = 0; i < keys.Length; i++)
             {
-                double y = 47 + i * 12;
+                double y = 47 + i * 11;
                 KeyCap(keys[i][0], 14, y);
                 ShadowText(keys[i][1].ToUpperInvariant(), 66, y + 1, 5, TextLight);
             }

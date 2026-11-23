@@ -2,6 +2,7 @@ using System;
 
 namespace OOPGames
 {
+    // Jede Kachel kapselt Gelaende, Rohstoff, Menge und Sichtbarkeit.
     internal sealed class G5_Kachel : IG5_KachelInfo
     {
         private G5_Gelaendeart _gelaende;

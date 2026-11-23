@@ -177,14 +177,16 @@ namespace OOPGames
                     return new[]
                     {
                         new B5ControlHint("← → / A D / MAUS", "Geraet waehlen"),
-                        new B5ControlHint("ENTER / Z / KLICK", "oeffnen", Key.Enter)
+                        new B5ControlHint("ENTER / Z / KLICK", "oeffnen", Key.Enter),
+                        new B5ControlHint("+ / -", "Lautstaerke")
                     };
                 case B5RoomPhase.Device:
                     return new[]
                     {
                         new B5ControlHint("↑ ↓ / W S / 1-3 / MAUS", "Spiel waehlen"),
                         new B5ControlHint("ENTER / Z / KLICK", "Modul", Key.Enter),
-                        new B5ControlHint("ESC / X / RECHTSKLICK", "zurueck", Key.Escape)
+                        new B5ControlHint("ESC / X / RECHTSKLICK", "zurueck", Key.Escape),
+                        new B5ControlHint("+ / -", "Lautstaerke")
                     };
                 case B5RoomPhase.Playing:
                     return new[]

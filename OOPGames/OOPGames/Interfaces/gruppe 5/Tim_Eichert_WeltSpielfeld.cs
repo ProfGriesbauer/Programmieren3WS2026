@@ -2,6 +2,7 @@ using System.Windows;
 
 namespace OOPGames
 {
+    // Gemeinsame read-only Vertrage fuer Kacheln, Rastergroesse und Bildschirmkoordinaten.
     public enum G5_Gelaendeart
     {
         Begehbar,

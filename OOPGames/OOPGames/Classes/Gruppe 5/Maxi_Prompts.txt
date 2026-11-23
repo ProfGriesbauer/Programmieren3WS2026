@@ -136,3 +136,15 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-19 12:09:02] Ändere den Mentor so, dass dieser wirklich mit schönen pfeilen auf die gebäude un d
 
 [2026-11-19 12:09:14] Mach die Anleitung noch Länger sodass man auch gezeigt bekommt wie die Förderbänderplatziert werden. Gebäude sollen zudem auch verschoben werden können und visualisiere auch den Transport der Rohstoffe auf den Förderbändern
+
+[2026-11-22 16:22:43] Btte schreibe weiterhin alle Prompts von mir in die Datei Maxi_Prompts und führe anschließend Pull, Push und Commit durch
+
+[2026-11-22 16:42:54] Gruppe 2 per pull aktualisieren
+
+[2026-11-22 17:43:42] Lasse bei dem Transport der Rohstoffe, diese über das komplette Förderband und nicht nur über das Letzte laufen. Außerdem soll das Inventar auch einklappbar sein.. Auch der mentor soll noch für die neuen Gebäude erweitert werden und erklären was die Gebäude machen, indem man sie platziert und anbindet
+
+[2026-11-22 21:54:18] Pull push und commit
+
+[2026-11-23 20:59:31] pull push und commit
+
+[2026-11-23 16:34:46] Bitte programmiere jede Satisfactory-Datei objektorientiert und mit den vorhandenen klassen die Tim Eichert in den "plans" definiert hat, sodass am Ende die gleiche Funktion mit so wenig wie möglichen Zeilen Code umgesetzt wirdwie jetzt gerade. Außerdem schreibe zu jedem Teil des Codes was dieser in etwa macht(mithilfe von Kommentaren), damit man wenn man den Code in einer Präsentation vorstellt weiß was überall passiert. Ergänze das bitte bei allen Dateien von Gruppe 5 die etwas mit dem Programm zu tun haben.

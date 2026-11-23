@@ -8,11 +8,14 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
+    // Kleines Startbildschirm-Modell mit Home-, Einstellungs- und Anleitung-Seite.
+    // Die Klasse zeichnet WPF-Canvas und verwaltet ihre Klickbereiche objektorientiert.
     internal sealed class SatisfactoryStartScreenSettings
     {
         internal int ResourceAmount { get; set; }
         internal int MinerCycleTicks { get; set; }
         internal int SmelterCycleTicks { get; set; }
+        internal bool TutorialEnabled { get; set; }
     }
 
     internal sealed class SatisfactoryStartScreen
@@ -31,7 +34,8 @@ namespace OOPGames
             Guide,
             Home,
             ChangeResource,
-            ChangeSpeed
+            ChangeSpeed,
+            ToggleTutorial
         }
 
         private sealed class HitTarget
@@ -48,6 +52,7 @@ namespace OOPGames
         private Page _page = Page.Home;
         private int _resourceChoice = 1;
         private int _speedChoice = 1;
+        private bool _tutorialEnabled = true;
 
         internal SatisfactoryStartScreenSettings SelectedSettings
         {
@@ -57,7 +62,8 @@ namespace OOPGames
                 {
                     ResourceAmount = _resourceChoice == 0 ? 150 : _resourceChoice == 2 ? 600 : 300,
                     MinerCycleTicks = _speedChoice == 0 ? 55 : _speedChoice == 2 ? 22 : 35,
-                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55
+                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55,
+                    TutorialEnabled = _tutorialEnabled
                 };
             }
         }
@@ -69,6 +75,7 @@ namespace OOPGames
 
         internal void Paint(Canvas canvas)
         {
+            // Zeichnet die aktuelle Startbildschirmseite als WPF-Canvas.
             if (canvas == null)
             {
                 throw new ArgumentNullException(nameof(canvas));
@@ -102,6 +109,7 @@ namespace OOPGames
 
         internal bool HandleClick(int x, int y)
         {
+            // Uebersetzt Mausklickkoordinaten in Startbildschirmaktionen; Start liefert true zurueck.
             Point click = new Point(x, y);
             foreach (HitTarget target in _hitTargets)
             {
@@ -128,6 +136,9 @@ namespace OOPGames
                         break;
                     case Action.ChangeSpeed:
                         _speedChoice = (_speedChoice + 1) % 3;
+                        break;
+                    case Action.ToggleTutorial:
+                        _tutorialEnabled = !_tutorialEnabled;
                         break;
                 }
 
@@ -240,7 +251,7 @@ namespace OOPGames
                 ResourceLabel() + "  ·  " + SpeedLabel(),
                 Brushes.White, left + 42, top + height - 80, width - 84, 22, 13,
                 FontWeights.SemiBold);
-            AddText(canvas, "Nach dem Start begleitet dich ein Mentor durch die verpflichtende Einführung.",
+            AddText(canvas, "Das Tutorial ist optional und kann jederzeit mit T beendet werden.",
                 MutedBrush, left + 30, top + 340, width - 60, 38, 11);
         }
 
@@ -250,17 +261,20 @@ namespace OOPGames
             AddText(canvas, "Einstellungen", Brushes.White,
                 left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
             AddText(canvas, "Klicke auf eine Auswahl, um den Wert zu ändern.",
-                MutedBrush, left + 30, top + 113, width - 60, 40, 12);
+                MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
             AddText(canvas, "ROHSTOFFVORRAT", AccentBrush,
-                left + 30, top + 190, width - 60, 18, 10, FontWeights.Bold);
-            DrawOptionButton(canvas, left + 28, top + 216, width - 56, 54,
+                left + 30, top + 148, width - 60, 18, 10, FontWeights.Bold);
+            DrawOptionButton(canvas, left + 28, top + 170, width - 56, 54,
                 ResourceLabel(), "Erz pro Vorkommen", Action.ChangeResource);
 
             AddText(canvas, "PRODUKTIONSTEMPO", AccentBrush,
-                left + 30, top + 300, width - 60, 18, 10, FontWeights.Bold);
-            DrawOptionButton(canvas, left + 28, top + 326, width - 56, 54,
+                left + 30, top + 238, width - 60, 18, 10, FontWeights.Bold);
+            DrawOptionButton(canvas, left + 28, top + 260, width - 56, 54,
                 SpeedLabel(), "Förderer- und Schmelzzyklen", Action.ChangeSpeed);
+
+            DrawOptionButton(canvas, left + 28, top + Math.Max(318, height - 160), width - 56, 54,
+                TutorialLabel(), "Tutorial bei Spielstart", Action.ToggleTutorial);
 
             DrawButton(canvas, left + 28, top + height - 96, width - 56, 54,
                 "SPIEL STARTEN", "Einstellungen übernehmen",
@@ -272,7 +286,7 @@ namespace OOPGames
             DrawBackButton(canvas, left + 28, top + 26);
             AddText(canvas, "Anleitung", Brushes.White,
                 left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
-            AddText(canvas, "Diese Einführung ist verpflichtend und nicht überspringbar:",
+            AddText(canvas, "Die Einführung ist optional und kann im Spiel mit T übersprungen werden:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
             DrawStep(canvas, left + 30, top + 155, "01", "Förderer bauen",
@@ -283,7 +297,7 @@ namespace OOPGames
                 "Drücke M, klicke das Gebäude und danach das Ziel.");
             DrawStep(canvas, left + 30, top + 365, "04", "Förderbänder",
                 "Drücke B und verbinde Förderer und Schmelze über freie Nachbarfelder.");
-            AddText(canvas, "Der Mentor zeigt dir alle Schritte. Bei aktivem Transport siehst du die Rohstoffe auf dem Band.",
+            AddText(canvas, "Tab öffnet die Gebäudeliste zum Scrollen; T überspringt das Tutorial.",
                 MutedBrush, left + 30, top + 440, width - 60, 40, 10);
 
             DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
@@ -388,6 +402,11 @@ namespace OOPGames
         {
             return _speedChoice == 0 ? "Entspannt" :
                 _speedChoice == 2 ? "Schnell" : "Standard";
+        }
+
+        private string TutorialLabel()
+        {
+            return _tutorialEnabled ? "Tutorial: Aktiv" : "Tutorial: Übersprungen";
         }
 
         private void AddHitTarget(double left, double top, double width, double height, Action action)
@@ -507,6 +526,8 @@ namespace OOPGames
         private readonly G5_FabrikSpielfeld _field;
         private readonly SatisfactoryStartScreen _startScreen;
         private readonly SatisfactoryGameMentor _mentor;
+        private Rect _inventarBereich;
+        private bool _inventarGeoeffnet = true;
 
         internal SatisfactoryFieldView(
             G5_FabrikSpielfeld field,
@@ -525,7 +546,34 @@ namespace OOPGames
         internal SatisfactoryStartScreen StartScreen { get { return _startScreen; } }
         internal SatisfactoryGameMentor Mentor { get { return _mentor; } }
         internal Canvas MentorOverlay { get; }
-        internal long SimulationTickNumber { get { return _field.Simulation.TickNumber; } }
+        internal bool GebaeuderegisterGeoeffnet => _field.GebaeuderegisterGeoeffnet;
+        internal int GebaeuderegisterOffset => _field.GebaeuderegisterOffset;
+        internal bool InventarGeoeffnet => _inventarGeoeffnet;
+
+        internal void ToggleGebaeuderegister()
+        {
+            _field.ToggleGebaeuderegister();
+        }
+
+        internal void ScrollGebaeuderegister(int schritte)
+        {
+            _field.ScrollGebaeuderegister(schritte);
+        }
+
+        internal void ToggleInventar()
+        {
+            _inventarGeoeffnet = !_inventarGeoeffnet;
+        }
+
+        internal void SetInventarBereich(Rect bereich)
+        {
+            _inventarBereich = bereich;
+        }
+
+        internal bool IsInventarBereich(int screenX, int screenY)
+        {
+            return _inventarBereich.Contains(new Point(screenX, screenY));
+        }
 
         internal bool TryGetConveyorFlow(int x, int y, out bool isVertical, out bool isReversed)
         {
@@ -546,6 +594,28 @@ namespace OOPGames
 
             isVertical = false;
             isReversed = false;
+            return false;
+        }
+
+        internal bool TryGetConveyorItem(int x, int y, out G5_Item item, out double progress)
+        {
+            foreach (G5_Conveyor conveyor in _field.InterneGebaeude.OfType<G5_Conveyor>())
+            {
+                if (conveyor.Position.X == x && conveyor.Position.Y == y)
+                {
+                    KeyValuePair<G5_Item, int> first = conveyor.Contents
+                        .FirstOrDefault(stack => stack.Value > 0);
+                    if (first.Value > 0)
+                    {
+                        item = first.Key;
+                        progress = conveyor.TransportProgress;
+                        return true;
+                    }
+                }
+            }
+
+            item = default;
+            progress = 0;
             return false;
         }
 
@@ -578,6 +648,23 @@ namespace OOPGames
                 x = screenX;
                 y = screenY;
                 return x >= 0 && y >= 0;
+            }
+
+            double registerWidth = _field.GebaeuderegisterGeoeffnet ? 220 : 38;
+            double registerHeight = _field.GebaeuderegisterGeoeffnet ? 253 : 42;
+            if (screenX >= 10 && screenX <= 10 + registerWidth &&
+                screenY >= 66 && screenY <= 66 + registerHeight)
+            {
+                x = -1;
+                y = -1;
+                return false;
+            }
+
+            if (IsInventarBereich(screenX, screenY))
+            {
+                x = -1;
+                y = -1;
+                return false;
             }
 
             return ((IG5_WeltSpielfeld)_field).TryBildschirmZuRaster(screenX, screenY, out x, out y);

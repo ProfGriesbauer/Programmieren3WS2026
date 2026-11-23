@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
+    // Diese Schnittstellen trennen Gegenstandstransport und Stromverbrauch von konkreten Gebaeudeklassen.
     public interface IG5_ItemEndpoint
     {
         G5_GridPosition Position { get; }

@@ -22,6 +22,11 @@ namespace OOPGames
         public int[] DamageLevels { get; set; } = new int[0];
         public int[] RangeLevels { get; set; } = new int[0];
         public int[] SpeedLevels { get; set; } = new int[0];
+        public int[] MasteryLevels { get; set; } = new int[0];
+        // True for a run in endless mode (waves after 50).
+        public bool Endless { get; set; }
+        // Seed of the random endless waves, so a resumed endless run gets the same waves again.
+        public int EndlessSeed { get; set; }
 
         public TowerUpgrades GetUpgrades(int spot)
         {
@@ -32,6 +37,8 @@ namespace OOPGames
                 upgrades.Damage = Clamp(At(DamageLevels, spot), 0, TowerUpgrades.MaxDamage);
                 upgrades.Range = Clamp(At(RangeLevels, spot), 0, TowerUpgrades.MaxRange);
                 upgrades.Speed = Clamp(At(SpeedLevels, spot), 0, TowerUpgrades.MaxSpeed);
+                // Mastery only counts while everything else is maxed.
+                if (upgrades.IsComplete) upgrades.Mastery = Math.Max(0, At(MasteryLevels, spot));
             }
             else if (TowerLevels != null && spot < TowerLevels.Length)
             {
@@ -47,6 +54,7 @@ namespace OOPGames
             DamageLevels = new int[upgrades.Length];
             RangeLevels = new int[upgrades.Length];
             SpeedLevels = new int[upgrades.Length];
+            MasteryLevels = new int[upgrades.Length];
             for (int i = 0; i < upgrades.Length; i++)
             {
                 if (upgrades[i] == null) continue;
@@ -54,6 +62,7 @@ namespace OOPGames
                 DamageLevels[i] = upgrades[i].Damage;
                 RangeLevels[i] = upgrades[i].Range;
                 SpeedLevels[i] = upgrades[i].Speed;
+                MasteryLevels[i] = upgrades[i].Mastery;
             }
         }
 
@@ -69,6 +78,32 @@ namespace OOPGames
         public DateTime? LastPlayed { get; set; }
         // Map that was played last, -1 if none.
         public int LastMap { get; set; } = -1;
+        // Starts the next wave automatically shortly after a wave has been beaten.
+        public bool AutoStart { get; set; }
+        // Key = map index, value = bit mask of the difficulties the map was beaten on (bit 0 = Easy ... bit 3 = God).
+        public Dictionary<int, int> CompletedDifficulties { get; set; } = new Dictionary<int, int>();
+        // Key = map index, value = highest wave number beaten on the map in endless mode (at least 50, the
+        // first 50 waves count as well).
+        public Dictionary<int, int> EndlessRecords { get; set; } = new Dictionary<int, int>();
+
+        public int EndlessRecord(int mapIndex)
+        {
+            int wave;
+            return EndlessRecords != null && EndlessRecords.TryGetValue(mapIndex, out wave) ? wave : 0;
+        }
+
+        public bool HasCompleted(int mapIndex, int difficulty)
+        {
+            int mask;
+            return CompletedDifficulties != null && CompletedDifficulties.TryGetValue(mapIndex, out mask) && (mask & (1 << difficulty)) != 0;
+        }
+
+        // True when the map was beaten on all four difficulties.
+        public bool HasCompletedAll(int mapIndex)
+        {
+            for (int d = 0; d < 4; d++) if (!HasCompleted(mapIndex, d)) return false;
+            return true;
+        }
 
         [JsonIgnore]
         public bool IsEmpty { get { return LastPlayed == null; } }
@@ -118,12 +153,18 @@ namespace OOPGames
             Save();
         }
 
-        // Unlocks the next map and drops the finished run. Returns true when a new map was unlocked.
-        public static bool CompleteMap(int slotIndex, int mapIndex)
+        // Records the beaten difficulty and drops the finished run.
+        // The next map is only unlocked when unlocksNext is true (beaten on
+        // Normal or harder); returns true if a new map was unlocked.
+        public static bool CompleteMap(int slotIndex, int mapIndex, int difficulty, bool unlocksNext)
         {
             TowerDefenseSaveSlot slot = Slots[slotIndex];
             slot.Runs.Remove(mapIndex);
-            int unlocked = Math.Min(TowerDefenseMaps.Maps.Count, mapIndex + 2);
+            if (slot.CompletedDifficulties == null) slot.CompletedDifficulties = new Dictionary<int, int>();
+            int mask;
+            slot.CompletedDifficulties.TryGetValue(mapIndex, out mask);
+            slot.CompletedDifficulties[mapIndex] = mask | (1 << difficulty);
+            int unlocked = unlocksNext ? Math.Min(TowerDefenseMaps.Maps.Count, mapIndex + 2) : slot.UnlockedMaps;
             bool newMap = unlocked > slot.UnlockedMaps;
             if (newMap) slot.UnlockedMaps = unlocked;
             Touch(slot, mapIndex);
@@ -137,6 +178,16 @@ namespace OOPGames
             slot.Runs[mapIndex] = run;
             Touch(slot, mapIndex);
             Save();
+        }
+
+        // Stores a beaten endless wave if it is a new record (saved together with the next Save()).
+        public static bool RecordEndlessWave(int slotIndex, int mapIndex, int wave)
+        {
+            TowerDefenseSaveSlot slot = Slots[slotIndex];
+            if (slot.EndlessRecords == null) slot.EndlessRecords = new Dictionary<int, int>();
+            if (wave <= slot.EndlessRecord(mapIndex)) return false;
+            slot.EndlessRecords[mapIndex] = wave;
+            return true;
         }
 
         public static void DiscardRun(int slotIndex, int mapIndex)

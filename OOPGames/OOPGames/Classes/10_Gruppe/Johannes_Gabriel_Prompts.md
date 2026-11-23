@@ -403,3 +403,193 @@ ergänzt. Der vollständige Wortlaut des Prompts bleibt erhalten.
 **Datum:** 2026-11-19
 
 > Speichere mir meine heutigen Prompts in der Johannes_Gabriel_Prompts.md Datei
+
+## Prompt 53
+
+**Datum:** 2026-11-19
+
+> Erstelle mir für unser Projekt der 10_Gruppe einen Lautstärkeregler, welcher im 3D Raum genutzt werden kann, damit alle Spiele lauter und leiser gestellt werden können
+
+## Prompt 54
+
+**Datum:** 2026-11-19
+
+> Der Lautstärkeregeler gefällt mir gut, aber mir würden 5er Schritte besser gefallen
+
+## Prompt 55
+
+**Datum:** 2026-11-19
+
+> Und stelle mir den Lautstärkeregler standardmäßig auf 50%, wenn man startet
+
+## Prompt 56
+
+**Datum:** 2026-11-19
+
+> Der letzte gespeicherte Wert klingt gut, das habe ich wohl überlesen. Aber es soll trotzdem beim ersten Start bei 50% bleiben
+
+## Prompt 57
+
+**Datum:** 2026-11-19
+
+> Ich habe neue Sprites generieren lassen und würde diese gerne mit den aktuellen austauschen. Ich hätte einen Ordner auf meinem Pc mit den darin befindenden PNG Dateien zu allem. Wie kann ich dir diese effektiv geben, dass du diese für mein Tower Defense Spiel einbinden kannst
+
+## Prompt 58
+
+**Datum:** 2026-11-19
+
+> C:\Users\gabri\Downloads\tower_defense_sprites_v4\tower_defense_sprites\1080p
+> Das ist der Pfad mit Ordnern in denen alle Sprite PNG liegen. Die Sprites sind nun auch mit Animationen gedacht, weshalb mehrere Sprites in einer PNG liegen. Es sind auch neue Angriffsanimationen der Türme vorhanden und diese bitte einbinden. Stelle mir nun alles auf das neue Sprite System um und lege die neuen Karten an. Es wird alles ersetzt und die alten Sprites werden nicht mehr benötigt. Falls die Auflösung und das Pixel Raster nicht für die Sprites passt, passe bitte die Auflösung und das Raster an und nicht die Sprites. Auflösung sollte im besten Fall bei 1080p bzw. dem jetztigen bleiben.
+
+## Prompt 59
+
+**Datum:** 2026-11-19
+
+> Das HUD mit Gold, Leben, Welle und so weiter ist nun sehr klein, wodurch es nicht so einfach zu lesen ist. Dieses sollte mindestens doppelt so groß werden. Dazu könnte man Welle starten, Tempo und Menü nach unten verlegen, wodurch oben mehr Platz entsteht. Zusätzlich optimiere mir die Podest Position der Türme, damit jeder Turm den Weg mit seiner Standard Reichweite erreichen kann, aber die Schwierigkeit der Karten beibehalten werden
+
+## Prompt 60
+
+**Datum:** 2026-11-19
+
+> Nun hätte ich gerne einen Button unten mit dem man Autostart ein und ausschalten kann. Dabei wird sobald eine Welle beendet ist, die nächste gestartet. Ich weiß nicht ob es besser wäre direkt die neue zu starten oder 1 Sekunde zu warten, nachdem der letzte Gegner der Welle stirbt. Dazu schießt das Hauptgebäude auch Pfeile, wenn Gegner in die Nähe kommen?
+
+## Prompt 61
+
+**Datum:** 2026-11-19
+
+> Nein, sie soll keine Pfeile schießen. Die Burg sollte aber nicht zu stark werden, sondern nur etwas aushelfen, wenn Gegner zu nahe kommen. Gerne könnte die Burg mit jeder Welle etwas stärker werden und das Scaling von der Schwierigkeit abhängig machen, sodass diese im God Modus schwächer ist als in Easy
+
+## Prompt 62
+
+**Datum:** 2026-11-19
+
+> Die nächste Karte soll nur freigeschaltet werden, wenn man eine Karte mit Normal, Hard oder God durchspielt
+
+## Prompt 63
+
+**Datum:** 2026-11-19
+
+> Mir sind mehrere Sachen aufgefallen, welche abgeändert werden sollten. Das Icon für die Turm Stufe passt nun nicht mehr zu den neuen Sprites, es ist zu groß und deckt teilweise einen nebenstehenden Turm ab, wenn die Podeste zu nahe aneinander stehen. Dazu ist das Goldsystem noch nicht ausgereift. Ich habe auf der ersten Karte nach Welle 38 allte 10 möglichen Podeste mit voll upgegradeten Türmen stehen und schon knapp 10000 Gold übrig. Das übrige Gold geht bis Welle 50 auf über 50000 Gold. Dieses wird nie verwendet bzw. kann nicht verwendet werden. Bitte ändere das Icon ab und was würdest du für das Gold System vorschlagen?
+
+## Prompt 64
+
+**Datum:** 2026-11-19
+
+> Die Einnahmen dämpfen klingt gut, aber ich überlege noch einen Endlos-Modus einzubauen, nachdem man eine Karte geschafft hat und dieser sollte dann auch noch etwas Gold pro Welle einbringen. Wie wäre es, wenn wir Upgrades etwas teurer machen, dafür etwas stärker, dazu noch die Meisterschaftsstufe sobald man alle Upgrades für einen Turm gekauft hat. Fähigkeiten möchte ich nicht und den Endlos-Modus soll erst nur eine Idee sein
+
+## Prompt 65
+
+**Datum:** 2026-11-19
+
+> Bitte weitermachen
+
+## Prompt 66
+
+**Datum:** 2026-11-19
+
+> Ich hätte gerne für jede Karte einen eigenen Soundtrack. Lass uns zusammen rausfinden was ich möchte und wie die Soundtracks sich anhören sollten. Stelle mir dafür Fragen, mit denen du rausfinden willst, wie die Soundtracks klingen sollen
+
+## Prompt 67
+
+**Datum:** 2026-11-19
+
+> Das klingt sehr gut
+
+## Prompt 68
+
+**Datum:** 2026-11-19
+
+> Der Soundtrack gefällt mir gut so wie er ist, nur wäre es gut, wenn die Lautstärke etwas leiser wäre. Anonsten kannst du gerne die restlichen Soundtracks komponieren
+
+## Prompt 69
+
+**Datum:** 2026-11-19
+
+> Ich habe bis jetzt die Musik im Menü, 1 und 2 Karte und die von Mini, Boss gehört diese ist eher ruhig. Es dürfen gerne alle Soundtracks etwas epischer werden, vor allem die der MiniBosse und Bosse. Vielleicht etwas mehr Tempo und etwas mehr Bass, damit die Stimmung einer epischen Schlacht aufkommt. Das mit jeder Karte etwas epischer wird
+
+## Prompt 70
+
+**Datum:** 2026-11-19
+
+> Die Musik passt soweit. Jetzt hätte ich noch gerne, dass es nach dem Abschluss einer Karte in ein Menü geht, indem man auf nächste Karte oder Schwierigkeit wählen klicken kann. Dazu steht Karte abgeschlossen dabei und wenn man eine neue Karte freischaltet, dass man diese freigeschalten hat.
+> Der Abschluss einer Karte und der gespielten Schwierigkeit soll bei Auswahl einer Karte angezeigt werden, mit einem grünen Haken bei der Schwierigkeit und ein Stern oben rechts, wenn alle Schwierigkeiten abgeschlossen wurden
+
+## Prompt 71
+
+**Datum:** 2026-11-19
+
+> Die Ecken bei der Turmauswahl sind in 3 Ecken etwas verschoben, passe mir diese an, dass es schöne Ecken sind
+
+## Prompt 72
+
+**Datum:** 2026-11-19
+
+> Die Ecken sehen gut aus, aber mach die ganze Auswahl etwas kleiner
+
+## Prompt 73
+
+**Datum:** 2026-11-19
+
+> Die Arme sollen kürzer sein und der Abstand etwas größer zwischen den Ecken
+
+## Prompt 74
+
+**Datum:** 2026-11-21
+
+> Warum habe ich immer wenn ich VsCode neu starte Changes, obwohl ich darin nichts gemacht habe?
+
+## Prompt 75
+
+**Datum:** 2026-11-21
+
+> Nur für jetzt
+
+## Prompt 76
+
+**Datum:** 2026-11-21
+
+> Jetzt würde ich gerne noch einen Endlos Modus in mein Tower Defense Spiel einfügen. Dabei soll nach dem eine Karte geschafft wurde zusätzlich zur Auswahl der nächsten Karte bzw. neue Schwierigkeit auch ein Button für Endlos Modus kommen. Dann geht es von Welle 51 weiter, bis das MainBuilding besiegt ist. Dazu soll nun auch ein Screen kommen, wenn das MainBuilding allgemein besiegt wird. Dabei kann man Neustarten, andere Karte oder Hauptmenü auswählen. Bei Neustart startet man bei Welle 1 von vorne
+
+## Prompt 77
+
+**Datum:** 2026-11-21
+
+> Im Endlos Modus wäre noch gut, wenn die Burg zerstört wird auch Schwierigkeit wählen kommt, wie wenn man Welle 50 geschafft hat.
+
+## Prompt 78
+
+**Datum:** 2026-11-21
+
+> Am besten zählen die ersten 50 Wellen auch zum Rekord dazu, wenn man im Endlos Modus verliert. Damit man weiß bis zu welcher Welle man die Karte geschafft hat
+
+## Prompt 79
+
+**Datum:** 2026-11-21
+
+> Könnte man den Endlos Modus auch so machen, dass es zufällig ist, welche Gegner kommen. Also die Anzahl der Gegner steigt wie bis Welle 50, aber es wird zufällig ausgewählt welche Gegner genau kommen. Genauso bei MiniBossen und Bossen. Dass man nie weiß was als nächstes kommt
+
+## Prompt 80
+
+**Datum:** 2026-11-21
+
+> [5 Screenshots der Karten mit rot markierten Podest-Positionen]
+> Kannst du mir die Podeste aller Karten verschieben. Bitte auch die mit dem roten X markierten Positionen und teste, ob diese Positionen auch gut spielbar sind
+
+## Prompt 81
+
+**Datum:** 2026-11-21
+
+> Wenn man die nächste Gegner Info öffnet im EndlosModus kommt es öfter vor, dass nicht alle Gegner angezeigt werden. Es wäre gut, wenn eine zweite Reihe aufgemacht wird, wenn zu viele Gegner angezeigt werden würden. Also rechts neben den angezeigten Gegner noch eine Reihe nach unten mit dem Rest.
+> Dazu möchte ich die Armor von dem ArcaneTitan von 90 auf 75 setzen, da er zu viel aushält, sobald man in den Endlos Modus kommt
+
+## Prompt 82
+
+**Datum:** 2026-11-22
+
+> Mir ist aufgefallen, dass im Endlos Modus Tempo 1 sehr langsam ist. Ich hätte gerne, dass die Spielgeschwindigkeit auf Tempo 1 etwa der derzeitigen Mitte von Tempo 1 und 2 darstellt und die neuen Tempo 2 und 3 genauso von dem neuen Tempo 1 steigen wie aktuell
+
+## Prompt 83
+
+**Datum:** 2026-11-22
+
+> Mir ist noch etwas aufgefallen. Wenn man eine Karte schafft und zur nächsten Karte auswählt, sieht man im Hintergrund immer nur die erste Karte und nicht die Karte, welche als nächstes gespielt werden würde

@@ -55,7 +55,7 @@ namespace OOPGames
                 {
                     new B5RoomGameEntry("Snake", Color.FromRgb(116, 158, 70), () => new G10_SnakeGame()),
                     new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new G10_PongGame()),
-                    new B5RoomGameEntry("Void Courier", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame()),
+                    new B5RoomGameEntry("SolarShooter", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame()),
                     new B5RoomGameEntry("Tetris", Color.FromRgb(112, 165, 201), () => new G10_TetrisGame())
                 }),
             new B5RoomDevice(B5RoomDeviceKind.Commodore, "HEIMCOMPUTER", Color.FromRgb(124, 112, 218), Color.FromRgb(53, 40, 121),
@@ -170,6 +170,8 @@ namespace OOPGames
         internal void Tick()
         {
             List<Key> keys = DrainInput();
+            // + / - change the volume of all games in every phase; the games never see these keys.
+            keys.RemoveAll(HandleVolumeKey);
             if (Phase == B5RoomPhase.Playing)
             {
                 if (keys.Any(IsBackKey) && !(ActiveGame is IB5RoomOwnBackKey))
@@ -290,6 +292,14 @@ namespace OOPGames
             ActiveGame = Device.Games[InsertedGame].Create();
             ActiveGame.Start();
             Phase = B5RoomPhase.Playing;
+        }
+
+        static bool HandleVolumeKey(Key key)
+        {
+            if (key == Key.OemPlus || key == Key.Add) G10_SoundVolume.Increase();
+            else if (key == Key.OemMinus || key == Key.Subtract) G10_SoundVolume.Decrease();
+            else return false;
+            return true;
         }
 
         static bool IsBackKey(Key key) { return key == Key.Escape || key == Key.X; }

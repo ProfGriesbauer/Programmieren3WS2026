@@ -157,7 +157,7 @@ namespace OOPGames
     public class ArcaneTitan : Enemy
     {
         public ArcaneTitan(int wave = 1)
-            : base("Arcane Titan", 0.25, FantasyEnemyScaling.Scale(2000, wave), FantasyEnemyScaling.Scale(90, wave), FantasyEnemyScaling.Scale(200, wave), new[] { DamageType.Physical, DamageType.Fire, DamageType.Ice }, new[] { DamageType.Poison }, FantasyEnemyScaling.Scale(300, wave))
+            : base("Arcane Titan", 0.25, FantasyEnemyScaling.Scale(2000, wave), FantasyEnemyScaling.Scale(75, wave), FantasyEnemyScaling.Scale(200, wave), new[] { DamageType.Physical, DamageType.Fire, DamageType.Ice }, new[] { DamageType.Poison }, FantasyEnemyScaling.Scale(300, wave))
         {
         }
     }

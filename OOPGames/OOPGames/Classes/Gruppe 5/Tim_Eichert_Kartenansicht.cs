@@ -3,6 +3,7 @@ using System.Windows;
 
 namespace OOPGames
 {
+    // Kapselt Zoom, Verschiebung und alle Bildschirm-Raster-Koordinatenumrechnungen.
     internal sealed class G5_Kartenansicht
     {
         private const double KachelGroesse = 32.0;
