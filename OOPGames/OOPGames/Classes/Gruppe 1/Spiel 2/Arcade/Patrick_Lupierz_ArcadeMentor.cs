@@ -20,7 +20,7 @@ namespace OOPGames
         public const string NpcName = "Patrick";
         public const string Skin = "pc-F0D060-F0C8A0-181818-2848A8-F8F8F8-x";   // Haare, Haut, T-Shirt, Hose, Schuhe, keine Mütze
         public const string SnakeGameName = "Schlange";
-        public const int SnakeRecord = 576;   // Änderung durch: Patrick Lupierz – 22.11.2026 (vorher 220); steht auch auf der Highscore-Tafel
+        public const int SnakeRecord = 560;   // Änderung durch: Patrick Lupierz – 22.11.2026 (vorher 220); steht auch auf der Highscore-Tafel
         public const int RecordReward = 300;   // Änderung durch: Patrick Lupierz – 22.11.2026 (vorher 35)
 
         public static readonly string[] Tips =
