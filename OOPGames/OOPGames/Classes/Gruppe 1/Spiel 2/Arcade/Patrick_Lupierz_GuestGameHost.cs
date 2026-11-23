@@ -50,12 +50,22 @@ namespace OOPGames
         }
 
         // Entwickler: Patrick Lupierz – Datum: 18.11.2026 – Gruppe aus dem Klassennamen (Text vor dem ersten "_")
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – auch Klassen ohne "_" (z. B. Gruppe3DragRaceRules, HayDayRules)
+        // bekommen eine brauchbare Gruppe: 1. Text vor "_", 2. "Gruppe3"/"G5" am Anfang, 3. Name ohne Rollen-Endung
+        // (Rules, Painter, HumanPlayer, ComputerPlayer, Player), damit Regeln, Painter und Spieler zusammenpassen.
+        private static readonly string[] RoleSuffixes = { "ComputerPlayer", "HumanPlayer", "Painter", "Rules", "Player" };
+
         public static string GroupOf(object part)
         {
             if (part == null) return "";
             string name = part.GetType().Name;
             int cut = name.IndexOf('_');
-            return cut > 0 ? name.Substring(0, cut) : name;
+            if (cut > 0) return name.Substring(0, cut);
+            System.Text.RegularExpressions.Match number = System.Text.RegularExpressions.Regex.Match(name, @"^(Gruppe|G)\d+");
+            if (number.Success) return number.Value;
+            foreach (string suffix in RoleSuffixes)
+                if (name.Length > suffix.Length && name.EndsWith(suffix, StringComparison.Ordinal)) return name.Substring(0, name.Length - suffix.Length);
+            return name;
         }
 
         // Entwickler: Patrick Lupierz – Datum: 18.11.2026
@@ -80,7 +90,10 @@ namespace OOPGames
             List<IGamePlayer> playerList = (players ?? Enumerable.Empty<IGamePlayer>()).Where(p => p != null).ToList();
             foreach (IGameRules registered in rules ?? Enumerable.Empty<IGameRules>())
             {
-                if (registered == null || registered is IG1C_CasinoRules || result.Count >= G1C_ArcadeCatalog.MaxGamesPerCabinet) continue;
+                // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – keine Obergrenze mehr im Gast-Automaten: alle
+                // registrierten Spiele anderer Gruppen erscheinen in der (scrollbaren) Liste. Die vier eigenen Automaten
+                // behalten ihre Grenze von neun Spielen (G1C_ArcadeCatalog.MaxGamesPerCabinet).
+                if (registered == null || registered is IG1C_CasinoRules) continue;
                 try
                 {
                     IGameRules probe = Fresh(registered);

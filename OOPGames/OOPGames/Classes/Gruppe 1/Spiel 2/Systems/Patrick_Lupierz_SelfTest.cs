@@ -113,6 +113,8 @@ namespace OOPGames
             run("Eduard", "Eduard spielt am linken Automaten, blockiert ihn, gestreiftes Hemd/Mütze, viele Sprüche", EduardBlocksLeftMachine); // Patrick Lupierz – 22.11.2026
             run("NPC", "Studentin Lea: eigenes Aussehen (blond, hellgrün, keine Krawatte), nicht mehr die geteilte Vorlage", LeaOwnLook); // Patrick Lupierz – 23.11.2026
             run("Angler", "Denis: 'Wofuer sind die Fische?' antwortet (Spaß, verkaufen), nur 'Welche Fische gibt es?' öffnet das Lexikon", AnglerFishQuestions); // Patrick Lupierz – 23.11.2026
+            run("Spielhalle", "Gast-Automat: Gruppe aus dem Klassennamen auch ohne Unterstrich (Drag Race, Hay Day)", ArcadeGuestGroupNames); // Patrick Lupierz – 23.11.2026
+            run("Spielhalle", "Gast-Automat ohne Obergrenze: mehr als 9 registrierte Spiele erscheinen alle, eigene Automaten bleiben bei 9", ArcadeGuestNoCap); // Patrick Lupierz – 23.11.2026
             run("Fenster", "Welt füllt jede Fenstergröße, Minispiele mittig im festen 480x320-Rahmen", WindowScaling); // Patrick Lupierz – 22.11.2026
             run("NPC", "Duell: NPC ansprechen, herausfordern, Pong spielen; Einsatz, Geldbeutel und Duell-Gedächtnis", NpcDuel); // Patrick Lupierz – 23.11.2026
             run("NPC", "Duell: Spielauswahl Pong/Poker/Blackjack, Poker und Blackjack gegen den NPC werden ausgewertet", NpcDuelGameChoice); // Patrick Lupierz – 23.11.2026
@@ -1272,6 +1274,39 @@ namespace OOPGames
             public override IGamePlayer Clone() { return new FakeComputer(); }
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Gast-Automat ohne Limit. 14 registrierte Spiele (mehr als die frühere Grenze von 9) werden alle angeboten.
+        private static void ArcadeGuestNoCap()
+        {
+            List<IGameRules> rules = new List<IGameRules>();
+            for (int i = 0; i < 14; i++) rules.Add(new FakeRules());
+            List<G1C_GuestGameEntry> found = G1C_GuestGameCatalog.Discover(rules,
+                new IPaintGame[] { new FakePainter() }, new IGamePlayer[] { new FakeHuman(), new FakeComputer() });
+            Equal(14, found.Count, "Spiele im Gast-Automaten");
+            Check(found.Count > G1C_ArcadeCatalog.MaxGamesPerCabinet, "Gast-Automat noch begrenzt");
+            Check(G1C_ArcadeCatalog.Cabinets.Where(c => !c.IsGuestCabinet).All(c => c.Games.Count <= G1C_ArcadeCatalog.MaxGamesPerCabinet), "Eigener Automat über der Grenze");
+
+            // die Liste im Spiel zeigt alle (scrollbar)
+            G1C_GameManager game = RunningGame();
+            game.GuestGameSource = () => found;
+            G1C_ArcadeCabinet cabinet = G1C_ArcadeCatalog.Cabinets.First(c => c.IsGuestCabinet);
+            G1C_GameManager at = GameAt(G1C_WorldLocation.Arcade, cabinet.X, cabinet.Y + 1, G1C_Direction.Up);
+            at.GuestGameSource = () => found;
+            at.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(14, at.ListMenu.Rows.Count, "Zeilen in der Spielauswahl");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Gruppenerkennung auch ohne "_" im Klassennamen (siehe G1C_GuestGameCatalog.GroupOf).
+        private static void ArcadeGuestGroupNames()
+        {
+            Equal("Gruppe3", G1C_GuestGameCatalog.GroupOf(new Gruppe3DragRaceRules()), "Gruppe3 Rules");
+            Equal("Gruppe3", G1C_GuestGameCatalog.GroupOf(new Gruppe3DragRacePainter()), "Gruppe3 Painter");
+            Equal(G1C_GuestGameCatalog.GroupOf(new HayDayRules()), G1C_GuestGameCatalog.GroupOf(new HayDayPainter()), "HayDay Rules/Painter");
+            Equal("G5", G1C_GuestGameCatalog.GroupOf(new G5_4GWRules()), "G5 mit Unterstrich");
+            Equal("Gruppe1", G1C_GuestGameCatalog.GroupOf(new Gruppe1_ConnectFourRules()), "Gruppe1 mit Unterstrich");
+        }
+
         private static void ArcadeGuestGame()
         {
             List<G1C_GuestGameEntry> found = G1C_GuestGameCatalog.Discover(
@@ -1928,7 +1963,10 @@ namespace OOPGames
                     int rulesWinner = host.Rules.CheckIfPLayerWon();
                     if (!host.Finished || host.Running) problems.Add(entry.Name + ": nicht beendet");
                     if ((rulesWinner > 0 ? (int?)rulesWinner : null) != host.Winner) problems.Add(entry.Name + ": Ergebnis weicht von den Regeln ab");
-                    if (host.MovesMade < 4) problems.Add(entry.Name + ": zu wenige Züge (" + host.MovesMade + ")");
+                    // Änderung durch: Patrick Lupierz – 23.11.2026 – Brettspiele (4 gewinnt) brauchen mehrere Züge; Echtzeitspiele
+                    // mit KI (z. B. Drag Race) enden nach wenigen Eingaben
+                    bool board = entry.Name.ToLower().Contains("gewinnt") || entry.Name.ToLower().Contains("connect") || entry.Name.ToLower().Contains("4g");
+                    if (host.MovesMade < (board ? 4 : 1)) problems.Add(entry.Name + ": zu wenige Züge (" + host.MovesMade + ")");
                     played++;
                 }
                 host.Leave();
