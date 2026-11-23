@@ -2444,3 +2444,11 @@ füge in der liste der fische wenn man mit denis redet links neben dem namen ein
 
 Ergebnisvermerk: In der Fischliste im Gespräch mit Denis (Welche Fische gibt es?) steht links neben jedem Namen die kleine Fischgrafik (dasselbe Sprite wie im Inventar). Nur Darstellung in Eduard Schoenfelds ConversationView geändert. Build 0/0, Selbsttest 90/90, Bild geprüft. Übernommen von: Patrick Lupierz nach Prüfung.
 
+### Prompt 23-11-2026 (5) (Claude Code)
+
+```text
+das rechte auge des npc buggt wenn sie andere emotionen zeigen
+```
+
+Ergebnisvermerk: Die Emotionen zeichneten das rechte Auge 10 statt 12 Pixel neben dem linken, und als Hautfarbe wurde ein Pixel aus dem Augenweiß gelesen. Beides in Eduard Schoenfelds NpcSprites korrigiert, Augen und Brauen sind jetzt gespiegelt. Build 0/0, Selbsttest 94/94, alle sechs Emotionen an vier Figuren als Bild geprüft. Prüfung im echten Spiel durch Patrick Lupierz steht noch aus.
+
