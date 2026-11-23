@@ -12,7 +12,7 @@ namespace OOPGames
     //               KI rechts. Wer zuerst 5 Punkte hat, gewinnt. Punkte: 100 je eigenem Treffer, +200 bei Sieg.
     //               Der Ball wird mit jedem Schlägerkontakt etwas schneller.
     // =====================================================
-    public sealed class G1C_PongDuel : G1C_ArcadeGame
+    public sealed class G1C_PongDuel : G1C_ArcadeGame, IG1C_NpcDuelGame   // Änderung durch: Patrick Lupierz – 23.11.2026
     {
         public const int WinningScore = 5;
         private const double PaddleH = 36, PaddleW = 5, BallR = 3, PlayerX = 10, AiX = FieldW - 15;
@@ -38,6 +38,10 @@ namespace OOPGames
             DuelOpponent = opponent;
             Message = "[E] Duell starten (Einsatz " + DuelStake + " Chips), [Q] Verlassen.";
         }
+
+        public bool DuelDecided { get { return IsDuel && IsOver; } }
+        public bool PlayerWonDuel { get { return PlayerWon; } }
+        public int NpcPurseChange { get { return PlayerWon ? -DuelStake : DuelStake; } }
 
         protected override int EntryCost { get { return IsDuel ? DuelStake : EntryFee; } }
         protected override int ComputeReward() { return IsDuel ? (PlayerWon ? 2 * DuelStake : 0) : base.ComputeReward(); }

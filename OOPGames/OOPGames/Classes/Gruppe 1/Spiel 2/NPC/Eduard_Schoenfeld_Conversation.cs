@@ -478,16 +478,33 @@ namespace OOPGames
                 ShowRoot();
                 return;
             }
-            if (Npc.Purse < stake)
+            if (Npc.Purse < G1C_NpcDuel.MinimumPurse)
             {
                 Say("Ich hab gerade keine " + stake + " Chips übrig. Ein andermal!", G1C_NpcExpression.Sad);
                 ShowRoot();
                 return;
             }
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Spiel für das Duell auswählen
+            Say("Ein Duell? Gerne! Was spielen wir?", Npc.Personality.Pride >= 0.6 ? G1C_NpcExpression.Thoughtful : G1C_NpcExpression.Happy);
+            _options.Clear();
+            Selected = 0;
+            foreach (G1C_DuelGame game in new[] { G1C_DuelGame.Pong, G1C_DuelGame.Poker, G1C_DuelGame.Blackjack })
+            {
+                G1C_DuelGame chosen = game;
+                AddOption(G1C_NpcDuel.Title(chosen), () => AcceptDuel(chosen));
+            }
+            AddOption("Doch nicht.", () => { Say("Schade. Ein andermal!", Npc.MoodExpression); ShowRoot(); });
+        }
+
+        private void AcceptDuel(G1C_DuelGame game)
+        {
             _duelNpc = Npc;
+            RequestedDuelGame = game;
             RequestedAction = G1C_ConversationAction.Duel;
             Close();
         }
+
+        public G1C_DuelGame RequestedDuelGame { get; private set; }
 
         private G1C_NpcCharacter _duelNpc;
 

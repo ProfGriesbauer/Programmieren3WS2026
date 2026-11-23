@@ -77,6 +77,8 @@ namespace OOPGames
         protected Random Random { get; }
         protected G1C_BetControl Bet { get; } = new G1C_BetControl();
         protected string Message { get; set; } = "";
+        /// <summary>Änderung durch: Patrick Lupierz – 23.11.2026 – aktuelle Meldung (lesend, für den Selbsttest)</summary>
+        public string StatusMessage { get { return Message; } }
 
         public abstract string Name { get; }
 

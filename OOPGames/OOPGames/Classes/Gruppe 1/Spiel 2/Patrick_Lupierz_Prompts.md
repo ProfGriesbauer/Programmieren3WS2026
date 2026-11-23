@@ -2419,3 +2419,19 @@ füge einen npc patrick hinzu der in in der arcade steht und wenn man mit ihm re
 
 Ergebnisvermerk: Pokerhand im Vollbild (Fenster ohne Rahmen) 1,0-fach, sonst 1,5-fach. NPC Patrick (G1C_ArcadeMentor) neben dem Gast-Automaten, täglicher Tipp nach Spieltag, Schlangen-Rekord 220, einmalig 35 Chips (NpcMemory.RecordRewardPaid, wird mitgespeichert). Build 0/0, Selbsttest 88/88, Spielhallen-Bild geprüft. Übernommen von: Patrick Lupierz nach Prüfung.
 
+### Prompt 23-11-2026 (2) (Claude Code)
+
+```text
+kann man mutter und oma herausfordern das wäre nähmlich nicht gut
+auswahl bei duel was man mit dem npc spielt ob man poker oder pong und co gegen den npc spielen kann
+```
+
+Ergebnisvermerk: Mutter und Oma bieten kein Duell an (plus Sicherung). Nach "Zum Duell herausfordern!" Auswahl: Pong (je 20 Chips), Poker heads-up gegen den NPC (sein Geldbeutel gewinnt/verliert), Blackjack (wer gegen den Dealer mehr gewinnt), "Doch nicht.". Gemeinsame Schnittstelle IG1C_NpcDuelGame, Auswertung in EndMinigame über RecordDuel. Build 0/0, Selbsttest 90/90, Bilder geprüft. Übernommen von: Patrick Lupierz nach Prüfung.
+
+### Prompt 23-11-2026 (3) (Claude Code)
+
+```text
+beim poker duell wird automatisch gegen max gespielt laut ausgabe der dealer soll nur dealer sein und es soll ausschliesßlich ein spiel gegen den duelanten sein
+```
+
+Ergebnisvermerk: Gespielt wurde schon gegen den Duellanten (eigene KI mit dessen Namen), aber sechs Poker-Texte nannten fest "Max" (Showdown, Hand-Info, Setzen, Überlegen, Knopf). Jetzt alle über _ai.Name; im Duell heißt auch die KI-Überlegung nach dem Namen. Test spielt sechs Duell-Hände und prüft, dass nie "Max" erscheint. Build 0/0, Selbsttest 90/90. Übernommen von: Patrick Lupierz nach Prüfung.

@@ -113,6 +113,7 @@ namespace OOPGames
             run("Eduard", "Eduard spielt am linken Automaten, blockiert ihn, gestreiftes Hemd/Mütze, viele Sprüche", EduardBlocksLeftMachine); // Patrick Lupierz – 22.11.2026
             run("Fenster", "Welt füllt jede Fenstergröße, Minispiele mittig im festen 480x320-Rahmen", WindowScaling); // Patrick Lupierz – 22.11.2026
             run("NPC", "Duell: NPC ansprechen, herausfordern, Pong spielen; Einsatz, Geldbeutel und Duell-Gedächtnis", NpcDuel); // Patrick Lupierz – 23.11.2026
+            run("NPC", "Duell: Spielauswahl Pong/Poker/Blackjack, Poker und Blackjack gegen den NPC werden ausgewertet", NpcDuelGameChoice); // Patrick Lupierz – 23.11.2026
             run("Spielhalle", "Patrick: am mittleren Automaten, Aussehen, täglicher Tipp, 300 Chips einmalig für den Schlangen-Rekord", ArcadeMentorPatrick); // Patrick Lupierz – 22.11.2026
             run("Geldhai", "Haustür-Begegnung wird nur beim Verlassen ausgelöst", LoanHouseExitEncounter);
 
@@ -785,6 +786,8 @@ namespace OOPGames
                 int index = game.Npcs.Conversation.Options.ToList().FindIndex(o => o.Text == "Zum Duell herausfordern!");
                 Check(index >= 0, "Keine Duell-Option: " + string.Join(" | ", game.Npcs.Conversation.Options.Select(o => o.Text)));
                 game.HandleInput(G1C_InputEvent.FromKey(Key.D1 + index));
+                Check(game.Npcs.Conversation.Options.Any(o => o.Text.StartsWith("Pong")), "Keine Spielauswahl im Duell");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.D1));   // Pong
                 G1C_PongDuel duel = game.ActiveGame as G1C_PongDuel;
                 Check(duel != null && duel.IsDuel && duel.DuelOpponent == "Gast Lena", "Duell startet nicht (Zustand " + game.State + ")");
                 game.HandleInput(G1C_InputEvent.FromKey(Key.E));
@@ -822,6 +825,71 @@ namespace OOPGames
                 all.Npcs.Conversation.Close();
             }
             Check(familyChecked >= 2, "Mutter und Oma wurden nicht geprüft");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Spielauswahl im Duell. Über das Gespräch Poker bzw. Blackjack gegen Lena wählen, das richtige Spiel
+        //          mit Lenas Namen läuft; Ergebnis: Poker bewegt Chips zwischen Spieler und Lenas Geldbeutel, Blackjack
+        //          vergleicht die Gewinne gegen den Dealer. "Doch nicht." führt zurück ohne Spiel.
+        private static void NpcDuelGameChoice()
+        {
+            string[] titles = { "Pong", "Poker", "Blackjack" };
+            for (int pick = 1; pick <= 2; pick++)
+            {
+                G1C_GameManager game = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+                G1C_NpcCharacter lena = game.Npcs.Find("Gast Lena");
+                int purse = lena.Purse, balance = game.Money.Balance;
+                game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                int index = game.Npcs.Conversation.Options.ToList().FindIndex(o => o.Text == "Zum Duell herausfordern!");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.D1 + index));
+                List<string> options = game.Npcs.Conversation.Options.Select(o => o.Text).ToList();
+                Check(options.Count == 4 && titles.All(t => options.Any(o => o.StartsWith(t))) && options.Contains("Doch nicht."),
+                      "Spielauswahl unvollständig: " + string.Join(" | ", options));
+                game.HandleInput(G1C_InputEvent.FromKey(Key.D1 + pick));
+                IG1C_NpcDuelGame duel = game.ActiveGame as IG1C_NpcDuelGame;
+                Check(duel != null && duel.DuelOpponent == "Gast Lena", titles[pick] + "-Duell startet nicht (Zustand " + game.State + ")");
+                Equal(pick == 1 ? G1C_GameState.Poker : G1C_GameState.Blackjack, game.State, "Spielzustand");
+                Check(pick == 1 ? game.ActiveGame is G1C_Poker : game.ActiveGame is G1C_Blackjack, "falsches Spiel");
+                Check(game.ActiveGame.Name.Contains("Gast Lena"), "Name des Gegners fehlt: " + game.ActiveGame.Name);
+                game.Money.Deposit(100);   // Spieler hat 100 Chips gewonnen
+                game.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+                Equal(G1C_GameState.Result, game.State, "Ergebnisanzeige nach " + titles[pick]);
+                Equal(1, lena.Memory.DuelsWonByPlayer, "Sieg gemerkt (" + titles[pick] + ")");
+                Equal(pick == 1 ? purse - 100 : purse, lena.Purse, "Lenas Geldbeutel nach " + titles[pick]);
+                Equal(balance + 100, game.Money.Balance, "Chips des Spielers");
+            }
+
+            // Poker-Duell: alle Meldungen nennen nur den Duellanten, nie "Max" (ganze Hände bis zum Showdown/Fold)
+            G1C_Poker poker = new G1C_Poker(new G1C_MoneyManager(1000), new Random(11));
+            poker.ConfigureDuel("Gast Lena");
+            List<string> seen = new List<string>();
+            for (int hand = 0; hand < 6; hand++)
+            {
+                poker.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                for (int step = 0; step < 400; step++)
+                {
+                    poker.Update();
+                    poker.HandleInput(G1C_InputEvent.FromKey(Key.D1));   // Check/Call
+                    if (!seen.Contains(poker.StatusMessage)) seen.Add(poker.StatusMessage);
+                }
+            }
+            Check(!seen.Any(m => m.Contains("Max")), "Poker-Duell nennt Max: " + seen.FirstOrDefault(m => m.Contains("Max")));
+            Check(seen.Any(m => m.Contains("Gast Lena")), "Duellant wird nie genannt: " + string.Join(" | ", seen.Take(5)));
+
+            // "Doch nicht." – zurück zum Gespräch, kein Spiel
+            G1C_GameManager back = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+            back.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            int i = back.Npcs.Conversation.Options.ToList().FindIndex(o => o.Text == "Zum Duell herausfordern!");
+            back.HandleInput(G1C_InputEvent.FromKey(Key.D1 + i));
+            back.HandleInput(G1C_InputEvent.FromKey(Key.D4));
+            Check(back.ActiveGame == null && back.State == G1C_GameState.Conversation, "Doch nicht. startet trotzdem ein Spiel");
+
+            // Ohne Ergebnis verlassen (Poker nie ausgeteilt): zählt nicht
+            G1C_GameManager quit = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+            quit.StartDuel(quit.Npcs.Find("Gast Lena"), G1C_DuelGame.Poker);
+            quit.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+            Check(quit.ActiveGame == null && quit.State == G1C_GameState.MainGame, "Leeres Poker-Duell nicht beendet");
+            Equal(0, quit.Npcs.Find("Gast Lena").Memory.DuelsTotal, "Leeres Duell gezählt");
         }
 
         // Entwickler: Patrick Lupierz – Datum: 22.11.2026
