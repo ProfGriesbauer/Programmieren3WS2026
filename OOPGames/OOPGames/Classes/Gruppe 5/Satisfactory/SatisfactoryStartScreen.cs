@@ -8,6 +8,8 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
+    // Kleines Startbildschirm-Modell mit Home-, Einstellungs- und Anleitung-Seite.
+    // Die Klasse zeichnet WPF-Canvas und verwaltet ihre Klickbereiche objektorientiert.
     internal sealed class SatisfactoryStartScreenSettings
     {
         internal int ResourceAmount { get; set; }
@@ -73,6 +75,7 @@ namespace OOPGames
 
         internal void Paint(Canvas canvas)
         {
+            // Zeichnet die aktuelle Startbildschirmseite als WPF-Canvas.
             if (canvas == null)
             {
                 throw new ArgumentNullException(nameof(canvas));
@@ -106,6 +109,7 @@ namespace OOPGames
 
         internal bool HandleClick(int x, int y)
         {
+            // Uebersetzt Mausklickkoordinaten in Startbildschirmaktionen; Start liefert true zurueck.
             Point click = new Point(x, y);
             foreach (HitTarget target in _hitTargets)
             {

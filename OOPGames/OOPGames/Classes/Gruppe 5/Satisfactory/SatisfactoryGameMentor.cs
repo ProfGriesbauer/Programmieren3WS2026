@@ -6,6 +6,8 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
+    // Diese Layoutklasse fasst die festen Zielkoordinaten des Tutorials zusammen.
+    // So bleiben Platzierungslogik, Pfeilanzeige und Mentortexte auf derselben Karte.
     internal static class SatisfactoryTutorialLayout
     {
         internal const int ConstructorX = 26;
@@ -23,6 +25,8 @@ namespace OOPGames
 
     internal sealed class SatisfactoryGameMentor
     {
+        // Jeder Enum-Wert stellt einen selbst erklaerten Lehrschritt dar.
+        // Das Mentorobjekt arbeitet wie ein kleiner Zustandsautomat.
         private enum TutorialStep
         {
             Inactive,
@@ -87,6 +91,7 @@ namespace OOPGames
             G5_GridPosition minerPosition,
             G5_GridPosition coalDepositPosition)
         {
+            // Begin setzt alle Zielpositionen und startet beim ersten Werkzeugschritt.
             _initialDeposit = initialDeposit;
             _conveyorIndex = 0;
             _minerX = minerPosition.X;
@@ -113,6 +118,7 @@ namespace OOPGames
 
         internal bool TrySelectTool(G5_Bauwerkzeug tool, out string message)
         {
+            // Prueft pro Lehrschritt, ob das aktuell ausgewaehlte Werkzeug zur Aufgabe passt.
             message = Message;
             if (!IsActive)
             {
@@ -212,6 +218,7 @@ namespace OOPGames
             int y,
             out string message)
         {
+            // Validiert die vom Mentor markierte Bauposition, damit Lernen und freie Spielzuege getrennt bleiben.
             message = Message;
             if (!IsActive)
             {
@@ -293,6 +300,7 @@ namespace OOPGames
 
         internal void BuildingPlaced(G5_Bauwerkzeug tool, int x, int y, long depositAmount)
         {
+            // Nach dem Platzieren wird der naechste Mentorzustand und die erklaerende Nachricht gesetzt.
             if (_step == TutorialStep.PlaceMiner &&
                 tool == G5_Bauwerkzeug.Foerderer &&
                 x == _minerX && y == _minerY)
@@ -519,6 +527,7 @@ namespace OOPGames
             double canvasHeight,
             IG5_WeltSpielfeld world)
         {
+            // Rendert Mentorfenster, Fortschritt, Avatar und einen Pfeil zum aktuellen Ziel.
             if (!IsActive || canvas == null || world == null ||
                 canvasWidth <= 0 || canvasHeight <= 0)
             {

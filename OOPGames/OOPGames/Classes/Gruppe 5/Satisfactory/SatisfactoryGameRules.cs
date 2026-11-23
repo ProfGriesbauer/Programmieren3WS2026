@@ -4,6 +4,8 @@ using System.Linq;
 
 namespace OOPGames
 {
+    // Zentrale Spiellogik: Diese Klasse bestaetigt Aktionen, verwaltet Karte und Tick.
+    // Die konkreten Berechnungsklassen fuer Gebaeude, Lager und Rohstoffe stammen aus dem gemeinsamen Fabrikmodell.
     public sealed class SatisfactoryGameRules : IGameRules2
     {
         private const int MapWidth = 50;
@@ -41,6 +43,7 @@ namespace OOPGames
 
         public void DoMove(IPlayMove move)
         {
+            // Der Player liefert Befehle; die Rules sind die einzige Stelle, die deren Gueltigkeit prueft.
             if (_field == null)
             {
                 return;
@@ -144,6 +147,7 @@ namespace OOPGames
 
         public void ClearField()
         {
+            // Reset: entfernt alte Simulationen und erstellt eine leere Karte mit Hub und Startschmelzen.
             _deposits.Clear();
             _beltConnectedMiners.Clear();
             _beltConnectedSmelters.Clear();
@@ -187,6 +191,7 @@ namespace OOPGames
 
         public void TickGameCall()
         {
+            // Tick: aktualisiert Simulation, Rohstoffanzeigen, automatische Verteilung und Mentorbeobachtung.
             if (_field == null || !_gameStarted)
             {
                 return;
@@ -232,6 +237,7 @@ namespace OOPGames
 
         private void SelectTool(G5_Bauwerkzeug tool)
         {
+            // Werkzeuge werden gewaehlt, bevor ein Klick auf der Karte platziert wird.
             if (!Enum.IsDefined(typeof(G5_Bauwerkzeug), tool))
             {
                 _field.SetStatusMeldung("Unbekanntes Bauwerkzeug.");
@@ -255,6 +261,7 @@ namespace OOPGames
 
         private void PlaceBuilding(int x, int y)
         {
+            // Platzierung: prueft Mentorvorgabe, Flaeche, Rohstofffeld und erstellt genau das Modell aus dem gemeinsamen Gebaeude-Layer.
             G5_Bauwerkzeug tool = ((IG5_FabrikSpielInfo)_field).AktuellesWerkzeug;
             if (!_mentor.CanPlaceBuilding(tool, x, y, out string mentorMessage))
             {
@@ -460,6 +467,7 @@ namespace OOPGames
 
         private void SelectBuildingToMove(int x, int y)
         {
+            // Verschieben Start: sucht das angeklickte Gebaeude und merkts sich fuer den zweiten Klick.
             G5_Building building = _field.InterneGebaeude.FirstOrDefault(candidate =>
                 x >= candidate.Position.X && x < candidate.Position.X + candidate.Width &&
                 y >= candidate.Position.Y && y < candidate.Position.Y + candidate.Height);
@@ -484,6 +492,7 @@ namespace OOPGames
 
         private void MoveSelectedBuilding(int x, int y)
         {
+            // Verschieben Ende: prueft Ziel und aktualisiert Position ueber die gemeinsame Fabriksimulation.
             G5_Building building = _buildingToMove;
             if (!_mentor.CanMoveBuilding(x, y, out string mentorMessage))
             {
@@ -540,6 +549,7 @@ namespace OOPGames
 
         private void RefreshConveyorConnections()
         {
+            // Verbindungsaufbau: sucht kuerzeste Linien von genau einem Miner zu einer passenden Schmelze.
             List<G5_Building> buildings = _field.InterneGebaeude.ToList();
             List<G5_Conveyor> conveyors = buildings.OfType<G5_Conveyor>().ToList();
             foreach (G5_Conveyor conveyor in conveyors)

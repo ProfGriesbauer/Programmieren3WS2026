@@ -5,6 +5,8 @@ using System.Linq;
 
 namespace OOPGames
 {
+    // Aggregiert Welt, Fabriksimulation und HUB zu einem gemeinsamen Spielfeld.
+    // Player und Painter erhalten ueber read-only Interfaces nur das fuer ihre Aufgabe benoetigte View-Modell.
     internal sealed class G5_FabrikSpielfeld : IG5_FabrikSpielInfo, IG5_KartenansichtSteuerung
     {
         private readonly G5_WeltSpielfeld _welt;
@@ -111,6 +113,7 @@ namespace OOPGames
 
         internal void AddGebaeude(G5_Building gebaeude)
         {
+            // Delegiert Platzierung an die gemeinsame Fabriksimulation statt selbst Gebaeudelisten zu verwalten.
             _simulation.AddBuilding(gebaeude);
         }
 

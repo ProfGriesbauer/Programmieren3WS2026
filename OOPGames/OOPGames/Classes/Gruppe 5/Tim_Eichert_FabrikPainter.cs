@@ -8,6 +8,8 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
+    // Verantwortlich nur fuer Darstellung: liest Welt und Spielfeld und zeichnet Canvas-Elemente.
+    // Platzierungs-, Produktions- oder Lageraenderungen werden hier nie direkt ausgefuehrt.
     public sealed class G5_FabrikPainter : IG5_FabrikPainter
     {
         private sealed class GebaeuderegisterEintrag

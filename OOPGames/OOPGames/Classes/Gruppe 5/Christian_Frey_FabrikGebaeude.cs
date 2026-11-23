@@ -5,6 +5,8 @@ using System.Linq;
 
 namespace OOPGames
 {
+    // Gemeinsame Gebaeudebasis und produktionsfaehige Gebaeudetypen.
+    // Zeitliche Verarbeitung wird ueber Tick und Puffer getrennt von der WPF-Darstellung gehalten.
 
     internal sealed class G5_ItemBuffer
     {

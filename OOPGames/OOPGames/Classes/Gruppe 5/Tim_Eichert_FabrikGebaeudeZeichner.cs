@@ -7,6 +7,8 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
+    // Fabrik-Vektordarstellungen fuer alle bereitgestellten Gebaeudetypen.
+    // Die Klasse trennt Grafiken sauber von Spielregeln und Modelldaten.
     internal static class G5_FabrikGebaeudeZeichner
     {
         private const double ZeichenBreite = 160;

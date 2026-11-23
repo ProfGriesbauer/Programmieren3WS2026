@@ -6,6 +6,8 @@ using System.Linq;
 namespace OOPGames
 {
 
+    // Verwaltet alle Gebaeude und ruft deren Tick-Logik in einer festen Reihenfolge auf.
+    // Das Stromnetz wird vor Produktionsanlagen aktualisiert.
     public sealed class G5_FactorySimulation
     {
         private readonly List<G5_Building> _buildings = new List<G5_Building>();

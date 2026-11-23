@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
+    // Bauwerkzeuge sind Befehlswerte fuer die Auswahl im Player und die Platzierung in den Rules.
     public enum G5_Bauwerkzeug
     {
         Keines,

@@ -3,6 +3,8 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
+    // Formt Tastatur- und Maustasten in typisierte Fabrikaktionen um.
+    // Der Controller entscheidet nicht, ob eine Platzierung erlaubt ist.
     public sealed class G5_FabrikHumanPlayer : IHumanGamePlayer
     {
         private int _playerNumber;
@@ -28,6 +30,7 @@ namespace OOPGames
 
         public IPlayMove GetMove(IMoveSelection selection, IGameField field)
         {
+            // Tastatur erzeugt Werkzeug-/Tutorialbefehle; Klick koordiniert werden zuerst in das Welt-Raster umgerechnet.
             if (!(field is IG5_FabrikSpielInfo fabrikInfo))
             {
                 return null;

@@ -6,6 +6,7 @@ using System.Linq;
 namespace OOPGames
 {
 
+    // Transport-, Strom- und atomarer Gegenstandsaustausch fuer die gemeinsame Fabrik.
     public sealed class G5_Conveyor : G5_Building
     {
         private const int TransportIntervalTicks = 12;
