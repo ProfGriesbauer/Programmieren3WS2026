@@ -38,6 +38,7 @@ namespace OOPGames
         public const string Range = "magic-wand-range";
         public const string Knockback = "magic-wand-knockback";
         public const string StrikeAbility = "magic-wand-strike";
+        public const double BaseStrikeRange = 150;
         public const string AttackCooldown = "magic-wand-attack-cooldown";
         public const double BaseCooldownSeconds = 0.55;
         public const string StrikeCooldown = "strike-cooldown";
@@ -162,7 +163,8 @@ namespace OOPGames
                 BaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
                     progression.GetWeaponUpgradeRank(AttackCooldown)),
                 WeaponTargetingMode.Opponents, "magic-projectile",
-                knockbackDistance: GetKnockbackDistance(progression));
+                knockbackDistance: GetKnockbackDistance(progression),
+                appearance: GetAppearance(progression));
         }
 
         public static Weapon CreateStrikeWeapon(ArenaProgression progression)
@@ -179,7 +181,7 @@ namespace OOPGames
 
             int damage = 8
                 + progression.GetWeaponUpgradeRank(StrikeDamage) * 3;
-            double range = 150 * GetRangeMultiplier(progression);
+            double range = GetStrikeRange(progression);
             return new Weapon(
                 StrikeAbility, "Stabschlag",
                 "Langer, schmaler Hieb in Blickrichtung des Spielers.",
@@ -188,7 +190,44 @@ namespace OOPGames
                 StrikeBaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
                     progression.GetWeaponUpgradeRank(StrikeCooldown)),
                 WeaponTargetingMode.Opponents, "magic-wand-strike",
-                knockbackDistance: GetKnockbackDistance(progression));
+                knockbackDistance: GetKnockbackDistance(progression),
+                appearance: GetAppearance(progression));
+        }
+
+        // Staff head of the chosen element; the poison frog has its own attack frame.
+        public static WeaponAppearance GetAppearance(ArenaProgression progression)
+        {
+            if (progression == null)
+            {
+                throw new ArgumentNullException(nameof(progression));
+            }
+
+            // The staff reaches as far as the staff strike at the start of a run, also before
+            // it is unlocked; range upgrades keep the size of the sprite.
+            double reach = BaseStrikeRange;
+            switch (progression.SelectedMagicWandElement)
+            {
+                case WeaponElement.Poison:
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Staff, reach, "WizardStaffFrog", "WizardStaffFrogAttac");
+                case WeaponElement.Lightning:
+                    return new WeaponAppearance(WeaponSpriteKind.Staff, reach, "WizardStafElektic");
+                case WeaponElement.Fire:
+                    return new WeaponAppearance(WeaponSpriteKind.Staff, reach, "WizardStaffFire");
+                case WeaponElement.Freeze:
+                    return new WeaponAppearance(WeaponSpriteKind.Staff, reach, "WizardStaffIce");
+                default:
+                    return new WeaponAppearance(WeaponSpriteKind.Staff, reach, "WizardStaff");
+            }
+        }
+
+        public static double GetStrikeRange(ArenaProgression progression)
+        {
+            if (progression == null)
+            {
+                throw new ArgumentNullException(nameof(progression));
+            }
+            return BaseStrikeRange * GetRangeMultiplier(progression);
         }
 
         private static double GetRangeMultiplier(ArenaProgression progression)

@@ -82,6 +82,25 @@ namespace OOPGames
 
             foreach (AttackVisualState visual in field.ActiveAttackVisuals)
             {
+                // Sword attacks hit with the blade itself, which ArenaWeaponRenderer draws;
+                // the debug view outlines the blade's hit area instead of a cone.
+                if (visual.HasBlade)
+                {
+                    if (field.ShowDamageRanges)
+                    {
+                        AddBladeHitArea(canvas, visual, left, top);
+                    }
+                    continue;
+                }
+                // Projectiles with a sprite (arrows) are drawn by ArenaWeaponRenderer; their
+                // hit circle is only shown in the debug view.
+                if (!field.ShowDamageRanges
+                    && visual.VisualKind == AttackVisualKind.Projectile
+                    && visual.Appearance != null
+                    && visual.Appearance.HasProjectileSprite)
+                {
+                    continue;
+                }
                 PaintActiveAttack(canvas, visual, left, top);
             }
         }
@@ -125,6 +144,23 @@ namespace OOPGames
                         centerX, centerY, pattern.DebugRadius);
                     break;
             }
+        }
+
+        private static void AddBladeHitArea(
+            Canvas canvas, AttackVisualState visual, double left, double top)
+        {
+            canvas.Children.Add(new Line
+            {
+                X1 = visual.BladeStartX - left,
+                Y1 = visual.BladeStartY - top,
+                X2 = visual.BladeEndX - left,
+                Y2 = visual.BladeEndY - top,
+                Stroke = PlayerAttackBrush,
+                StrokeThickness = visual.BladeHalfWidth * 2,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            });
         }
 
         private static void PaintActiveAttack(

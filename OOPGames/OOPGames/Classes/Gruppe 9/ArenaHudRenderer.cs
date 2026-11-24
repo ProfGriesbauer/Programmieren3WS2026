@@ -118,8 +118,13 @@ namespace OOPGames
         public void PaintStatusPlaceholder(
             Canvas canvas, Entity entity, double centerX, double centerY)
         {
+            // Weakness (Blacksteel) has its own ring even without a movement status.
             if (entity.ActiveStatusEffects.Count == 0)
             {
+                if (entity.IsWeakened)
+                {
+                    AddStatusRing(canvas, entity, centerX, centerY, Brushes.DarkViolet, false);
+                }
                 return;
             }
 
@@ -146,17 +151,27 @@ namespace OOPGames
                 }
             }
 
+            AddStatusRing(canvas, entity, centerX, centerY,
+                isFrozen ? Brushes.LightCyan
+                    : isBurning ? Brushes.OrangeRed
+                    : isPoisoned ? Brushes.GreenYellow
+                    : entity.IsWeakened ? Brushes.DarkViolet : Brushes.Plum,
+                isFrozen);
+        }
+
+        private static void AddStatusRing(
+            Canvas canvas, Entity entity, double centerX, double centerY,
+            Brush stroke, bool isSolid)
+        {
             double diameter = entity.Size + 12;
             Ellipse indicator = new Ellipse
             {
                 Width = diameter,
                 Height = diameter,
                 Fill = Brushes.Transparent,
-                Stroke = isFrozen ? Brushes.LightCyan
-                    : isBurning ? Brushes.OrangeRed
-                    : isPoisoned ? Brushes.GreenYellow : Brushes.Plum,
+                Stroke = stroke,
                 StrokeThickness = 3,
-                StrokeDashArray = isFrozen ? null : new DoubleCollection { 2, 2 },
+                StrokeDashArray = isSolid ? null : new DoubleCollection { 2, 2 },
                 IsHitTestVisible = false
             };
             Canvas.SetLeft(indicator, centerX - diameter / 2);

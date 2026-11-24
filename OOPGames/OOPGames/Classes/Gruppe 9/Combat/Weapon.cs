@@ -15,7 +15,8 @@ namespace OOPGames
             string id, string name, string description, IAttackPattern attackPattern,
             ICombatEffect effect, double cooldownSeconds,
             WeaponTargetingMode targetingMode, string animationPlaceholder,
-            int maximumHitsPerTarget = 1, double knockbackDistance = 8)
+            int maximumHitsPerTarget = 1, double knockbackDistance = 8,
+            WeaponAppearance appearance = null, double equipReadySeconds = 0)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -45,6 +46,10 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(knockbackDistance));
             }
+            if (equipReadySeconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(equipReadySeconds));
+            }
 
             Id = id;
             Name = name;
@@ -56,6 +61,8 @@ namespace OOPGames
             AnimationPlaceholder = animationPlaceholder ?? string.Empty;
             MaximumHitsPerTarget = maximumHitsPerTarget;
             KnockbackDistance = knockbackDistance;
+            Appearance = appearance;
+            EquipReadySeconds = equipReadySeconds;
         }
 
         public string Id { get; }
@@ -68,5 +75,9 @@ namespace OOPGames
         public string AnimationPlaceholder { get; }
         public int MaximumHitsPerTarget { get; }
         public double KnockbackDistance { get; }
+        // Sprite clips of the weapon; null for weapons without a sprite, e.g. enemy claws.
+        public WeaponAppearance Appearance { get; }
+        // Game time after equipping before the weapon can attack, e.g. drawing the bow.
+        public double EquipReadySeconds { get; }
     }
 }

@@ -16,7 +16,9 @@ namespace OOPGames
         Poison,
         Lightning,
         Fire,
-        Freeze
+        Freeze,
+        // Sword only: the Blacksteel blade weakens hit enemies.
+        BlackSteel
     }
 
     public sealed class ArenaProgression
@@ -94,6 +96,10 @@ namespace OOPGames
         {
             get
             {
+                if (GetWeaponUpgradeRank(SwordUpgradeCatalog.BlackSteel) > 0)
+                {
+                    return WeaponElement.BlackSteel;
+                }
                 return GetSelectedElement(
                     SwordUpgradeCatalog.Poison,
                     SwordUpgradeCatalog.Lightning,
