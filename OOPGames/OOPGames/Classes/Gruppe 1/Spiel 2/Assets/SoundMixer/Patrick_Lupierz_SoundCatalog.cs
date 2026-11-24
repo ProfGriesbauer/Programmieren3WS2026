@@ -97,8 +97,8 @@ namespace OOPGames
                 M("title", "Titelbild und Charakter", "Ambiente im Hauptmenü und bei der Charaktererstellung", "Musik_Gebaeude", "^Ambient Charakter$", 100),
                 M("casino", "Casino", "Hintergrundmusik im Casino", "Musik_Gebaeude", "^CasinoBackgroundLoop$", 70),
                 M("arcade", "Spielhalle", "Chip-Musik in der Spielhalle, vier Stücke im Wechsel", "Musik_Gebaeude", "^chippy", 70),
-                M("home", "Zuhause", "Eigene Datei 'Home.mp3' in Musik_Gebaeude ablegen; sonst eingebaute Melodie", "Musik_Gebaeude", "^Home$", 100, true),
-                M("shop", "Läden und Bank", "Eigene Datei 'Shop.mp3' in Musik_Gebaeude ablegen; sonst eingebaute Melodie", "Musik_Gebaeude", "^Shop$", 100, true),
+                M("home", "Zuhause", "Ambiente 'AmbientSound house.mp3' (oder eigene Datei Home.mp3) in Musik_Gebaeude; sonst eingebaute Melodie", "Musik_Gebaeude", "^(Home|AmbientSound house)$", 100, true),
+                M("shop", "Läden und Bank", "Ambiente 'AmbientSound house.mp3' (oder eigene Datei Shop.mp3) in Musik_Gebaeude; sonst eingebaute Melodie", "Musik_Gebaeude", "^(Shop|AmbientSound house)$", 100, true),
                 M("fishing", "Angeln", "Eigene Datei 'Fishing.mp3' in Musik_Aussen ablegen; sonst eingebaute Melodie", "Musik_Aussen", "^Fishing$", 100, true),
 
                 // ---- Schritte: Untergrund und Name der Datei bestimmen die Auswahl; Varianten laufen reihum

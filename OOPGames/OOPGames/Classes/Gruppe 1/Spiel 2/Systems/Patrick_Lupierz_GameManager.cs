@@ -91,7 +91,11 @@ namespace OOPGames
             _movement = CreateMovement();
             _interactions = new G1C_InteractionManager(World);
             Npcs = new G1C_NpcSystem(World, Money, Finance, _random); // Änderung durch: Eduard Schoenfeld
+            Npcs.Player = Player;
+            Npcs.OnNurseTreat = TreatBrokenLegs;
+            Npcs.OnLoanRepaid = ApplyLoanRepaidConsequences;
             Npcs.Clock = Clock; // Änderung durch: Patrick Lupierz – 15.11.2026
+            Npcs.ArcadeHighscores = () => ArcadeHighscores; // Änderung durch: Patrick Lupierz – 22.11.2026 – Patricks Rekord
             Npcs.IsPresent = npc => World.IsPresent(npc); // Änderung durch: Patrick Lupierz – 18.11.2026 – Tagesablauf
             _exteriorNpcRoaming = new G1C_ExteriorNpcRoamingSystem(Exterior, Player, _random); // Erweiterung durch Denis Mock
             Phone = new G1C_Phone(Npcs);
@@ -324,6 +328,12 @@ namespace OOPGames
 
             if (_sceneTransitions.TryTransition(Player))
             {
+                G1C_WorldLocation leavingFrom = CurrentLocation;
+                if (leavingFrom == G1C_WorldLocation.Home && Finance.LoanBonesBroken)
+                {
+                    TriggerHouseExitDebtEncounter();
+                    return;
+                }
                 _movement.ClearQueue();
                 _movement = CreateMovement();
                 Npcs.Bubbles.Clear();
@@ -421,6 +431,13 @@ namespace OOPGames
             if (conversation.IsOpen) return;
             G1C_InteractionType? game = conversation.TakeRequestedGame();
             G1C_ConversationAction action = conversation.TakeRequestedAction();
+            if (action == G1C_ConversationAction.Duel)
+            {
+                // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Pong-Duell gegen den angesprochenen NPC
+                State = G1C_GameState.MainGame;
+                StartDuel(conversation.TakeDuelNpc(), conversation.RequestedDuelGame);
+                return;
+            }
             if (action == G1C_ConversationAction.BankMenu)
             {
                 OpenBankMenu();
@@ -605,6 +622,46 @@ namespace OOPGames
         {
             int interest = Finance.ApplyDailyInterest(Clock.Day);
             if (interest > 0) NotifySystemMessage("Tag " + Clock.Day + ": Die Bank schreibt dir " + interest + " Chips Zinsen gut.");
+            int loanInterest = Finance.ApplyLoanInterest(Clock.Day);
+            if (loanInterest > 0)
+            {
+                NotifySystemMessage("Geldhai: Deine Schuld ist um " + loanInterest + " Chips gewachsen.");
+            }
+            if (Finance.ApplyLoanRespectDay(Clock.Day))
+            {
+                G1C_NpcCharacter shark = Npcs.Find("Geldhai Viktor");
+                if (shark != null)
+                {
+                    shark.Relationship.ChangeRespect(-5);
+                    shark.Relationship.UpdateStatus(shark.Memory, shark.Personality);
+                }
+            }
+            if (Finance.ApplyLoanSmsDay(Clock.Day))
+            {
+                int debt = Finance.LoanOwed;
+                int age = System.Math.Max(0, Clock.Day - Finance.LoanStartDay);
+                string text;
+                switch (Finance.LoanWarningStage)
+                {
+                    case 5:
+                        text = "LETZTE PHASE: " + debt + " Chips, " + age + " Tage offen, Sozialschmarotzer. Milo bleibt weg. Heute entscheidet sich, ob deine Tür oder deine Knochen dran sind.";
+                        break;
+                    case 4:
+                        text = "DU MACHST ES SCHWERER: " + debt + " Chips sind seit " + age + " Tagen offen. Saftsack, die nächste Nacht kostet dich vielleicht das Gehen.";
+                        break;
+                    case 3:
+                        text = "DAS IST KEINE FREUNDLICHE ERINNERUNG: " + debt + " Chips seit " + age + " Tagen. Ich stehe heute vor deiner Tür, Versager.";
+                        break;
+                    case 2:
+                        text = "Du hast " + age + " Tage gezögert. " + debt + " Chips stehen noch offen, Lappen. Morgen wird Viktor persönlicher.";
+                        break;
+                    default:
+                        text = "Erste Mahnung: " + debt + " Chips, " + age + " Tag(e) offen. Freundlich zahlt es sich aus. Ich will mein Geld.";
+                        break;
+                }
+                Phone.Receive("Geldhai Viktor", text, Clock);
+                if (Finance.LoanSmsCount >= 3) ApplySharkConsequences();
+            }
             return interest;
         }
 
@@ -927,9 +984,30 @@ namespace OOPGames
                     break;
                 case G1C_PhoneRequestKind.Save:
                     Phone.Info = G1C_SaveSystem.Save(request.Slot, CreateSave())
-                        ? "Gespeichert auf Platz " + request.Slot + "."
+                        ? "Spiel gespeichert."
                         : "Speichern fehlgeschlagen!";
                     Phone.RefreshSlots();
+                    break;
+                case G1C_PhoneRequestKind.AudioAdjust:
+                    if (request.Text == "master")
+                    {
+                        int value = G1C_SoundSettings.Clamp(Sound.Settings.Master + request.IntValue, 0, 100);
+                        Sound.Settings.Set(G1C_SoundSettings.GlobalId, "master", value);
+                    }
+                    else if (request.Text == "music")
+                    {
+                        int value = G1C_SoundSettings.Clamp(Sound.Settings.Music + request.IntValue, 0, 100);
+                        Sound.Settings.Set(G1C_SoundSettings.GlobalId, "music", value);
+                    }
+                    else
+                    {
+                        int value = G1C_SoundSettings.Clamp(Sound.Settings.Effects + request.IntValue, 0, 100);
+                        Sound.Settings.Set(G1C_SoundSettings.GlobalId, "effects", value);
+                    }
+                    Phone.Info = "Lautstaerke: " + Sound.Settings.Master + "% Gesamt.";
+                    break;
+                case G1C_PhoneRequestKind.AudioMute:
+                    Phone.Info = Sound.ToggleMute();
                     break;
             }
         }
@@ -974,7 +1052,14 @@ namespace OOPGames
                 Messages = Phone.Messages, Trash = _trash.SearchedOnDay,
                 BankInterestDay = Finance.LastInterestDay, BankInterestTotal = Finance.TotalInterestPaid,
                 RidingBike = Bikes.Riding, ActiveBike = Bikes.ActiveBikeId, BikeParkedAtDoor = Bikes.ParkedAtDoor,
-                ArcadeHighscores = new Dictionary<string, int>(ArcadeHighscores)
+                ArcadeHighscores = new Dictionary<string, int>(ArcadeHighscores),
+                LoanInterestDay = Finance.LoanInterestLastDay, LoanRespectDay = Finance.LoanRespectLastDay,
+                LoanSmsDay = Finance.LoanSmsLastDay, LoanSmsCount = Finance.LoanSmsCount,
+                LoanStartDay = Finance.LoanStartDay,
+                LoanWarningStage = Finance.LoanWarningStage, LoanDoorThreat = Finance.LoanDoorThreat,
+                LoanBonesBroken = Finance.LoanBonesBroken, LoanCatKidnapped = Finance.LoanCatKidnapped,
+                AudioMaster = Sound.Settings.Master, AudioMusic = Sound.Settings.Music,
+                AudioEffects = Sound.Settings.Effects, AudioMuted = Sound.Muted
             };
         }
 
@@ -991,6 +1076,14 @@ namespace OOPGames
             Buffs.Restore(data.Buffs);
             Clock.TotalTicks = data.ClockTicks;
             Finance.RestoreInterest(data.BankInterestDay, data.BankInterestTotal, Clock.Day); // Patrick Lupierz – 15.11.2026
+            Finance.RestoreLoanState(data.LoanInterestDay, data.LoanRespectDay, data.LoanSmsDay, data.LoanSmsCount, Clock.Day);
+            Finance.RestoreLoanStartDay(data.LoanStartDay, Clock.Day);
+            if (data.LoanDoorThreat) Finance.RestoreLoanState(data.LoanInterestDay, data.LoanRespectDay, data.LoanSmsDay,
+                System.Math.Max(data.LoanSmsCount, 3), Clock.Day);
+            if (!data.LoanBonesBroken) Finance.ClearBoneDamage();
+            if (data.LoanBonesBroken) Bikes.SetBlockedByShark(true);
+            else Bikes.SetBlockedByShark(false);
+            Home.SetHouseCatPresent(!data.LoanCatKidnapped);
             TickCount = Math.Max(0, data.PlayTicks);
             GamesPlayed = Math.Max(0, data.GamesPlayed);
             Npcs.RestoreReputation(data.Reputation);
@@ -1011,6 +1104,10 @@ namespace OOPGames
             }
             Phone.Messages = (data.Messages ?? new List<G1C_Sms>()).Where(m => m != null).ToList();
             _trash.SearchedOnDay = data.Trash ?? new Dictionary<string, int>();
+            Sound.Settings.Set(G1C_SoundSettings.GlobalId, "master", data.AudioMaster);
+            Sound.Settings.Set(G1C_SoundSettings.GlobalId, "music", data.AudioMusic);
+            Sound.Settings.Set(G1C_SoundSettings.GlobalId, "effects", data.AudioEffects);
+            Sound.SetMuted(data.AudioMuted);
 
             _sceneTransitions.Restore((G1C_WorldLocation)data.Location);
             IG1C_WorldScene scene = CurrentWorld;
@@ -1113,10 +1210,17 @@ namespace OOPGames
             State = G1C_GameState.ListMenu;
         }
 
-        private string HighscoreText()
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Patricks Schlangen-Rekord steht mit auf der Tafel,
+        // bis der Spieler ihn übertrifft; jeder Eintrag nennt den Rekordhalter.
+        public string HighscoreText()
         {
-            if (ArcadeHighscores.Count == 0) return "Noch keine Rekorde. Sei der Erste!";
-            return string.Join("\n", ArcadeHighscores.OrderByDescending(h => h.Value).Take(4).Select(h => h.Key + ": " + h.Value + " Punkte"));
+            Dictionary<string, KeyValuePair<int, string>> board = ArcadeHighscores.ToDictionary(
+                h => h.Key, h => new KeyValuePair<int, string>(h.Value, "Du"));
+            KeyValuePair<int, string> snake;
+            if (!board.TryGetValue(G1C_ArcadeMentor.SnakeGameName, out snake) || snake.Key <= G1C_ArcadeMentor.SnakeRecord)
+                board[G1C_ArcadeMentor.SnakeGameName] = new KeyValuePair<int, string>(G1C_ArcadeMentor.SnakeRecord, G1C_ArcadeMentor.NpcName);
+            return string.Join("\n", board.OrderByDescending(h => h.Value.Key).Take(4)
+                .Select(h => h.Key + ": " + h.Value.Key + " Punkte – " + h.Value.Value));
         }
 
         private G1C_WorldObject _lastGuestCabinet; // Patrick Lupierz – 18.11.2026
@@ -1133,6 +1237,22 @@ namespace OOPGames
             State = G1C_GameState.Arcade;
         }
 
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Duell gegen einen NPC starten (Pong, Einsatz je 20 Chips). Das Ergebnis wertet EndMinigame aus
+        //          (Chips aus dem NPC-Geldbeutel, G1C_CasinoEventReactor.RecordDuel für Respekt/Rivalität).
+        public G1C_NpcCharacter DuelNpc { get; private set; }
+
+        public void StartDuel(G1C_NpcCharacter npc, G1C_DuelGame game = G1C_DuelGame.Pong)
+        {
+            if (npc == null) return;
+            _gameStartBalance = Money.Balance;
+            _activeGameType = G1C_InteractionType.Talk;
+            ActiveGame = G1C_NpcDuel.Create(game, npc.Name, Money, _random);
+            ActiveGame.SoundRequested = id => Sound.Play(id);
+            DuelNpc = npc;
+            State = G1C_NpcDuel.StateFor(game);
+        }
+
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026 – Fahrradständer vor dem Haus
         private void UseParkedBike()
         {
@@ -1144,6 +1264,29 @@ namespace OOPGames
         {
             // Änderung durch: Patrick Lupierz – 18.11.2026 – Gast-Automat: [Esc] führt zurück zur Spielauswahl,
             // damit direkt ein anderes Spiel einer anderen Gruppe gewählt werden kann.
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Duell gegen einen NPC auswerten
+            IG1C_NpcDuelGame duel = ActiveGame as IG1C_NpcDuelGame;
+            if (duel != null && duel.DuelOpponent != null && DuelNpc != null)
+            {
+                G1C_NpcCharacter rival = DuelNpc;
+                DuelNpc = null;
+                if (!duel.DuelDecided)   // nichts gespielt bzw. Gleichstand: kein Ergebnis
+                {
+                    int delta = Money.Balance - _gameStartBalance;
+                    ActiveGame = null;
+                    State = G1C_GameState.MainGame;
+                    if (delta != 0) NotifySystemMessage("Duell unentschieden (" + (delta > 0 ? "+" : "") + delta + " Chips).");
+                    return;
+                }
+                rival.Restore(Math.Max(0, rival.Purse + duel.NpcPurseChange), rival.Mood, rival.Memory);
+                Npcs.Events.RecordDuel(rival, duel.PlayerWonDuel);
+                PlayResultSound();
+                Result.Show(ActiveGame.Name, _gameStartBalance, Money.Balance);
+                ActiveGame = null;
+                GamesPlayed++;
+                State = G1C_GameState.Result;
+                return;
+            }
             G1C_GuestGameHost guest = ActiveGame as G1C_GuestGameHost;
             if (guest != null && _lastGuestCabinet != null)
             {
@@ -1188,6 +1331,88 @@ namespace OOPGames
         //          Hinweis), höchstens einmal pro Vorbeigehen: erst wenn der Spieler sich entfernt hat, wieder.
         public const int LoanSharkRange = 2;
         public bool LoanSharkApproached { get; private set; }
+
+        private void ApplySharkConsequences()
+        {
+            if (Finance.LoanDoorThreat)
+            {
+                G1C_Npc shark = Exterior.TownNpcs.FirstOrDefault(n => n.Interaction == G1C_InteractionType.LoanShark);
+                if (shark != null)
+                {
+                    shark.Teleport(MapDoorX(), MapDoorY(), G1C_Direction.Down);
+                    Npcs.Bubbles.ShowReaction(shark, "Hier ist deine letzte Warnung, Versager.", TickCount);
+                }
+            }
+            if (Finance.LoanBonesBroken)
+            {
+                Player.Humping = true;
+                Player.StepTicks = Math.Max(Player.StepTicks, 9);
+                Bikes.SetBlockedByShark(true);
+                NotifySystemMessage("Viktor hat dir die Knochen gebrochen. Du humpelst und kannst kein Fahrrad fahren.");
+            }
+            if (Finance.LoanCatKidnapped)
+            {
+                Home.SetHouseCatPresent(false);
+                Phone.Receive("Geldhai Viktor", "Ich habe eure Katze Milo. Bezahle deine Schulden – dann bekommst du sie zurück.", Clock);
+            }
+        }
+
+        private int MapDoorX() { return Exterior.Map.DoorX(G1C_WorldLocation.Home); }
+        private int MapDoorY() { return Exterior.Map.DoorY(G1C_WorldLocation.Home) + 1; }
+
+        // Änderung durch: Denis Mock – Datum: 19.11.2026 – Begegnung nur beim tatsächlichen Verlassen des Hauses
+        private void TriggerHouseExitDebtEncounter()
+        {
+            G1C_Npc shark = Exterior.TownNpcs.FirstOrDefault(n => n.Interaction == G1C_InteractionType.LoanShark);
+            if (shark != null)
+            {
+                shark.Teleport(MapDoorX(), MapDoorY(), G1C_Direction.Down);
+                Npcs.Bubbles.ShowReaction(shark, "Ich hab dich lange genug warten lassen.", TickCount);
+            }
+            OpenDialogue("Geldhai Viktor", new[]
+            {
+                "Ich hab dich lange genug warten lassen.",
+                "Du hast deine Schulden nicht bezahlt. Keine weiteren Ausreden."
+            }, () =>
+            {
+                Finance.MarkBonesBroken();
+                Player.Humping = true;
+                Player.StepTicks = Math.Max(Player.StepTicks, 9);
+                Bikes.SetBlockedByShark(true);
+                _sceneTransitions.Restore(G1C_WorldLocation.Hospital);
+                Player.Teleport(Hospital.PlayerStartX, Hospital.PlayerStartY, G1C_Direction.Down);
+                _movement.ClearQueue();
+                _movement = CreateMovement();
+                NotifySystemMessage("Du wachst im Krankenhaus auf. Schwester Emma kann dich behandeln.");
+                OpenDialogue("Krankenhaus", new[] { "Du wachst nach der Begegnung mit Viktor auf.\nSchwester Emma kümmert sich um dich." }, null);
+            });
+        }
+
+        private void ApplyLoanRepaidConsequences()
+        {
+            Player.Humping = false;
+            Player.StepTicks = G1C_Player.TicksPerStep;
+            Bikes.SetBlockedByShark(false);
+            Home.SetHouseCatPresent(true);
+            Phone.Receive("Geldhai Viktor",
+                "Schulden bezahlt. Milo ist wieder sicher. Wir sind quitt - für heute.", Clock);
+            G1C_Npc shark = Exterior.TownNpcs.FirstOrDefault(n => n.Interaction == G1C_InteractionType.LoanShark);
+            if (shark != null)
+            {
+                shark.Teleport(35, 45, G1C_Direction.Down);
+                Npcs.Bubbles.ShowReaction(shark, "Bezahlt. Ich bin zufrieden.", TickCount);
+            }
+            NotifySystemMessage("Die Schulden sind bezahlt. Dein Humpeln endet und Milo ist zurück.");
+        }
+
+        private void TreatBrokenLegs()
+        {
+            Player.Humping = false;
+            Player.StepTicks = G1C_Player.TicksPerStep;
+            Bikes.SetBlockedByShark(false);
+            Finance.ClearBoneDamage();
+            NotifySystemMessage("Schwester Emma hat dich behandelt. Du kannst wieder laufen und Fahrrad fahren.");
+        }
 
         private void UpdateLoanSharkApproach()
         {
@@ -1281,6 +1506,7 @@ namespace OOPGames
                 if (!Player.IsMoving)
                 {
                     Player.StepTicks = Bikes.StepTicks(Buffs.StepTicks); // Patrick Lupierz – Fahrrad
+                    if (Finance.LoanBonesBroken) Player.StepTicks = Math.Max(Player.StepTicks, 9);
                     // Änderung durch: Patrick Lupierz – 16.11.2026 – Admin-Cheat: dauerhaft erhöhte Geschwindigkeit (endet
                     // erst, wenn ADMIN erneut getippt wird); schneller als Fahrrad und Energydrink.
                     if (Cheats.JackpotActive) Player.StepTicks = Math.Min(Player.StepTicks, G1C_CheatCode.SpeedStepTicks);

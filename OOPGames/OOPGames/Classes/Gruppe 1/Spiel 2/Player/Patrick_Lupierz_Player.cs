@@ -53,6 +53,7 @@ namespace OOPGames
         public bool IsMoving { get; private set; }
         public int StepProgress { get; private set; }
         public int StepCount { get; private set; }
+        public bool Humping { get; set; }
 
         public G1C_Player(int tileX, int tileY, G1C_Direction facing)
         {

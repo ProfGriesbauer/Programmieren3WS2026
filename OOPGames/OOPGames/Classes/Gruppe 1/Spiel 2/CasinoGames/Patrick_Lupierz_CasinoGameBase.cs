@@ -77,6 +77,8 @@ namespace OOPGames
         protected Random Random { get; }
         protected G1C_BetControl Bet { get; } = new G1C_BetControl();
         protected string Message { get; set; } = "";
+        /// <summary>Änderung durch: Patrick Lupierz – 23.11.2026 – aktuelle Meldung (lesend, für den Selbsttest)</summary>
+        public string StatusMessage { get { return Message; } }
 
         public abstract string Name { get; }
 
@@ -133,7 +135,9 @@ namespace OOPGames
         public void Draw(G1C_Renderer r)
         {
             _buttons.Clear();
-            r.FillRect(0, 0, G1C_Renderer.ScreenWidth, G1C_Renderer.ScreenHeight, BackgroundColor);
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Hintergrund füllt das ganze Fenster, nicht nur den Rahmen
+            r.FillRect(G1C_Renderer.WindowLeft, G1C_Renderer.WindowTop, G1C_Renderer.WindowRight - G1C_Renderer.WindowLeft,
+                       G1C_Renderer.WindowBottom - G1C_Renderer.WindowTop, BackgroundColor);
             DrawHeader(r);
             DrawGame(r);
             DrawMessage(r);
@@ -154,7 +158,7 @@ namespace OOPGames
 
         private void DrawHeader(G1C_Renderer r)
         {
-            r.FillRect(0, 0, G1C_Renderer.ScreenWidth, 28, G1C_UiColors.HeaderBar);
+            r.FillRect(G1C_Renderer.WindowLeft, 0, G1C_Renderer.WindowRight - G1C_Renderer.WindowLeft, 28, G1C_UiColors.HeaderBar); // Patrick Lupierz – 22.11.2026: ganze Fensterbreite
             r.Text(Name, 8, 5, 15, G1C_UiColors.Gold);
             double balanceX = G1C_Renderer.ScreenWidth - 124;
             r.Sprite("chip", balanceX, 8, 12, 12);

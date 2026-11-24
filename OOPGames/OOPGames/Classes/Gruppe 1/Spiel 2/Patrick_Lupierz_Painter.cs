@@ -58,8 +58,12 @@ namespace OOPGames
 
             G1C_Renderer r = _renderer;
             r.BeginFrame(canvas);
-            field.Viewport = r.Viewport;
             G1C_GameManager game = field.Manager;
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Minispiele im festen, zentrierten Rahmen;
+            // der Viewport für die Mausumrechnung wird erst danach übernommen.
+            bool minigame = game.State != G1C_GameState.Title && !game.IsWorldVisible && game.ActiveGame != null;
+            if (minigame) r.UseFixedFrame();
+            field.Viewport = r.Viewport;
 
             if (game.State == G1C_GameState.Title)
             {
@@ -166,7 +170,12 @@ namespace OOPGames
                 double x = npc != null ? npc.VisualX : pet != null ? pet.VisualX : o.X;
                 double y = npc != null ? npc.VisualY : pet != null ? pet.VisualY : o.Y;
                 if (!IsEntityVisible(o, x, y, tileSize, mapX, mapY)) continue;
-                drawables.Add(new KeyValuePair<double, System.Action>(y + o.Height,
+                double sortY = y + o.Height;
+                // Änderung durch Denis Mock – 19.11.2026 – Dach/Front vor, hintere Stützen hinter Spieler und NPC
+                if (o.SpriteId == "building_pavilion_back") sortY = y + 1.0;
+                else if (o.SpriteId == "building_pavilion_roof") sortY = y + 4.25;
+                else if (o.SpriteId == "building_pavilion_front") sortY = y + 4.75;
+                drawables.Add(new KeyValuePair<double, System.Action>(sortY,
                     () => DrawEntity(r, o.SpriteId, x, y, o.Width, o.Height, tileSize, mapX, mapY)));
             }
 
@@ -185,7 +194,9 @@ namespace OOPGames
                 // Laufbeine (Standbild, leichtes Wippen beim Treten); von vorn liegt der Lenker vor der Figur.
                 if (!riding)
                 {
-                    DrawEntity(r, _animation.GetSpriteId(player), player.VisualX, player.VisualY, 1, 1, tileSize, mapX, mapY);
+                    string playerSprite = _animation.GetSpriteId(player);
+                    double limpOffset = player.Humping && player.IsMoving ? (game.TickCount % 2 == 0 ? 0.12 : -0.05) : 0;
+                    DrawEntity(r, playerSprite, player.VisualX, player.VisualY + limpOffset, 1, 1, tileSize, mapX, mapY);
                     return;
                 }
                 string bike = game.Bikes.RideSpriteId(player.Facing);

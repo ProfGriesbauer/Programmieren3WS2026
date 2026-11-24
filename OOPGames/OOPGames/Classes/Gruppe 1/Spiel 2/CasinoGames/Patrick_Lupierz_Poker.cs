@@ -15,7 +15,7 @@ namespace OOPGames
     ///  - Pro Setzrunde höchstens ein Einsatz und eine Erhöhung, jeweils um eine Einheit.
     ///  - Dadurch ist der maximale Einsatz pro Hand 9 Einheiten – so gibt es keine Side-Pots.
     /// </summary>
-    public class G1C_Poker : G1C_CasinoGameBase
+    public class G1C_Poker : G1C_CasinoGameBase, IG1C_NpcDuelGame   // Änderung durch: Patrick Lupierz – 23.11.2026 – auch als NPC-Duell
     {
         private enum Street { Preflop, Flop, Turn, River }
         private enum Phase { Setup, PlayerAction, AiThinking, HandOver }
@@ -26,7 +26,7 @@ namespace OOPGames
 
         private static readonly string[] StreetNames = { "Preflop", "Flop", "Turn", "River" };
 
-        private readonly G1C_PokerAI _ai;
+        private G1C_PokerAI _ai;
         private readonly List<G1C_Card> _playerHole = new List<G1C_Card>();
         private readonly List<G1C_Card> _aiHole = new List<G1C_Card>();
         private readonly List<G1C_Card> _board = new List<G1C_Card>();
@@ -51,10 +51,28 @@ namespace OOPGames
         {
             _deck = new G1C_Deck(Random);
             _ai = new G1C_PokerAI("Max", 1500, Random);
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – alle Texte nennen den Gegner über _ai.Name (statt fest "Max"),
+            // damit im NPC-Duell ausschließlich der Duellant genannt wird.
             Message = "Einheit mit [W]/[S] wählen (max. 9 Einheiten pro Hand). [E] Austeilen, [Q] Verlassen.";
         }
 
-        public override string Name { get { return "Poker (Texas Hold'em)"; } }
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Duell gegen einen angesprochenen NPC (Heads-up)
+        public string DuelOpponent { get; private set; }
+        private int _duelStartBalance;
+
+        public void ConfigureDuel(string opponent)
+        {
+            DuelOpponent = opponent;
+            _ai = new G1C_PokerAI(opponent, 1500, Random);
+            _duelStartBalance = Money.Balance;
+        }
+
+        private int DuelDelta { get { return Money.Balance - _duelStartBalance; } }
+        public bool DuelDecided { get { return DuelOpponent != null && DuelDelta != 0; } }
+        public bool PlayerWonDuel { get { return DuelDelta > 0; } }
+        public int NpcPurseChange { get { return -DuelDelta; } }
+
+        public override string Name { get { return DuelOpponent != null ? "Poker-Duell gegen " + DuelOpponent : "Poker (Texas Hold'em)"; } }
 
         private int ToCall(bool forPlayer)
         {
@@ -136,7 +154,7 @@ namespace OOPGames
             _phase = Phase.PlayerAction;
             int toCall = ToCall(true);
             Message = toCall > 0
-                ? "Max hat gesetzt. [1] Call " + toCall + (CanRaise ? "  [2] Raise" : "") + "  [3] Fold"
+                ? _ai.Name + " hat gesetzt. [1] Call " + toCall + (CanRaise ? "  [2] Raise" : "") + "  [3] Fold"
                 : "Du bist dran: [1] Check  [2] Bet " + _unit + "  [3] Fold";
         }
 
@@ -191,7 +209,7 @@ namespace OOPGames
             {
                 _phase = Phase.AiThinking;
                 _timer = AiDelay;
-                Message = _lastAction + " Max überlegt ...";
+                Message = _lastAction + " " + _ai.Name + " überlegt ...";
             }
             else
             {
@@ -242,7 +260,7 @@ namespace OOPGames
             G1C_PokerHandValue aiValue = G1C_PokerHandEvaluator.EvaluateBest(_aiHole.Concat(_board).ToList());
             int cmp = playerValue.CompareTo(aiValue);
             _showAiCards = true;
-            _handInfo = "Du: " + playerValue.Name + "  |  Max: " + aiValue.Name;
+            _handInfo = "Du: " + playerValue.Name + "  |  " + _ai.Name + ": " + aiValue.Name;
 
             if (cmp == 0)
             {
@@ -254,7 +272,7 @@ namespace OOPGames
                 Message = "Split Pot - gleich starke Hände! [E] Neue Hand, [Q] Verlassen";
                 return;
             }
-            EndHand(cmp > 0, cmp > 0 ? "Showdown: Du gewinnst!" : "Showdown: Max gewinnt.");
+            EndHand(cmp > 0, cmp > 0 ? "Showdown: Du gewinnst!" : "Showdown: " + _ai.Name + " gewinnt.");
         }
 
         private void EndHand(bool playerWins, string reason)
@@ -280,16 +298,22 @@ namespace OOPGames
 
         protected override Color BackgroundColor { get { return Color.FromRgb(0x1E, 0x5A, 0x50); } }
 
-        public const double PlayerHandScale = 1.5;   // Patrick Lupierz – 16.11.2026
-        public const double PlayerHandTop = 300;
-        public const double PlayerHandCenterX = 240;
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – im Vollbild war die Hand kleiner. Minispiele laufen jetzt
+        // in einem festen 480x320-Rahmen (G1C_Renderer.UseFixedFrame): die Hand ist in jeder Fenstergröße gleich groß
+        // (1,5-fach wie in der normalen Ansicht) und liegt unter "Du", über dem Meldungsfeld.
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – im Vollbild kleiner (100 %), sonst 1,5-fach.
+        public const double NormalHandScale = 1.5;
+        public const double FullscreenHandScale = 1.0;
+        public static double PlayerHandScale { get { return G1C_Renderer.IsFullscreen ? FullscreenHandScale : NormalHandScale; } }
+        public const double PlayerHandTop = 172;
+        public const double PlayerHandCenterX = 228;
 
         protected override void DrawGame(G1C_Renderer r)
         {
             bool inHand = _phase != Phase.Setup;
 
             // KI
-            r.Text("KI " + _ai.Name, 20, 36, 13, G1C_UiColors.Gold);
+            r.Text((DuelOpponent != null ? "" : "KI ") + _ai.Name, 20, 36, 13, G1C_UiColors.Gold);
             r.Text("Kasse: " + _ai.Bankroll, 20, 54, 10, Colors.White);
             if (inHand) G1C_CardView.DrawHand(r, _aiHole, 200, 34, 44, _showAiCards ? int.MaxValue : 0);
 
@@ -322,7 +346,7 @@ namespace OOPGames
             if (_phase == Phase.HandOver)
             {
                 // Die Überlegung der KI wird erst nach der Hand gezeigt, sonst würde sie ihre Karten verraten
-                r.WrappedText("KI: " + _ai.LastDecision, 296, 196, 9, G1C_UiColors.Gold, 176);
+                r.WrappedText((DuelOpponent != null ? _ai.Name : "KI") + ": " + _ai.LastDecision, 296, 196, 9, G1C_UiColors.Gold, 176);
             }
 
             switch (_phase)
@@ -339,7 +363,7 @@ namespace OOPGames
                                  Btn("[3] Fold", Key.D3, toCall > 0));
                     break;
                 default:
-                    AddButtonRow(Btn("Max überlegt ...", Key.None, false));
+                    AddButtonRow(Btn(_ai.Name + " überlegt ...", Key.None, false));
                     break;
             }
         }

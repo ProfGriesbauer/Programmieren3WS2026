@@ -42,9 +42,15 @@ namespace OOPGames
         {
             if (Bankroll < minimum)
             {
-                Bankroll = Math.Max(StartBankroll, minimum);
+                int refill = Math.Max(StartBankroll, minimum);
+                Injected += refill - Bankroll;   // Patrick Lupierz – 23.11.2026
+                Bankroll = refill;
                 Rebuys++;
             }
         }
+
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – echter Gewinn/Verlust ohne nachgekaufte Chips (für NPC-Duelle)
+        public int Injected { get; private set; }
+        public int Net { get { return Bankroll - StartBankroll - Injected; } }
     }
 }

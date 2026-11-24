@@ -5,7 +5,7 @@ using System.Windows.Input;
 namespace OOPGames
 {
     // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Shop: Warenliste nach Gespräch mit einem Verkäufer
-    public enum G1C_ConversationAction { None, BankMenu, FurnitureShop, Shop }
+    public enum G1C_ConversationAction { None, BankMenu, FurnitureShop, Shop, Duel /* Patrick Lupierz – 23.11.2026 */ }
 
     // =====================================================
     // Klasse: G1C_ConversationOption
@@ -74,6 +74,9 @@ namespace OOPGames
         public int Selected { get; private set; }
         public IReadOnlyList<G1C_ConversationOption> Options { get { return _options; } }
         public IReadOnlyList<G1C_Notice> Notices { get { return _notices; } }
+        private readonly System.Collections.Generic.List<G1C_CatchInfo> _fishScroll = new System.Collections.Generic.List<G1C_CatchInfo>();
+        private int _fishScrollIndex;
+        private bool _fishScrollMode;
 
         private int Tick { get { return _system.Tick; } }
         private G1C_NpcMemory Memory { get { return Npc.Memory; } }
@@ -125,6 +128,27 @@ namespace OOPGames
         public void HandleKey(Key key)
         {
             if (!IsOpen) return;
+
+            if (_fishScrollMode)
+            {
+                if (key == Key.W || key == Key.Up)
+                {
+                    MoveFishSelection(-1);
+                    return;
+                }
+                if (key == Key.S || key == Key.Down)
+                {
+                    MoveFishSelection(1);
+                    return;
+                }
+                if (G1C_InputManager.IsBack(key))
+                {
+                    _fishScrollMode = false;
+                    Say("Zurück zur Frageauswahl.", Npc.MoodExpression);
+                    ShowTopics(0);
+                    return;
+                }
+            }
 
             int number = G1C_InputManager.ToNumber(key);
             if (number >= 1 && number <= _options.Count) { Choose(number - 1); return; }
@@ -263,8 +287,24 @@ namespace OOPGames
                 return;
             }
 
+            if (_serviceOffered == G1C_InteractionType.Nurse)
+            {
+                if (_system.Finance.LoanBonesBroken)
+                    AddOption("Beine behandeln lassen (2000 Chips).", TreatWithNurse);
+                else
+                    AddOption("Kannst du mich untersuchen?", () => Say("Du bist wieder beweglich. Keine Behandlung nötig.", G1C_NpcExpression.Happy));
+                if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0));
+                AddOption("Ich gehe wieder.", Close);
+                return;
+            }
+
             if (_serviceOffered == G1C_InteractionType.LoanShark)
             {
+                if (_system.Finance.LoanDoorThreat)
+                {
+                    ShowSharkThreatOptions(0);
+                    return;
+                }
                 if (_system.Finance.LoanOwed > 0)
                 {
                     AddOption("50 Chips zurückzahlen.", () => RepayLoan(50));
@@ -272,10 +312,11 @@ namespace OOPGames
                 }
                 else
                 {
-                    AddOption("250 Chips leihen.", BorrowFromShark);
-                    AddOption("Konditionen erklären.", ExplainLoan);
+                    AddOption("Mit Viktor reden.", SmallTalk);
+                    AddOption("Über einen Kredit sprechen.", ShowLoanOptions);
                 }
-                AddOption("Lass uns plaudern.", SmallTalk);
+                if (_system.Finance.LoanOwed > 0)
+                    AddOption("Mit Viktor reden.", SmallTalk);
                 AddOption("Ich gehe wieder.", Close);
                 return;
             }
@@ -306,6 +347,9 @@ namespace OOPGames
             else if (Npc.Personality.HasPauseTask && !Memory.HelpedByPlayer) AddOption("Du wirkst nervös. Alles okay?", AskAboutNerves);
 
             if (Npc.Personality.Topics.Count > 0) AddOption("Ich hab da eine Frage ...", () => ShowTopics(0)); // Patrick Lupierz – 15.11.2026
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – jeden (nicht feindlichen) NPC zum Pong-Duell herausfordern
+            // Mutter und Oma werden nie herausgefordert (Familie wird nie zum Gegner, auch nicht zum Rivalen)
+            if (!Npc.Personality.IsFamily) AddOption("Zum Duell herausfordern!", ChallengeToDuel);
             AddOption("Lass uns plaudern.", SmallTalk);
             bool goodFriendOffer = Status == G1C_RelationshipStatus.GoodFriend && PlayerBroke && !Npc.Personality.IsFamily;
             AddOption(Npc.Personality.IsFamily ? "Hast du Taschengeld für mich?" // Patrick Lupierz – 15.11.2026
@@ -345,11 +389,51 @@ namespace OOPGames
                 Hour = _system.Clock != null ? _system.Clock.Hour : 12,
                 Money = _system.Money,
                 Random = _system.Random,
-                ViaPhone = ViaPhone
+                ViaPhone = ViaPhone,
+                // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Rekorde, Gedächtnis und Chips-Hinweis für Patrick
+                Highscores = _system.ArcadeHighscores != null ? _system.ArcadeHighscores() : null,
+                Memory = Memory,
+                Notice = text => AddNotice(text, true)
             };
             Say(topic.Ask(context), topic.Expression);
             if (firstTime) GrantSocialTrust(1); // neue Themen festigen die Beziehung ein wenig
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – nur "Welche Fische gibt es?" öffnet das Lexikon;
+            // "Wofuer sind die Fische?" bleibt eine normale Antwort (vorher wurde sie vom Lexikon überdeckt).
+            if (Npc.Name == "Denis der Angler" && topic.Question == "Welche Fische gibt es?")
+            {
+                OpenFishScroll();
+                return;
+            }
             ShowTopics(page);
+        }
+
+        // Änderung durch: Denis Mock – Datum: 19.11.2026 – dynamisches Scroll-Menü aus G1C_FishingGame.Catches
+        public bool FishScrollMode { get { return _fishScrollMode; } }
+        public int FishScrollIndex { get { return _fishScrollIndex; } }
+        public IReadOnlyList<G1C_CatchInfo> FishScroll { get { return _fishScroll; } }
+
+        private void OpenFishScroll()
+        {
+            _fishScroll.Clear();
+            foreach (G1C_CatchInfo fish in G1C_FishingGame.Catches)
+                if (fish != null && fish.IsFish) _fishScroll.Add(fish);
+            _fishScrollIndex = 0;
+            _fishScrollMode = _fishScroll.Count > 0;
+            if (_fishScrollMode)
+                Say("Fischarten – mit W/S scrollen.", G1C_NpcExpression.Thoughtful);
+        }
+
+        private void MoveFishSelection(int delta)
+        {
+            if (_fishScroll.Count == 0) return;
+            _fishScrollIndex = (_fishScrollIndex + delta + _fishScroll.Count) % _fishScroll.Count;
+            G1C_CatchInfo fish = _fishScroll[_fishScrollIndex];
+            G1C_Item item = G1C_ItemCatalog.Get(fish.ItemId);
+            if (item == null) return;
+            string rarity = fish.Weight <= 2 ? "sehr selten" : fish.Weight <= 4 ? "selten"
+                : fish.Weight <= 7 ? "ungewoehnlich" : "haeufig";
+            Say(item.Name + " | " + rarity + " | " + item.SellValue + " Chips | Verwendung: Verkauf in jedem Laden",
+                G1C_NpcExpression.Thoughtful);
         }
 
         private string GameOptionText()
@@ -382,6 +466,57 @@ namespace OOPGames
         }
 
         // ------------------------------------------------------------------ Antworten
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Duell-Herausforderung. Beide setzen G1C_PongDuel.DuelStake Chips ein; der NPC lehnt ab, wenn er (oder
+        //          der Spieler) zu wenig Chips hat, sonst startet das Duell (GameManager.StartDuel) nach dem Gespräch.
+        private void ChallengeToDuel()
+        {
+            if (Npc.Personality.IsFamily) return;   // Sicherung: Familie nie herausfordern
+            int stake = G1C_PongDuel.DuelStake;
+            if (_system.Money.Balance < stake)
+            {
+                Say("Du hast keine " + stake + " Chips für den Einsatz. Komm wieder, wenn du welche hast.", G1C_NpcExpression.Neutral);
+                ShowRoot();
+                return;
+            }
+            if (Npc.Purse < G1C_NpcDuel.MinimumPurse)
+            {
+                Say("Ich hab gerade keine " + stake + " Chips übrig. Ein andermal!", G1C_NpcExpression.Sad);
+                ShowRoot();
+                return;
+            }
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Spiel für das Duell auswählen
+            Say("Ein Duell? Gerne! Was spielen wir?", Npc.Personality.Pride >= 0.6 ? G1C_NpcExpression.Thoughtful : G1C_NpcExpression.Happy);
+            _options.Clear();
+            Selected = 0;
+            foreach (G1C_DuelGame game in new[] { G1C_DuelGame.Pong, G1C_DuelGame.Poker, G1C_DuelGame.Blackjack })
+            {
+                G1C_DuelGame chosen = game;
+                AddOption(G1C_NpcDuel.Title(chosen), () => AcceptDuel(chosen));
+            }
+            AddOption("Doch nicht.", () => { Say("Schade. Ein andermal!", Npc.MoodExpression); ShowRoot(); });
+        }
+
+        private void AcceptDuel(G1C_DuelGame game)
+        {
+            _duelNpc = Npc;
+            RequestedDuelGame = game;
+            RequestedAction = G1C_ConversationAction.Duel;
+            Close();
+        }
+
+        public G1C_DuelGame RequestedDuelGame { get; private set; }
+
+        private G1C_NpcCharacter _duelNpc;
+
+        /// <summary>NPC, der zum Duell herausgefordert wurde (einmal abholbar).</summary>
+        public G1C_NpcCharacter TakeDuelNpc()
+        {
+            G1C_NpcCharacter npc = _duelNpc;
+            _duelNpc = null;
+            return npc;
+        }
 
         // Entwickler: Eduard Schoenfeld
         private void PlayGame()
@@ -514,10 +649,11 @@ namespace OOPGames
                 " % Zinsen\nauf dein Guthaben. Das Konto wird mit deinem Spielstand gespeichert.", G1C_NpcExpression.Thoughtful);
         }
 
-        private void BorrowFromShark()
+        private void BorrowFromShark(int amount)
         {
             int oldDebt = _system.Finance.LoanOwed;
-            string reply = _system.Finance.Borrow(_system.Money);
+            int day = _system.Clock != null ? _system.Clock.Day : 1;
+            string reply = _system.Finance.Borrow(_system.Money, amount, day);
             if (oldDebt == 0 && _system.Finance.LoanOwed > 0)
             {
                 Adjust(1, 0);
@@ -530,14 +666,64 @@ namespace OOPGames
         private void RepayLoan(int amount)
         {
             string reply = _system.Finance.Repay(_system.Money, amount);
+            if (_system.Finance.LoanOwed == 0)
+            {
+                if (_system.OnLoanRepaid != null) _system.OnLoanRepaid();
+            }
             Say(reply, _system.Finance.LoanOwed == 0 ? G1C_NpcExpression.Happy : G1C_NpcExpression.Thoughtful);
+            ShowRoot();
+        }
+
+        private void TreatWithNurse()
+        {
+            if (!_system.Money.TryWithdraw(2000))
+            {
+                Say("Behandlung 2000 Chips. Du hast nicht genug Chips.", G1C_NpcExpression.Thoughtful);
+                ShowRoot();
+                return;
+            }
+            if (_system.OnNurseTreat != null) _system.OnNurseTreat();
+            Say("Die Behandlung ist bezahlt. Deine Beine sind versorgt, du humpelst nicht mehr und kannst wieder Fahrrad fahren.", G1C_NpcExpression.Happy);
             ShowRoot();
         }
 
         private void ExplainLoan()
         {
-            Say("Ich zahle dir einmalig 250 Chips aus.\nDu schuldest mir dafür insgesamt 300 Chips. Kein zweiter Kredit, solange der erste offen ist.",
+            Say("Du kannst bis zu 5000 Chips wählen.\nJeden neuen Tag steigen die Schulden um 50 %. Währenddessen verlierst du taeglich Respekt. Kein neuer Kredit, solange die alte Schuld offen ist.",
                 G1C_NpcExpression.Thoughtful);
+        }
+
+        private void ShowSharkThreatOptions(int page)
+        {
+            _options.Clear();
+            Selected = 0;
+            int debt = _system.Finance.LoanOwed;
+            int day = _system.Clock != null ? _system.Clock.Day : 1;
+            int age = System.Math.Max(0, day - _system.Finance.LoanStartDay);
+            int stage = _system.Finance.LoanWarningStage;
+            string threat = stage >= 5
+                ? "Letzte Phase. Milo wartet nicht ewig, und deine Knochen auch nicht."
+                : stage >= 4
+                    ? "Du hast meine Geduld verbrannt. Nächstes Mal rede ich nicht mehr."
+                    : "Saftsack, deine Frist läuft heute ab.";
+            Say(threat, G1C_NpcExpression.Angry);
+
+            AddOption("Wie lange stehen die Schulden offen?", () => Say("Seit " + age + " Tag(en). Du hast genug Zeit gehabt, Sozialschmarotzer.", G1C_NpcExpression.Angry));
+            AddOption("Wie hoch ist die Schuld jetzt?", () => Say(debt + " Chips. Ohne Zahlung wachsen sie jeden Tag um 50 Prozent.", G1C_NpcExpression.Thoughtful));
+            AddOption("Ich kann heute nicht alles zahlen.", () => Say("Dann zahl mindestens etwas, Saftsack. Ausreden retten dir Milo nicht.", G1C_NpcExpression.Angry));
+            AddOption(stage >= 5 ? "Alles zahlen - kein Kommentar." : "Meine Schulden bezahlen.", () => RepayLoan(debt));
+        }
+
+        private void ShowLoanOptions()
+        {
+            _options.Clear();
+            Selected = 0;
+            Say("Gut, dass du gefragt hast. Kredit aufnehmen kannst du jetzt - aber du zahlst jeden Tag 50 Prozent Zinsen.", G1C_NpcExpression.Thoughtful);
+            AddOption("500 Chips leihen.", () => BorrowFromShark(500));
+            AddOption("1000 Chips leihen.", () => BorrowFromShark(1000));
+            AddOption("2500 Chips leihen.", () => BorrowFromShark(2500));
+            AddOption("5000 Chips leihen.", () => BorrowFromShark(5000));
+            AddOption("Zuruck.", ShowRoot);
         }
 
         private void RequestFurnitureShop()

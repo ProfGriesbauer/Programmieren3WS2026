@@ -510,3 +510,4 @@ Modell: im Chat nicht angezeigt
 - Der vorhandene Prüflauf besteht mit 24 Assertions; er prüft unter anderem direkte Gewinn- und Blockzüge der Gruppe-1-KI.
 - Der dokumentierte KI-Benchmark gegen die Vergleichs-KI ergab 6 Siege aus 6 Partien; ein GUI-Test für Neustarts, Abbruch während der Berechnung oder nicht reagierende KIs wurde nicht durchgeführt.
 - Keine MainWindow-Datei und keine KI-Implementierung wurde für diesen Auftrag geändert.
+a

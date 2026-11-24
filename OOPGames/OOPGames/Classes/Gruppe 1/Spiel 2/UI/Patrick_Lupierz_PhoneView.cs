@@ -66,6 +66,7 @@ namespace OOPGames
                 case G1C_PhoneScreen.Clock: DrawClock(r, game, y); break;
                 case G1C_PhoneScreen.Tasks: DrawTasks(r, game, y); break;
                 case G1C_PhoneScreen.Save: DrawRows(r, phone.SlotLines, phone.Selected, y, 3); break;
+                case G1C_PhoneScreen.Settings: DrawAudioSettings(r, game, y); break;
             }
 
             if (!string.IsNullOrEmpty(phone.Info))
@@ -87,6 +88,7 @@ namespace OOPGames
                 case G1C_PhoneScreen.Clock: return "Uhr";
                 case G1C_PhoneScreen.Tasks: return "Aufgaben";
                 case G1C_PhoneScreen.Save: return "Speichern";
+                case G1C_PhoneScreen.Settings: return "Einstellungen";
                 default: return "Menü";
             }
         }
@@ -166,6 +168,21 @@ namespace OOPGames
                 text += "• " + task.Title + ": " + state + "\n";
             }
             Paragraph(r, text, y);
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Handy-Lautstärkeregelung
+        private static void DrawAudioSettings(G1C_Renderer r, G1C_GameManager game, double y)
+        {
+            G1C_SoundSettings s = game.Sound.Settings;
+            string[] rows =
+            {
+                "Gesamt: " + s.Master + "%",
+                "Musik: " + s.Music + "%",
+                "Effekte: " + s.Effects + "%",
+                game.Sound.Muted ? "Stumm: AN" : "Stumm: AUS"
+            };
+            DrawRows(r, rows, game.Phone.Selected, y, 1);
+            r.Text("[A/D] stellen  [E] Mute", ScreenX + 4, y + 70, 7, LcdDark, ScreenW - 8);
         }
 
         private static void Paragraph(G1C_Renderer r, string text, double y)

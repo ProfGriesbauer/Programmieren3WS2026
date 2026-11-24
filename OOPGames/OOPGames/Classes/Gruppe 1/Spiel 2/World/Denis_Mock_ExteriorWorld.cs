@@ -96,7 +96,7 @@ namespace OOPGames
             AddTownNpc("Gast Lena", "guest", G1C_WorldLocation.Home);
             AddTownNpc("Kurier Paul", "dealer_green", G1C_WorldLocation.Hospital);
             AddTownNpc("Gärtner Sam", "bartender", G1C_WorldLocation.Market);
-            AddTownNpc("Studentin Lea", "dealer_blue", G1C_WorldLocation.Casino);
+            AddTownNpc("Studentin Lea", G1C_ShopNpcRoster.LeaSkin, G1C_WorldLocation.Casino); // Änderung durch: Patrick Lupierz – 23.11.2026 – blond, hellgrün
             AddTownNpc("Geldhai Viktor", "dealer_red", G1C_WorldLocation.Bank, G1C_InteractionType.LoanShark);
 
             // Änderung durch: Patrick Lupierz – Datum: 16.11.2026 – Enten sind nicht mehr begehbar
@@ -119,6 +119,7 @@ namespace OOPGames
 
             AddGasStationForecourt(); // Änderung durch: Patrick Lupierz – 15.11.2026 – Oma wohnt jetzt in ihrem Haus
             AddFishingSpots();        // Änderung durch: Patrick Lupierz – 16.11.2026 – Angeln auf den Brücken
+            AddFisherNpc();           // Änderung durch: Patrick Lupierz – 19.11.2026 – Angel-Tutorial-NPC
             // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrrad vor dem Spielerhaus (links neben dem Eingang)
             ParkedBike = new G1C_ParkedBike(Map.DoorX(G1C_WorldLocation.Home) - 1, Map.DoorY(G1C_WorldLocation.Home) + 1);
             _objects.Add(ParkedBike);
@@ -132,6 +133,22 @@ namespace OOPGames
             AddSign("Parkschild", 22, 23, "Stadtpark mit Pavillon.\nBitte die Enten nicht mit Chips füttern.");
             AddSign("Oma Gerdas Briefkasten", 29, Map.DoorY(G1C_WorldLocation.Home) + 1,
                 "Auf dem Briefkasten steht: \"G. – Keine Werbung, keine Vertreter,\nkeine Fragen zum Handy.\"");
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Angler neben dem Angelplatz
+        private void AddFisherNpc()
+        {
+            G1C_WorldObject fishing = null;
+            foreach (G1C_WorldObject obj in _objects)
+                if (obj.Interaction == G1C_InteractionType.Fishing) { fishing = obj; break; }
+            if (fishing == null) return;
+            int x = fishing.X + 2;
+            int y = fishing.Y;
+            if (!Map.IsWalkable(x, y) || ObjectAt(x, y) != null) x = fishing.X - 2;
+            if (!Map.IsWalkable(x, y) || ObjectAt(x, y) != null) return;
+            G1C_Npc npc = new G1C_Npc("Denis der Angler", "angler_denis", x, y, G1C_Direction.Left, G1C_InteractionType.Talk);
+            _townNpcs.Add(npc);
+            _objects.Add(npc);
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026
@@ -200,7 +217,9 @@ namespace OOPGames
         {
             foreach (int[] corner in new[] { new[] { x, y }, new[] { x + 3, y }, new[] { x, y + 3 }, new[] { x + 3, y + 3 } })
                 Map.AddSolidFootprint(corner[0], corner[1], 1, 1);
-            _objects.Add(new G1C_WorldObject("Parkpavillon", "building_pavilion", x, y, 4, 4, false, G1C_InteractionType.None));
+            _objects.Add(new G1C_WorldObject("Parkpavillon Hinterstützen", "building_pavilion_back", x, y, 4, 4, false, G1C_InteractionType.None));
+            _objects.Add(new G1C_WorldObject("Parkpavillon Dach", "building_pavilion_roof", x, y, 4, 4, false, G1C_InteractionType.None));
+            _objects.Add(new G1C_WorldObject("Parkpavillon Vorderseite", "building_pavilion_front", x, y, 4, 4, false, G1C_InteractionType.None));
         }
 
         // Entwickler: Patrick Lupierz – Datum: 16.11.2026

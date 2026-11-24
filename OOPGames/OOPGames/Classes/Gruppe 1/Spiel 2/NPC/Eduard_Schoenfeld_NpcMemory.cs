@@ -38,6 +38,8 @@ namespace OOPGames
         // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Spieltag des letzten Taschengelds (Familie);
         // wird mitgespeichert, damit nach dem Laden nicht doppelt gezahlt wird.
         public int PocketMoneyDay { get; set; }
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Patricks Rekord-Belohnung (Spielhalle) wurde ausgezahlt
+        public bool RecordRewardPaid { get; set; }
 
         public int DuelsTotal { get { return DuelsWonByPlayer + DuelsLostByPlayer; } }
     }

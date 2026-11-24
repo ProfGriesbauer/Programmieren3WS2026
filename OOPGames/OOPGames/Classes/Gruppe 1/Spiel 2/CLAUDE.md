@@ -41,7 +41,7 @@ Data flow: input → `G1C_CasinoHumanPlayer` builds `G1C_CasinoMove` → `G1C_Ca
 | `NPC/` | Eduard's system: roster, conversations, memory, relationships, tasks, money, speech bubbles, casino event reactions; Denis's city roster and exterior roaming |
 | `CasinoGames/` | `CasinoGameBase` + Roulette, Blackjack (split/double), Poker (+`PokerHandEvaluator`), Slots, ClawMachine, Cards |
 | `AI/` | Roulette/Blackjack/Poker/Pong opponents |
-| `Arcade/` | `G1C_ArcadeGame` base (fee 5, reward once, max 30), StarHunter, Snake, BrickBreaker, PongDuel, `G1C_ArcadeCatalog` (5 cabinets, ≤9 games), `G1C_GuestGameHost`/`G1C_GuestGameCatalog` (plays other groups' registered framework games via `OOPGamesManager.Singleton`, CanBePaintedBy/CanBeRuledBy) |
+| `Arcade/` | `G1C_ArcadeGame` base (fee 5, reward once, max 30), StarHunter, Snake, BrickBreaker, PongDuel, `G1C_ArcadeCatalog` (5 cabinets, ≤9 games per own cabinet; the guest cabinet has no limit since 23.11.2026), `G1C_GuestGameHost`/`G1C_GuestGameCatalog` (plays other groups' registered framework games via `OOPGamesManager.Singleton`, CanBePaintedBy/CanBeRuledBy) |
 | `Fishing/` | `G1C_FishingGame` (bridge fishing minigame, slide bar; catches are items with `SellValue`; 20 fish sprites from a free asset pack, stored as pixel data in `G1C_FishSprites`) |
 | `UI/` | Renderer (`BeginRotation` for grouped rotation, e.g. poker fan), HUD, DialogueBox, CasinoMenu, ResultScreen, MapView, PhoneView, CardView, StartView, Conversation/NpcOverlay views |
 | `Graphics/` | `SpriteLibrary` (sprite-ID → image, PNG override), `BuiltInSprites`, `TownSprites`, `NpcSprites`, `WorldSprites`, `PixelCanvas` |

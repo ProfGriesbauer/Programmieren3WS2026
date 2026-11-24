@@ -31,6 +31,10 @@ namespace OOPGames
             Message = "[E] Spiel starten (" + EntryFee + " Chips), [Q] Verlassen.";
         }
 
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Duell gegen einen NPC: eigene Kosten und eigene Auszahlung
+        protected virtual int EntryCost { get { return EntryFee; } }
+        protected virtual int ComputeReward() { return RewardFor(Score, PointsPerChip); }
+
         protected ArcadePhase Phase { get; private set; } = ArcadePhase.Ready;
         public bool IsPlaying { get { return Phase == ArcadePhase.Playing; } }
         public bool IsOver { get { return Phase == ArcadePhase.Over; } }
@@ -73,9 +77,9 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz – Einsatz abbuchen, Runde zurücksetzen
         public bool StartRound()
         {
-            if (!Money.TryWithdraw(EntryFee))
+            if (!Money.TryWithdraw(EntryCost))
             {
-                Message = "Ein Spiel kostet " + EntryFee + " Chips – du hast zu wenig.";
+                Message = "Ein Spiel kostet " + EntryCost + " Chips – du hast zu wenig.";
                 return false;
             }
             Score = 0;
@@ -97,7 +101,7 @@ namespace OOPGames
             if (!_rewardPaid)
             {
                 _rewardPaid = true;
-                LastReward = RewardFor(Score, PointsPerChip);
+                LastReward = ComputeReward();
                 if (LastReward > 0) Money.Deposit(LastReward);
             }
             Message = reason + " Punkte: " + Score + " – Belohnung: " + LastReward + " Chips. [E] Nochmal, [Q] Verlassen.";
@@ -131,7 +135,7 @@ namespace OOPGames
             {
                 string title = IsOver ? "GAME OVER" : "INSERT COIN";
                 r.Text(title, fx, fy + FieldH / 2 - 20, 20, Color.FromRgb(0xF8, 0x60, 0xD0), FieldW);
-                r.Text("[E] Start – " + EntryFee + " Chips", fx, fy + FieldH / 2 + 8, 11, Color.FromRgb(0x50, 0xE0, 0xF8), FieldW);
+                r.Text("[E] Start – " + EntryCost + " Chips", fx, fy + FieldH / 2 + 8, 11, Color.FromRgb(0x50, 0xE0, 0xF8), FieldW);
             }
             AddButtonRow(Btn("Start [E]", Key.E, !IsPlaying), Btn("Verlassen [Q]", Key.Q));
         }
