@@ -1605,7 +1605,8 @@ namespace OOPGames
             G1C_GameManager shop = GameAt(G1C_WorldLocation.Exterior, game.Exterior.Map.DoorX(G1C_WorldLocation.Market),
                                           game.Exterior.Map.DoorY(G1C_WorldLocation.Market) + 1, G1C_Direction.Up);
             shop.HandleInput(G1C_InputEvent.FromKey(Key.E));
-            Equal("door", shop.Sound.LastEffect, "Türgeräusch");
+            // Änderung durch: Patrick Lupierz – Datum: 25.11.2026 – kein Türgeräusch mehr (kam beim Hinausgehen verzögert)
+            Check(shop.Sound.LastEffect != "door" && G1C_SoundCatalog.Find("door") == null, "Türgeräusch ist entfernt");
             shop.Update();
             Equal("shop", shop.Sound.CurrentMusic, "Ladenmusik");
             Equal("Ton aus.", shop.Sound.ToggleMute(), "Stummschalten");
@@ -1616,7 +1617,7 @@ namespace OOPGames
             Check(G1C_SoundSystem.Resolve("Soundeffekte", "gibt_es_nicht") == null, "Fehlende Datei wird als vorhanden gemeldet");
 
             foreach (string name in new[] { "music_town", "music_home", "music_shop", "music_casino", "music_arcade", "music_fishing", "music_title",
-                                            "sfx_win", "sfx_jackpot", "sfx_lose", "sfx_coin", "sfx_door", "sfx_meow", "sfx_woof", "sfx_splash", "sfx_catch" })
+                                            "sfx_win", "sfx_jackpot", "sfx_lose", "sfx_coin", "sfx_meow", "sfx_woof", "sfx_splash", "sfx_catch" })
             {
                 byte[] wav = G1C_ChipTune.Render(name);
                 Check(wav.Length > 2000 && wav[0] == 'R' && wav[1] == 'I' && wav[8] == 'W', "WAV ungültig: " + name);
@@ -2195,7 +2196,7 @@ namespace OOPGames
             }
             foreach (string id in new[] { "step_grass", "step_path", "step_bridge", "step_indoor", "bicycle", "meow", "woof", "bird", "frog", "slot_lever",
                 "slots_spin", "slot_win_small", "slot_win_big", "jackpot", "jackpot_alarm", "coins_small", "coins_mid", "coins_big", "win", "poker_win",
-                "shuffle", "chip", "bet", "lose", "coin", "buff", "furniture_open", "trash_open", "door", "click", "splash", "catch",
+                "shuffle", "chip", "bet", "lose", "coin", "buff", "furniture_open", "trash_open", "click", "splash", "catch",
                 "music_town", "music_title", "music_casino", "music_arcade", "music_home", "music_shop", "music_fishing" })
                 Check(G1C_SoundCatalog.Find(id) != null, "Im Spiel benutzter Sound fehlt im Katalog: " + id);
 

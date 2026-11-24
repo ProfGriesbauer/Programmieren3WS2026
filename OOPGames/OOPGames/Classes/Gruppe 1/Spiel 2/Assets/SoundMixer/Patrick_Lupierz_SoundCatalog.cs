@@ -136,7 +136,6 @@ namespace OOPGames
                 E("buff", General, "Effekt erhalten", "Essen, Trinken und andere Gegenstände benutzen", generalFolder, "^EffectGainTypeAny$", 60),
                 E("furniture_open", General, "Einrichtungsplan", "Beim Öffnen des Einrichtungsplans im Zuhause", generalFolder, "^OpenFurnitureDesk$", 70),
                 E("trash_open", General, "Mülleimer", "Beim Durchsuchen eines Mülleimers", generalFolder, "^OpenTrashCan$", 70),
-                E("door", General, "Tür", "Gebäude betreten oder verlassen (eingebaute Melodie)", null, null, 60, 2, 100, 0, "sfx_door"),
                 E("click", General, "Klick", "Menü-Klick (eingebaute Melodie)", null, null, 50, 2, 100, 80, "sfx_click"),
                 E("splash", General, "Platschen", "Angeln: Fisch springt (eingebaute Melodie)", null, null, 55, 2, 100, 250, "sfx_splash"),
                 E("catch", General, "Fang", "Angeln: Fisch gefangen (eingebaute Melodie)", null, null, 70, 2, 100, 0, "sfx_catch"),

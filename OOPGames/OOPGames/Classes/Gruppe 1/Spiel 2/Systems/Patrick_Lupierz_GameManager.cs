@@ -338,7 +338,7 @@ namespace OOPGames
                 _movement = CreateMovement();
                 Npcs.Bubbles.Clear();
                 AnimalVoices.Clear();
-                Sound.Play("door"); // Patrick Lupierz – 16.11.2026
+                // Änderung durch: Patrick Lupierz – Datum: 25.11.2026 – Türgeräusch entfernt (kam beim Hinausgehen verzögert)
                 // Änderung durch: Patrick Lupierz – 15.11.2026 – in Gebäuden wird nicht Fahrrad gefahren
                 // Änderung durch: Patrick Lupierz – 16.11.2026 – Fehler "Fahrrad muss nach dem Haus zweimal angeklickt
                 // werden" behoben: Das Rad wartet vor der Tür (ParkedAtDoor) und beim Hinausgehen steigt man automatisch
@@ -1455,9 +1455,11 @@ namespace OOPGames
         private void UpdateWorldAudio()
         {
             bool exploring = State == G1C_GameState.MainGame && !IsSleeping;
-            if (Player.StepCount != _lastStepCount)
+            // Änderung durch: Patrick Lupierz – Datum: 24.11.2026 – Schrittgeräusch beim BEGINN des Schritts (Spieler steht dann
+            // schon auf der Zielkachel); vorher erst am Ende des Schritts, 200 ms nach dem Tastendruck.
+            if (Player.StepStartCount != _lastStepCount)
             {
-                _lastStepCount = Player.StepCount;
+                _lastStepCount = Player.StepStartCount;
                 if (exploring && !Bikes.Riding)
                     Sound.Play(G1C_StepSurface.SoundIdFor(CurrentWorld.Grid.GetTileSpriteId(Player.TileX, Player.TileY), CurrentLocation));
             }
