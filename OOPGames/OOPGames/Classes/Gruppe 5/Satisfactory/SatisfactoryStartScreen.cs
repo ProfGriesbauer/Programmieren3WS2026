@@ -282,16 +282,17 @@ namespace OOPGames
             AddText(canvas, "Bewege dich frei und baue deine Fabrik aus gesammelten Rohstoffen:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
-            DrawStep(canvas, left + 30, top + 155, "01", "Laufen und abbauen",
+            double stepsTop = top + Math.Max(136, (height - 330) / 2);
+            DrawStep(canvas, left + 30, stepsTop, "01", "Laufen und abbauen",
                 "WASD bewegt dich. Schaue ein Feld an und drücke E, um Holz oder Erz abzubauen.");
-            DrawStep(canvas, left + 30, top + 225, "02", "Gebäude kaufen",
-                "Das Baumenü zeigt Kosten. Ein Klick baut am gelb markierten Feld.");
-            DrawStep(canvas, left + 30, top + 295, "03", "Produktion einstellen",
+            DrawStep(canvas, left + 30, stepsTop + 70, "02", "Gebäude kaufen",
+                "Wähle ein Gebäude und ziehe es auf eine freie Kachel.");
+            DrawStep(canvas, left + 30, stepsTop + 140, "03", "Produktion einstellen",
                 "Klicke ein Gebäude für Details, freigeschaltete Rezepte und Upgrades.");
-            DrawStep(canvas, left + 30, top + 365, "04", "Verkaufen",
-                "Verkaufe im Gebäudemenü oder mit Entf. Du erhältst 50 % der Kosten zurück.");
-            AddText(canvas, "Gebäude und Förderbänder benötigen jeweils ein Rasterfeld.",
-                MutedBrush, left + 30, top + 440, width - 60, 40, 10);
+            DrawStep(canvas, left + 30, stepsTop + 210, "04", "Verkaufen und rückgängig machen",
+                "Entf verkauft für 50 % der Kosten. Strg+Z nimmt bis zu 20 Aktionen zurück.");
+            AddText(canvas, "Förderbänder entstehen durch Ziehen einer Linie; E baut nur das markierte Feld ab.",
+                MutedBrush, left + 30, stepsTop + 285, width - 60, 34, 10);
 
             DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
                 "SPIEL STARTEN", " ", AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
@@ -519,7 +520,9 @@ namespace OOPGames
         private Rect _gebaeudeMenueBereich;
         private readonly List<(Rect Bereich, G5_FabrikAktionstyp Typ, G5_Bauwerkzeug Werkzeug, string Wert)> _menuAktionen =
             new List<(Rect, G5_FabrikAktionstyp, G5_Bauwerkzeug, string)>();
-        private G5_Bauwerkzeug? _pendingBuild;
+        private (G5_Bauwerkzeug Werkzeug, G5_GridPosition Position)? _pendingBuild;
+        private G5_Bauwerkzeug? _pendingToolSelection;
+        private (G5_GridPosition Start, G5_GridPosition Ende)? _pendingConveyorLine;
         private bool _inventarGeoeffnet = true;
 
         internal SatisfactoryFieldView(
@@ -612,20 +615,64 @@ namespace OOPGames
             return false;
         }
 
-        internal void QueuePendingBuild(G5_Bauwerkzeug werkzeug)
+        internal void QueuePendingBuild(G5_Bauwerkzeug werkzeug, G5_GridPosition position)
         {
-            _pendingBuild = werkzeug;
+            _pendingBuild = (werkzeug, position);
         }
 
-        internal bool TryConsumePendingBuild(out G5_Bauwerkzeug werkzeug)
+        internal void QueuePendingToolSelection(G5_Bauwerkzeug werkzeug)
         {
-            if (!_pendingBuild.HasValue)
+            _pendingToolSelection = werkzeug;
+        }
+
+        internal bool TryConsumePendingToolSelection(out G5_Bauwerkzeug werkzeug)
+        {
+            if (!_pendingToolSelection.HasValue)
             {
                 werkzeug = G5_Bauwerkzeug.Keines;
                 return false;
             }
 
-            werkzeug = _pendingBuild.Value;
+            werkzeug = _pendingToolSelection.Value;
+            _pendingToolSelection = null;
+            return true;
+        }
+
+        internal void QueuePendingConveyorLine(G5_GridPosition start, G5_GridPosition end)
+        {
+            _pendingConveyorLine = (start, end);
+        }
+
+        internal bool TryConsumePendingConveyorLine(
+            out G5_GridPosition start,
+            out G5_GridPosition end)
+        {
+            if (!_pendingConveyorLine.HasValue)
+            {
+                start = default;
+                end = default;
+                return false;
+            }
+
+            start = _pendingConveyorLine.Value.Start;
+            end = _pendingConveyorLine.Value.End;
+            _pendingConveyorLine = null;
+            return true;
+        }
+
+        internal bool TryConsumePendingBuild(
+            out G5_Bauwerkzeug werkzeug,
+            out G5_GridPosition position)
+        {
+            if (!_pendingBuild.HasValue)
+            {
+                werkzeug = G5_Bauwerkzeug.Keines;
+                position = default;
+                return false;
+            }
+
+            werkzeug = _pendingBuild.Value.Werkzeug;
+            position = _pendingBuild.Value.Position;
             _pendingBuild = null;
             return true;
         }
@@ -637,7 +684,7 @@ namespace OOPGames
                 return;
             }
 
-            const double zoom = 0.8;
+            const double zoom = G5_Kartenansicht.StandardZoom;
             const double tileSize = 32;
             double cellSize = tileSize * zoom;
             double mapWidth = ((IG5_WeltSpielfeld)_field).Breite * cellSize;
@@ -853,6 +900,12 @@ namespace OOPGames
 
         IReadOnlyDictionary<G5_Item, int> IG5_FabrikSpielInfo.SpielerInventar =>
             ((IG5_FabrikSpielInfo)_field).SpielerInventar;
+
+        int IG5_FabrikSpielInfo.SpielerInventarKapazitaet =>
+            ((IG5_FabrikSpielInfo)_field).SpielerInventarKapazitaet;
+
+        int IG5_FabrikSpielInfo.SpielerInventarBelegt =>
+            ((IG5_FabrikSpielInfo)_field).SpielerInventarBelegt;
 
         bool IG5_FabrikSpielInfo.BaumenueGeoeffnet =>
             ((IG5_FabrikSpielInfo)_field).BaumenueGeoeffnet;

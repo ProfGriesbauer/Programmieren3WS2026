@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(TEMP)\Gruppe5Tests\obj\</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+    <OutputPath>$(TEMP)\Gruppe5Tests\bin\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+</Project>

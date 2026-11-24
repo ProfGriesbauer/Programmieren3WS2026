@@ -7,6 +7,9 @@ namespace OOPGames
 {
     internal sealed class G5_FabrikSpielfeld : IG5_FabrikSpielInfo, IG5_KartenansichtSteuerung
     {
+        internal const int SpielerInventarKapazitaetMax = 30;
+        internal const int HandabbauCooldownTicks = 50;
+
         private readonly G5_WeltSpielfeld _welt;
         private readonly G5_FactorySimulation _simulation;
         private readonly Dictionary<G5_Item, int> _spielerInventar = new Dictionary<G5_Item, int>();
@@ -16,6 +19,7 @@ namespace OOPGames
         private G5_GridPosition? _ausgewaehltesGebaeude;
         private string _statusMeldung;
         private bool _baumenueGeoeffnet = true;
+        private int _handabbauCooldownTicks;
 
         internal G5_FabrikSpielfeld(G5_WeltSpielfeld welt, int spielerX, int spielerY)
         {
@@ -83,6 +87,8 @@ namespace OOPGames
         G5_SpielerBlickrichtung IG5_FabrikSpielInfo.SpielerBlickrichtung => _spielerBlickrichtung;
         IReadOnlyDictionary<G5_Item, int> IG5_FabrikSpielInfo.SpielerInventar =>
             new ReadOnlyDictionary<G5_Item, int>(_spielerInventar);
+        int IG5_FabrikSpielInfo.SpielerInventarKapazitaet => SpielerInventarKapazitaetMax;
+        int IG5_FabrikSpielInfo.SpielerInventarBelegt => InventarBelegt;
         bool IG5_FabrikSpielInfo.BaumenueGeoeffnet => _baumenueGeoeffnet;
         string IG5_FabrikSpielInfo.StatusMeldung => _statusMeldung;
 
@@ -215,6 +221,80 @@ namespace OOPGames
             return _spielerInventar.TryGetValue(item, out int amount) ? amount : 0;
         }
 
+        internal int InventarBelegt => _spielerInventar.Values.Sum();
+        internal int VerbleibendeHandabbauCooldownTicks => _handabbauCooldownTicks;
+
+        internal int FreieAufnahmekapazitaet(G5_Storage ausgeschlossenesLager = null)
+        {
+            int freieRucksackKapazitaet = SpielerInventarKapazitaetMax - InventarBelegt;
+            int freieLagerKapazitaet = _simulation.Buildings
+                .OfType<G5_Storage>()
+                .Where(storage => !ReferenceEquals(storage, ausgeschlossenesLager))
+                .Sum(storage => storage.Capacity - storage.UsedCapacity);
+            return checked(freieRucksackKapazitaet + freieLagerKapazitaet);
+        }
+
+        internal bool KannEinlagern(int amount, G5_Storage ausgeschlossenesLager = null)
+        {
+            return amount >= 0 && amount <= FreieAufnahmekapazitaet(ausgeschlossenesLager);
+        }
+
+        internal bool KannEinlagern(
+            IReadOnlyDictionary<G5_Item, int> items,
+            G5_Storage ausgeschlossenesLager = null)
+        {
+            return items != null &&
+                items.Values.All(amount => amount >= 0) &&
+                items.Values.Sum() <= FreieAufnahmekapazitaet(ausgeschlossenesLager);
+        }
+
+        internal bool TryAddInventar(G5_Item item, int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount));
+            }
+
+            if (amount == 0)
+            {
+                return true;
+            }
+
+            if (!KannEinlagern(amount))
+            {
+                return false;
+            }
+
+            int inRucksack = Math.Min(amount, SpielerInventarKapazitaetMax - InventarBelegt);
+            if (inRucksack > 0)
+            {
+                _spielerInventar[item] = checked(Menge(item) + inRucksack);
+            }
+
+            int remaining = amount - inRucksack;
+            foreach (G5_Storage storage in _simulation.Buildings.OfType<G5_Storage>())
+            {
+                int inLager = Math.Min(remaining, storage.Capacity - storage.UsedCapacity);
+                if (inLager > 0 && !storage.TryReceive(item, inLager))
+                {
+                    throw new InvalidOperationException("Gegenstände konnten trotz freier Kapazität nicht eingelagert werden.");
+                }
+
+                remaining -= inLager;
+                if (remaining == 0)
+                {
+                    break;
+                }
+            }
+
+            if (remaining != 0)
+            {
+                throw new InvalidOperationException("Die Aufnahmekapazität änderte sich während der Einlagerung.");
+            }
+
+            return true;
+        }
+
         internal int Gesamtmenge(G5_Item item)
         {
             return checked(Menge(item) + _simulation.Buildings.OfType<G5_Storage>()
@@ -276,17 +356,29 @@ namespace OOPGames
 
         internal void AddInventar(G5_Item item, int amount)
         {
-            if (amount < 0)
+            if (!TryAddInventar(item, amount))
             {
-                throw new ArgumentOutOfRangeException(nameof(amount));
+                throw new InvalidOperationException("Im Rucksack und in den Lagern ist nicht genug Platz.");
+            }
+        }
+
+        internal bool TryStartHandabbau()
+        {
+            if (_handabbauCooldownTicks > 0)
+            {
+                return false;
             }
 
-            if (amount == 0)
-            {
-                return;
-            }
+            _handabbauCooldownTicks = HandabbauCooldownTicks;
+            return true;
+        }
 
-            _spielerInventar[item] = checked(Menge(item) + amount);
+        internal void TickHandabbauCooldown()
+        {
+            if (_handabbauCooldownTicks > 0)
+            {
+                _handabbauCooldownTicks--;
+            }
         }
 
         internal void SetWerkzeug(G5_Bauwerkzeug werkzeug)

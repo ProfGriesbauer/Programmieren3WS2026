@@ -84,6 +84,8 @@ namespace OOPGames
         G5_GridPosition ZielKachel { get; }
         G5_SpielerBlickrichtung SpielerBlickrichtung { get; }
         IReadOnlyDictionary<G5_Item, int> SpielerInventar { get; }
+        int SpielerInventarKapazitaet { get; }
+        int SpielerInventarBelegt { get; }
         bool BaumenueGeoeffnet { get; }
         int HubMenge(G5_Item item);
         string StatusMeldung { get; }

@@ -161,6 +161,8 @@ namespace OOPGames
                 PlaceBuilding(droppedTool);
             }
 
+            _field.TickHandabbauCooldown();
+
             List<G5_Miner> miners = _field.InterneGebaeude.OfType<G5_Miner>().ToList();
             Dictionary<G5_Miner, long?> depositsBeforeTick = miners.ToDictionary(
                 miner => miner,
@@ -189,6 +191,27 @@ namespace OOPGames
             if (!_deposits.TryGetValue(target, out G5_ResourceDeposit deposit))
             {
                 _field.SetStatusMeldung("Vor dir gibt es keinen abbaubaren Rohstoff.");
+                return;
+            }
+
+            if (deposit.RemainingAmount == 0)
+            {
+                _field.SetStatusMeldung("Dieses Vorkommen ist erschöpft.");
+                return;
+            }
+
+            if (!_field.KannEinlagern(1))
+            {
+                _field.SetStatusMeldung("Rucksack und Lager sind voll. Baue ein Lager oder schaffe Platz.");
+                return;
+            }
+
+            if (!_field.TryStartHandabbau())
+            {
+                double verbleibendeSekunden = _field.VerbleibendeHandabbauCooldownTicks * 0.04;
+                _field.SetStatusMeldung(
+                    "Handabbau dauert etwa 2 Sekunden. Bitte noch " +
+                    verbleibendeSekunden.ToString("0.0") + " Sekunden warten.");
                 return;
             }
 
@@ -470,6 +493,22 @@ namespace OOPGames
                 investment = new Dictionary<G5_Item, int>();
             }
 
+            G5_Storage storage = building as G5_Storage;
+            if (storage != null && storage.UsedCapacity > 0)
+            {
+                _field.SetStatusMeldung("Leere das Lager, bevor du es verkaufst.");
+                return;
+            }
+
+            Dictionary<G5_Item, int> refund = investment.ToDictionary(
+                item => item.Key,
+                item => item.Value / 2);
+            if (!_field.KannEinlagern(refund, storage))
+            {
+                _field.SetStatusMeldung("Rucksack und Lager sind voll. Schaffe Platz für die Rückerstattung.");
+                return;
+            }
+
             if (!_field.RemoveGebaeude(building))
             {
                 _field.SetStatusMeldung("Das Gebäude konnte nicht verkauft werden.");
@@ -477,9 +516,9 @@ namespace OOPGames
             }
 
             _buildingInvestments.Remove(building);
-            foreach (KeyValuePair<G5_Item, int> item in investment)
+            foreach (KeyValuePair<G5_Item, int> item in refund)
             {
-                _field.AddInventar(item.Key, item.Value / 2);
+                _field.AddInventar(item.Key, item.Value);
             }
 
             RefreshConveyorConnections();
@@ -816,9 +855,10 @@ namespace OOPGames
                 }
 
                 int remaining = source.CountOf(item.Key);
-                if (remaining > 0 && source.TryExtract(item.Key, remaining))
+                int amountToTransfer = Math.Min(remaining, _field.FreieAufnahmekapazitaet());
+                if (amountToTransfer > 0 && source.TryExtract(item.Key, amountToTransfer))
                 {
-                    _field.AddInventar(item.Key, remaining);
+                    _field.AddInventar(item.Key, amountToTransfer);
                 }
             }
         }

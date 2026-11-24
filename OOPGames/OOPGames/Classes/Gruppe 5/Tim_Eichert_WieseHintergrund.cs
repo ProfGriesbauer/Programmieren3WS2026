@@ -36,17 +36,18 @@ namespace OOPGames
         private static readonly Brush ErdeBrush = Gefroren(Color.FromRgb(0x6B, 0x51, 0x36));
         private static readonly Brush FelsGrund = Gefroren(Color.FromRgb(0x4A, 0x4D, 0x4A));
         private static readonly Brush LabelHintergrund = Gefroren(Color.FromArgb(179, 20, 25, 20));
+        private static readonly Brush FelsFuellung = Gefroren(new LinearGradientBrush(
+            Color.FromRgb(0xB8, 0xB4, 0xA4),
+            Color.FromRgb(0x4B, 0x4D, 0x47),
+            70));
+        private static readonly Brush FelsSchatten = Gefroren(Color.FromArgb(145, 10, 13, 11));
+        private static readonly Brush FelsHighlight = Gefroren(Color.FromArgb(80, 245, 239, 218));
+        private static readonly Brush BrockenHighlight = Gefroren(Color.FromArgb(85, 255, 255, 255));
 
         private static readonly Pen BueschelHell = GefrorenerStift(Color.FromArgb(140, 160, 190, 90), RenderKachelGroesse / 22);
         private static readonly Pen BueschelDunkel = GefrorenerStift(Color.FromArgb(115, 30, 50, 25), RenderKachelGroesse / 22);
         private static readonly Pen BrockenRand = GefrorenerStift(Color.FromArgb(89, 0, 0, 0), RenderKachelGroesse / 40);
-
-        private static readonly Brush[] FelsFarben =
-        {
-            Gefroren(Color.FromRgb(0x7B, 0x7F, 0x78)),
-            Gefroren(Color.FromRgb(0x62, 0x66, 0x5F)),
-            Gefroren(Color.FromRgb(0x8F, 0x93, 0x8A))
-        };
+        private static readonly Pen FelsKontur = GefrorenerStift(Color.FromArgb(135, 32, 35, 32), RenderKachelGroesse / 42);
 
         private static readonly Brush[] EisenFarben =
         {
@@ -295,8 +296,15 @@ namespace OOPGames
 
         private static void ZeichneFels(DrawingContext dc, int x, int y, double s)
         {
-            dc.DrawRectangle(FelsGrund, null, new Rect(x * s, y * s, s, s));
-            ZeichneBrocken(dc, x * s, y * s, s, FelsFarben, x * 31 + y, 4);
+            double px = x * s;
+            double py = y * s;
+            Point center = new Point(px + s * 0.5, py + s * 0.51);
+            dc.DrawRectangle(FelsGrund, null, new Rect(px, py, s, s));
+            dc.DrawEllipse(FelsSchatten, null,
+                new Point(center.X + s * 0.02, py + s * 0.79), s * 0.39, s * 0.09);
+            dc.DrawEllipse(FelsFuellung, FelsKontur, center, s * 0.43, s * 0.34);
+            dc.DrawEllipse(FelsHighlight, null,
+                new Point(center.X - s * 0.12, center.Y - s * 0.17), s * 0.17, s * 0.055);
         }
 
         private ImageSource HoleVorkommenBild(G5_Rohstofftyp typ, int x, int y)
@@ -326,7 +334,7 @@ namespace OOPGames
         }
 
         /// <summary>
-        /// Zeichnet unregelmäßige Sechsecke als Gesteins- bzw. Erzbrocken.
+        /// Zeichnet weiche, abgerundete Gesteins- bzw. Erzbrocken.
         /// </summary>
         private static void ZeichneBrocken(
             DrawingContext dc,
@@ -342,28 +350,15 @@ namespace OOPGames
                 double cx = px + s * (0.22 + 0.56 * Zufall(i, seed, 11));
                 double cy = py + s * (0.22 + 0.56 * Zufall(seed, i, 12));
                 double radius = s * (0.09 + 0.08 * Zufall(i, i + seed, 13));
+                double breite = radius * (0.85 + 0.45 * Zufall(i, seed, 14));
+                double hoehe = radius * (0.55 + 0.35 * Zufall(seed, i, 15));
 
-                StreamGeometry form = new StreamGeometry();
-                using (StreamGeometryContext ctx = form.Open())
-                {
-                    for (int k = 0; k < 6; k++)
-                    {
-                        double winkel = k / 6.0 * Math.PI * 2 + Zufall(i, k, seed);
-                        double r = radius * (0.7 + 0.5 * Zufall(k, i, seed + 3));
-                        Point ecke = new Point(cx + Math.Cos(winkel) * r, cy + Math.Sin(winkel) * r);
-                        if (k == 0)
-                        {
-                            ctx.BeginFigure(ecke, true, true);
-                        }
-                        else
-                        {
-                            ctx.LineTo(ecke, true, false);
-                        }
-                    }
-                }
-
-                form.Freeze();
-                dc.DrawGeometry(farben[i % farben.Length], BrockenRand, form);
+                dc.PushTransform(new RotateTransform((Zufall(i, seed, 16) - 0.5) * 40, cx, cy));
+                dc.DrawEllipse(farben[i % farben.Length], BrockenRand, new Point(cx, cy), breite, hoehe);
+                dc.DrawEllipse(BrockenHighlight, null,
+                    new Point(cx - breite * 0.25, cy - hoehe * 0.25),
+                    breite * 0.36, hoehe * 0.2);
+                dc.Pop();
             }
         }
 
@@ -459,6 +454,12 @@ namespace OOPGames
         private static Brush Gefroren(Color farbe)
         {
             SolidColorBrush pinsel = new SolidColorBrush(farbe);
+            pinsel.Freeze();
+            return pinsel;
+        }
+
+        private static Brush Gefroren(Brush pinsel)
+        {
             pinsel.Freeze();
             return pinsel;
         }

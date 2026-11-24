@@ -23,12 +23,13 @@ Produktionstempo.
 
 Die gelbe Umrandung zeigt das Feld vor dem Spieler. Rohstoffe sammelst du,
 indem du dich neben ein Vorkommen stellst, darauf schaust und `E` drückst.
-Das Inventar zeigt die gesammelten Rohstoffe und später auch eingelagerte
-Gegenstände. Wähle ein Gebäude im Baumenü aus und ziehe es auf das gelb
-markierte Feld oder bestätige mit **Bauen**; das Feld muss frei und bebaubar
-sein. Ein Förderer
-muss auf einem noch verfügbaren Vorkommen stehen. Gebäude und Vorkommen belegen
-jeweils ein Rasterfeld.
+Der Handabbau dauert ungefähr zwei Sekunden pro Rohstoff. Der Rucksack fasst
+höchstens 30 Gegenstände. Ist er voll, brauchst du ein gebautes Lager für
+weitere Rohstoffe. Im Inventar stehen die vollen Gegenstandsnamen sowie die
+Mengen im Rucksack und in den Lagern getrennt. Wähle ein Gebäude im Baumenü aus
+und ziehe es auf das gelb markierte Feld oder bestätige mit **Bauen**; das Feld
+muss frei und bebaubar sein. Ein Förderer muss auf einem noch verfügbaren
+Vorkommen stehen. Gebäude und Vorkommen belegen jeweils ein Rasterfeld.
 
 ## Gebäude und Kosten
 
