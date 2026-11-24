@@ -92,6 +92,8 @@ namespace OOPGames
         private const string MapDragFormat = "OOPGames.ArenaMapElement";
         private const int MapGridSize = 8;
         private const int MajorMapGridSize = 256;
+        private const int RandomBushFreeCheckRadius = 55;
+        private const byte BackgroundColorTolerance = 12;
         private readonly ArenaField _field;
         private readonly List<ArenaMapElement> _elements;
         private readonly List<ArenaMapPlacement> _placements =
@@ -201,7 +203,18 @@ namespace OOPGames
             _palette.PreviewMouseLeftButtonDown += OnPaletteMouseDown;
             _palette.PreviewMouseMove += OnPaletteMouseMove;
             _palette.PreviewMouseLeftButtonUp += OnPaletteMouseLeftButtonUp;
-            workspace.Children.Add(_palette);
+            Grid palettePanel = new Grid();
+            palettePanel.RowDefinitions.Add(
+                new RowDefinition { Height = GridLength.Auto });
+            palettePanel.RowDefinitions.Add(
+                new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            Button randomBush = CreateButton("Busch zufällig platzieren");
+            randomBush.Margin = new Thickness(4);
+            randomBush.Click += (sender, args) => PlaceRandomGrassBush();
+            palettePanel.Children.Add(randomBush);
+            Grid.SetRow(_palette, 1);
+            palettePanel.Children.Add(_palette);
+            workspace.Children.Add(palettePanel);
 
             _mapCanvas = new Canvas
             {
@@ -603,6 +616,171 @@ namespace OOPGames
             _mapGridSnapButton.Content = _snapToGrid
                 ? "Einrasten: Ein"
                 : "Einrasten: Aus";
+        }
+
+        private void PlaceRandomGrassBush()
+        {
+            ArenaMapElement bush = _elements.FirstOrDefault(
+                element => String.Equals(
+                    element.Name, "GrassBush", StringComparison.Ordinal));
+            if (bush == null)
+            {
+                ShowError("Das Map-Element GrassBush wurde nicht gefunden.");
+                return;
+            }
+
+            double width = bush.Image.PixelWidth;
+            double height = bush.Image.PixelHeight;
+            double minimumX = ArenaField.WallThickness;
+            double minimumY = ArenaField.WallThickness;
+            double maximumX = _mapCanvas.Width - ArenaField.WallThickness - width;
+            double maximumY = _mapCanvas.Height - ArenaField.WallThickness - height;
+            if (maximumX < minimumX || maximumY < minimumY)
+            {
+                SetStatus("Die Karte ist zu klein, um einen Busch zu platzieren.");
+                return;
+            }
+
+            const int maximumAttempts = 200;
+            for (int attempt = 0; attempt < maximumAttempts; attempt++)
+            {
+                double candidateX = minimumX
+                    + Random.Shared.NextDouble() * (maximumX - minimumX);
+                double candidateY = minimumY
+                    + Random.Shared.NextDouble() * (maximumY - minimumY);
+                Point position = GetMapPlacementPosition(
+                    new Point(candidateX + width / 2.0, candidateY + height / 2.0),
+                    bush.Image);
+                Point candidateCenter = new Point(
+                    position.X + width / 2.0, position.Y + height / 2.0);
+                if (!IsBackgroundFreeCircle(candidateCenter))
+                {
+                    continue;
+                }
+
+                _placements.Add(new ArenaMapPlacement(
+                    bush.Image, position.X, position.Y));
+                RedrawMap();
+                SetStatus("Busch zufällig auf freier Kartenfläche platziert.");
+                return;
+            }
+
+            SetStatus("Kein freier Platz für einen Busch gefunden.");
+        }
+
+        private bool IsBackgroundFreeCircle(Point center)
+        {
+            int diameter = RandomBushFreeCheckRadius * 2 + 1;
+            RenderTargetBitmap background = RenderMapRegion(center, false, diameter);
+            RenderTargetBitmap currentMap = RenderMapRegion(center, true, diameter);
+            int stride = diameter * 4;
+            byte[] backgroundPixels = new byte[stride * diameter];
+            byte[] mapPixels = new byte[stride * diameter];
+            background.CopyPixels(backgroundPixels, stride, 0);
+            currentMap.CopyPixels(mapPixels, stride, 0);
+
+            int radiusSquared = RandomBushFreeCheckRadius
+                * RandomBushFreeCheckRadius;
+            for (int y = 0; y < diameter; y++)
+            {
+                int offsetY = y - RandomBushFreeCheckRadius;
+                for (int x = 0; x < diameter; x++)
+                {
+                    int offsetX = x - RandomBushFreeCheckRadius;
+                    if (offsetX * offsetX + offsetY * offsetY > radiusSquared)
+                    {
+                        continue;
+                    }
+
+                    int pixelOffset = (y * diameter + x) * 4;
+                    Color backgroundColor = GetPixelColor(
+                        backgroundPixels, pixelOffset);
+                    Color mapColor = GetPixelColor(mapPixels, pixelOffset);
+                    if (!PixelMatchesBackground(mapColor, backgroundColor))
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private RenderTargetBitmap RenderMapRegion(
+            Point center, bool includePlacements, int diameter)
+        {
+            DrawingVisual visual = new DrawingVisual();
+            using (DrawingContext drawing = visual.RenderOpen())
+            {
+                drawing.PushTransform(new TranslateTransform(
+                    RandomBushFreeCheckRadius - Math.Round(center.X),
+                    RandomBushFreeCheckRadius - Math.Round(center.Y)));
+                drawing.DrawImage(_baseImage,
+                    new Rect(0, 0, _mapCanvas.Width, _mapCanvas.Height));
+                if (includePlacements)
+                {
+                    foreach (ArenaMapPlacement placement in _placements)
+                    {
+                        DrawMapPlacement(drawing, placement, 1.0);
+                    }
+                    if (_pendingPlacement != null)
+                    {
+                        DrawMapPlacement(drawing, _pendingPlacement, 0.65);
+                    }
+                }
+                drawing.Pop();
+            }
+
+            RenderTargetBitmap rendered = new RenderTargetBitmap(
+                diameter, diameter, 96, 96, PixelFormats.Pbgra32);
+            rendered.Render(visual);
+            rendered.Freeze();
+            return rendered;
+        }
+
+        private static void DrawMapPlacement(
+            DrawingContext drawing, ArenaMapPlacement placement, double opacity)
+        {
+            double width = GetPlacementWidth(
+                placement.Image, placement.RotationDegrees);
+            double height = GetPlacementHeight(
+                placement.Image, placement.RotationDegrees);
+            drawing.PushTransform(new TranslateTransform(
+                placement.X + width / 2.0,
+                placement.Y + height / 2.0));
+            drawing.PushTransform(new RotateTransform(placement.RotationDegrees));
+            drawing.PushTransform(new ScaleTransform(
+                placement.FlipHorizontal ? -1 : 1,
+                placement.FlipVertical ? -1 : 1));
+            if (opacity < 1.0)
+            {
+                drawing.PushOpacity(opacity);
+            }
+            drawing.DrawImage(placement.Image,
+                new Rect(-placement.Image.PixelWidth / 2.0,
+                    -placement.Image.PixelHeight / 2.0,
+                    placement.Image.PixelWidth, placement.Image.PixelHeight));
+            if (opacity < 1.0)
+            {
+                drawing.Pop();
+            }
+            drawing.Pop();
+            drawing.Pop();
+            drawing.Pop();
+        }
+
+        private static Color GetPixelColor(byte[] pixels, int offset)
+        {
+            return Color.FromArgb(
+                pixels[offset + 3], pixels[offset + 2],
+                pixels[offset + 1], pixels[offset]);
+        }
+
+        internal static bool PixelMatchesBackground(Color pixel, Color background)
+        {
+            return Math.Abs(pixel.A - background.A) <= BackgroundColorTolerance
+                && Math.Abs(pixel.R - background.R) <= BackgroundColorTolerance
+                && Math.Abs(pixel.G - background.G) <= BackgroundColorTolerance
+                && Math.Abs(pixel.B - background.B) <= BackgroundColorTolerance;
         }
 
         private void ShowMapDragPreview(ArenaMapElement element, Point position)

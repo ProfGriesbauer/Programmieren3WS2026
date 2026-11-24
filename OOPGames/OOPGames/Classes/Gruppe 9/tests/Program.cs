@@ -46,8 +46,10 @@ internal static class Program
             TestArenaSkillTreeStartNode();
             TestArenaSkillTreeForcedFork();
             TestArenaMapDimensionInput();
+            TestWindowKeyboardAllowsTextEntry();
             TestArenaEditorAssets();
             TestArenaMapGridSnapping();
+            TestRandomBushPixelMatching();
             TestArenaMapPlacementTransforms();
             TestArenaDevToolMenu();
             TestArenaMapRestart();
@@ -1589,6 +1591,18 @@ internal static class Program
             "map placements stay within the playable area between the arena walls");
     }
 
+    private static void TestRandomBushPixelMatching()
+    {
+        Color background = Color.FromRgb(40, 170, 55);
+        Assert(ArenaMapEditorControl.PixelMatchesBackground(
+                background, background)
+            && ArenaMapEditorControl.PixelMatchesBackground(
+                Color.FromRgb(45, 165, 60), background)
+            && !ArenaMapEditorControl.PixelMatchesBackground(
+                Color.FromRgb(80, 170, 55), background),
+            "random bush placement accepts matching green pixels within tolerance");
+    }
+
     private static void TestArenaSkillTreeStartNode()
     {
         ArenaProgression progression = new ArenaProgression();
@@ -1832,6 +1846,16 @@ internal static class Program
             && input.ProcessEditorKey(Key.NumPad7, ModifierKeys.None)
             && input.Text == "7",
             "map dimensions support replacing the selection with numpad digits");
+    }
+
+    private static void TestWindowKeyboardAllowsTextEntry()
+    {
+        TextBox nameInput = new TextBox();
+        Canvas gameCanvas = new Canvas();
+        Assert(MainWindow.IsTextEntryFocused(nameInput)
+            && !MainWindow.IsTextEntryFocused(gameCanvas)
+            && !MainWindow.IsTextEntryFocused(null),
+            "window keyboard routing distinguishes text inputs from game controls");
     }
 
     private static void TestArenaDevToolMenu()
