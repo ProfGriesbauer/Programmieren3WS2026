@@ -503,6 +503,11 @@ namespace OOPGames
 
         private void OnZoomKeyDown(object sender, KeyEventArgs e)
         {
+            if (_menuPage == MenuPage.DevTools)
+            {
+                return;
+            }
+
             if (IsTextEntryFocused())
             {
                 return;
@@ -562,6 +567,11 @@ namespace OOPGames
 
         private void OnZoomMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            if (_menuPage == MenuPage.DevTools)
+            {
+                return;
+            }
+
             if (_zoomInputField != null && _zoomInputField.HandleGameSpeedWheel(e.Delta))
             {
                 e.Handled = true;
@@ -581,6 +591,11 @@ namespace OOPGames
 
         private void OnZoomKeyUp(object sender, KeyEventArgs e)
         {
+            if (_menuPage == MenuPage.DevTools)
+            {
+                return;
+            }
+
             if (IsTextEntryFocused())
             {
                 return;
