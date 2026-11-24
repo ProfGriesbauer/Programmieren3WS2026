@@ -53,6 +53,8 @@ namespace OOPGames
         public bool IsMoving { get; private set; }
         public int StepProgress { get; private set; }
         public int StepCount { get; private set; }
+        /// <summary>Änderung durch: Patrick Lupierz – 24.11.2026 – zählt begonnene Schritte (Schrittgeräusch beim Losgehen statt am Ende).</summary>
+        public int StepStartCount { get; private set; }
         public bool Humping { get; set; }
 
         public G1C_Player(int tileX, int tileY, G1C_Direction facing)
@@ -79,6 +81,7 @@ namespace OOPGames
             TileY = targetY;
             StepProgress = 0;
             IsMoving = true;
+            StepStartCount++;
         }
 
         // Entwickler: Denis Mock
