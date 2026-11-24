@@ -162,6 +162,10 @@ namespace OOPGames
                     new ArenaSkillTreeNode
                     {
                         SkillId = PlayerAbilityCatalog.SlowMotion, X = 430, Y = 760
+                    },
+                    new ArenaSkillTreeNode
+                    {
+                        SkillId = PlayerAbilityCatalog.MirrorImage, X = 780, Y = 420
                     }
                 },
                 Connections = new List<ArenaSkillTreeConnection>
@@ -170,7 +174,8 @@ namespace OOPGames
                     CreateStartConnection(ArenaProgression.MaximumSpeed),
                     CreateStartConnection(PlayerAbilityCatalog.PowerBlast),
                     CreateStartConnection(PlayerAbilityCatalog.HealingPulse),
-                    CreateStartConnection(PlayerAbilityCatalog.SlowMotion)
+                    CreateStartConnection(PlayerAbilityCatalog.SlowMotion),
+                    CreateStartConnection(PlayerAbilityCatalog.MirrorImage)
                 }
             };
             return tree;

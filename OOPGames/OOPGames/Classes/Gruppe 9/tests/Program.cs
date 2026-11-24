@@ -42,6 +42,8 @@ internal static class Program
             TestWeaponSpriteAppearances();
             TestPlayerKeepsStrikeFacing();
             TestMultiplePlayerAbilities();
+            TestMirrorImageAbility();
+            TestMirrorImageEnemyTargeting();
             TestArenaSkillTreeDependencies();
             TestArenaSkillTreeStartNode();
             TestArenaSkillTreeForcedFork();
@@ -1121,6 +1123,143 @@ internal static class Program
             "Power Blast damages nearby enemies while healing restores player health");
     }
 
+    private static void TestMirrorImageAbility()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        field.Player.IsInvulnerable = true;
+        Assert(field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.MirrorImage)
+            && field.Progression.EntityAbilities[0] == PlayerAbilityCatalog.MirrorImage,
+            "Mirror Image can be unlocked and assigned to an entity-ability slot");
+
+        Weapon ability = field.Progression.GetEntityAbilityWeapon(0);
+        Assert(Math.Abs(ability.CooldownSeconds
+                - PlayerAbilityCatalog.MirrorImageBaseCooldownSeconds) < 1e-9,
+            "Mirror Image starts with a 20-second cooldown");
+        Assert(field.AttackWithEntityAbility(0)
+            && field.MirrorImages.Count == 1,
+            "using rank one spawns one mirror image");
+
+        MirrorImage firstImage = field.MirrorImages[0];
+        double spawnOffsetX = field.Player.PositionX - firstImage.PositionX;
+        double spawnOffsetY = field.Player.PositionY - firstImage.PositionY;
+        double spawnDistance = Math.Sqrt(
+            spawnOffsetX * spawnOffsetX + spawnOffsetY * spawnOffsetY);
+        Assert(firstImage.Team == CombatTeam.Player
+            && firstImage.CurrentHitPoints == 1
+            && firstImage.MaxHitPoints == 1
+            && firstImage.EquippedWeapon == null
+            && firstImage.IsInvulnerable
+            && spawnDistance >= ArenaField.MirrorImageMinimumSpawnDistance
+            && spawnDistance <= ArenaField.MirrorImageSpawnRadius,
+            "the image has one HP, cannot attack, is protected, and spawns near the player");
+        double stationaryX = firstImage.PositionX;
+        double stationaryY = firstImage.PositionY;
+        firstImage.UpdateBehavior(field);
+        Assert(firstImage.PositionX == stationaryX
+            && firstImage.PositionY == stationaryY
+            && !firstImage.CanBePushed,
+            "a newly spawned image stays still for its first half-second");
+        Assert(!field.AttackWithEntityAbility(0),
+            "Mirror Image respects its cooldown");
+
+        field.Progression.SetGodMode(true);
+        for (int rank = 1; rank < PlayerAbilityCatalog.MirrorImageMaximumRank; rank++)
+        {
+            Assert(field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.MirrorImage),
+                "Mirror Image can be upgraded through its maximum rank");
+        }
+        Assert(field.Progression.GetSkillRank(PlayerAbilityCatalog.MirrorImage) == 4,
+            "Mirror Image has a maximum rank of four");
+
+        field.UpdateCombat(21);
+        Assert(field.AttackWithEntityAbility(0)
+            && field.MirrorImages.Count == PlayerAbilityCatalog.MirrorImageMaximumRank
+            && !firstImage.IsAlive,
+            "each activation replaces old images and spawns the full rank-based count");
+
+        MirrorImage movingImage = field.MirrorImages[0];
+        double previousX = movingImage.PositionX;
+        double previousY = movingImage.PositionY;
+        movingImage.UpdateBehavior(field);
+        Assert(movingImage.PositionX == previousX
+            && movingImage.PositionY == previousY
+            && movingImage.IsInvulnerable,
+            "a fresh image is stationary and invulnerable");
+        field.UpdateCombat(MirrorImage.SpawnStationaryDurationSeconds);
+        movingImage.UpdateBehavior(field);
+        Assert(previousX != movingImage.PositionX || previousY != movingImage.PositionY,
+            "the image starts moving after half a second");
+        Assert(movingImage.IsInvulnerable && !movingImage.CanBePushed,
+            "the image remains invulnerable and collisionless after it starts moving");
+
+        PursuerEnemy overlappingEnemy = field.Enemies[0];
+        overlappingEnemy.PositionX = movingImage.PositionX;
+        overlappingEnemy.PositionY = movingImage.PositionY;
+        double enemyX = overlappingEnemy.PositionX;
+        double enemyY = overlappingEnemy.PositionY;
+        field.UpdateMirrorImagePositions();
+        Assert(overlappingEnemy.PositionX == enemyX
+            && overlappingEnemy.PositionY == enemyY,
+            "mirror-image movement does not push overlapping enemies");
+
+        field.UpdateCombat(
+            MirrorImage.SpawnInvulnerabilityDurationSeconds
+                - MirrorImage.SpawnStationaryDurationSeconds);
+        Assert(!movingImage.IsInvulnerable,
+            "the image becomes vulnerable after three seconds");
+        movingImage.TakeDamage(1);
+        Assert(!movingImage.IsAlive && !field.MirrorImages.Contains(movingImage),
+            "a vulnerable killed image is removed from the arena");
+    }
+
+    private static void TestMirrorImageEnemyTargeting()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        field.Player.IsInvulnerable = true;
+        field.Progression.SetGodMode(true);
+        Assert(field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.MirrorImage)
+            && field.AttackWithEntityAbility(0),
+            "Mirror Image can be summoned for enemy-targeting tests");
+
+        MirrorImage mirrorImage = field.MirrorImages[0];
+        field.Player.PositionX = 800;
+        field.Player.PositionY = 600;
+        mirrorImage.PositionX = 500;
+        mirrorImage.PositionY = 600;
+        PursuerEnemy enemy = field.Enemies[0];
+        enemy.PositionX = 400;
+        enemy.PositionY = 600;
+
+        enemy.UpdateBehavior(field);
+        Assert(ReferenceEquals(enemy.CurrentTarget, mirrorImage)
+            && enemy.PositionX > 400,
+            "an enemy pursues the closer mirror image instead of the player");
+
+        for (int tick = 0; tick < 20 && !enemy.HasActiveAttack; tick++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        Assert(enemy.HasActiveAttack
+            && ReferenceEquals(enemy.CurrentTarget, mirrorImage),
+            "an enemy in range attacks its selected mirror-image target");
+        field.UpdateCombat(0.5);
+        Assert(mirrorImage.IsAlive && mirrorImage.CurrentHitPoints == 1
+            && mirrorImage.IsInvulnerable,
+            "an enemy targets the image but cannot damage it during spawn protection");
+        field.UpdateCombat(
+            MirrorImage.SpawnInvulnerabilityDurationSeconds);
+        Assert(!mirrorImage.IsInvulnerable,
+            "the mirror image loses invulnerability after three seconds");
+        field.UpdateEnemyPositions();
+        Assert(enemy.HasActiveAttack,
+            "the enemy can attack the image after its protection expires");
+        field.UpdateCombat(0.5);
+        Assert(!mirrorImage.IsAlive && !field.MirrorImages.Contains(mirrorImage),
+            "an enemy attack can kill and remove a mirror image");
+    }
+
     private static void TestKeyBindingPersistenceAndConflicts()
     {
         string path = Path.Combine(
@@ -1561,7 +1700,9 @@ internal static class Program
         BitmapSource baseImage = ArenaMapAssets.LoadMapBase();
         Assert(baseImage.PixelWidth > 0 && baseImage.PixelHeight > 0,
             "map editor loads the selected BackgroundColour PNG");
-        Assert(ArenaSkillTreeRepository.GetImplementedSkills().Count == 5,
+        Assert(ArenaSkillTreeRepository.GetImplementedSkills().Count == 6
+            && ArenaSkillTreeRepository.GetImplementedSkills().Any(
+                skill => skill.Id == PlayerAbilityCatalog.MirrorImage),
             "skilltree editor exposes implemented player stats and abilities");
 
         bool rejectedLargeMap = false;
