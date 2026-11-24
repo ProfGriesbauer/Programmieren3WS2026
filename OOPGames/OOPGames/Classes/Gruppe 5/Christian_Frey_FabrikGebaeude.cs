@@ -258,7 +258,8 @@ namespace OOPGames
 
         private static bool IsMineableSolid(G5_Item item)
         {
-            return item == G5_Item.Eisenerz
+            return item == G5_Item.Holz
+                || item == G5_Item.Eisenerz
                 || item == G5_Item.Kupfererz
                 || item == G5_Item.Kohle
                 || item == G5_Item.Kalkstein
@@ -282,7 +283,7 @@ namespace OOPGames
             int cycleTicks,
             int amountPerCycle,
             int powerDemandPerTick)
-            : base(position, 2, 2, powerDemandPerTick)
+            : base(position, 1, 1, powerDemandPerTick)
         {
             _deposit = deposit ?? throw new ArgumentNullException(nameof(deposit));
             _output = new G5_ItemBuffer(outputCapacity);
@@ -408,7 +409,7 @@ namespace OOPGames
             int inputCapacity,
             int outputCapacity,
             int powerPriority = 0)
-            : base(position, 2, 2, 0, powerPriority)
+            : base(position, 1, 1, 0, powerPriority)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -583,7 +584,7 @@ namespace OOPGames
         private readonly G5_ItemBuffer _items;
 
         public G5_Storage(G5_GridPosition position, int capacity)
-            : base(position, 2, 2)
+            : base(position, 1, 1)
         {
             _items = new G5_ItemBuffer(capacity);
         }

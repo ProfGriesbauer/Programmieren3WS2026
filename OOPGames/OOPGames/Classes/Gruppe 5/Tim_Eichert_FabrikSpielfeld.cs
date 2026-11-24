@@ -5,37 +5,34 @@ using System.Linq;
 
 namespace OOPGames
 {
-    // Aggregiert Welt, Fabriksimulation und HUB zu einem gemeinsamen Spielfeld.
-    // Player und Painter erhalten ueber read-only Interfaces nur das fuer ihre Aufgabe benoetigte View-Modell.
     internal sealed class G5_FabrikSpielfeld : IG5_FabrikSpielInfo, IG5_KartenansichtSteuerung
     {
         private readonly G5_WeltSpielfeld _welt;
         private readonly G5_FactorySimulation _simulation;
-        private readonly G5_Storage _hub;
+        private readonly Dictionary<G5_Item, int> _spielerInventar = new Dictionary<G5_Item, int>();
         private G5_Bauwerkzeug _aktuellesWerkzeug;
+        private G5_GridPosition _spielerPosition;
+        private G5_SpielerBlickrichtung _spielerBlickrichtung;
+        private G5_GridPosition? _ausgewaehltesGebaeude;
         private string _statusMeldung;
-        private bool _gebaeuderegisterGeoeffnet;
-        private int _gebaeuderegisterOffset;
+        private bool _baumenueGeoeffnet = true;
 
-        internal G5_FabrikSpielfeld(G5_WeltSpielfeld welt, int hubX, int hubY)
+        internal G5_FabrikSpielfeld(G5_WeltSpielfeld welt, int spielerX, int spielerY)
         {
             _welt = welt ?? throw new ArgumentNullException(nameof(welt));
             _simulation = new G5_FactorySimulation();
-            _hub = new G5_Storage(new G5_GridPosition(hubX, hubY), 500);
-            _simulation.AddBuilding(_hub);
-            _aktuellesWerkzeug = G5_Bauwerkzeug.Keines;
-            _statusMeldung = "F wählt Förderer, S wählt Schmelze. Danach auf die Karte klicken.";
+            _spielerPosition = new G5_GridPosition(spielerX, spielerY);
+            _spielerBlickrichtung = G5_SpielerBlickrichtung.Sueden;
+            _statusMeldung = "WASD: bewegen | E: abbauen | Baumenü: Gebäude kaufen und am markierten Feld bauen.";
         }
 
         internal G5_WeltSpielfeld Welt => _welt;
         internal G5_FactorySimulation Simulation => _simulation;
-        internal G5_Storage Hub => _hub;
         internal IReadOnlyList<G5_Building> InterneGebaeude => _simulation.Buildings;
-        internal bool GebaeuderegisterGeoeffnet => _gebaeuderegisterGeoeffnet;
-        internal int GebaeuderegisterOffset => _gebaeuderegisterOffset;
+        internal bool BaumenueGeoeffnet => _baumenueGeoeffnet;
+        internal bool GebaeuderegisterGeoeffnet => _baumenueGeoeffnet;
 
         int IG5_WeltSpielfeld.Breite => ((IG5_WeltSpielfeld)_welt).Breite;
-
         int IG5_WeltSpielfeld.Hoehe => ((IG5_WeltSpielfeld)_welt).Hoehe;
 
         bool IG5_WeltSpielfeld.TryGetKachelInfo(int x, int y, out IG5_KachelInfo info)
@@ -60,20 +57,71 @@ namespace OOPGames
             get
             {
                 IG5_GebaeudeInfo[] gebaeude = _simulation.Buildings
-                    .Select(building => (IG5_GebaeudeInfo)new G5_GebaeudeInfo(
-                        building,
-                        ReferenceEquals(building, _hub)))
+                    .Select(building => (IG5_GebaeudeInfo)new G5_GebaeudeInfo(building))
                     .ToArray();
                 return new ReadOnlyCollection<IG5_GebaeudeInfo>(gebaeude);
             }
         }
 
+        IG5_GebaeudeInfo IG5_FabrikSpielInfo.AusgewaehltesGebaeude
+        {
+            get
+            {
+                if (!_ausgewaehltesGebaeude.HasValue)
+                {
+                    return null;
+                }
+
+                G5_Building building = _simulation.Buildings.FirstOrDefault(candidate =>
+                    candidate.Position == _ausgewaehltesGebaeude.Value);
+                return building == null ? null : new G5_GebaeudeInfo(building);
+            }
+        }
+
+        G5_GridPosition IG5_FabrikSpielInfo.SpielerPosition => _spielerPosition;
+        G5_GridPosition IG5_FabrikSpielInfo.ZielKachel => ZielKachel;
+        G5_SpielerBlickrichtung IG5_FabrikSpielInfo.SpielerBlickrichtung => _spielerBlickrichtung;
+        IReadOnlyDictionary<G5_Item, int> IG5_FabrikSpielInfo.SpielerInventar =>
+            new ReadOnlyDictionary<G5_Item, int>(_spielerInventar);
+        bool IG5_FabrikSpielInfo.BaumenueGeoeffnet => _baumenueGeoeffnet;
         string IG5_FabrikSpielInfo.StatusMeldung => _statusMeldung;
+
+        internal G5_GridPosition SpielerPosition => _spielerPosition;
+
+        internal G5_GridPosition ZielKachel
+        {
+            get
+            {
+                int x = _spielerPosition.X;
+                int y = _spielerPosition.Y;
+                switch (_spielerBlickrichtung)
+                {
+                    case G5_SpielerBlickrichtung.Norden:
+                        y--;
+                        break;
+                    case G5_SpielerBlickrichtung.Osten:
+                        x++;
+                        break;
+                    case G5_SpielerBlickrichtung.Sueden:
+                        y++;
+                        break;
+                    case G5_SpielerBlickrichtung.Westen:
+                        x--;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                return new G5_GridPosition(x, y);
+            }
+        }
 
         int IG5_FabrikSpielInfo.HubMenge(G5_Item item)
         {
-            return _simulation.Buildings.OfType<G5_Storage>()
+            int playerAmount = Menge(item);
+            int storedAmount = _simulation.Buildings.OfType<G5_Storage>()
                 .Sum(storage => storage.CountOf(item));
+            return checked(playerAmount + storedAmount);
         }
 
         bool IGameField.CanBePaintedBy(IPaintGame painter)
@@ -101,6 +149,146 @@ namespace OOPGames
             return _welt.TryGetKachel(x, y, out kachel);
         }
 
+        internal bool MoveSpieler(int dx, int dy)
+        {
+            if (Math.Abs(dx) + Math.Abs(dy) != 1)
+            {
+                throw new ArgumentException("Spielerbewegungen müssen genau eine Kachel betragen.");
+            }
+
+            if (dx > 0) _spielerBlickrichtung = G5_SpielerBlickrichtung.Osten;
+            else if (dx < 0) _spielerBlickrichtung = G5_SpielerBlickrichtung.Westen;
+            else if (dy > 0) _spielerBlickrichtung = G5_SpielerBlickrichtung.Sueden;
+            else _spielerBlickrichtung = G5_SpielerBlickrichtung.Norden;
+
+            int zielX = _spielerPosition.X + dx;
+            int zielY = _spielerPosition.Y + dy;
+            if (!_welt.TryGetKachel(zielX, zielY, out G5_Kachel kachel) ||
+                ((IG5_KachelInfo)kachel).Gelaende != G5_Gelaendeart.Begehbar ||
+                _simulation.Buildings.Any(building =>
+                    zielX >= building.Position.X &&
+                    zielX < building.Position.X + building.Width &&
+                    zielY >= building.Position.Y &&
+                    zielY < building.Position.Y + building.Height))
+            {
+                return false;
+            }
+
+            _spielerPosition = new G5_GridPosition(zielX, zielY);
+            return true;
+        }
+
+        internal bool SelectBuildingAt(int x, int y)
+        {
+            G5_Building building = _simulation.Buildings.FirstOrDefault(candidate =>
+                x >= candidate.Position.X &&
+                x < candidate.Position.X + candidate.Width &&
+                y >= candidate.Position.Y &&
+                y < candidate.Position.Y + candidate.Height);
+            _ausgewaehltesGebaeude = building == null
+                ? (G5_GridPosition?)null
+                : building.Position;
+            return building != null;
+        }
+
+        internal G5_Building AusgewaehltesInternesGebaeude
+        {
+            get
+            {
+                if (!_ausgewaehltesGebaeude.HasValue)
+                {
+                    return null;
+                }
+
+                return _simulation.Buildings.FirstOrDefault(building =>
+                    building.Position == _ausgewaehltesGebaeude.Value);
+            }
+        }
+
+        internal void DeselectBuilding()
+        {
+            _ausgewaehltesGebaeude = null;
+        }
+
+        internal int Menge(G5_Item item)
+        {
+            return _spielerInventar.TryGetValue(item, out int amount) ? amount : 0;
+        }
+
+        internal int Gesamtmenge(G5_Item item)
+        {
+            return checked(Menge(item) + _simulation.Buildings.OfType<G5_Storage>()
+                .Sum(storage => storage.CountOf(item)));
+        }
+
+        internal bool HatRessourcen(IReadOnlyDictionary<G5_Item, int> kosten)
+        {
+            return kosten != null && kosten.All(kostenpunkt =>
+                kostenpunkt.Value >= 0 && Gesamtmenge(kostenpunkt.Key) >= kostenpunkt.Value);
+        }
+
+        internal bool TryVerbraucheRessourcen(IReadOnlyDictionary<G5_Item, int> kosten)
+        {
+            if (!HatRessourcen(kosten))
+            {
+                return false;
+            }
+
+            foreach (KeyValuePair<G5_Item, int> kostenpunkt in kosten)
+            {
+                int remaining = kostenpunkt.Value;
+                int fromPlayer = Math.Min(remaining, Menge(kostenpunkt.Key));
+                int playerRemaining = Menge(kostenpunkt.Key) - fromPlayer;
+                if (playerRemaining == 0)
+                {
+                    _spielerInventar.Remove(kostenpunkt.Key);
+                }
+                else
+                {
+                    _spielerInventar[kostenpunkt.Key] = playerRemaining;
+                }
+
+                remaining -= fromPlayer;
+                foreach (G5_Storage storage in _simulation.Buildings.OfType<G5_Storage>())
+                {
+                    if (remaining == 0)
+                    {
+                        break;
+                    }
+
+                    int fromStorage = Math.Min(remaining, storage.CountOf(kostenpunkt.Key));
+                    if (fromStorage > 0 && !storage.TryExtract(kostenpunkt.Key, fromStorage))
+                    {
+                        throw new InvalidOperationException("Ressourcen konnten nicht aus dem Lager entnommen werden.");
+                    }
+
+                    remaining -= fromStorage;
+                }
+
+                if (remaining != 0)
+                {
+                    throw new InvalidOperationException("Der Ressourcenbestand änderte sich während der Entnahme.");
+                }
+            }
+
+            return true;
+        }
+
+        internal void AddInventar(G5_Item item, int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount));
+            }
+
+            if (amount == 0)
+            {
+                return;
+            }
+
+            _spielerInventar[item] = checked(Menge(item) + amount);
+        }
+
         internal void SetWerkzeug(G5_Bauwerkzeug werkzeug)
         {
             _aktuellesWerkzeug = werkzeug;
@@ -113,83 +301,84 @@ namespace OOPGames
 
         internal void AddGebaeude(G5_Building gebaeude)
         {
-            // Delegiert Platzierung an die gemeinsame Fabriksimulation statt selbst Gebaeudelisten zu verwalten.
             _simulation.AddBuilding(gebaeude);
+            DeselectBuilding();
+        }
+
+        internal bool RemoveGebaeude(G5_Building gebaeude)
+        {
+            if (gebaeude == null || !_simulation.RemoveBuilding(gebaeude))
+            {
+                return false;
+            }
+
+            DeselectBuilding();
+            return true;
+        }
+
+        internal void ToggleBaumenue()
+        {
+            _baumenueGeoeffnet = !_baumenueGeoeffnet;
         }
 
         internal void ToggleGebaeuderegister()
         {
-            _gebaeuderegisterGeoeffnet = !_gebaeuderegisterGeoeffnet;
+            ToggleBaumenue();
         }
 
-        internal void ScrollGebaeuderegister(int schritte)
-        {
-            _gebaeuderegisterOffset = Math.Max(0, Math.Min(2, _gebaeuderegisterOffset + schritte));
-        }
     }
 
     internal sealed class G5_GebaeudeInfo : IG5_GebaeudeInfo
     {
         private readonly G5_Building _gebaeude;
-        private readonly bool _istHub;
 
-        internal G5_GebaeudeInfo(G5_Building gebaeude, bool istHub)
+        internal G5_GebaeudeInfo(G5_Building gebaeude)
         {
             _gebaeude = gebaeude ?? throw new ArgumentNullException(nameof(gebaeude));
-            _istHub = istHub;
         }
 
         G5_FabrikGebaeudeTyp IG5_GebaeudeInfo.Typ
         {
             get
             {
-                if (_gebaeude is G5_Storage)
-                {
-                    return _istHub
-                        ? G5_FabrikGebaeudeTyp.Hub
-                        : G5_FabrikGebaeudeTyp.Lager;
-                }
-
-                if (_gebaeude is G5_Miner)
-                {
-                    return G5_FabrikGebaeudeTyp.Foerderer;
-                }
-
-                if (_gebaeude is G5_Smelter)
-                {
-                    return G5_FabrikGebaeudeTyp.Schmelze;
-                }
-
-                if (_gebaeude is G5_Constructor)
-                {
-                    return G5_FabrikGebaeudeTyp.Konstruktor;
-                }
-
-                if (_gebaeude is G5_Assembler)
-                {
-                    return G5_FabrikGebaeudeTyp.Assembler;
-                }
-
-                if (_gebaeude is G5_BurningGenerator)
-                {
-                    return G5_FabrikGebaeudeTyp.Verbrennungsgenerator;
-                }
-
-                if (_gebaeude is G5_PowerPole)
-                {
-                    return G5_FabrikGebaeudeTyp.Strommast;
-                }
-
-                if (_gebaeude is G5_Conveyor)
-                {
-                    return G5_FabrikGebaeudeTyp.Laufband;
-                }
-
+                if (_gebaeude is G5_Storage) return G5_FabrikGebaeudeTyp.Lager;
+                if (_gebaeude is G5_Miner) return G5_FabrikGebaeudeTyp.Foerderer;
+                if (_gebaeude is G5_Smelter) return G5_FabrikGebaeudeTyp.Schmelze;
+                if (_gebaeude is G5_Constructor) return G5_FabrikGebaeudeTyp.Konstruktor;
+                if (_gebaeude is G5_Assembler) return G5_FabrikGebaeudeTyp.Assembler;
+                if (_gebaeude is G5_BurningGenerator) return G5_FabrikGebaeudeTyp.Verbrennungsgenerator;
+                if (_gebaeude is G5_PowerPole) return G5_FabrikGebaeudeTyp.Strommast;
+                if (_gebaeude is G5_Conveyor) return G5_FabrikGebaeudeTyp.Laufband;
                 throw new InvalidOperationException("Unbekannter Gebäudetyp in der Fabrikansicht.");
             }
         }
 
         string IG5_GebaeudeInfo.Name => _gebaeude.Name;
+
+        string IG5_GebaeudeInfo.Beschreibung
+        {
+            get
+            {
+                if (_gebaeude is G5_Miner miner)
+                {
+                    return "Fördert " + miner.Resource + " aus dem Vorkommen.";
+                }
+
+                if (_gebaeude is G5_ProductionBuilding production)
+                {
+                    return production.SelectedRecipe == null
+                        ? "Verarbeitet Rohstoffe nach einem gewählten Rezept."
+                        : "Verarbeitet Rohstoffe: " + production.SelectedRecipe.Name + ".";
+                }
+
+                if (_gebaeude is G5_Conveyor) return "Transportiert Gegenstände zum nächsten Gebäude.";
+                if (_gebaeude is G5_BurningGenerator) return "Erzeugt Strom aus Kohle.";
+                if (_gebaeude is G5_PowerPole) return "Verbindet Gebäude mit dem Stromnetz.";
+                if (_gebaeude is G5_Storage) return "Lagert Gegenstände für deine Fabrik.";
+                return "Gebäude deiner Fabrik.";
+            }
+        }
+
         int IG5_GebaeudeInfo.X => _gebaeude.Position.X;
         int IG5_GebaeudeInfo.Y => _gebaeude.Position.Y;
         int IG5_GebaeudeInfo.Breite => _gebaeude.Width;
@@ -197,5 +386,82 @@ namespace OOPGames
         int IG5_GebaeudeInfo.Level => _gebaeude.Level;
         G5_BuildingStatus IG5_GebaeudeInfo.Status => _gebaeude.Status;
         bool IG5_GebaeudeInfo.IstMitStromVersorgt => _gebaeude.IsPowered;
+
+        string IG5_GebaeudeInfo.AusgewaehltesRezept =>
+            (_gebaeude as G5_ProductionBuilding)?.SelectedRecipe?.Name ?? string.Empty;
+
+        IReadOnlyList<string> IG5_GebaeudeInfo.VerfuegbareRezepte
+        {
+            get
+            {
+                if (!(_gebaeude is G5_ProductionBuilding production))
+                {
+                    return Array.Empty<string>();
+                }
+
+                if (_gebaeude.Level >= 2)
+                {
+                    return production.Recipes.Select(recipe => recipe.Name).ToArray();
+                }
+
+                return production.SelectedRecipe == null
+                    ? Array.Empty<string>()
+                    : new[] { production.SelectedRecipe.Name };
+            }
+        }
+
+        IReadOnlyDictionary<G5_Item, int> IG5_GebaeudeInfo.UpgradeKosten =>
+            ((IG5_GebaeudeInfo)this).KannVerbessertWerden
+                ? G5_FabrikKosten.UpgradePreis(_gebaeude.Level)
+                : new ReadOnlyDictionary<G5_Item, int>(new Dictionary<G5_Item, int>());
+
+        bool IG5_GebaeudeInfo.KannVerbessertWerden =>
+            _gebaeude.Level < G5_FabrikKosten.MaxUpgradeLevel &&
+            !(_gebaeude is G5_PowerPole);
+    }
+
+    internal static class G5_FabrikKosten
+    {
+        internal const int MaxUpgradeLevel = 3;
+
+        private static readonly IReadOnlyDictionary<G5_Bauwerkzeug, IReadOnlyDictionary<G5_Item, int>> Baupreise =
+            new Dictionary<G5_Bauwerkzeug, IReadOnlyDictionary<G5_Item, int>>
+            {
+                [G5_Bauwerkzeug.Foerderer] = Kosten((G5_Item.Eisenerz, 8), (G5_Item.Holz, 5)),
+                [G5_Bauwerkzeug.Schmelze] = Kosten((G5_Item.Eisenerz, 10), (G5_Item.Holz, 4)),
+                [G5_Bauwerkzeug.Foerderband] = Kosten((G5_Item.Eisenerz, 2), (G5_Item.Holz, 1)),
+                [G5_Bauwerkzeug.Konstruktor] = Kosten((G5_Item.Eisenerz, 12), (G5_Item.Kupfererz, 4), (G5_Item.Holz, 6)),
+                [G5_Bauwerkzeug.Assembler] = Kosten((G5_Item.Eisenerz, 18), (G5_Item.Kupfererz, 12), (G5_Item.Holz, 8)),
+                [G5_Bauwerkzeug.Verbrennungsgenerator] = Kosten((G5_Item.Eisenerz, 12), (G5_Item.Kohle, 4), (G5_Item.Holz, 6)),
+                [G5_Bauwerkzeug.Strommast] = Kosten((G5_Item.Eisenerz, 3), (G5_Item.Holz, 2)),
+                [G5_Bauwerkzeug.Lager] = Kosten((G5_Item.Eisenerz, 8), (G5_Item.Holz, 6))
+            };
+
+        internal static IReadOnlyDictionary<G5_Item, int> Baupreis(G5_Bauwerkzeug werkzeug)
+        {
+            return Baupreise.TryGetValue(werkzeug, out IReadOnlyDictionary<G5_Item, int> kosten)
+                ? kosten
+                : new ReadOnlyDictionary<G5_Item, int>(new Dictionary<G5_Item, int>());
+        }
+
+        internal static IReadOnlyDictionary<G5_Item, int> UpgradePreis(int aktuellesLevel)
+        {
+            if (aktuellesLevel < 1 || aktuellesLevel >= MaxUpgradeLevel)
+            {
+                return new ReadOnlyDictionary<G5_Item, int>(new Dictionary<G5_Item, int>());
+            }
+
+            int faktor = aktuellesLevel;
+            return Kosten(
+                (G5_Item.Eisenerz, 8 * faktor),
+                (G5_Item.Kupfererz, 4 * faktor),
+                (G5_Item.Holz, 3 * faktor));
+        }
+
+        private static IReadOnlyDictionary<G5_Item, int> Kosten(params (G5_Item Item, int Menge)[] kosten)
+        {
+            return new ReadOnlyDictionary<G5_Item, int>(
+                kosten.ToDictionary(eintrag => eintrag.Item, eintrag => eintrag.Menge));
+        }
     }
 }

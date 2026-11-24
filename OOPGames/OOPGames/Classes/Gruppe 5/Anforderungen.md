@@ -18,7 +18,7 @@ Laufband (Tick-basiert)
 ## Game Logik
 Hand abbauen und craften möglich
 Inventar mit begrenzter Größe
-Missionen wenn nicht geschafft, dann raus --> erstmal nicht(vielleicht mit zwei modi, competitive & cozy)
+-- Missionen wenn nicht geschafft, dann raus --> erstmal nicht(vielleicht mit zwei modi, competitive & cozy) --
 
 ## Interaktion
 wenn gebäude angeklickt, POP up mit rezept auswahl, feld für resourcen und feld für fertige produkte
@@ -28,8 +28,8 @@ Gebäude verschieben
 Stromnetz quer drüber
 
 ## Rezepte
-Schmelze: Aus rohstoff wird baren
-Konstruktor: Eisenbaren wird zu stangen oder platten
+Schmelze: Aus rohstoff wird barren
+Konstruktor: Eisenbarren wird zu stangen oder platten
 
 # Struktur
 Alles objektorientiert Aufbau

@@ -167,24 +167,6 @@
 - **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
 - **Prompt im Wortlaut:**
 
-> nehm die graue Umrandung, ich hab sie dir hier mal pink markiert
-
-- **Ergebnisvermerk:** Die graue Zwischenlage der Laufband-SVG-Kontur wurde entfernt; der dunkle Gurt und die Levelakzente bleiben bestehen.
-
-## 2026-11-19
-
-- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
-- **Prompt im Wortlaut:**
-
-> nicht weg nehmen, sondern in den farben der Level gestalten, die aktuelle levelmarkierung kann dafür weg. nehm bei splitter und konstruktor auch die graue umrandung
-
-- **Ergebnisvermerk:** Die graue Gurtumrandung wird wiederverwendet und in MK2-Blau bzw. MK3-Rot dargestellt. Die separaten farbigen Markierungsstreifen am Laufband entfallen; Splitter/Merger-Ränder und Konstruktor-Metallplatten erhalten ebenfalls Level-Umrandungen.
-
-## 2026-11-19
-
-- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
-- **Prompt im Wortlaut:**
-
 > entferne jetzt noch die umrandungen der metallplatten beim konstruktor und mach die umrandungen im gleichen farbton (weniger kräftig)
 
 - **Ergebnisvermerk:** Die farbigen Konturen der Konstruktor-Metallplatten wurden entfernt. Laufband-, Splitter- und Merger-Umrandungen behalten ihre MK2-/MK3-Farbtöne, erscheinen aber transparenter und dadurch dezenter.

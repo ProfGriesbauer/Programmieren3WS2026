@@ -15,7 +15,6 @@ namespace OOPGames
         internal int ResourceAmount { get; set; }
         internal int MinerCycleTicks { get; set; }
         internal int SmelterCycleTicks { get; set; }
-        internal bool TutorialEnabled { get; set; }
     }
 
     internal sealed class SatisfactoryStartScreen
@@ -34,8 +33,7 @@ namespace OOPGames
             Guide,
             Home,
             ChangeResource,
-            ChangeSpeed,
-            ToggleTutorial
+            ChangeSpeed
         }
 
         private sealed class HitTarget
@@ -52,7 +50,6 @@ namespace OOPGames
         private Page _page = Page.Home;
         private int _resourceChoice = 1;
         private int _speedChoice = 1;
-        private bool _tutorialEnabled = true;
 
         internal SatisfactoryStartScreenSettings SelectedSettings
         {
@@ -62,8 +59,7 @@ namespace OOPGames
                 {
                     ResourceAmount = _resourceChoice == 0 ? 150 : _resourceChoice == 2 ? 600 : 300,
                     MinerCycleTicks = _speedChoice == 0 ? 55 : _speedChoice == 2 ? 22 : 35,
-                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55,
-                    TutorialEnabled = _tutorialEnabled
+                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55
                 };
             }
         }
@@ -137,9 +133,6 @@ namespace OOPGames
                     case Action.ChangeSpeed:
                         _speedChoice = (_speedChoice + 1) % 3;
                         break;
-                    case Action.ToggleTutorial:
-                        _tutorialEnabled = !_tutorialEnabled;
-                        break;
                 }
 
                 return false;
@@ -188,19 +181,19 @@ namespace OOPGames
                 left + 24, top + 24, 116, 24, 12);
             AddText(canvas, "PRODUKTION STARTEN", AccentBrush,
                 left + 34, top + 29, 100, 14, 9, FontWeights.Bold);
-            AddText(canvas, "Rohstoffe rein.\nProduktion an.", Brushes.White,
+            AddText(canvas, "Sammeln.\nBauen. Automatisieren.", Brushes.White,
                 left + 26, top + 70, width - 52, 100, 35, FontWeights.Bold);
             AddText(canvas,
-                "Baue Förderer und Schmelzen, verbinde sie mit Förderbändern und beobachte den Rohstofftransport.",
+                "Du startest ohne Gebäude. Laufe mit WASD, sammle Holz und Erze mit E und baue deine Fabrik Schritt für Schritt.",
                 MutedBrush, left + 28, top + 185, width - 206, 68, 13);
             DrawFactoryArt(canvas, left + width - 166, top + 170);
 
-            DrawStep(canvas, left + 28, top + 280, "01", "Förderer",
-                "F drücken und auf ein Erzvorkommen klicken.");
-            DrawStep(canvas, left + 28, top + 350, "02", "Förderband",
-                "B drücken und eine Verbindung zur Schmelze bauen.");
-            DrawStep(canvas, left + 28, top + 420, "03", "Transport & Umbau",
-                "Rohstoffe bewegen sich sichtbar; mit M versetzt du Gebäude.");
+            DrawStep(canvas, left + 28, top + 280, "01", "Rohstoffe sammeln",
+                "Stelle dich neben einen Baum oder ein Erz und drücke E.");
+            DrawStep(canvas, left + 28, top + 350, "02", "Gebäude bauen",
+                "Wähle ein Gebäude im Baumenü. Es entsteht am gelb markierten Feld.");
+            DrawStep(canvas, left + 28, top + 420, "03", "Fabrik verwalten",
+                "Klicke Gebäude für Rezepte und Upgrades. Entf verkauft mit Rückerstattung.");
         }
 
         private void DrawControlPanel(
@@ -251,7 +244,7 @@ namespace OOPGames
                 ResourceLabel() + "  ·  " + SpeedLabel(),
                 Brushes.White, left + 42, top + height - 80, width - 84, 22, 13,
                 FontWeights.SemiBold);
-            AddText(canvas, "Das Tutorial ist optional und kann jederzeit mit T beendet werden.",
+            AddText(canvas, "Du beginnst ohne Gebäude und baust dein erstes Werk aus selbst gesammelten Rohstoffen.",
                 MutedBrush, left + 30, top + 340, width - 60, 38, 11);
         }
 
@@ -273,8 +266,8 @@ namespace OOPGames
             DrawOptionButton(canvas, left + 28, top + 260, width - 56, 54,
                 SpeedLabel(), "Förderer- und Schmelzzyklen", Action.ChangeSpeed);
 
-            DrawOptionButton(canvas, left + 28, top + Math.Max(318, height - 160), width - 56, 54,
-                TutorialLabel(), "Tutorial bei Spielstart", Action.ToggleTutorial);
+            AddText(canvas, "Du startest ohne Gebäude. Ressourcen sammelst du direkt in der Welt.",
+                MutedBrush, left + 30, top + Math.Max(318, height - 150), width - 60, 40, 11);
 
             DrawButton(canvas, left + 28, top + height - 96, width - 56, 54,
                 "SPIEL STARTEN", "Einstellungen übernehmen",
@@ -286,18 +279,18 @@ namespace OOPGames
             DrawBackButton(canvas, left + 28, top + 26);
             AddText(canvas, "Anleitung", Brushes.White,
                 left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
-            AddText(canvas, "Die Einführung ist optional und kann im Spiel mit T übersprungen werden:",
+            AddText(canvas, "Bewege dich frei und baue deine Fabrik aus gesammelten Rohstoffen:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
-            DrawStep(canvas, left + 30, top + 155, "01", "Förderer bauen",
-                "Drücke F und platziere ihn auf dem markierten Eisenerzvorkommen.");
-            DrawStep(canvas, left + 30, top + 225, "02", "Schmelze bauen",
-                "Drücke S und platziere sie auf dem markierten freien Feld.");
-            DrawStep(canvas, left + 30, top + 295, "03", "Gebäude versetzen",
-                "Drücke M, klicke das Gebäude und danach das Ziel.");
-            DrawStep(canvas, left + 30, top + 365, "04", "Förderbänder",
-                "Drücke B und verbinde Förderer und Schmelze über freie Nachbarfelder.");
-            AddText(canvas, "Tab öffnet die Gebäudeliste zum Scrollen; T überspringt das Tutorial.",
+            DrawStep(canvas, left + 30, top + 155, "01", "Laufen und abbauen",
+                "WASD bewegt dich. Schaue ein Feld an und drücke E, um Holz oder Erz abzubauen.");
+            DrawStep(canvas, left + 30, top + 225, "02", "Gebäude kaufen",
+                "Das Baumenü zeigt Kosten. Ein Klick baut am gelb markierten Feld.");
+            DrawStep(canvas, left + 30, top + 295, "03", "Produktion einstellen",
+                "Klicke ein Gebäude für Details, freigeschaltete Rezepte und Upgrades.");
+            DrawStep(canvas, left + 30, top + 365, "04", "Verkaufen",
+                "Verkaufe im Gebäudemenü oder mit Entf. Du erhältst 50 % der Kosten zurück.");
+            AddText(canvas, "Gebäude und Förderbänder benötigen jeweils ein Rasterfeld.",
                 MutedBrush, left + 30, top + 440, width - 60, 40, 10);
 
             DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
@@ -388,7 +381,7 @@ namespace OOPGames
 
         private void DrawFooter(Canvas canvas, double left, double top, double width)
         {
-            AddText(canvas, "BEDIENUNG IM SPIEL:  F Förderer   ·   S Schmelze   ·   B Förderband   ·   M Gebäude versetzen",
+            AddText(canvas, "BEDIENUNG IM SPIEL:  WASD laufen   ·   E abbauen   ·   Gebäude über das Baumenü kaufen",
                 MutedBrush, left, top, width, 16, 10, FontWeights.Normal, TextAlignment.Center);
         }
 
@@ -402,11 +395,6 @@ namespace OOPGames
         {
             return _speedChoice == 0 ? "Entspannt" :
                 _speedChoice == 2 ? "Schnell" : "Standard";
-        }
-
-        private string TutorialLabel()
-        {
-            return _tutorialEnabled ? "Tutorial: Aktiv" : "Tutorial: Übersprungen";
         }
 
         private void AddHitTarget(double left, double top, double width, double height, Action action)
@@ -527,6 +515,11 @@ namespace OOPGames
         private readonly SatisfactoryStartScreen _startScreen;
         private readonly SatisfactoryGameMentor _mentor;
         private Rect _inventarBereich;
+        private Rect _baumenueBereich;
+        private Rect _gebaeudeMenueBereich;
+        private readonly List<(Rect Bereich, G5_FabrikAktionstyp Typ, G5_Bauwerkzeug Werkzeug, string Wert)> _menuAktionen =
+            new List<(Rect, G5_FabrikAktionstyp, G5_Bauwerkzeug, string)>();
+        private G5_Bauwerkzeug? _pendingBuild;
         private bool _inventarGeoeffnet = true;
 
         internal SatisfactoryFieldView(
@@ -547,17 +540,17 @@ namespace OOPGames
         internal SatisfactoryGameMentor Mentor { get { return _mentor; } }
         internal Canvas MentorOverlay { get; }
         internal bool GebaeuderegisterGeoeffnet => _field.GebaeuderegisterGeoeffnet;
-        internal int GebaeuderegisterOffset => _field.GebaeuderegisterOffset;
         internal bool InventarGeoeffnet => _inventarGeoeffnet;
+        internal IG5_GebaeudeInfo AusgewaehltesGebaeude =>
+            ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
+        internal IReadOnlyDictionary<G5_Item, int> SpielerInventar =>
+            ((IG5_FabrikSpielInfo)_field).SpielerInventar;
+        internal int HubMenge(G5_Item item) =>
+            ((IG5_FabrikSpielInfo)_field).HubMenge(item);
 
         internal void ToggleGebaeuderegister()
         {
             _field.ToggleGebaeuderegister();
-        }
-
-        internal void ScrollGebaeuderegister(int schritte)
-        {
-            _field.ScrollGebaeuderegister(schritte);
         }
 
         internal void ToggleInventar()
@@ -570,51 +563,269 @@ namespace OOPGames
             _inventarBereich = bereich;
         }
 
+        internal void SetBaumenueBereich(Rect bereich)
+        {
+            _baumenueBereich = bereich;
+        }
+
+        internal void SetGebaeudeMenueBereich(Rect bereich)
+        {
+            _gebaeudeMenueBereich = bereich;
+        }
+
+        internal void BeginMenuAktionen()
+        {
+            _menuAktionen.Clear();
+        }
+
+        internal void RegisterMenuAktion(
+            Rect bereich,
+            G5_FabrikAktionstyp typ,
+            G5_Bauwerkzeug werkzeug = G5_Bauwerkzeug.Keines,
+            string wert = null)
+        {
+            _menuAktionen.Add((bereich, typ, werkzeug, wert ?? string.Empty));
+        }
+
+        internal bool TryGetMenuAktion(
+            int screenX,
+            int screenY,
+            out G5_FabrikAktionstyp typ,
+            out G5_Bauwerkzeug werkzeug,
+            out string wert)
+        {
+            Point click = new Point(screenX, screenY);
+            foreach (var aktion in _menuAktionen)
+            {
+                if (aktion.Bereich.Contains(click))
+                {
+                    typ = aktion.Typ;
+                    werkzeug = aktion.Werkzeug;
+                    wert = aktion.Wert;
+                    return true;
+                }
+            }
+
+            typ = default;
+            werkzeug = G5_Bauwerkzeug.Keines;
+            wert = string.Empty;
+            return false;
+        }
+
+        internal void QueuePendingBuild(G5_Bauwerkzeug werkzeug)
+        {
+            _pendingBuild = werkzeug;
+        }
+
+        internal bool TryConsumePendingBuild(out G5_Bauwerkzeug werkzeug)
+        {
+            if (!_pendingBuild.HasValue)
+            {
+                werkzeug = G5_Bauwerkzeug.Keines;
+                return false;
+            }
+
+            werkzeug = _pendingBuild.Value;
+            _pendingBuild = null;
+            return true;
+        }
+
+        internal void CenterCamera(double viewportWidth, double viewportHeight)
+        {
+            if (viewportWidth <= 0 || viewportHeight <= 66)
+            {
+                return;
+            }
+
+            const double zoom = 0.8;
+            const double tileSize = 32;
+            double cellSize = tileSize * zoom;
+            double mapWidth = ((IG5_WeltSpielfeld)_field).Breite * cellSize;
+            double mapHeight = ((IG5_WeltSpielfeld)_field).Hoehe * cellSize;
+            G5_GridPosition player = ((IG5_FabrikSpielInfo)_field).SpielerPosition;
+            double offsetX = viewportWidth / 2 - (player.X + 0.5) * cellSize;
+            double offsetY = 66 + (viewportHeight - 66) / 2 - (player.Y + 0.5) * cellSize;
+            offsetX = Math.Max(Math.Min(0, viewportWidth - mapWidth), Math.Min(0, offsetX));
+            offsetY = Math.Max(Math.Min(66, viewportHeight - mapHeight), Math.Min(66, offsetY));
+            ((IG5_KartenansichtSteuerung)_field).SetzeAnsicht(zoom, offsetX, offsetY);
+        }
+
         internal bool IsInventarBereich(int screenX, int screenY)
         {
             return _inventarBereich.Contains(new Point(screenX, screenY));
         }
 
-        internal bool TryGetConveyorFlow(int x, int y, out bool isVertical, out bool isReversed)
+        internal bool IsMenueBereich(int screenX, int screenY)
         {
-            foreach (G5_Conveyor conveyor in _field.InterneGebaeude.OfType<G5_Conveyor>())
+            Point position = new Point(screenX, screenY);
+            return _baumenueBereich.Contains(position) || _gebaeudeMenueBereich.Contains(position);
+        }
+
+        internal bool TryGetConveyorRoute(
+            int x,
+            int y,
+            out G5_ConveyorDirection inputDirection,
+            out G5_ConveyorDirection outputDirection)
+        {
+            G5_Conveyor conveyor = null;
+            foreach (G5_Building building in _field.InterneGebaeude)
             {
-                if (conveyor.Position.X != x || conveyor.Position.Y != y ||
-                    !(conveyor.Destination is G5_Building destination))
+                if (building is G5_Conveyor candidate &&
+                    candidate.Position.X == x &&
+                    candidate.Position.Y == y)
+                {
+                    conveyor = candidate;
+                    break;
+                }
+            }
+
+            if (conveyor == null)
+            {
+                inputDirection = default;
+                outputDirection = default;
+                return false;
+            }
+
+            if (conveyor.TryGetFlowDirections(out inputDirection, out outputDirection))
+            {
+                return true;
+            }
+
+            int adjacentConveyorCount = 0;
+            G5_ConveyorDirection firstConveyorDirection = default;
+            G5_ConveyorDirection secondConveyorDirection = default;
+            int adjacentBuildingCount = 0;
+            G5_Building firstAdjacentBuilding = null;
+            G5_ConveyorDirection firstBuildingDirection = default;
+            G5_ConveyorDirection secondBuildingDirection = default;
+            foreach (G5_Building building in _field.InterneGebaeude)
+            {
+                if (ReferenceEquals(building, conveyor) ||
+                    !conveyor.TryGetDirectionTo(building, out G5_ConveyorDirection direction))
                 {
                     continue;
                 }
 
-                int deltaX = destination.Position.X - conveyor.Position.X;
-                int deltaY = destination.Position.Y - conveyor.Position.Y;
-                isVertical = Math.Abs(deltaY) > Math.Abs(deltaX);
-                isReversed = isVertical ? deltaY < 0 : deltaX < 0;
+                if (building is G5_Conveyor)
+                {
+                    if (adjacentConveyorCount == 0)
+                    {
+                        firstConveyorDirection = direction;
+                    }
+                    else if (adjacentConveyorCount == 1)
+                    {
+                        secondConveyorDirection = direction;
+                    }
+
+                    adjacentConveyorCount++;
+                }
+                else
+                {
+                    if (adjacentBuildingCount == 0)
+                    {
+                        firstAdjacentBuilding = building;
+                        firstBuildingDirection = direction;
+                    }
+                    else if (adjacentBuildingCount == 1)
+                    {
+                        secondBuildingDirection = direction;
+                    }
+
+                    adjacentBuildingCount++;
+                }
+            }
+
+            if (adjacentConveyorCount == 0 && adjacentBuildingCount == 0)
+            {
+                inputDirection = default;
+                outputDirection = default;
+                return false;
+            }
+
+            if (adjacentBuildingCount > 0 && adjacentConveyorCount > 0)
+            {
+                if (firstAdjacentBuilding is G5_Miner ||
+                    firstAdjacentBuilding is G5_ProductionBuilding)
+                {
+                    inputDirection = firstBuildingDirection;
+                    outputDirection = firstConveyorDirection;
+                }
+                else
+                {
+                    inputDirection = firstConveyorDirection;
+                    outputDirection = firstBuildingDirection;
+                }
+
                 return true;
             }
 
-            isVertical = false;
-            isReversed = false;
-            return false;
+            if (adjacentConveyorCount >= 2)
+            {
+                inputDirection = firstConveyorDirection;
+                outputDirection = secondConveyorDirection;
+                return true;
+            }
+
+            if (adjacentBuildingCount >= 2)
+            {
+                inputDirection = firstBuildingDirection;
+                outputDirection = secondBuildingDirection;
+                return true;
+            }
+
+            if (adjacentBuildingCount == 1)
+            {
+                if (firstAdjacentBuilding is G5_Miner ||
+                    firstAdjacentBuilding is G5_ProductionBuilding)
+                {
+                    inputDirection = firstBuildingDirection;
+                    outputDirection = OppositeConveyorDirection(firstBuildingDirection);
+                }
+                else
+                {
+                    inputDirection = OppositeConveyorDirection(firstBuildingDirection);
+                    outputDirection = firstBuildingDirection;
+                }
+
+                return true;
+            }
+
+            inputDirection = firstConveyorDirection;
+            outputDirection = OppositeConveyorDirection(firstConveyorDirection);
+            return true;
         }
 
-        internal bool TryGetConveyorItem(int x, int y, out G5_Item item, out double progress)
+        private static G5_ConveyorDirection OppositeConveyorDirection(G5_ConveyorDirection direction)
+        {
+            switch (direction)
+            {
+                case G5_ConveyorDirection.North:
+                    return G5_ConveyorDirection.South;
+                case G5_ConveyorDirection.East:
+                    return G5_ConveyorDirection.West;
+                case G5_ConveyorDirection.South:
+                    return G5_ConveyorDirection.North;
+                case G5_ConveyorDirection.West:
+                    return G5_ConveyorDirection.East;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(direction));
+            }
+        }
+
+        internal bool TryGetConveyorTransportProgress(int x, int y, out double progress)
         {
             foreach (G5_Conveyor conveyor in _field.InterneGebaeude.OfType<G5_Conveyor>())
             {
                 if (conveyor.Position.X == x && conveyor.Position.Y == y)
                 {
-                    KeyValuePair<G5_Item, int> first = conveyor.Contents
-                        .FirstOrDefault(stack => stack.Value > 0);
-                    if (first.Value > 0)
+                    if (conveyor.Contents.Values.Sum() > 0)
                     {
-                        item = first.Key;
                         progress = conveyor.TransportProgress;
                         return true;
                     }
                 }
             }
 
-            item = default;
             progress = 0;
             return false;
         }
@@ -627,6 +838,24 @@ namespace OOPGames
 
         IReadOnlyList<IG5_GebaeudeInfo> IG5_FabrikSpielInfo.Gebaeude =>
             ((IG5_FabrikSpielInfo)_field).Gebaeude;
+
+        IG5_GebaeudeInfo IG5_FabrikSpielInfo.AusgewaehltesGebaeude =>
+            ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
+
+        G5_GridPosition IG5_FabrikSpielInfo.SpielerPosition =>
+            ((IG5_FabrikSpielInfo)_field).SpielerPosition;
+
+        G5_GridPosition IG5_FabrikSpielInfo.ZielKachel =>
+            ((IG5_FabrikSpielInfo)_field).ZielKachel;
+
+        G5_SpielerBlickrichtung IG5_FabrikSpielInfo.SpielerBlickrichtung =>
+            ((IG5_FabrikSpielInfo)_field).SpielerBlickrichtung;
+
+        IReadOnlyDictionary<G5_Item, int> IG5_FabrikSpielInfo.SpielerInventar =>
+            ((IG5_FabrikSpielInfo)_field).SpielerInventar;
+
+        bool IG5_FabrikSpielInfo.BaumenueGeoeffnet =>
+            ((IG5_FabrikSpielInfo)_field).BaumenueGeoeffnet;
 
         string IG5_FabrikSpielInfo.StatusMeldung =>
             ((IG5_FabrikSpielInfo)_field).StatusMeldung;
@@ -650,6 +879,13 @@ namespace OOPGames
                 return x >= 0 && y >= 0;
             }
 
+            if (screenY < 56)
+            {
+                x = -1;
+                y = -1;
+                return false;
+            }
+
             double registerWidth = _field.GebaeuderegisterGeoeffnet ? 220 : 38;
             double registerHeight = _field.GebaeuderegisterGeoeffnet ? 253 : 42;
             if (screenX >= 10 && screenX <= 10 + registerWidth &&
@@ -661,6 +897,13 @@ namespace OOPGames
             }
 
             if (IsInventarBereich(screenX, screenY))
+            {
+                x = -1;
+                y = -1;
+                return false;
+            }
+
+            if (IsMenueBereich(screenX, screenY))
             {
                 x = -1;
                 y = -1;

@@ -11,10 +11,73 @@ namespace OOPGames
     // Die Klasse trennt Grafiken sauber von Spielregeln und Modelldaten.
     internal static class G5_FabrikGebaeudeZeichner
     {
+        private sealed class ConveyorRoute
+        {
+            private readonly Point[] _points;
+            private readonly double[] _cumulativeLengths;
+
+            internal ConveyorRoute(Point[] points)
+            {
+                _points = points;
+                _cumulativeLengths = new double[points.Length];
+                for (int index = 1; index < points.Length; index++)
+                {
+                    double deltaX = points[index].X - points[index - 1].X;
+                    double deltaY = points[index].Y - points[index - 1].Y;
+                    _cumulativeLengths[index] = _cumulativeLengths[index - 1] +
+                        Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+                }
+
+                PathFigure figure = new PathFigure { StartPoint = points[0], IsClosed = false };
+                PointCollection segmentPoints = new PointCollection();
+                for (int index = 1; index < points.Length; index++)
+                {
+                    segmentPoints.Add(points[index]);
+                }
+
+                figure.Segments.Add(new PolyLineSegment(segmentPoints, true));
+                Geometry = new PathGeometry(new[] { figure });
+                Geometry.Freeze();
+            }
+
+            internal Geometry Geometry { get; }
+
+            internal Point PointAt(double progress, out Point tangent)
+            {
+                double distance = _cumulativeLengths[_cumulativeLengths.Length - 1] *
+                    Math.Max(0, Math.Min(1, progress));
+                for (int index = 1; index < _points.Length; index++)
+                {
+                    double segmentLength =
+                        _cumulativeLengths[index] - _cumulativeLengths[index - 1];
+                    if (distance > _cumulativeLengths[index] && index < _points.Length - 1)
+                    {
+                        continue;
+                    }
+
+                    double fraction = segmentLength <= 0
+                        ? 0
+                        : Math.Max(0, Math.Min(1,
+                            (distance - _cumulativeLengths[index - 1]) / segmentLength));
+                    Point start = _points[index - 1];
+                    Point end = _points[index];
+                    tangent = new Point(end.X - start.X, end.Y - start.Y);
+                    return new Point(
+                        start.X + (end.X - start.X) * fraction,
+                        start.Y + (end.Y - start.Y) * fraction);
+                }
+
+                tangent = new Point(1, 0);
+                return _points[_points.Length - 1];
+            }
+        }
+
         private const double ZeichenBreite = 160;
         private const double ZeichenHoehe = 130;
         private static readonly Dictionary<string, Geometry> Geometrien =
             new Dictionary<string, Geometry>();
+        private static readonly Dictionary<string, ConveyorRoute> ConveyorRouten =
+            new Dictionary<string, ConveyorRoute>();
 
         private static readonly Brush Dunkel = Brush(31, 38, 36);
         private static readonly Brush Stahl = Gradient(137, 145, 138, 64, 73, 68);
@@ -25,18 +88,21 @@ namespace OOPGames
         private static readonly Brush Schatten = Brush(23, 27, 26, 150);
         private static readonly Brush Band = Brush(8, 12, 11);
         private static readonly Brush Rahmen = Brush(70, 80, 75);
+        private static readonly Brush Bandrippe = Brush(48, 57, 53);
 
         internal static Canvas Create(
             G5_FabrikGebaeudeTyp typ,
             int level,
             double width,
-            double height)
+            double height,
+            G5_ConveyorDirection? conveyorInput = null,
+            G5_ConveyorDirection? conveyorOutput = null)
         {
             Canvas container = new Canvas
             {
                 Width = width,
                 Height = height,
-                ClipToBounds = true,
+                ClipToBounds = typ != G5_FabrikGebaeudeTyp.Laufband,
                 IsHitTestVisible = false
             };
             Canvas zeichnung = new Canvas
@@ -74,7 +140,11 @@ namespace OOPGames
                     ZeichneStrommast(zeichnung, level);
                     break;
                 case G5_FabrikGebaeudeTyp.Laufband:
-                    ZeichneLaufband(zeichnung, level);
+                    ZeichneLaufband(
+                        zeichnung,
+                        level,
+                        conveyorInput ?? G5_ConveyorDirection.West,
+                        conveyorOutput ?? G5_ConveyorDirection.East);
                     break;
                 case G5_FabrikGebaeudeTyp.Splitter:
                     ZeichneWeiche(zeichnung, istSplitter: true, level);
@@ -287,24 +357,186 @@ namespace OOPGames
             }
         }
 
-        private static void ZeichneLaufband(Canvas canvas, int level)
+        private static void ZeichneLaufband(
+            Canvas canvas,
+            int level,
+            G5_ConveyorDirection inputDirection,
+            G5_ConveyorDirection outputDirection)
         {
-            EllipseShape(canvas, 10, 87, 140, 23, Schatten);
-            RectangleShape(canvas, 15, 43, 130, 43, Dunkel, Brush(17, 22, 21), 3);
-            RectangleShape(canvas, 19, 48, 122, 34, Rahmen, Brush(53, 61, 57), 2);
-            RectangleShape(canvas, 22, 53, 116, 24, Band);
-            RectangleShape(canvas, 22, 47, 116, 5, StahlSeite);
-            RectangleShape(canvas, 22, 78, 116, 5, StahlSeite);
-            for (int x = 28; x <= 132; x += 16)
-            {
-                Line(canvas, "M" + x + " 53v24", Brush(48, 57, 53), 3);
-            }
-            Line(canvas, "M22 49v32M138 49v32", Brush(107, 116, 108), 4);
-            Line(canvas, "M38 86v8M80 86v8M122 86v8M31 96h98", Brush(69, 78, 73), 5);
+            ConveyorRoute route = ConveyorGeometry(inputDirection, outputDirection);
+            ConveyorStroke(canvas, route.Geometry, Dunkel, 46);
+            ConveyorStroke(canvas, route.Geometry, Rahmen, 38);
+            ConveyorStroke(canvas, route.Geometry, Band, 28);
             if (level >= 2)
             {
-                Line(canvas, "M22 49v32M138 49v32", LevelAccent(level), 3);
+                ConveyorStroke(canvas, route.Geometry, LevelAccent(level), 2.5);
             }
+
+            for (double progress = 0.16; progress <= 0.84; progress += 0.17)
+            {
+                Point point = route.PointAt(progress, out Point tangent);
+                double length = Math.Sqrt(tangent.X * tangent.X + tangent.Y * tangent.Y);
+                if (length <= 0)
+                {
+                    continue;
+                }
+
+                double normalX = -tangent.Y / length * 12;
+                double normalY = tangent.X / length * 12;
+                ConveyorLine(
+                    canvas,
+                    new Point(point.X - normalX, point.Y - normalY),
+                    new Point(point.X + normalX, point.Y + normalY),
+                    Bandrippe,
+                    3);
+            }
+
+            EllipseShape(canvas, 73, 82, 14, 24, StahlSeite);
+        }
+
+        internal static Point ConveyorPoint(
+            G5_ConveyorDirection inputDirection,
+            G5_ConveyorDirection outputDirection,
+            double progress)
+        {
+            return ConveyorGeometry(inputDirection, outputDirection)
+                .PointAt(progress, out _);
+        }
+
+        private static ConveyorRoute ConveyorGeometry(
+            G5_ConveyorDirection inputDirection,
+            G5_ConveyorDirection outputDirection)
+        {
+            string key = "Conveyor|" + inputDirection + "|" + outputDirection;
+            if (ConveyorRouten.TryGetValue(key, out ConveyorRoute cached))
+            {
+                return cached;
+            }
+
+            Point start = ConveyorPort(inputDirection);
+            Point end = ConveyorPort(outputDirection);
+            List<Point> points = new List<Point> { start };
+            if (outputDirection == Opposite(inputDirection))
+            {
+                points.Add(end);
+            }
+            else
+            {
+                Point center = new Point(80, 65);
+                Vector incoming = DirectionVector(Opposite(inputDirection));
+                Vector outgoing = DirectionVector(outputDirection);
+                const double turnRadius = 24;
+                const double curveHandle = turnRadius * 0.552;
+                Point turnStart = center - incoming * turnRadius;
+                Point turnEnd = center + outgoing * turnRadius;
+                points.Add(turnStart);
+                Point control1 = turnStart + incoming * curveHandle;
+                Point control2 = turnEnd - outgoing * curveHandle;
+                const int curveSteps = 16;
+                for (int step = 1; step <= curveSteps; step++)
+                {
+                    double fraction = step / (double)curveSteps;
+                    double inverse = 1 - fraction;
+                    points.Add(new Point(
+                        inverse * inverse * inverse * turnStart.X +
+                            3 * inverse * inverse * fraction * control1.X +
+                            3 * inverse * fraction * fraction * control2.X +
+                            fraction * fraction * fraction * turnEnd.X,
+                        inverse * inverse * inverse * turnStart.Y +
+                            3 * inverse * inverse * fraction * control1.Y +
+                            3 * inverse * fraction * fraction * control2.Y +
+                            fraction * fraction * fraction * turnEnd.Y));
+                }
+
+                points.Add(end);
+            }
+
+            ConveyorRoute route = new ConveyorRoute(points.ToArray());
+            ConveyorRouten.Add(key, route);
+            return route;
+        }
+
+        private static Point ConveyorPort(G5_ConveyorDirection direction)
+        {
+            switch (direction)
+            {
+                case G5_ConveyorDirection.North:
+                    return new Point(80, -40);
+                case G5_ConveyorDirection.East:
+                    return new Point(200, 65);
+                case G5_ConveyorDirection.South:
+                    return new Point(80, 170);
+                case G5_ConveyorDirection.West:
+                    return new Point(-40, 65);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(direction));
+            }
+        }
+
+        private static G5_ConveyorDirection Opposite(G5_ConveyorDirection direction)
+        {
+            switch (direction)
+            {
+                case G5_ConveyorDirection.North:
+                    return G5_ConveyorDirection.South;
+                case G5_ConveyorDirection.East:
+                    return G5_ConveyorDirection.West;
+                case G5_ConveyorDirection.South:
+                    return G5_ConveyorDirection.North;
+                case G5_ConveyorDirection.West:
+                    return G5_ConveyorDirection.East;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(direction));
+            }
+        }
+
+        private static Vector DirectionVector(G5_ConveyorDirection direction)
+        {
+            switch (direction)
+            {
+                case G5_ConveyorDirection.North:
+                    return new Vector(0, -1);
+                case G5_ConveyorDirection.East:
+                    return new Vector(1, 0);
+                case G5_ConveyorDirection.South:
+                    return new Vector(0, 1);
+                case G5_ConveyorDirection.West:
+                    return new Vector(-1, 0);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(direction));
+            }
+        }
+
+        private static void ConveyorStroke(Canvas canvas, Geometry geometry, Brush brush, double thickness)
+        {
+            Path path = new Path
+            {
+                Data = geometry,
+                Stroke = brush,
+                StrokeThickness = thickness,
+                StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            };
+            canvas.Children.Add(path);
+        }
+
+        private static void ConveyorLine(Canvas canvas, Point start, Point end, Brush brush, double thickness)
+        {
+            System.Windows.Shapes.Line line = new System.Windows.Shapes.Line
+            {
+                X1 = start.X,
+                Y1 = start.Y,
+                X2 = end.X,
+                Y2 = end.Y,
+                Stroke = brush,
+                StrokeThickness = thickness,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            };
+            canvas.Children.Add(line);
         }
 
         private static void ZeichneWeiche(Canvas canvas, bool istSplitter, int level)

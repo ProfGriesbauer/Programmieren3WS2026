@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 
 namespace OOPGames
 {
@@ -129,6 +130,11 @@ namespace OOPGames
                 throw new ArgumentNullException(nameof(kachel));
             }
 
+            if (kachel.Rohstoff == G5_Rohstofftyp.Holz)
+            {
+                return ErzeugeBaum(breite, hoehe);
+            }
+
             Canvas vorkommen = new Canvas
             {
                 Width = breite,
@@ -146,6 +152,60 @@ namespace OOPGames
             vorkommen.Children.Add(bild);
 
             return vorkommen;
+        }
+
+        private static UIElement ErzeugeBaum(double breite, double hoehe)
+        {
+            Canvas baum = new Canvas
+            {
+                Width = breite,
+                Height = hoehe,
+                IsHitTestVisible = false
+            };
+            double baumBreite = breite * 0.72;
+            double baumHoehe = hoehe * 0.74;
+            baum.Children.Add(new Ellipse
+            {
+                Width = baumBreite * 0.5,
+                Height = hoehe * 0.13,
+                Fill = new SolidColorBrush(Color.FromArgb(110, 22, 30, 18))
+            });
+            Canvas.SetLeft(baum.Children[0], (breite - baumBreite * 0.5) / 2);
+            Canvas.SetTop(baum.Children[0], hoehe * 0.78);
+
+            Rectangle stamm = new Rectangle
+            {
+                Width = Math.Max(3, breite * 0.14),
+                Height = hoehe * 0.32,
+                Fill = ErdeBrush
+            };
+            Canvas.SetLeft(stamm, (breite - stamm.Width) / 2);
+            Canvas.SetTop(stamm, hoehe * 0.55);
+            baum.Children.Add(stamm);
+
+            Brush[] kronenFarben =
+            {
+                Gefroren(Color.FromRgb(51, 101, 48)),
+                Gefroren(Color.FromRgb(68, 128, 58)),
+                Gefroren(Color.FromRgb(84, 146, 65))
+            };
+            for (int index = 0; index < kronenFarben.Length; index++)
+            {
+                double versatz = index * baumBreite * 0.19;
+                Ellipse kronenTeil = new Ellipse
+                {
+                    Width = baumBreite * 0.56,
+                    Height = baumHoehe * 0.48,
+                    Fill = kronenFarben[index],
+                    Stroke = new SolidColorBrush(Color.FromArgb(120, 25, 55, 24)),
+                    StrokeThickness = Math.Max(0.5, breite * 0.025)
+                };
+                Canvas.SetLeft(kronenTeil, (breite - baumBreite * 0.56) / 2 + versatz - baumBreite * 0.19);
+                Canvas.SetTop(kronenTeil, hoehe * (0.08 + index * 0.05));
+                baum.Children.Add(kronenTeil);
+            }
+
+            return baum;
         }
 
         private static ImageSource ErzeugeHintergrund(IG5_WeltSpielfeld welt)

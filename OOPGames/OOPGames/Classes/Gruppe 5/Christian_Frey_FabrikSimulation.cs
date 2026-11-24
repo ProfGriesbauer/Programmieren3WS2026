@@ -54,6 +54,34 @@ namespace OOPGames
             }
         }
 
+        public bool RemoveBuilding(G5_Building building)
+        {
+            if (building == null)
+            {
+                throw new ArgumentNullException(nameof(building));
+            }
+
+            if (!_buildings.Remove(building))
+            {
+                return false;
+            }
+
+            if (building is G5_PowerPole pole)
+            {
+                PowerGrid.RemovePole(pole);
+            }
+            else if (building is G5_BurningGenerator generator)
+            {
+                PowerGrid.RemoveGenerator(generator);
+            }
+            else if (building.PowerDemandPerTick > 0 || building is G5_ProductionBuilding)
+            {
+                PowerGrid.RemoveConsumer(building);
+            }
+
+            return true;
+        }
+
         public void MoveBuilding(G5_Building building, G5_GridPosition destination)
         {
             if (building == null)
@@ -148,7 +176,10 @@ namespace OOPGames
                     G5_Item.Eisenstange, 1, cycleTicks, powerDemandPerTick),
                 new G5_Recipe("Kupferdraht herstellen", G5_RecipeType.Construction,
                     new[] { new KeyValuePair<G5_Item, int>(G5_Item.Kupferbarren, 1) },
-                    G5_Item.Kupferdraht, 1, cycleTicks, powerDemandPerTick)
+                    G5_Item.Kupferdraht, 1, cycleTicks, powerDemandPerTick),
+                new G5_Recipe("Schrauben herstellen", G5_RecipeType.Construction,
+                    new[] { new KeyValuePair<G5_Item, int>(G5_Item.Eisenstange, 1) },
+                    G5_Item.Schraube, 4, cycleTicks, powerDemandPerTick)
             };
         }
 

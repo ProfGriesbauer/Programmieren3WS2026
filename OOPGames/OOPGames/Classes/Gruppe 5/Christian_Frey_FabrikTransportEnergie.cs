@@ -7,9 +7,17 @@ namespace OOPGames
 {
 
     // Transport-, Strom- und atomarer Gegenstandsaustausch fuer die gemeinsame Fabrik.
+    internal enum G5_ConveyorDirection
+    {
+        North,
+        East,
+        South,
+        West
+    }
+
     public sealed class G5_Conveyor : G5_Building
     {
-        private const int TransportIntervalTicks = 12;
+        private const int TransportIntervalTicks = 15;
         private readonly G5_ItemBuffer _items;
         private int _itemsPerTick;
         private int _ticksUntilTransport;
@@ -41,6 +49,23 @@ namespace OOPGames
             ? 0
             : Math.Max(0, Math.Min(1,
                 (TransportIntervalTicks - _ticksUntilTransport) / (double)TransportIntervalTicks));
+
+        internal bool TryGetFlowDirections(
+            out G5_ConveyorDirection inputDirection,
+            out G5_ConveyorDirection outputDirection)
+        {
+            inputDirection = default;
+            outputDirection = default;
+            return TryGetDirectionTo(_source, out inputDirection) &&
+                TryGetDirectionTo(_destination, out outputDirection);
+        }
+
+        internal bool TryGetDirectionTo(
+            IG5_ItemEndpoint endpoint,
+            out G5_ConveyorDirection direction)
+        {
+            return TryGetAdjacentDirection(endpoint, out direction);
+        }
 
         public void Connect(IG5_ItemEndpoint source, IG5_ItemEndpoint destination)
         {
@@ -188,6 +213,46 @@ namespace OOPGames
             _itemsPerTick = checked(_itemsPerTick + upgrade.TransportCapacityIncrease);
             _items.IncreaseCapacity(upgrade.OutputCapacityIncrease);
         }
+
+        private bool TryGetAdjacentDirection(
+            IG5_ItemEndpoint endpoint,
+            out G5_ConveyorDirection direction)
+        {
+            if (endpoint is G5_Building building)
+            {
+                bool overlapsX = Position.X < (long)building.Position.X + building.Width &&
+                    building.Position.X < (long)Position.X + Width;
+                bool overlapsY = Position.Y < (long)building.Position.Y + building.Height &&
+                    building.Position.Y < (long)Position.Y + Height;
+
+                if (overlapsY && Position.X + Width == building.Position.X)
+                {
+                    direction = G5_ConveyorDirection.East;
+                    return true;
+                }
+
+                if (overlapsY && building.Position.X + building.Width == Position.X)
+                {
+                    direction = G5_ConveyorDirection.West;
+                    return true;
+                }
+
+                if (overlapsX && Position.Y + Height == building.Position.Y)
+                {
+                    direction = G5_ConveyorDirection.South;
+                    return true;
+                }
+
+                if (overlapsX && building.Position.Y + building.Height == Position.Y)
+                {
+                    direction = G5_ConveyorDirection.North;
+                    return true;
+                }
+            }
+
+            direction = default;
+            return false;
+        }
     }
     public sealed class G5_BurningGenerator : G5_Building
     {
@@ -201,7 +266,7 @@ namespace OOPGames
             int fuelCapacity,
             int maxOutputPerTick,
             IEnumerable<KeyValuePair<G5_Item, int>> energyPerFuel)
-            : base(position, 2, 2)
+            : base(position, 1, 1)
         {
             _fuel = new G5_ItemBuffer(fuelCapacity);
             if (maxOutputPerTick <= 0)
@@ -329,6 +394,11 @@ namespace OOPGames
             _poles.Add(pole);
         }
 
+        internal void RemovePole(G5_PowerPole pole)
+        {
+            _poles.Remove(pole);
+        }
+
         public void AddGenerator(G5_BurningGenerator generator)
         {
             if (generator == null)
@@ -344,6 +414,11 @@ namespace OOPGames
             _generators.Add(generator);
         }
 
+        internal void RemoveGenerator(G5_BurningGenerator generator)
+        {
+            _generators.Remove(generator);
+        }
+
         public void AddConsumer(IG5_PowerConsumer consumer)
         {
             if (consumer == null)
@@ -357,6 +432,12 @@ namespace OOPGames
             }
 
             _consumers.Add(consumer);
+        }
+
+        internal void RemoveConsumer(IG5_PowerConsumer consumer)
+        {
+            _consumers.Remove(consumer);
+            consumer.SetPowered(false);
         }
 
         public void DistributePower()

@@ -1,79 +1,75 @@
 # Satisfactory – Anleitung
 
-## Spiel starten
+## Spielstart
 
-Im Framework die Regeln **„G5 Satisfactory Rules“**, den Painter
-**„G5 Fabrik-Welt“** und den gemeinsamen menschlichen Spieler
-**„G5 Fabrik-Spieler“** auswählen. Der Startbildschirm erscheint im
-Framework-Spielfeld, nicht in einem zusätzlichen Fenster. Dort stehen
-**„Spiel starten“**, **„Einstellungen“** und **„Anleitung“** zur Auswahl.
-Rohstoffvorrat und Produktionstempo lassen sich unter Einstellungen wählen.
-Dort lässt sich auch wählen, ob das Tutorial beim Start aktiv ist. Während des
-Spiels kann das aktive Tutorial jederzeit mit `T` übersprungen werden.
-
-## Einstellungen
-
-- **Rohstoffvorrat:** Knapp (150), Standard (300) oder Reich (600) Erz pro Vorkommen.
-- **Produktionstempo:** Entspannt, Standard oder Schnell für Förderer und Schmelzen.
-- **Tutorial:** Aktiviert oder beim Spielstart übersprungen.
+Wähle im Framework die Regeln **„G5 Satisfactory Rules“**, den Painter
+**„G5 Fabrik-Welt“** und den menschlichen Spieler **„G5 Fabrik-Spieler“**.
+Du startest auf einer großen Weltkarte ohne Gebäude und ohne Rohstoffe im
+Inventar. Die Einstellungen bestimmen den Vorrat der Vorkommen und das
+Produktionstempo.
 
 ## Steuerung
 
 | Aktion | Steuerung |
 | --- | --- |
-| Förderer auswählen | `F`, danach ein Eisenerz- oder Kupfervorkommen anklicken |
-| Schmelze auswählen | `S`, danach eine freie Fläche anklicken |
-| Förderband auswählen | `B`, danach freie Nachbarfelder anklicken |
-| Konstruktor / Assembler / Generator / Strommast / Lager | `C` / `A` / `G` / `P` / `L`, danach freie Fläche anklicken |
-| Gebäude-Register öffnen oder schließen | `Tab`; mit Mausrad oder `↑` / `↓` darin scrollen |
-| Gebäude verschieben | `M`, Gebäude anklicken und danach das Zielfeld anklicken |
-| Inventar einklappen oder öffnen | Im rechten Inventarbereich auf `‹ INVENTAR` oder `›` klicken |
-| Aktives Tutorial überspringen | `T` |
-| Bauwerkzeug abwählen oder Verschieben abbrechen | `Esc` |
+| Spieler bewegen und Blickrichtung ändern | `W`, `A`, `S`, `D` |
+| Rohstoff vor dem Spieler abbauen | `E` |
+| Baumenü öffnen oder schließen | `Tab` oder auf die Menü-Überschrift klicken |
+| Gebäude auswählen und bauen | Im Baumenü auswählen, dann auf die gelbe Zielkachel ziehen oder **Bauen** klicken |
+| Gebäudeinformationen öffnen | Gebäude auf der Karte anklicken |
+| Gebäude verkaufen | Gebäudemenü oder `Entf` |
+| Gebäudemenü schließen | `Esc` |
+| Inventar ein- oder ausklappen | Überschrift im rechten Inventarbereich anklicken |
 
-Der Mentor erklärt die benötigte Taste und zeigt mit einem leuchtenden Pfeil
-auf jedes Gebäude und Zielfeld. Baue zuerst einen Förderer auf dem markierten
-Rohstofffeld und warte, bis er Erz abbaut. Errichte und verschiebe danach eine
-Schmelze. Wähle anschließend mit `B` das Förderband und platziere die drei
-markierten Segmente vom Förderer bis zur Schmelze. Sobald Erz
-über das Band transportiert wurde, klicke auf das markierte Hub. Danach erklärt
-der Mentor Konstruktor und Assembler, zeigt das Abbauen von Kohle für den
-Generator und verbindet Generator, Konstruktor und Assembler über einen
-Strommast. Zum Abschluss erklärt er das zusätzliche Lager. Mit `T` kannst du
-das Tutorial jederzeit überspringen.
+Die gelbe Umrandung zeigt das Feld vor dem Spieler. Rohstoffe sammelst du,
+indem du dich neben ein Vorkommen stellst, darauf schaust und `E` drückst.
+Das Inventar zeigt die gesammelten Rohstoffe und später auch eingelagerte
+Gegenstände. Wähle ein Gebäude im Baumenü aus und ziehe es auf das gelb
+markierte Feld oder bestätige mit **Bauen**; das Feld muss frei und bebaubar
+sein. Ein Förderer
+muss auf einem noch verfügbaren Vorkommen stehen. Gebäude und Vorkommen belegen
+jeweils ein Rasterfeld.
 
-Das Bau-Register zeigt die verfügbaren Gebäudetypen und ihre Tasten. Konstruktor
-und Assembler werden automatisch aus dem gemeinsamen Lager beliefert. Der
-Konstruktor fertigt Bauteile, der Assembler kombiniert mehrere Bauteile. Beide
-benötigen Strom. Der Generator verbrennt Kohle aus dem Lager, und Strommasten
-verbinden ihn mit Maschinen in Reichweite. Ein zusätzliches Lager erhöht den
-gemeinsam angezeigten Vorrat.
+## Gebäude und Kosten
 
-Im Vollbildmodus wird die gesamte Karte an den verfügbaren Bereich angepasst.
-Die oberen zwei Zeilen zeigen Steuerung, aktives Werkzeug, Hub-Bestand und Status.
-Im normalen Fenstermodus bleibt die Karte bei ihrer Standardgröße; der sichtbare
-Ausschnitt beginnt oben links unterhalb der Steuerungszeilen und wird am
-Spielfeldbereich begrenzt.
+Die Kosten werden im Baumenü angezeigt. Sie werden aus dem Spielerinventar und
+den Lagern bezahlt:
 
-Jede neue Spielwelt verteilt die Rohstofffelder und Felsen zufällig neu. Die
-Karte verwendet den Wiesenhintergrund mit Grasstruktur und Raster; Rohstoffe,
-Gebäude und HUD werden separat aktualisiert.
+- Förderer: 8 Eisenerz, 5 Holz
+- Schmelze: 10 Eisenerz, 4 Holz
+- Förderband: 2 Eisenerz, 1 Holz
+- Konstruktor: 12 Eisenerz, 4 Kupfererz, 6 Holz
+- Assembler: 18 Eisenerz, 12 Kupfererz, 8 Holz
+- Generator: 12 Eisenerz, 4 Kohle, 6 Holz
+- Strommast: 3 Eisenerz, 2 Holz
+- Lager: 8 Eisenerz, 6 Holz
 
-Förderer bauen auf Rohstoffvorkommen und liefern Erz automatisch zum Hub, sofern
-keine passende Förderbandverbindung besteht. Eine durchgehende Förderbandlinie
-zwischen genau einem Förderer und einer passenden Schmelze transportiert das
-Erz direkt. Das Rohstoffsymbol wandert dabei nacheinander über jedes Segment
-der gesamten verbundenen Förderbandlinie. Verzweigte Leitungen oder Leitungen
-mit mehr als zwei angeschlossenen Gebäuden werden nicht verbunden. Schmelzen liefern
-Barren weiterhin zum Hub. Gebäude können mit `M` versetzt werden; Förderer
-müssen auf ein freies Rohstoffvorkommen gesetzt werden. Auch das Hub kann
-verschoben werden.
+Ein Klick auf ein Gebäude öffnet seine Details. Dort kannst du – abhängig von
+Gebäudetyp und Level – Rezepte auswählen und ein Upgrade kaufen. Upgrades
+beschleunigen die Produktion oder erhöhen Kapazität und Leistung. Ab Level 2
+werden zusätzliche Rezepte freigeschaltet. Ein Verkauf erstattet 50 Prozent der
+Bau- und Upgrade-Rohstoffe; Bruchteile werden abgerundet.
 
-Splitter und Merger sind derzeit nur als Zeichnungen vorhanden und werden nicht
-im Bau-Register angeboten.
+## Produktion und Transport
 
-## Startwelt
+Förderer bauen Vorkommen automatisch ab. Schmelzen verarbeiten Erze zu Barren,
+Konstruktoren stellen Bauteile her und Assembler kombinieren Bauteile. Maschinen
+werden automatisch aus einem Lager oder dem Spielerinventar beliefert; ohne
+Lager gelangen nicht über Förderbänder transportierte Produkte ins
+Spielerinventar. Konstruktoren und Assembler benötigen Strom aus einem
+Kohlegenerator und einem verbundenen Stromnetz.
 
-Die Karte enthält zufällig verteilte Vorkommen verschiedener Rohstoffarten sowie
-eine Eisen- und eine Kupferschmelze. Für Kupfer wird die vorhandene
-Kupferschmelze verwendet; neu platzierte Schmelzen starten mit dem Eisenrezept.
+Nebeneinanderliegende Förderbänder verbinden sich automatisch. Ihre Ausrichtung
+folgt der Strecke, auch um Ecken. Eine zusammenhängende Linie muss an einer
+Quelle und einem passenden Produktionsgebäude oder Lager anliegen. Pro
+Förderband dauert der Transport etwa 0,6 Sekunden. Währenddessen bewegt sich
+eine neutrale Transportbox über das Band; sie stellt keine konkrete Ressource
+oder Menge dar. Schmelzen, Konstruktoren, Assembler und Förderer haben eigene
+Verarbeitungszyklen.
+
+## Welt
+
+Die Welt ist 120 × 80 Felder groß. Die Kamera folgt dem Spieler; der sichtbare
+Ausschnitt ist kleiner als die Karte. Erze, Bäume und Hindernisse werden bei
+jedem neuen Spiel zufällig verteilt. Die Bäume liefern Holz, das für Gebäude
+und Upgrades benötigt wird.
