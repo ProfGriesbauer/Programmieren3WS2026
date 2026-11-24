@@ -90,7 +90,8 @@ namespace OOPGames
     internal sealed class ArenaMapEditorControl : UserControl
     {
         private const string MapDragFormat = "OOPGames.ArenaMapElement";
-        private const int MapGridSize = 256;
+        private const int MapGridSize = 8;
+        private const int MajorMapGridSize = 256;
         private readonly ArenaField _field;
         private readonly List<ArenaMapElement> _elements;
         private readonly List<ArenaMapPlacement> _placements =
@@ -109,6 +110,7 @@ namespace OOPGames
         private readonly Button _flipPendingHorizontalButton;
         private readonly Button _flipPendingVerticalButton;
         private readonly CheckBox _mapGridCheckBox;
+        private readonly Button _mapGridSnapButton;
         private BitmapSource _baseImage;
         private ArenaMapElement _draggedElement;
         private ArenaMapPlacement _pendingPlacement;
@@ -116,6 +118,7 @@ namespace OOPGames
         private Point _dragStart;
         private double _mapZoom = 1.0;
         private bool _isMovingPendingPlacement;
+        private bool _snapToGrid = true;
 
         public ArenaMapEditorControl(ArenaField field)
         {
@@ -263,7 +266,7 @@ namespace OOPGames
             mapTools.Children.Add(resetZoom);
             _mapGridCheckBox = new CheckBox
             {
-                Content = "Raster / Einrasten (256 px)",
+                Content = "Raster anzeigen (8 px)",
                 IsChecked = true,
                 Foreground = Brushes.White,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -272,6 +275,9 @@ namespace OOPGames
             _mapGridCheckBox.Checked += OnMapGridChanged;
             _mapGridCheckBox.Unchecked += OnMapGridChanged;
             mapTools.Children.Add(_mapGridCheckBox);
+            _mapGridSnapButton = CreateButton("Einrasten: Ein");
+            _mapGridSnapButton.Click += OnMapGridSnapButtonClick;
+            mapTools.Children.Add(_mapGridSnapButton);
             mapTools.Children.Add(new TextBlock
             {
                 Text = "Vorschau:",
@@ -540,31 +546,63 @@ namespace OOPGames
             double height = GetPlacementHeight(image, rotationDegrees);
             double x = pointer.X - width / 2.0;
             double y = pointer.Y - height / 2.0;
-            if (_mapGridCheckBox.IsChecked == true)
+            double wallThickness = ArenaField.WallThickness;
+            double maximumX = _mapCanvas.Width - wallThickness - width;
+            double maximumY = _mapCanvas.Height - wallThickness - height;
+            if (_snapToGrid)
             {
-                x = SnapGridCoordinate(x, _mapCanvas.Width - width);
-                y = SnapGridCoordinate(y, _mapCanvas.Height - height);
+                x = SnapGridCoordinate(
+                    x, wallThickness, maximumX, MapGridSize);
+                y = SnapGridCoordinate(
+                    y, wallThickness, maximumY, MapGridSize);
             }
             else
             {
-                x = ClampPlacementPosition(x, _mapCanvas.Width - width);
-                y = ClampPlacementPosition(y, _mapCanvas.Height - height);
+                x = ClampPlacementPosition(x, wallThickness, maximumX);
+                y = ClampPlacementPosition(y, wallThickness, maximumY);
             }
             return new Point(x, y);
         }
 
         internal static double SnapGridCoordinate(double coordinate, double maximum)
         {
-            double maxGridCoordinate = Math.Floor(
-                Math.Max(0, maximum) / MapGridSize) * MapGridSize;
+            return SnapGridCoordinate(coordinate, 0, maximum, MapGridSize);
+        }
+
+        internal static double SnapGridCoordinate(
+            double coordinate, double minimum, double maximum, int gridSize)
+        {
+            if (gridSize <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(gridSize));
+            }
+
+            double minimumGridCoordinate =
+                Math.Ceiling(minimum / gridSize) * gridSize;
+            double maximumGridCoordinate =
+                Math.Floor(maximum / gridSize) * gridSize;
+            if (maximumGridCoordinate < minimumGridCoordinate)
+            {
+                return minimum;
+            }
+
             double snappedCoordinate =
-                Math.Round(coordinate / MapGridSize) * MapGridSize;
-            return ClampPlacementPosition(snappedCoordinate, maxGridCoordinate);
+                Math.Round(coordinate / gridSize) * gridSize;
+            return ClampPlacementPosition(
+                snappedCoordinate, minimumGridCoordinate, maximumGridCoordinate);
         }
 
         private void OnMapGridChanged(object sender, RoutedEventArgs e)
         {
             RedrawMap();
+        }
+
+        private void OnMapGridSnapButtonClick(object sender, RoutedEventArgs e)
+        {
+            _snapToGrid = !_snapToGrid;
+            _mapGridSnapButton.Content = _snapToGrid
+                ? "Einrasten: Ein"
+                : "Einrasten: Aus";
         }
 
         private void ShowMapDragPreview(ArenaMapElement element, Point position)
@@ -685,8 +723,12 @@ namespace OOPGames
             double height = GetPlacementHeight(_pendingPlacement.Image, rotation);
             _pendingPlacement = new ArenaMapPlacement(
                 _pendingPlacement.Image,
-                ClampPlacementPosition(centerX - width / 2.0, _mapCanvas.Width - width),
-                ClampPlacementPosition(centerY - height / 2.0, _mapCanvas.Height - height),
+                ClampPlacementPosition(centerX - width / 2.0,
+                    ArenaField.WallThickness,
+                    _mapCanvas.Width - ArenaField.WallThickness - width),
+                ClampPlacementPosition(centerY - height / 2.0,
+                    ArenaField.WallThickness,
+                    _mapCanvas.Height - ArenaField.WallThickness - height),
                 rotation,
                 _pendingPlacement.FlipHorizontal,
                 _pendingPlacement.FlipVertical);
@@ -803,6 +845,12 @@ namespace OOPGames
             return Math.Max(0, Math.Min(maximum, position));
         }
 
+        private static double ClampPlacementPosition(
+            double position, double minimum, double maximum)
+        {
+            return Math.Max(minimum, Math.Min(maximum, position));
+        }
+
         private void HideMapDragPreview()
         {
             if (_mapDragPreview != null)
@@ -846,44 +894,89 @@ namespace OOPGames
                 IsHitTestVisible = false
             };
             _mapCanvas.Children.Add(background);
-            foreach (ArenaMapPlacement placement in _placements)
-            {
-                _mapCanvas.Children.Add(CreatePlacementImage(placement, 1.0));
-            }
             if (_mapGridCheckBox.IsChecked == true)
             {
                 DrawMapGrid();
             }
+            foreach (ArenaMapPlacement placement in _placements)
+            {
+                _mapCanvas.Children.Add(CreatePlacementImage(placement, 1.0));
+            }
             ShowPendingPlacementPreview();
+            DrawUnusableMapBorder();
+        }
+
+        private void DrawUnusableMapBorder()
+        {
+            double border = ArenaField.WallThickness;
+            Brush mask = new SolidColorBrush(Color.FromRgb(16, 22, 30));
+            AddMapMask(0, 0, _mapCanvas.Width, border, mask);
+            AddMapMask(0, _mapCanvas.Height - border,
+                _mapCanvas.Width, border, mask);
+            AddMapMask(0, border, border,
+                _mapCanvas.Height - 2 * border, mask);
+            AddMapMask(_mapCanvas.Width - border, border, border,
+                _mapCanvas.Height - 2 * border, mask);
+            System.Windows.Shapes.Rectangle borderFrame =
+                new System.Windows.Shapes.Rectangle
+            {
+                Width = _mapCanvas.Width - 2 * border,
+                Height = _mapCanvas.Height - 2 * border,
+                Stroke = new SolidColorBrush(Color.FromArgb(170, 220, 232, 244)),
+                StrokeThickness = 1,
+                IsHitTestVisible = false
+            };
+            _mapCanvas.Children.Add(borderFrame);
+            Canvas.SetLeft(borderFrame, border);
+            Canvas.SetTop(borderFrame, border);
+        }
+
+        private void AddMapMask(
+            double x, double y, double width, double height, Brush mask)
+        {
+            _mapCanvas.Children.Add(new System.Windows.Shapes.Rectangle
+            {
+                Width = width,
+                Height = height,
+                Fill = mask,
+                IsHitTestVisible = false
+            });
+            UIElement overlay = _mapCanvas.Children[_mapCanvas.Children.Count - 1];
+            Canvas.SetLeft(overlay, x);
+            Canvas.SetTop(overlay, y);
         }
 
         private void DrawMapGrid()
         {
-            Brush gridBrush = new SolidColorBrush(
-                Color.FromArgb(90, 220, 232, 244));
+            Brush minorGridBrush = new SolidColorBrush(
+                Color.FromArgb(45, 220, 232, 244));
+            Brush majorGridBrush = new SolidColorBrush(
+                Color.FromArgb(100, 220, 232, 244));
             for (double x = MapGridSize; x < _mapCanvas.Width; x += MapGridSize)
             {
+                bool isMajorLine = x % MajorMapGridSize == 0;
                 _mapCanvas.Children.Add(new System.Windows.Shapes.Line
                 {
                     X1 = x,
                     Y1 = 0,
                     X2 = x,
                     Y2 = _mapCanvas.Height,
-                    Stroke = gridBrush,
-                    StrokeThickness = 1,
+                    Stroke = isMajorLine ? majorGridBrush : minorGridBrush,
+                    StrokeThickness = isMajorLine ? 1.25 : 0.6,
                     IsHitTestVisible = false
                 });
             }
             for (double y = MapGridSize; y < _mapCanvas.Height; y += MapGridSize)
             {
+                bool isMajorLine = y % MajorMapGridSize == 0;
                 _mapCanvas.Children.Add(new System.Windows.Shapes.Line
                 {
                     X1 = 0,
                     Y1 = y,
                     X2 = _mapCanvas.Width,
                     Y2 = y,
-                    Stroke = gridBrush,
-                    StrokeThickness = 1,
+                    Stroke = isMajorLine ? majorGridBrush : minorGridBrush,
+                    StrokeThickness = isMajorLine ? 1.25 : 0.6,
                     IsHitTestVisible = false
                 });
             }

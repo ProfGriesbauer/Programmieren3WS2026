@@ -1290,10 +1290,16 @@ internal static class Program
 
     private static void TestArenaMapGridSnapping()
     {
-        Assert(ArenaMapEditorControl.SnapGridCoordinate(390, 1544) == 512,
-            "map placements snap to the nearest 256-pixel grid coordinate");
-        Assert(ArenaMapEditorControl.SnapGridCoordinate(1790, 1544) == 1536,
+        Assert(ArenaMapEditorControl.SnapGridCoordinate(399, 1544) == 400,
+            "map placements snap to the nearest 8-pixel grid coordinate");
+        Assert(ArenaMapEditorControl.SnapGridCoordinate(1790, 1544) == 1544,
             "map grid snapping keeps an element inside the map boundary");
+        Assert(ArenaMapEditorControl.SnapGridCoordinate(
+                0, ArenaField.WallThickness, 1512, 8)
+                == ArenaField.WallThickness
+            && ArenaMapEditorControl.SnapGridCoordinate(
+                1530, ArenaField.WallThickness, 1512, 8) == 1512,
+            "map placements stay within the playable area between the arena walls");
     }
 
     private static void TestArenaSkillTreeStartNode()
