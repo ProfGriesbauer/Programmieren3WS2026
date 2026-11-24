@@ -105,8 +105,7 @@ namespace OOPGames
             };
             p.Topics.Add(new G1C_DialogueTopic("Wie funktioniert das Angelspiel?", context =>
                 "[E] wirft die Angel aus. Die Pose treibt, und der Fisch beißt nach kurzer Wartezeit.\n" +
-                "Bei Zucken schnell [E] drücken. Mit [A]/[D] haeltst du den Fisch im grünen Bereich. " +
-                "[Q] beendet das Minispiel. Zu frueh beissen lassen bedeutet: nichts angebissen; aus der Fangleiste heraus kommt der Fisch frei.", G1C_NpcExpression.Thoughtful));
+                "Bei Zucken schnell [E] drücken. Mit [A]/[D] hältst du den Fisch im grünen Bereich. ", G1C_NpcExpression.Thoughtful));
             p.Topics.Add(new G1C_DialogueTopic("Welche Fische gibt es?", context =>
             {
                 System.Text.StringBuilder text = new System.Text.StringBuilder();
@@ -121,7 +120,7 @@ namespace OOPGames
                     text.Append("Alle angezeigten Arten stammen aus den vorhandenen Angeldaten.");
                 return text.ToString();
             }, G1C_NpcExpression.Thoughtful));
-            p.Topics.Add(new G1C_DialogueTopic("Wofuer sind die Fische?", context =>
+            p.Topics.Add(new G1C_DialogueTopic("Wofür sind die Fische?", context =>
                 // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Angeln macht Spaß und bringt nebenbei Chips
                 "Angeln kannst du einfach zum Spaß – am Wasser sitzen, abschalten, schauen, was anbeißt.\n" +
                 "Und die Fische sind nicht umsonst: Du kannst sie in jedem Laden verkaufen, und das bringt dir Chips.", G1C_NpcExpression.Happy));
