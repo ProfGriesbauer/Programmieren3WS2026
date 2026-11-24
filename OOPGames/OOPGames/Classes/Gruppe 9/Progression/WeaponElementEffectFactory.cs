@@ -19,6 +19,10 @@ namespace OOPGames
                         2 + rank * 2, 2.5 + rank * 0.5, fireSpreadRadius);
                 case WeaponElement.Freeze:
                     return new FreezeEffect(0.45 + rank * 0.2);
+                case WeaponElement.BlackSteel:
+                    // Weakened enemies deal 30 % less damage, 5 % less per element rank.
+                    return new WeaknessEffect(
+                        0.7 - rank * 0.05, 3 + rank * 0.5);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(element));
             }

@@ -1040,11 +1040,14 @@ namespace OOPGames
             SetAimDirection(aimX, aimY);
             aimX = AimDirectionX;
             aimY = AimDirectionY;
-            FaceAttackDirection(aimX, aimY);
 
             if (_combatSystem.TryStartAttack(Player, aimX, aimY))
             {
-                Player.StartAttack();
+                // The player turns into the strike and keeps that facing until the weapon
+                // is ready again (slash finished, bow drawn again).
+                Player.StartAttack(
+                    GetFacingForDirection(aimX, aimY),
+                    Player.EquippedWeapon.CooldownSeconds);
                 if (Player.EquippedWeapon.Id == WeaponCatalog.Sword.Id)
                 {
                     PlayerSwordSwung?.Invoke();
@@ -1087,12 +1090,13 @@ namespace OOPGames
                 return false;
             }
 
-            FaceAttackDirection(AimDirectionX, AimDirectionY);
             bool started = _combatSystem.TryStartAttack(
                 Player, ability, AimDirectionX, AimDirectionY);
             if (started)
             {
-                Player.StartAttack();
+                Player.StartAttack(
+                    GetFacingForDirection(AimDirectionX, AimDirectionY),
+                    PlayerCharacter.AttackAnimationDurationSeconds);
             }
             return started;
         }
@@ -1125,11 +1129,9 @@ namespace OOPGames
             return started;
         }
 
-        private void FaceAttackDirection(double directionX, double directionY)
+        private static PlayerFacing GetFacingForDirection(double directionX, double directionY)
         {
-            Player.Facing = Math.Abs(directionX) >= Math.Abs(directionY)
-                ? (directionX < 0 ? PlayerFacing.Left : PlayerFacing.Right)
-                : (directionY < 0 ? PlayerFacing.Back : PlayerFacing.Front);
+            return PlayerCharacter.GetFacingForDirection(directionX, directionY);
         }
 
         public bool IsPlayerSpinning

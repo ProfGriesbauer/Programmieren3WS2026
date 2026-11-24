@@ -38,6 +38,9 @@ internal static class Program
             TestProgressionAndMagicWandUpgrades();
             TestBowAutoAimAndUpgrades();
             TestSwordUpgradesAndSpin();
+            TestBlackSteelWeaknessAndLeach();
+            TestWeaponSpriteAppearances();
+            TestPlayerKeepsStrikeFacing();
             TestMultiplePlayerAbilities();
             TestArenaSkillTreeDependencies();
             TestArenaSkillTreeStartNode();
@@ -266,6 +269,27 @@ internal static class Program
             && Math.Abs(((SweepingArcAttackPattern)sword.AttackPattern).DurationSeconds
                 - SwordUpgradeCatalog.BaseSwingSeconds * factor) < 1e-9,
             "sword cooldown and swing duration shrink together");
+        foreach (Weapon slashingSword in new[] { WeaponCatalog.Sword, sword })
+        {
+            TestEntity swordsman = new TestEntity(100, 100, 100, 10, CombatTeam.Player);
+            ArenaCombatSystem slashCombat = new ArenaCombatSystem();
+            Assert(slashCombat.TryStartAttack(swordsman, slashingSword, 1, 0),
+                "a sword slash starts");
+            int ticks = 0;
+            while (slashCombat.ActiveAttackCount > 0 && ticks < 100)
+            {
+                slashCombat.Update(ArenaField.GameTickDurationSeconds,
+                    new List<Entity> { swordsman });
+                ticks++;
+                if (slashCombat.ActiveAttackCount > 0)
+                {
+                    Assert(!slashCombat.TryStartAttack(swordsman, slashingSword, 1, 0),
+                        "no new slash starts while one is still running");
+                }
+            }
+            Assert(slashCombat.TryStartAttack(swordsman, slashingSword, 1, 0),
+                "the next slash can start in the tick the previous one is finished");
+        }
         Assert(Math.Abs(MagicWandUpgradeCatalog.CreateMagicWand(progression).CooldownSeconds
                 - MagicWandUpgradeCatalog.BaseCooldownSeconds * factor) < 1e-9,
             "magic wand cooldown can be upgraded");
@@ -281,7 +305,7 @@ internal static class Program
         }
         Weapon fastestSword = SwordUpgradeCatalog.CreateSword(progression);
         Assert(((SweepingArcAttackPattern)fastestSword.AttackPattern).DurationSeconds
-                < fastestSword.CooldownSeconds,
+                <= fastestSword.CooldownSeconds,
             "fully upgraded sword slashes still never overlap");
     }
 
@@ -391,8 +415,10 @@ internal static class Program
         bool weaponsMaxed = true;
         foreach (WeaponUpgradeDefinition upgrade in SwordUpgradeCatalog.Upgrades)
         {
+            // Leach builds on the Blacksteel element, so it stays open like ElementPower.
             if (!SwordUpgradeCatalog.IsElement(upgrade.Id)
-                && upgrade.Id != SwordUpgradeCatalog.ElementPower)
+                && upgrade.Id != SwordUpgradeCatalog.ElementPower
+                && upgrade.Id != SwordUpgradeCatalog.Leach)
             {
                 weaponsMaxed &= progression.GetWeaponUpgradeRank(upgrade.Id)
                     == upgrade.MaximumRank;
@@ -439,6 +465,17 @@ internal static class Program
                 == SwordUpgradeCatalog.GetDefinition(SwordUpgradeCatalog.ElementPower).MaximumRank
             && elementField.Progression.GetWeaponUpgradeRank(SwordUpgradeCatalog.Poison) == 0,
             "an already chosen element is maxed, other elements stay locked");
+
+        ArenaField blackSteelField = new ArenaField();
+        blackSteelField.StartNewGame();
+        blackSteelField.ToggleGodMode();
+        blackSteelField.Progression.TryUpgradeSword(
+            SwordUpgradeCatalog.StrikeDamage, UpgradeCurrency.Universal);
+        blackSteelField.Progression.TryUpgradeSword(
+            SwordUpgradeCatalog.BlackSteel, UpgradeCurrency.Universal);
+        blackSteelField.PurchaseAllUpgrades();
+        Assert(blackSteelField.Progression.GetWeaponUpgradeRank(SwordUpgradeCatalog.Leach) == 1,
+            "buying everything with Blacksteel chosen also buys leach");
 
         Assert(field.ChangeGameSpeed(5) && Math.Abs(field.GameSpeed - 1.5) < 1e-9
                 && Math.Abs(field.GameTimeScale - 1.5) < 1e-9
@@ -801,6 +838,256 @@ internal static class Program
         }
         Assert(enemy.CurrentHitPoints == 76,
             "the spinning slash applies one direct hit per rotation");
+    }
+
+    private static void TestBlackSteelWeaknessAndLeach()
+    {
+        TestEntity weakenedEnemy = new TestEntity(100, 100, 100, 10, CombatTeam.Enemies);
+        TestEntity target = new TestEntity(150, 100, 100, 10, CombatTeam.Player);
+        new WeaknessEffect(0.5, 2).Apply(null, weakenedEnemy);
+        new DamageEffect(10).Apply(weakenedEnemy, target);
+        Assert(weakenedEnemy.IsWeakened && target.CurrentHitPoints == 95,
+            "a weakened attacker deals reduced damage");
+        weakenedEnemy.UpdateStatusEffects(2);
+        new DamageEffect(10).Apply(weakenedEnemy, target);
+        Assert(!weakenedEnemy.IsWeakened && target.CurrentHitPoints == 85,
+            "weakness expires and full damage returns");
+
+        TestEntity leacher = new TestEntity(100, 100, 100, 10, CombatTeam.Player);
+        TestEntity victim = new TestEntity(150, 100, 100, 10, CombatTeam.Enemies);
+        leacher.TakeDamage(50);
+        new LifeStealEffect(new DamageEffect(20), 0.5).Apply(leacher, victim);
+        Assert(victim.CurrentHitPoints == 80 && leacher.CurrentHitPoints == 60,
+            "life steal heals the attacker by a share of the dealt damage");
+
+        ArenaProgression progression = new ArenaProgression();
+        Assert(progression.TryUpgradeSword(
+            SwordUpgradeCatalog.StrikeDamage, UpgradeCurrency.Universal)
+            && !progression.TryUpgradeSword(
+                SwordUpgradeCatalog.Leach, UpgradeCurrency.Universal),
+            "leach requires the Blacksteel blade");
+        Assert(progression.TryUpgradeSword(
+            SwordUpgradeCatalog.BlackSteel, UpgradeCurrency.Universal)
+            && progression.SelectedSwordElement == WeaponElement.BlackSteel,
+            "Blacksteel is a selectable sword element");
+        Assert(!progression.TryUpgradeSword(
+            SwordUpgradeCatalog.Poison, UpgradeCurrency.Universal),
+            "Blacksteel excludes the other blade elements");
+        Assert(SwordUpgradeCatalog.CreateSword(progression).Appearance.HeldAnimation
+            == "SwordBlackSteel",
+            "the Blacksteel sword uses its own sprite");
+        Assert(progression.TryUpgradeSword(
+            SwordUpgradeCatalog.Leach, UpgradeCurrency.Universal),
+            "leach can be bought on top of Blacksteel");
+        Weapon leachSword = SwordUpgradeCatalog.CreateSword(progression);
+        Assert(leachSword.Effect is LifeStealEffect
+            && leachSword.Appearance.HeldAnimation == "SwordBlackSteelLeach",
+            "the leach sword steals life and shows the leach sprite");
+
+        TestEntity swordsman = new TestEntity(100, 100, 100, 10, CombatTeam.Player);
+        TestEntity enemy = new TestEntity(100, 100, 100, 10, CombatTeam.Enemies);
+        swordsman.TakeDamage(50);
+        leachSword.Effect.Apply(swordsman, enemy);
+        Assert(enemy.IsWeakened && swordsman.CurrentHitPoints > 50,
+            "a leach sword hit weakens the enemy and heals the player");
+    }
+
+    private static void TestWeaponSpriteAppearances()
+    {
+        ArenaProgression progression = new ArenaProgression();
+        Assert(SwordUpgradeCatalog.CreateSword(progression).Appearance.HeldAnimation == "Sword"
+            && MagicWandUpgradeCatalog.CreateMagicWand(progression).Appearance.HeldAnimation
+                == "WizardStaff",
+            "base sword and staff use their plain sprites");
+        WeaponAppearance bow = BowUpgradeCatalog.CreateBow(progression).Appearance;
+        Assert(bow.HeldAnimation == "BowShooting"
+            && bow.ProjectileAnimations.SequenceEqual(new[] { "Arow" }),
+            "the bow starts without scope and shoots plain arrows");
+
+        Assert(progression.TryUpgradeMagicWand(
+            MagicWandUpgradeCatalog.ProjectileDamage, UpgradeCurrency.Universal)
+            && progression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.Poison, UpgradeCurrency.Universal),
+            "the staff can take the poison element");
+        WeaponAppearance frogStaff =
+            MagicWandUpgradeCatalog.CreateMagicWand(progression).Appearance;
+        Assert(frogStaff.HeldAnimation == "WizardStaffFrog"
+            && frogStaff.AttackAnimation == "WizardStaffFrogAttac",
+            "the poison staff shows the frog and its attack frame");
+
+        Assert(progression.TryUpgradeBow(
+            BowUpgradeCatalog.AutoAim, UpgradeCurrency.Universal)
+            && BowUpgradeCatalog.CreateBow(progression).Appearance.HeldAnimation
+                == "BowShootingScope",
+            "the first autoaim rank mounts a scope on the bow");
+        Assert(progression.TryUpgradeBow(
+            BowUpgradeCatalog.ArrowDamage, UpgradeCurrency.Universal)
+            && progression.TryUpgradeBow(
+                BowUpgradeCatalog.Fire, UpgradeCurrency.Universal)
+            && BowUpgradeCatalog.CreateBow(progression).Appearance.ProjectileAnimations
+                .SequenceEqual(new[] { "ArowFire", "ArowFireFlying" }),
+            "fire arrows flicker between both fire arrow frames");
+        progression.SetGodMode(true);
+        while (progression.GetWeaponUpgradeRank(BowUpgradeCatalog.AutoAim)
+            < BowUpgradeCatalog.RocketArrowAutoAimRank)
+        {
+            Assert(progression.TryUpgradeBow(
+                BowUpgradeCatalog.AutoAim, UpgradeCurrency.Universal),
+                "autoaim ranks can be bought up to the maximum");
+        }
+        WeaponAppearance rocketBow = BowUpgradeCatalog.CreateBow(progression).Appearance;
+        Assert(rocketBow.HeldAnimation == "BowShootingScope"
+            && rocketBow.ProjectileAnimations.SequenceEqual(new[] { "ArowAutoAim" }),
+            "the highest autoaim rank fires rocket arrows");
+
+        Assert(SwordUpgradeCatalog.CreateSword(progression).Appearance.Reach
+                == SwordUpgradeCatalog.CreateSword(new ArenaProgression()).AttackPattern.Range
+            && MagicWandUpgradeCatalog.CreateMagicWand(progression).Appearance.Reach
+                == MagicWandUpgradeCatalog.GetStrikeRange(new ArenaProgression()),
+            "blade and staff sprites are sized to their damage areas at the start of a run");
+        Assert(progression.TryUpgradeSword(
+                SwordUpgradeCatalog.Range, UpgradeCurrency.Universal)
+            && SwordUpgradeCatalog.CreateSword(progression).AttackPattern.Range
+                > SwordUpgradeCatalog.BaseSlashRange
+            && SwordUpgradeCatalog.CreateSword(progression).Appearance.Reach
+                == SwordUpgradeCatalog.CreateSword(progression).AttackPattern.Range
+            && MagicWandUpgradeCatalog.CreateMagicWand(progression).Appearance.Reach
+                == MagicWandUpgradeCatalog.BaseStrikeRange,
+            "the sword is its own damage area, so range upgrades lengthen it; the staff keeps its size");
+
+        // The damage area of the sword is the blade itself: from the right hand to the tip.
+        ArenaField bladeField = new ArenaField();
+        bladeField.StartNewGame();
+        foreach (PursuerEnemy existing in bladeField.Enemies)
+        {
+            existing.TakeDamage(existing.MaxHitPoints);
+        }
+        PlayerCharacter swordsman = bladeField.Player;
+        Weapon sword = SwordUpgradeCatalog.CreateSword(new ArenaProgression());
+        TestEntity nearTip = new TestEntity(0, 0, 100, 0, CombatTeam.Enemies);
+        TestEntity besideCone = new TestEntity(0, 0, 100, 0, CombatTeam.Enemies);
+        ArenaCombatSystem bladeCombat = new ArenaCombatSystem();
+        Assert(bladeCombat.TryStartAttack(swordsman, sword, 1, 0),
+            "a sword slash starts");
+        swordsman.StartAttack(PlayerFacing.Right, sword.CooldownSeconds);
+        AttackVisualState slash = bladeCombat.GetActiveVisuals()[0];
+        Assert(slash.HasBlade && slash.Appearance != null,
+            "the sword slash describes its blade");
+        Vector hand = swordsman.GetRightHandOffset(PlayerFacing.Right);
+        Assert(Math.Abs(slash.BladeStartX - (swordsman.PositionX + hand.X)) < 1e-6
+            && Math.Abs(slash.BladeStartY - (swordsman.PositionY + hand.Y)) < 1e-6,
+            "the blade starts at the grip in the right hand");
+        Vector bladeVector = new Vector(
+            slash.BladeEndX - slash.BladeStartX, slash.BladeEndY - slash.BladeStartY);
+        Assert(Math.Abs(bladeVector.Length
+                - (sword.AttackPattern.Range - AttackGeometry.BladeGripGap)) < 1e-6,
+            "the blade is as long as the drawn sword");
+
+        // A target on the blade's path is hit; one just beyond the blade's tip (including
+        // the blade width) is not.
+        nearTip.PositionX = swordsman.PositionX + 70;
+        nearTip.PositionY = swordsman.PositionY + hand.Y;
+        besideCone.PositionX = swordsman.PositionX + hand.X + bladeVector.Length
+            + slash.BladeHalfWidth + besideCone.Size / 2 + 1;
+        besideCone.PositionY = swordsman.PositionY + hand.Y;
+        List<Entity> bladeTargets = new List<Entity> { swordsman, nearTip, besideCone };
+        for (int i = 0; i < 20; i++)
+        {
+            bladeCombat.Update(0.05, bladeTargets);
+        }
+        Assert(nearTip.CurrentHitPoints < 100,
+            "an enemy on the blade's path is hit");
+        Assert(besideCone.CurrentHitPoints == 100,
+            "an enemy just beyond the blade tip is not hit");
+
+        TestEntity drawingArcher = new TestEntity(100, 100, 100, 10, CombatTeam.Player);
+        Weapon drawnBow = BowUpgradeCatalog.CreateBow(progression);
+        drawingArcher.EquippedWeapon = drawnBow;
+        ArenaCombatSystem bowCombat = new ArenaCombatSystem();
+        Assert(drawnBow.EquipReadySeconds == drawnBow.CooldownSeconds
+            && !bowCombat.TryStartAttack(drawingArcher, 1, 0),
+            "a freshly equipped bow cannot shoot while it is being drawn");
+        drawingArcher.UpdateStatusEffects(drawnBow.EquipReadySeconds);
+        Assert(bowCombat.TryStartAttack(drawingArcher, 1, 0),
+            "the bow shoots once it is fully drawn");
+
+        TestEntity archer = new TestEntity(100, 100, 100, 10, CombatTeam.Player)
+        {
+            EquippedWeapon = WeaponCatalog.Sword
+        };
+        archer.UpdateStatusEffects(1);
+        archer.EquippedWeapon = BowUpgradeCatalog.CreateBow(progression);
+        Assert(archer.WeaponEquippedSeconds == 0,
+            "equipping another weapon restarts its equip clock");
+        archer.UpdateStatusEffects(0.4);
+        archer.EquippedWeapon = BowUpgradeCatalog.CreateBow(progression);
+        Assert(Math.Abs(archer.WeaponEquippedSeconds - 0.4) < 1e-9,
+            "an upgraded copy of the same weapon keeps the bow drawn");
+
+        string weaponAssets = Path.Combine(
+            FindGameProjectDirectory(), "Classes", "Gruppe 9", "Assets", "Weapons");
+        SpriteSheetAnimator sheet = new SpriteSheetAnimator(
+            Path.Combine(weaponAssets, "Weapons.png"),
+            Path.Combine(weaponAssets, "Weapons.json"));
+        string[] usedAnimations =
+        {
+            "Sword", "SwordPoisen", "SwordFire", "SwordFireAttack", "SwordBlackSteel",
+            "SwordBlackSteelLeach", "WizardStaff", "WizardStafElektic", "WizardStaffIce",
+            "WizardStaffFire", "WizardStaffFrog", "WizardStaffFrogAttac", "BowShooting",
+            "BowShootingScope", "Arow", "ArowAutoAim", "ArowPoisen", "ArowFire",
+            "ArowFireFlying"
+        };
+        Assert(usedAnimations.All(name => sheet.GetFrameCount(name) > 0),
+            "every weapon sprite clip used by the catalogs exists in Weapons.json");
+        Assert(sheet.GetFrameCount("BowShooting") == 4
+            && sheet.GetClipFrame("BowShooting", 3) != null
+            && sheet.GetClipFrame("Unknown", 0) == null,
+            "bow draw frames can be selected by index");
+    }
+
+    private static void TestPlayerKeepsStrikeFacing()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        Rect bounds = field.MovementArea;
+        field.Player.Facing = PlayerFacing.Front;
+        field.AttackWithPlayer(1, 0);
+        Assert(field.Player.Facing == PlayerFacing.Right
+            && field.Player.AttackFacing == PlayerFacing.Right,
+            "the player turns into the direction of the strike");
+
+        field.Player.Move(-1, 0, bounds);
+        Assert(field.Player.Facing == PlayerFacing.Right,
+            "walking during the strike keeps the strike facing");
+
+        field.AttackWithPlayer(0, -1);
+        Assert(field.Player.Facing == PlayerFacing.Right,
+            "a click rejected by the cooldown does not turn the player");
+
+        field.Player.UpdateStatusEffects(field.Player.EquippedWeapon.CooldownSeconds);
+        field.Player.Move(-1, 0, bounds);
+        Assert(field.Player.Facing == PlayerFacing.Left,
+            "after the strike walking turns the player again");
+
+        Assert(PlayerCharacter.IsRightHandBehindBody(PlayerFacing.Back)
+            && PlayerCharacter.IsRightHandBehindBody(PlayerFacing.Right)
+            && !PlayerCharacter.IsRightHandBehindBody(PlayerFacing.Front)
+            && !PlayerCharacter.IsRightHandBehindBody(PlayerFacing.Left),
+            "the right hand is behind the body seen from behind or from the right");
+        Assert(field.Player.GetRightHandOffset(PlayerFacing.Front).X < 0
+            && field.Player.GetRightHandOffset(PlayerFacing.Back).X > 0,
+            "seen from the front the right hand is on the left of the screen");
+
+        field.SelectPlayerWeapon(WeaponCatalog.Bow);
+        field.Player.UpdateStatusEffects(field.Player.EquippedWeapon.EquipReadySeconds);
+        field.AttackWithPlayer(0, 1);
+        AttackVisualState arrow = field.ActiveAttackVisuals.Last(
+            visual => visual.VisualKind == AttackVisualKind.Projectile);
+        Vector hand = field.Player.GetRightHandOffset(PlayerFacing.Front);
+        Assert(Math.Abs(arrow.ProjectileX - (field.Player.PositionX + hand.X)) < 1e-6
+            && Math.Abs(arrow.ProjectileY - (field.Player.PositionY + hand.Y
+                + WeaponAppearance.BowArrowTipDistance)) < 1e-6,
+            "arrows are launched at the tip of the arrow nocked on the bow in the right hand");
     }
 
     private static void TestMultiplePlayerAbilities()

@@ -23,6 +23,7 @@ namespace OOPGames
             new ArenaProgressionMenuRenderer();
         private readonly ArenaWeaponWheelRenderer _weaponWheelRenderer =
             new ArenaWeaponWheelRenderer();
+        private readonly ArenaWeaponRenderer _weaponRenderer = new ArenaWeaponRenderer();
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
         private Canvas _zoomInputCanvas;
@@ -198,10 +199,23 @@ namespace OOPGames
                 _playerAnimator = CreateAnimator(_selectedAnimationProfile);
                 _playerAnimatorProfile = _selectedAnimationProfile;
             }
+            if (_playerAnimator.GetFrameCount(animationName) == 0)
+            {
+                // Characters without attack clips (BoxingKnight) show the idle or walk view of
+                // the strike direction instead of the NotFound frame.
+                animationName = GetPlayerAnimationName(
+                    field.Player.AttackFacing, field.Player.IsMoving, false,
+                    field.Player.AttackFacing);
+            }
             BitmapSource sprite = _playerAnimator.GetFrame(
                 animationName, field.PlayerTimeScale);
             double spriteHeight = field.Player.Size * 2 * PlayerSpriteScale;
             double spriteWidth = spriteHeight * sprite.PixelWidth / sprite.PixelHeight;
+            // Weapon frames use the 128-pixel grid of the character frames.
+            double unitsPerFramePixel = spriteHeight / ArenaWeaponRenderer.FramePixelSize;
+            _weaponRenderer.PaintEntityWeapon(
+                worldCanvas, field, field.Player, width / 2, height / 2,
+                unitsPerFramePixel, true);
             Image player = new Image
             {
                 Source = sprite,
@@ -217,6 +231,9 @@ namespace OOPGames
             PaintDamageFlash(
                 worldCanvas, field.Player, width / 2, height / 2,
                 spriteWidth, spriteHeight);
+            _weaponRenderer.PaintEntityWeapon(
+                worldCanvas, field, field.Player, width / 2, height / 2,
+                unitsPerFramePixel, false);
             _hudRenderer.PaintStatusPlaceholder(
                 worldCanvas, field.Player, width / 2, height / 2);
 
@@ -267,6 +284,8 @@ namespace OOPGames
                 _hudRenderer.PaintEntityHealth(worldCanvas, enemy,
                     enemy.PositionX - left, enemy.PositionY - top - enemyHeight / 2 - 10);
             }
+
+            _weaponRenderer.PaintProjectiles(worldCanvas, field, left, top);
 
             canvas.Children.Add(worldCanvas);
             if (field.IsSlowMotionActive)

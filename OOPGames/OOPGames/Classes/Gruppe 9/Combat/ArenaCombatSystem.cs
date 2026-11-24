@@ -6,6 +6,7 @@ namespace OOPGames
 {
     public sealed class ArenaCombatSystem
     {
+        private const double CooldownTolerance = 1e-9;
         private readonly Dictionary<Entity, Dictionary<string, double>> _cooldownSeconds =
             new Dictionary<Entity, Dictionary<string, double>>();
         private readonly List<RunningAttack> _runningAttacks =
@@ -45,7 +46,8 @@ namespace OOPGames
             {
                 return false;
             }
-            if (GetCooldownRemaining(source, weapon) > 0)
+            if (GetCooldownRemaining(source, weapon) > 0
+                || !IsReadyAfterEquip(source, weapon))
             {
                 return false;
             }
@@ -69,6 +71,7 @@ namespace OOPGames
 
             IAttackInstance instance = weapon.AttackPattern.BeginAttack(
                 source, directionX, directionY, weapon);
+            instance.VisualState.Appearance = weapon.Appearance;
             _runningAttacks.Add(new RunningAttack(source, weapon, instance));
             if (!_cooldownSeconds.TryGetValue(
                 source, out Dictionary<string, double> weaponCooldowns))
@@ -80,6 +83,16 @@ namespace OOPGames
             source.HasActiveAttack = true;
             source.CurrentAttackVisual = instance.VisualState;
             return true;
+        }
+
+        // A freshly equipped weapon with an equip time (the bow being drawn) cannot attack
+        // until that time has passed.
+        private static bool IsReadyAfterEquip(Entity source, Weapon weapon)
+        {
+            return weapon.EquipReadySeconds <= 0
+                || source.EquippedWeapon == null
+                || source.EquippedWeapon.Id != weapon.Id
+                || source.WeaponEquippedSeconds >= weapon.EquipReadySeconds;
         }
 
         public double GetCooldownRemaining(Entity entity)
@@ -165,7 +178,9 @@ namespace OOPGames
                 foreach (string weaponId in weaponIds)
                 {
                     double remaining = weaponCooldowns[weaponId] - deltaSeconds;
-                    if (remaining <= 0 || !owner.IsAlive)
+                    // The tolerance lets a cooldown that equals an attack's duration end in the
+                    // same tick as the attack despite rounding.
+                    if (remaining <= CooldownTolerance || !owner.IsAlive)
                     {
                         weaponCooldowns.Remove(weaponId);
                     }
