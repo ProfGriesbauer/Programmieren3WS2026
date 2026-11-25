@@ -221,6 +221,6 @@ die kompilierte Windows-Anwendung wurde gestartet.
 pushe das
 ```
 
-Ergebnis: Die Änderungen in Gruppe 8 wurden nach dem aktuellen Pull für den
-Push vorbereitet. Die bereits vorhandenen generierten HouseExample-`obj`-
-Änderungen werden nicht mit aufgenommen.
+Ergebnis: Die Gruppe-8-Änderungen wurden in Commit `d553e67` nach
+`origin/master` gepusht. Die bereits vorhandenen generierten HouseExample-
+`obj`-Änderungen wurden nicht mit aufgenommen.
