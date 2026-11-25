@@ -93,8 +93,10 @@ internal static class Program
             TestMirrorImageAbility();
             TestMirrorImageEnemyTargeting();
             TestArenaSkillTreeDependencies();
+            TestArenaSkillTreeRankSplitting();
             TestArenaSkillTreeStartNode();
             TestArenaSkillTreeForcedFork();
+            TestArenaSkillTreeForkInputThreshold();
             TestArenaMapDimensionInput();
             TestWindowKeyboardAllowsTextEntry();
             TestArenaEditorAssets();
@@ -4059,6 +4061,104 @@ internal static class Program
             "skill tree validation rejects circular unlock dependencies");
     }
 
+    private static void TestArenaSkillTreeRankSplitting()
+    {
+        string firstNodeId = "mirror-image-first";
+        string secondNodeId = "mirror-image-second";
+        ArenaSkillTreeDocument tree = new ArenaSkillTreeDocument
+        {
+            Name = "Split rank test",
+            Nodes = new List<ArenaSkillTreeNode>
+            {
+                new ArenaSkillTreeNode
+                {
+                    SkillId = ArenaSkillTreeRepository.StartNodeId,
+                    NodeId = ArenaSkillTreeRepository.StartNodeId
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.MirrorImage,
+                    NodeId = firstNodeId,
+                    RankStages = 2,
+                    X = 300
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.MirrorImage,
+                    NodeId = secondNodeId,
+                    RankStages = 2,
+                    X = 600
+                }
+            },
+            Connections = new List<ArenaSkillTreeConnection>
+            {
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = ArenaSkillTreeRepository.StartNodeId,
+                    ToSkillId = firstNodeId
+                },
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = firstNodeId,
+                    ToSkillId = secondNodeId
+                }
+            }
+        };
+        ArenaSkillTreeRepository.ValidateTree(tree);
+
+        ArenaProgression progression = new ArenaProgression();
+        progression.SetSkillTree(tree);
+        progression.SetGodMode(true);
+        Assert(progression.CanUpgradeSkillNode(firstNodeId)
+            && !progression.CanUpgradeSkillNode(secondNodeId),
+            "a later duplicate skill tile remains unavailable until its rank range");
+        Assert(progression.TryUpgradeSkillNode(firstNodeId)
+            && progression.TryUpgradeSkillNode(firstNodeId)
+            && progression.GetSkillRank(PlayerAbilityCatalog.MirrorImage) == 2
+            && progression.CanUpgradeSkillNode(secondNodeId),
+            "each skill tile grants only the allocated ranks before proceeding");
+        Assert(progression.TryUpgradeSkillNode(secondNodeId)
+            && progression.TryUpgradeSkillNode(secondNodeId)
+            && progression.GetSkillRank(PlayerAbilityCatalog.MirrorImage) == 4
+            && !progression.CanUpgradeSkill(PlayerAbilityCatalog.MirrorImage),
+            "split ranks never allow the ability to exceed its maximum");
+
+        string treeName = "ArenaRankSplitTest_" + Guid.NewGuid().ToString("N");
+        string treePath = Path.Combine(
+            ArenaSkillTreeRepository.TreeDirectory, treeName + ".json");
+        try
+        {
+            ArenaSkillTreeRepository.SaveTree(treeName, tree);
+            ArenaSkillTreeDocument loadedTree =
+                ArenaSkillTreeRepository.LoadTreeByName(treeName);
+            Assert(loadedTree.Nodes[1].NodeId == firstNodeId
+                && loadedTree.Nodes[1].RankStages == 2
+                && loadedTree.Nodes[2].NodeId == secondNodeId
+                && loadedTree.Nodes[2].RankStages == 2,
+                "split rank limits and unique node ids survive saving and loading");
+        }
+        finally
+        {
+            if (File.Exists(treePath))
+            {
+                File.Delete(treePath);
+            }
+        }
+
+        tree.Nodes[2].RankStages = 3;
+        bool rejectedExcessRanks = false;
+        try
+        {
+            ArenaSkillTreeRepository.ValidateTree(tree);
+        }
+        catch (InvalidDataException)
+        {
+            rejectedExcessRanks = true;
+        }
+        Assert(rejectedExcessRanks,
+            "skill tree validation rejects rank allocations above the ability maximum");
+    }
+
     private static void TestArenaEditorAssets()
     {
         IReadOnlyList<ArenaMapElement> mapElements = ArenaMapAssets.LoadMapElements();
@@ -4116,6 +4216,33 @@ internal static class Program
 
     private static void TestArenaSkillTreeStartNode()
     {
+        ArenaSkillTreeDocument centeredDefaultTree =
+            ArenaSkillTreeRepository.CreateDefaultTree();
+        ArenaSkillTreeNode defaultStart = centeredDefaultTree.Nodes.Single(
+            node => ArenaSkillTreeRepository.IsStartNode(node.SkillId));
+        Assert(ArenaSkillTreeVisuals.EditorBoardWidth == 4096
+            && ArenaSkillTreeVisuals.EditorBoardHeight == 3072
+            && defaultStart.X + ArenaSkillTreeVisuals.NodeWidth / 2
+                == ArenaSkillTreeVisuals.EditorBoardWidth / 2
+            && defaultStart.Y + ArenaSkillTreeVisuals.NodeHeight / 2
+                == ArenaSkillTreeVisuals.EditorBoardHeight / 2,
+            "the editor board is larger and the default start tile is centered");
+        ArenaSkillTreeRepository.ValidateTree(centeredDefaultTree);
+
+        PainterG9 characterPainter = new PainterG9();
+        BitmapSource boxingKnightFrontIdle =
+            characterPainter.GetSelectedCharacterFrontIdleFrame();
+        Border startTile =
+            ArenaSkillTreeVisuals.CreateStartNodeTile(boxingKnightFrontIdle);
+        Assert(startTile.Child is Image startImage
+            && ReferenceEquals(startImage.Source, boxingKnightFrontIdle),
+            "the in-game start tile displays the selected character's front idle sprite");
+        characterPainter.ResetAnimationProfile("Kurt");
+        BitmapSource kurtFrontIdle =
+            characterPainter.GetSelectedCharacterFrontIdleFrame();
+        Assert(!ReferenceEquals(boxingKnightFrontIdle, kurtFrontIdle),
+            "the start tile sprite follows the selected character profile");
+
         ArenaProgression progression = new ArenaProgression();
         ArenaSkillTreeDocument tree = new ArenaSkillTreeDocument
         {
@@ -4210,6 +4337,11 @@ internal static class Program
             && vectorTile.Height == ArenaSkillTreeVisuals.NodeHeight
             && vectorTile.Child is StackPanel,
             "skill tiles use crisp vector surfaces instead of upscaled sprite pixels");
+        Border lockedTile = ArenaSkillTreeVisuals.CreateNodeTile(
+            "Locked", "Gesperrt", ArenaSkillTreeTileState.Locked);
+        Assert(lockedTile.BorderBrush is SolidColorBrush lockedBrush
+            && lockedBrush.Color == Color.FromArgb(235, 235, 76, 76),
+            "skills that cannot currently be purchased use a red tile state");
 
         ArenaSkillTreeDocument defaultTree =
             ArenaSkillTreeRepository.CreateDefaultTree();
@@ -4318,10 +4450,29 @@ internal static class Program
         ArenaProgression progression = new ArenaProgression();
         progression.SetSkillTree(tree);
         progression.SetGodMode(true);
+        Assert(!progression.HasChosenForcedForkBranch(fork.SkillId),
+            "a forced fork has no selected branch before purchasing an exit");
+        AssertForkMarkerColor(
+            ArenaSkillTreeVisuals.CreateForkMarker(false, false),
+            Colors.DeepSkyBlue,
+            "free-choice forks use a blue marker");
+        AssertForkMarkerColor(
+            ArenaSkillTreeVisuals.CreateForkMarker(true, false),
+            Colors.MediumPurple,
+            "undecided forced forks use a purple marker");
+        AssertForkMarkerColor(
+            ArenaSkillTreeVisuals.CreateForkMarker(true, true),
+            Colors.Red,
+            "decided forced forks use a red marker");
+        Border editorForkTile = ArenaSkillTreeVisuals.CreateForkTile(true);
+        Assert(editorForkTile.Width == ArenaSkillTreeVisuals.NodeWidth
+            && editorForkTile.Height == ArenaSkillTreeVisuals.NodeHeight,
+            "the editor keeps its existing fork-tile visualization");
         Assert(progression.CanUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
             && progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
             "both exits of a forced fork are available before the player chooses");
         Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && progression.HasChosenForcedForkBranch(fork.SkillId)
             && !progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse)
             && !progression.TryUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
             "buying one forced-fork exit permanently locks the other exit for the run");
@@ -4338,6 +4489,148 @@ internal static class Program
             && progression.CanUpgradeSkill(PlayerAbilityCatalog.HealingPulse)
             && progression.TryUpgradeSkill(PlayerAbilityCatalog.HealingPulse),
             "a non-exclusive fork allows the player to choose both exits");
+    }
+
+    private static void TestArenaSkillTreeForkInputThreshold()
+    {
+        ArenaSkillTreeNode fork = new ArenaSkillTreeNode
+        {
+            SkillId = ArenaSkillTreeRepository.CreateForkNodeId(),
+            X = 400,
+            Y = 100,
+            IsFork = true,
+            ForceDecision = true
+        };
+        ArenaSkillTreeDocument tree = new ArenaSkillTreeDocument
+        {
+            Name = "Fork input threshold test",
+            Nodes = new List<ArenaSkillTreeNode>
+            {
+                new ArenaSkillTreeNode
+                {
+                    SkillId = ArenaSkillTreeRepository.StartNodeId,
+                    X = 0,
+                    Y = 100
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.PowerBlast,
+                    X = 150,
+                    Y = 0
+                },
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.HealingPulse,
+                    X = 150,
+                    Y = 200
+                },
+                fork,
+                new ArenaSkillTreeNode
+                {
+                    SkillId = PlayerAbilityCatalog.SlowMotion,
+                    X = 700,
+                    Y = 100
+                }
+            },
+            Connections = new List<ArenaSkillTreeConnection>
+            {
+                ArenaSkillTreeRepository.CreateStartConnection(
+                    PlayerAbilityCatalog.PowerBlast),
+                ArenaSkillTreeRepository.CreateStartConnection(
+                    PlayerAbilityCatalog.HealingPulse),
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = PlayerAbilityCatalog.PowerBlast,
+                    ToSkillId = fork.SkillId
+                },
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = PlayerAbilityCatalog.HealingPulse,
+                    ToSkillId = fork.SkillId
+                },
+                new ArenaSkillTreeConnection
+                {
+                    FromSkillId = fork.SkillId,
+                    ToSkillId = PlayerAbilityCatalog.SlowMotion
+                }
+            }
+        };
+        ArenaSkillTreeRepository.ValidateTree(tree);
+
+        ArenaProgression progression = new ArenaProgression();
+        progression.SetSkillTree(tree);
+        progression.SetGodMode(true);
+        Assert(progression.GetForkInputsRemaining(fork.SkillId) == 2
+            && !progression.CanUpgradeSkill(PlayerAbilityCatalog.SlowMotion),
+            "a fork remains locked until its configured number of inputs is skilled");
+
+        Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast)
+            && progression.GetForkInputsRemaining(fork.SkillId) == 1
+            && !progression.CanUpgradeSkill(PlayerAbilityCatalog.SlowMotion),
+            "the default fork setting requires all inputs and tracks the missing one");
+        fork.RequiredInputs = 1;
+        Assert(progression.GetForkInputsRemaining(fork.SkillId) == 0
+            && progression.CanUpgradeSkill(PlayerAbilityCatalog.SlowMotion),
+            "the fork can be configured to accept one skilled input");
+        fork.RequiredInputs = 2;
+        Assert(progression.GetForkInputsRemaining(fork.SkillId) == 1
+            && !progression.CanUpgradeSkill(PlayerAbilityCatalog.SlowMotion),
+            "raising the threshold relocks downstream skills until the extra input is skilled");
+        Grid waitingMarker =
+            (Grid)ArenaSkillTreeVisuals.CreateForkMarkerVisual(true, false, 1);
+        Assert(waitingMarker.Children.OfType<System.Windows.Shapes.Ellipse>()
+                .Single().Fill == Brushes.Gray
+            && waitingMarker.Children.OfType<TextBlock>()
+                .Single().Text == "1",
+            "a waiting fork is gray and shows the remaining input count");
+
+        Assert(progression.TryUpgradeSkill(PlayerAbilityCatalog.HealingPulse)
+            && progression.GetForkInputsRemaining(fork.SkillId) == 0
+            && progression.CanUpgradeSkill(PlayerAbilityCatalog.SlowMotion),
+            "the fork unlocks downstream skills once its input threshold is met");
+        Grid readyMarker =
+            (Grid)ArenaSkillTreeVisuals.CreateForkMarkerVisual(true, false, 0);
+        Assert(readyMarker.Children.OfType<System.Windows.Shapes.Ellipse>()
+                .Single().Fill == Brushes.MediumPurple
+            && !readyMarker.Children.OfType<TextBlock>().Any(),
+            "a satisfied fork returns to its normal decision color");
+
+        string treeName = "ForkInputThreshold_" + Guid.NewGuid().ToString("N");
+        string treePath = Path.Combine(
+            ArenaSkillTreeRepository.TreeDirectory, treeName + ".json");
+        try
+        {
+            ArenaSkillTreeRepository.SaveTree(treeName, tree);
+            ArenaSkillTreeDocument loaded =
+                ArenaSkillTreeRepository.LoadTreeByName(treeName);
+            Assert(loaded.Nodes.Single(node => node.IsFork).RequiredInputs == 2,
+                "the fork input threshold survives saving and loading");
+        }
+        finally
+        {
+            if (File.Exists(treePath))
+            {
+                File.Delete(treePath);
+            }
+        }
+
+        Assert(ArenaSkillTreeRepository.GetPlayerStatName(
+                    ArenaProgression.MaximumHealth) == "Gesundheit erhöhen um 20"
+            && ArenaSkillTreeRepository.GetPlayerStatName(
+                    ArenaProgression.MaximumSpeed)
+                == "Geschwindigkeit erhöhen um 2",
+            "health and speed skill labels state their per-rank increase");
+    }
+
+    private static void AssertForkMarkerColor(
+        System.Windows.Shapes.Ellipse marker,
+        Color expectedColor, string description)
+    {
+        Assert(marker.Width > 0 && marker.Height == marker.Width
+            && marker.Fill is SolidColorBrush brush
+            && brush.Color == expectedColor
+            && marker.IsHitTestVisible == false,
+            description);
     }
 
     private static void TestArenaMapDimensionInput()

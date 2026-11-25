@@ -18,10 +18,13 @@ namespace OOPGames
     internal sealed class ArenaSkillTreeNode
     {
         public string SkillId { get; set; }
+        public string NodeId { get; set; }
+        public int RankStages { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
         public bool IsFork { get; set; }
         public bool ForceDecision { get; set; }
+        public int RequiredInputs { get; set; }
     }
 
     internal sealed class ArenaSkillTreeConnection
@@ -50,6 +53,7 @@ namespace OOPGames
         public const string StartNodeId = "__tree_start__";
         public const string ForkPaletteId = "__fork_palette__";
         private const string ForkNodePrefix = "__tree_fork_";
+        private const string SkillNodePrefix = "__tree_skill_node_";
         private const string SelectionFileName = "SelectedSkillTree.txt";
         private const double MaximumNodePosition = 4096;
         private static readonly JsonSerializerOptions JsonOptions =
@@ -77,11 +81,11 @@ namespace OOPGames
             List<ArenaSkillInfo> skills = new List<ArenaSkillInfo>
             {
                 new ArenaSkillInfo(ArenaProgression.MaximumHealth,
-                    "Maximale Gesundheit",
+                    GetPlayerStatName(ArenaProgression.MaximumHealth),
                     "Erhöht die maximale Gesundheit um "
                         + ArenaProgression.HealthIncreasePerRank + "."),
                 new ArenaSkillInfo(ArenaProgression.MaximumSpeed,
-                    "Maximale Geschwindigkeit",
+                    GetPlayerStatName(ArenaProgression.MaximumSpeed),
                     "Erhöht die Bewegungsgeschwindigkeit um "
                         + ArenaProgression.SpeedIncreasePerRank + ".")
             };
@@ -91,6 +95,22 @@ namespace OOPGames
                     definition.Id, definition.Name, definition.Description));
             }
             return skills;
+        }
+
+        public static string GetPlayerStatName(string statId)
+        {
+            if (statId == ArenaProgression.MaximumHealth)
+            {
+                return "Gesundheit erhöhen um "
+                    + ArenaProgression.HealthIncreasePerRank;
+            }
+            if (statId == ArenaProgression.MaximumSpeed)
+            {
+                return "Geschwindigkeit erhöhen um "
+                    + ArenaProgression.SpeedIncreasePerRank;
+            }
+            throw new ArgumentException(
+                "Unknown player stat: " + statId, nameof(statId));
         }
 
         public static bool IsStartNode(string skillId)
@@ -108,12 +128,137 @@ namespace OOPGames
             ArenaSkillTreeDocument tree, string skillId)
         {
             return tree.Nodes.Any(node => node.IsFork
-                && String.Equals(node.SkillId, skillId, StringComparison.Ordinal));
+                && String.Equals(GetNodeId(node), skillId, StringComparison.Ordinal));
         }
 
         public static string CreateForkNodeId()
         {
             return ForkNodePrefix + Guid.NewGuid().ToString("N");
+        }
+
+        public static string CreateSkillNodeId()
+        {
+            return SkillNodePrefix + Guid.NewGuid().ToString("N");
+        }
+
+        public static string GetNodeId(ArenaSkillTreeNode node)
+        {
+            return String.IsNullOrEmpty(node.NodeId) ? node.SkillId : node.NodeId;
+        }
+
+        public static int GetMaximumRank(string skillId)
+        {
+            if (skillId == ArenaProgression.MaximumHealth
+                || skillId == ArenaProgression.MaximumSpeed)
+            {
+                return ArenaProgression.PlayerStatMaximumRank;
+            }
+            return PlayerAbilityCatalog.GetDefinition(skillId).MaximumRank;
+        }
+
+        public static int GetRankStages(ArenaSkillTreeNode node)
+        {
+            return node.RankStages > 0
+                ? node.RankStages
+                : GetMaximumRank(node.SkillId);
+        }
+
+        public static int GetRankStart(
+            ArenaSkillTreeDocument tree, ArenaSkillTreeNode node)
+        {
+            int rankStart = 0;
+            foreach (ArenaSkillTreeNode previous in tree.Nodes)
+            {
+                if (ReferenceEquals(previous, node))
+                {
+                    break;
+                }
+                if (!previous.IsFork && previous.SkillId == node.SkillId)
+                {
+                    rankStart += GetRankStages(previous);
+                }
+            }
+            return rankStart;
+        }
+
+        public static int GetForkInputCount(
+            ArenaSkillTreeDocument tree, string nodeId)
+        {
+            if (tree == null)
+            {
+                throw new ArgumentNullException(nameof(tree));
+            }
+            return tree.Connections.Count(connection =>
+                String.Equals(
+                    connection.ToSkillId, nodeId, StringComparison.Ordinal));
+        }
+
+        public static int GetRequiredForkInputCount(
+            ArenaSkillTreeDocument tree, string nodeId)
+        {
+            if (tree == null)
+            {
+                throw new ArgumentNullException(nameof(tree));
+            }
+            ArenaSkillTreeNode node = tree.Nodes.FirstOrDefault(item =>
+                item.IsFork
+                && String.Equals(
+                    GetNodeId(item), nodeId, StringComparison.Ordinal));
+            if (node == null)
+            {
+                return 0;
+            }
+            int inputCount = GetForkInputCount(tree, nodeId);
+            return node.RequiredInputs > 0
+                ? node.RequiredInputs
+                : inputCount;
+        }
+
+        public static int GetForkInputsRemaining(
+            ArenaSkillTreeDocument tree,
+            string nodeId,
+            Func<string, int> getRank,
+            Func<string, string> getChosenForkBranch)
+        {
+            if (tree == null)
+            {
+                throw new ArgumentNullException(nameof(tree));
+            }
+            if (getRank == null)
+            {
+                throw new ArgumentNullException(nameof(getRank));
+            }
+            if (getChosenForkBranch == null)
+            {
+                throw new ArgumentNullException(nameof(getChosenForkBranch));
+            }
+            ArenaSkillTreeNode node = tree.Nodes.FirstOrDefault(item =>
+                item.IsFork
+                && String.Equals(
+                    GetNodeId(item), nodeId, StringComparison.Ordinal));
+            if (node == null)
+            {
+                return 0;
+            }
+
+            List<ArenaSkillTreeConnection> inputs = tree.Connections
+                .Where(connection => String.Equals(
+                    connection.ToSkillId, nodeId, StringComparison.Ordinal))
+                .ToList();
+            if (inputs.Count == 0)
+            {
+                bool hasStartNode = tree.Nodes.Any(
+                    item => IsStartNode(GetNodeId(item)));
+                return hasStartNode
+                    ? Math.Max(1, node.RequiredInputs)
+                    : 0;
+            }
+
+            int requiredInputs = GetRequiredForkInputCount(tree, nodeId);
+            int availableInputs = CountAvailableInputs(
+                tree, inputs, getRank, getChosenForkBranch,
+                new HashSet<string>(new[] { nodeId }, StringComparer.Ordinal));
+            return Math.Max(0, requiredInputs - availableInputs);
         }
 
         public static ArenaSkillInfo ForkPaletteInfo { get; } =
@@ -122,18 +267,29 @@ namespace OOPGames
                 "Abzweigung",
                 "Verzweigt den Freischaltpfad. Optional erzwingt sie die Wahl eines einzigen Ausgangs.");
 
-        public static ArenaSkillInfo GetForkNodeInfo(bool forceDecision)
+        public static ArenaSkillInfo GetForkNodeInfo(
+            bool forceDecision, int requiredInputs = 0, int inputCount = 0)
         {
+            string inputDescription = requiredInputs > 0
+                ? "Mindestens " + requiredInputs + " Eingänge müssen aktiv sein."
+                : inputCount == 0
+                    ? "Die Abzweigung wartet auf verbundene Eingänge."
+                    : "Alle " + inputCount + " Eingänge müssen aktiv sein.";
             return new ArenaSkillInfo(
                 "fork",
                 "Abzweigung",
-                forceDecision
+                (forceDecision
                     ? "Erzwingt eine Entscheidung: Nach dem Freischalten eines Ausgangs werden die anderen gesperrt."
-                    : "Verzweigt den Freischaltpfad. Mehrere Ausgänge können freigeschaltet werden.");
+                    : "Verzweigt den Freischaltpfad. Mehrere Ausgänge können freigeschaltet werden.")
+                    + " " + inputDescription);
         }
 
         public static ArenaSkillTreeDocument CreateDefaultTree()
         {
+            double centerX = (ArenaSkillTreeVisuals.EditorBoardWidth
+                - ArenaSkillTreeVisuals.NodeWidth) / 2;
+            double centerY = (ArenaSkillTreeVisuals.EditorBoardHeight
+                - ArenaSkillTreeVisuals.NodeHeight) / 2;
             ArenaSkillTreeDocument tree = new ArenaSkillTreeDocument
             {
                 Name = DefaultTreeName,
@@ -141,31 +297,37 @@ namespace OOPGames
                 {
                     new ArenaSkillTreeNode
                     {
-                        SkillId = StartNodeId, X = 80, Y = 420
+                        SkillId = StartNodeId, X = centerX, Y = centerY
                     },
                     new ArenaSkillTreeNode
                     {
-                        SkillId = ArenaProgression.MaximumHealth, X = 430, Y = 80
+                        SkillId = ArenaProgression.MaximumHealth,
+                        X = centerX - 500, Y = centerY - 650
                     },
                     new ArenaSkillTreeNode
                     {
-                        SkillId = ArenaProgression.MaximumSpeed, X = 430, Y = 250
+                        SkillId = ArenaProgression.MaximumSpeed,
+                        X = centerX - 500, Y = centerY
                     },
                     new ArenaSkillTreeNode
                     {
-                        SkillId = PlayerAbilityCatalog.PowerBlast, X = 430, Y = 420
+                        SkillId = PlayerAbilityCatalog.PowerBlast,
+                        X = centerX - 500, Y = centerY + 650
                     },
                     new ArenaSkillTreeNode
                     {
-                        SkillId = PlayerAbilityCatalog.HealingPulse, X = 430, Y = 590
+                        SkillId = PlayerAbilityCatalog.HealingPulse,
+                        X = centerX + 500, Y = centerY - 650
                     },
                     new ArenaSkillTreeNode
                     {
-                        SkillId = PlayerAbilityCatalog.SlowMotion, X = 430, Y = 760
+                        SkillId = PlayerAbilityCatalog.SlowMotion,
+                        X = centerX + 500, Y = centerY
                     },
                     new ArenaSkillTreeNode
                     {
-                        SkillId = PlayerAbilityCatalog.MirrorImage, X = 780, Y = 420
+                        SkillId = PlayerAbilityCatalog.MirrorImage,
+                        X = centerX + 500, Y = centerY + 650
                     }
                 },
                 Connections = new List<ArenaSkillTreeConnection>
@@ -276,6 +438,8 @@ namespace OOPGames
             string fileName = ValidateTreeFileName(name + ".json");
             tree.Name = Path.GetFileNameWithoutExtension(fileName);
             ValidateTree(tree);
+            NormalizeNodeConfiguration(tree);
+            ValidateTree(tree);
 
             string path = Path.Combine(TreeDirectory, fileName);
             string temporaryPath = path + ".tmp";
@@ -328,16 +492,55 @@ namespace OOPGames
                     throw new InvalidDataException(
                         "A skill tree contains an invalid or unknown skill node.");
                 }
-                if (!nodes.TryAdd(node.SkillId, node))
+                string nodeId = GetNodeId(node);
+                if (String.IsNullOrWhiteSpace(nodeId)
+                    || node.RankStages < 0
+                    || !node.IsFork && !IsStartNode(node.SkillId)
+                        && node.RankStages > GetMaximumRank(node.SkillId)
+                    || (node.IsFork || IsStartNode(node.SkillId))
+                        && node.RankStages != 0
+                    || node.RequiredInputs < 0
+                    || !node.IsFork && node.RequiredInputs != 0)
                 {
                     throw new InvalidDataException(
-                        "A skill tree may contain each skill only once.");
+                        "A skill tree node has an invalid node id or rank/input limit.");
+                }
+                if (IsStartNode(node.SkillId)
+                    && !String.Equals(nodeId, StartNodeId, StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException(
+                        "The start node must keep its reserved node id.");
+                }
+                if (!nodes.TryAdd(nodeId, node))
+                {
+                    throw new InvalidDataException(
+                        "A skill tree may contain each node only once.");
                 }
             }
             if (tree.Nodes.Count(node => IsStartNode(node.SkillId)) > 1)
             {
                 throw new InvalidDataException(
                     "A skill tree can contain only one start node.");
+            }
+
+            foreach (IGrouping<string, ArenaSkillTreeNode> skillNodes
+                in tree.Nodes.Where(node => !node.IsFork
+                    && !IsStartNode(node.SkillId))
+                    .GroupBy(node => node.SkillId, StringComparer.Ordinal))
+            {
+                int maximumRank = GetMaximumRank(skillNodes.Key);
+                if (skillNodes.Count() > 1 && maximumRank <= 1)
+                {
+                    throw new InvalidDataException(
+                        "A skill with only one rank cannot appear more than once.");
+                }
+                int totalRankStages = skillNodes.Sum(node =>
+                    GetRankStages(node));
+                if (totalRankStages > maximumRank)
+                {
+                    throw new InvalidDataException(
+                        "A skill tree cannot allocate more upgrade stages than a skill allows.");
+                }
             }
 
             Dictionary<string, List<string>> prerequisites =
@@ -351,7 +554,7 @@ namespace OOPGames
                 if (connection == null
                     || !nodes.ContainsKey(connection.FromSkillId)
                     || !nodes.ContainsKey(connection.ToSkillId)
-                    || IsStartNode(connection.ToSkillId)
+                    || IsStartNode(nodes[connection.ToSkillId].SkillId)
                     || String.Equals(
                         connection.FromSkillId, connection.ToSkillId,
                         StringComparison.Ordinal))
@@ -399,8 +602,39 @@ namespace OOPGames
                 return false;
             }
 
+            return tree.Nodes.Any(node => !node.IsFork
+                && String.Equals(node.SkillId, skillId, StringComparison.Ordinal)
+                && AreNodePrerequisitesMet(
+                    tree, GetNodeId(node), getRank, getChosenForkBranch));
+        }
+
+        public static bool AreNodePrerequisitesMet(
+            ArenaSkillTreeDocument tree,
+            string nodeId,
+            Func<string, int> getRank,
+            Func<string, string> getChosenForkBranch)
+        {
+            if (tree == null)
+            {
+                throw new ArgumentNullException(nameof(tree));
+            }
+            if (getRank == null)
+            {
+                throw new ArgumentNullException(nameof(getRank));
+            }
+            if (getChosenForkBranch == null)
+            {
+                throw new ArgumentNullException(nameof(getChosenForkBranch));
+            }
+            if (IsStartNode(nodeId) || !tree.Nodes.Any(
+                node => String.Equals(
+                    GetNodeId(node), nodeId, StringComparison.Ordinal)))
+            {
+                return false;
+            }
+
             return AreNodePrerequisitesMet(
-                tree, skillId, getRank, getChosenForkBranch,
+                tree, nodeId, getRank, getChosenForkBranch,
                 new HashSet<string>(StringComparer.Ordinal));
         }
 
@@ -417,14 +651,15 @@ namespace OOPGames
             }
 
             ArenaSkillTreeNode node = tree.Nodes.FirstOrDefault(
-                item => String.Equals(item.SkillId, nodeId, StringComparison.Ordinal));
+                item => String.Equals(
+                    GetNodeId(item), nodeId, StringComparison.Ordinal));
             if (node == null)
             {
                 return false;
             }
             if (!node.IsFork)
             {
-                return getRank(nodeId) > 0;
+                return getRank(node.SkillId) > 0;
             }
             return AreNodePrerequisitesMet(
                 tree, nodeId, getRank, getChosenForkBranch, visited);
@@ -443,40 +678,74 @@ namespace OOPGames
             }
             try
             {
-                bool hasStartNode = tree.Nodes.Any(
-                    node => IsStartNode(node.SkillId));
-                bool hasIncomingConnection = false;
-                foreach (ArenaSkillTreeConnection connection in tree.Connections)
+                ArenaSkillTreeNode node = tree.Nodes.FirstOrDefault(
+                    item => String.Equals(
+                        GetNodeId(item), nodeId, StringComparison.Ordinal));
+                if (node == null)
                 {
-                    if (!String.Equals(
-                        connection.ToSkillId, nodeId, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-                    hasIncomingConnection = true;
-                    ArenaSkillTreeNode source = tree.Nodes.First(
-                        item => item.SkillId == connection.FromSkillId);
-                    if (source.IsFork
-                        && source.ForceDecision
-                        && getChosenForkBranch(source.SkillId) is string chosenBranch
-                        && !String.Equals(
-                            chosenBranch, nodeId, StringComparison.Ordinal))
-                    {
-                        return false;
-                    }
-                    if (!IsNodeAvailable(
-                        tree, source.SkillId, getRank,
-                        getChosenForkBranch, visited))
-                    {
-                        return false;
-                    }
+                    return false;
                 }
-                return hasIncomingConnection || !hasStartNode;
+                bool hasStartNode = tree.Nodes.Any(
+                    node => IsStartNode(GetNodeId(node)));
+                List<ArenaSkillTreeConnection> inputs = tree.Connections
+                    .Where(connection => String.Equals(
+                        connection.ToSkillId, nodeId, StringComparison.Ordinal))
+                    .ToList();
+                if (inputs.Count == 0)
+                {
+                    return !hasStartNode;
+                }
+
+                int availableInputs = CountAvailableInputs(
+                    tree, inputs, getRank, getChosenForkBranch, visited);
+                if (node.IsFork)
+                {
+                    return availableInputs
+                        >= GetRequiredForkInputCount(tree, nodeId);
+                }
+                return availableInputs == inputs.Count;
             }
             finally
             {
                 visited.Remove(nodeId);
             }
+        }
+
+        private static int CountAvailableInputs(
+            ArenaSkillTreeDocument tree,
+            IEnumerable<ArenaSkillTreeConnection> inputs,
+            Func<string, int> getRank,
+            Func<string, string> getChosenForkBranch,
+            ISet<string> visited)
+        {
+            int availableInputs = 0;
+            foreach (ArenaSkillTreeConnection connection in inputs)
+            {
+                ArenaSkillTreeNode source = tree.Nodes.FirstOrDefault(
+                    item => String.Equals(
+                        GetNodeId(item), connection.FromSkillId,
+                        StringComparison.Ordinal));
+                if (source == null)
+                {
+                    continue;
+                }
+                string sourceNodeId = GetNodeId(source);
+                if (source.IsFork
+                    && source.ForceDecision
+                    && getChosenForkBranch(sourceNodeId) is string chosenBranch
+                    && !String.Equals(
+                        chosenBranch, connection.ToSkillId,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                if (IsNodeAvailable(
+                    tree, sourceNodeId, getRank, getChosenForkBranch, visited))
+                {
+                    availableInputs++;
+                }
+            }
+            return availableInputs;
         }
 
         private static ArenaSkillTreeDocument LoadTree(string path)
@@ -500,18 +769,35 @@ namespace OOPGames
             if (!tree.Nodes.Any(node => IsStartNode(node.SkillId)))
             {
                 AddStartNodeToLegacyTree(tree);
-                ValidateTree(tree);
             }
+            NormalizeNodeConfiguration(tree);
+            ValidateTree(tree);
             tree.Name = Path.GetFileNameWithoutExtension(path);
             return tree;
+        }
+
+        private static void NormalizeNodeConfiguration(ArenaSkillTreeDocument tree)
+        {
+            foreach (ArenaSkillTreeNode node in tree.Nodes)
+            {
+                if (String.IsNullOrEmpty(node.NodeId))
+                {
+                    node.NodeId = node.SkillId;
+                }
+                if (!node.IsFork && !IsStartNode(node.SkillId)
+                    && node.RankStages == 0)
+                {
+                    node.RankStages = GetMaximumRank(node.SkillId);
+                }
+            }
         }
 
         private static void AddStartNodeToLegacyTree(ArenaSkillTreeDocument tree)
         {
             string[] initialSkillIds = tree.Nodes
                 .Where(node => !tree.Connections.Any(
-                    connection => connection.ToSkillId == node.SkillId))
-                .Select(node => node.SkillId)
+                    connection => connection.ToSkillId == GetNodeId(node)))
+                .Select(GetNodeId)
                 .ToArray();
 
             double width = ArenaSkillTreeVisuals.NodeWidth;
@@ -544,6 +830,7 @@ namespace OOPGames
             tree.Nodes.Add(new ArenaSkillTreeNode
             {
                 SkillId = StartNodeId,
+                NodeId = StartNodeId,
                 X = startX,
                 Y = startY
             });

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 namespace OOPGames
@@ -20,9 +21,16 @@ namespace OOPGames
     {
         public const double NodeWidth = 232;
         public const double NodeHeight = 144;
+        public const double EditorBoardWidth = 4096;
+        public const double EditorBoardHeight = 3072;
+        private const double ForkMarkerDiameter = 32;
 
         private static readonly Brush WireOutline =
             new SolidColorBrush(Color.FromRgb(5, 11, 18));
+        private static readonly Brush FreeChoiceForkBrush = Brushes.DeepSkyBlue;
+        private static readonly Brush UndecidedForcedForkBrush = Brushes.MediumPurple;
+        private static readonly Brush DecidedForcedForkBrush = Brushes.Red;
+        private static readonly Brush WaitingForkBrush = Brushes.Gray;
 
         public static Border CreateNodeTile(
             string title, string subtitle, ArenaSkillTreeTileState state)
@@ -97,10 +105,79 @@ namespace OOPGames
                 ArenaSkillTreeTileState.Fork);
         }
 
+        public static Border CreateStartNodeTile(BitmapSource characterSprite)
+        {
+            if (characterSprite == null)
+            {
+                throw new ArgumentNullException(nameof(characterSprite));
+            }
+            Border tile = CreateNodeTile(
+                null, null, ArenaSkillTreeTileState.Start);
+            tile.Padding = new Thickness(8, 4, 8, 4);
+            tile.Child = new Image
+            {
+                Source = characterSprite,
+                Width = 96,
+                Height = 128,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            return tile;
+        }
+
+        public static Ellipse CreateForkMarker(
+            bool forceDecision, bool hasChosenBranch)
+        {
+            return new Ellipse
+            {
+                Width = ForkMarkerDiameter,
+                Height = ForkMarkerDiameter,
+                Fill = !forceDecision
+                    ? FreeChoiceForkBrush
+                    : hasChosenBranch
+                        ? DecidedForcedForkBrush
+                        : UndecidedForcedForkBrush,
+                IsHitTestVisible = false
+            };
+        }
+
+        public static FrameworkElement CreateForkMarkerVisual(
+            bool forceDecision, bool hasChosenBranch, int inputsRemaining)
+        {
+            Grid marker = new Grid
+            {
+                Width = ForkMarkerDiameter,
+                Height = ForkMarkerDiameter,
+                IsHitTestVisible = false
+            };
+            Ellipse sphere = CreateForkMarker(
+                forceDecision, hasChosenBranch);
+            if (inputsRemaining > 0)
+            {
+                sphere.Fill = WaitingForkBrush;
+            }
+            marker.Children.Add(sphere);
+            if (inputsRemaining > 0)
+            {
+                marker.Children.Add(new TextBlock
+                {
+                    Text = inputsRemaining.ToString(),
+                    Foreground = Brushes.White,
+                    FontSize = 14,
+                    FontWeight = FontWeights.Bold,
+                    TextAlignment = TextAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+            }
+            return marker;
+        }
+
         public static void DrawConnections(
             Canvas canvas,
             ArenaSkillTreeDocument tree,
-            Func<ArenaSkillTreeConnection, Brush> getBrush)
+            Func<ArenaSkillTreeConnection, Brush> getBrush,
+            bool forksAsMarkers = false)
         {
             if (canvas == null)
             {
@@ -118,15 +195,18 @@ namespace OOPGames
             foreach (ArenaSkillTreeConnection connection in tree.Connections)
             {
                 ArenaSkillTreeNode from = tree.Nodes.Find(
-                    node => node.SkillId == connection.FromSkillId);
+                    node => ArenaSkillTreeRepository.GetNodeId(node)
+                        == connection.FromSkillId);
                 ArenaSkillTreeNode to = tree.Nodes.Find(
-                    node => node.SkillId == connection.ToSkillId);
+                    node => ArenaSkillTreeRepository.GetNodeId(node)
+                        == connection.ToSkillId);
                 if (from == null || to == null)
                 {
                     throw new InvalidOperationException(
                         "A skill tree connection refers to a missing node.");
                 }
-                DrawConnection(canvas, from, to, getBrush(connection));
+                DrawConnection(
+                    canvas, from, to, getBrush(connection), forksAsMarkers);
             }
         }
 
@@ -134,7 +214,8 @@ namespace OOPGames
             Canvas canvas,
             ArenaSkillTreeNode from,
             ArenaSkillTreeNode to,
-            Brush brush)
+            Brush brush,
+            bool forksAsMarkers)
         {
             bool horizontal = Math.Abs(to.X - from.X) >= Math.Abs(to.Y - from.Y);
             Point start;
@@ -144,12 +225,11 @@ namespace OOPGames
             if (horizontal)
             {
                 bool goesRight = to.X >= from.X;
-                start = new Point(
-                    from.X + (goesRight ? NodeWidth : 0),
-                    from.Y + NodeHeight / 2);
-                end = new Point(
-                    to.X + (goesRight ? 0 : NodeWidth),
-                    to.Y + NodeHeight / 2);
+                double directionX = goesRight ? 1 : -1;
+                start = GetConnectionPoint(
+                    from, directionX, 0, forksAsMarkers);
+                end = GetConnectionPoint(
+                    to, -directionX, 0, forksAsMarkers);
                 double middleX = (start.X + end.X) / 2;
                 firstBend = new Point(middleX, start.Y);
                 secondBend = new Point(middleX, end.Y);
@@ -157,12 +237,11 @@ namespace OOPGames
             else
             {
                 bool goesDown = to.Y >= from.Y;
-                start = new Point(
-                    from.X + NodeWidth / 2,
-                    from.Y + (goesDown ? NodeHeight : 0));
-                end = new Point(
-                    to.X + NodeWidth / 2,
-                    to.Y + (goesDown ? 0 : NodeHeight));
+                double directionY = goesDown ? 1 : -1;
+                start = GetConnectionPoint(
+                    from, 0, directionY, forksAsMarkers);
+                end = GetConnectionPoint(
+                    to, 0, -directionY, forksAsMarkers);
                 double middleY = (start.Y + end.Y) / 2;
                 firstBend = new Point(start.X, middleY);
                 secondBend = new Point(end.X, middleY);
@@ -191,6 +270,28 @@ namespace OOPGames
                 canvas.Children.Add(arrowOutline);
                 canvas.Children.Add(arrow);
             }
+        }
+
+        private static Point GetConnectionPoint(
+            ArenaSkillTreeNode node, double directionX,
+            double directionY, bool forksAsMarkers)
+        {
+            double centerX = node.X + NodeWidth / 2;
+            double centerY = node.Y + NodeHeight / 2;
+            if (forksAsMarkers && node.IsFork)
+            {
+                return new Point(
+                    centerX + directionX * ForkMarkerDiameter / 2,
+                    centerY + directionY * ForkMarkerDiameter / 2);
+            }
+
+            if (Math.Abs(directionX) > 0)
+            {
+                return new Point(
+                    centerX + directionX * NodeWidth / 2, centerY);
+            }
+            return new Point(
+                centerX, centerY + directionY * NodeHeight / 2);
         }
 
         private static Polyline CreatePolyline(
@@ -241,6 +342,8 @@ namespace OOPGames
                     return Color.FromRgb(78, 196, 255);
                 case ArenaSkillTreeTileState.Unlocked:
                     return Color.FromRgb(83, 218, 164);
+                case ArenaSkillTreeTileState.Locked:
+                    return Color.FromRgb(235, 76, 76);
                 default:
                     return Color.FromRgb(112, 132, 154);
             }

@@ -9,23 +9,44 @@
       "ForceDecision": false
     },
     {
+      "SkillId": "maximum-health",
+      "X": 410.4000000000001,
+      "Y": 66.15666666666667,
+      "IsFork": false,
+      "ForceDecision": false
+    },
+    {
+      "SkillId": "maximum-speed",
+      "X": 766.4000000000001,
+      "Y": 62.156666666666666,
+      "IsFork": false,
+      "ForceDecision": false
+    },
+    {
+      "SkillId": "__tree_fork_1d6ce0b47a0345eaa9e62df2306737da",
+      "X": 562.4000000000001,
+      "Y": 263.75666666666666,
+      "IsFork": true,
+      "ForceDecision": true
+    },
+    {
+      "SkillId": "__tree_fork_bea56af0d07c4daaac728a9b283cb6a8",
+      "X": 446.4000000000001,
+      "Y": 509.3566666666667,
+      "IsFork": true,
+      "ForceDecision": false
+    },
+    {
       "SkillId": "power-blast",
-      "X": 658.4000000000001,
-      "Y": 326.95666666666665,
+      "X": 760.8,
+      "Y": 437.3566666666667,
       "IsFork": false,
       "ForceDecision": false
     },
     {
       "SkillId": "healing-pulse",
-      "X": 669.6000000000001,
-      "Y": 555.7566666666667,
-      "IsFork": false,
-      "ForceDecision": false
-    },
-    {
-      "SkillId": "mirror-image",
-      "X": 476,
-      "Y": 81.35666666666665,
+      "X": 756,
+      "Y": 626.1566666666666,
       "IsFork": false,
       "ForceDecision": false
     }
@@ -33,15 +54,27 @@
   "Connections": [
     {
       "FromSkillId": "__tree_start__",
+      "ToSkillId": "__tree_fork_1d6ce0b47a0345eaa9e62df2306737da"
+    },
+    {
+      "FromSkillId": "__tree_fork_1d6ce0b47a0345eaa9e62df2306737da",
+      "ToSkillId": "maximum-health"
+    },
+    {
+      "FromSkillId": "__tree_fork_1d6ce0b47a0345eaa9e62df2306737da",
+      "ToSkillId": "maximum-speed"
+    },
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "__tree_fork_bea56af0d07c4daaac728a9b283cb6a8"
+    },
+    {
+      "FromSkillId": "__tree_fork_bea56af0d07c4daaac728a9b283cb6a8",
       "ToSkillId": "power-blast"
     },
     {
-      "FromSkillId": "__tree_start__",
+      "FromSkillId": "__tree_fork_bea56af0d07c4daaac728a9b283cb6a8",
       "ToSkillId": "healing-pulse"
-    },
-    {
-      "FromSkillId": "__tree_start__",
-      "ToSkillId": "mirror-image"
     }
   ]
 }

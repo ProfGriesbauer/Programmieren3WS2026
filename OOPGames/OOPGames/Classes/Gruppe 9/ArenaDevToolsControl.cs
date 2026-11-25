@@ -1584,14 +1584,16 @@ namespace OOPGames
 
     internal sealed class ArenaSkillTreeEditorControl : UserControl
     {
-        private const double BoardWidth = 2048;
-        private const double BoardHeight = 1280;
+        private const double BoardWidth = ArenaSkillTreeVisuals.EditorBoardWidth;
+        private const double BoardHeight = ArenaSkillTreeVisuals.EditorBoardHeight;
         private const string SkillDragFormat = "OOPGames.ArenaSkill";
+        private const string SkillNodeDragFormat = "OOPGames.ArenaSkillNode";
         private readonly Action<string> _treeSaved;
         private readonly IReadOnlyList<ArenaSkillInfo> _skills;
         private readonly IReadOnlyList<ArenaSkillInfo> _paletteItems;
         private readonly ListBox _palette;
         private readonly Canvas _treeCanvas;
+        private readonly ScrollViewer _treeScrollViewer;
         private readonly ComboBox _treeSelection;
         private readonly TextBox _treeNameInput;
         private readonly TextBlock _status;
@@ -1602,8 +1604,11 @@ namespace OOPGames
         private ArenaSkillInfo _draggedSkill;
         private Border _treeDragPreview;
         private string _treeDragPreviewSkillId;
+        private string _treeDragPreviewNodeId;
         private string _treeName;
         private string _selectedSkillId;
+        private string _draggedNodeId;
+        private bool _nodeDragStarted;
         private bool _connectionMode;
         private bool _removeConnectionMode;
         private bool _suppressTreeSelectionChanged;
@@ -1703,7 +1708,7 @@ namespace OOPGames
             _treeCanvas.DragOver += OnCanvasDragOver;
             _treeCanvas.DragLeave += OnCanvasDragLeave;
             _treeCanvas.Drop += OnCanvasDrop;
-            ScrollViewer treeScroll = new ScrollViewer
+            _treeScrollViewer = new ScrollViewer
             {
                 Content = _treeCanvas,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -1711,13 +1716,15 @@ namespace OOPGames
                 Margin = new Thickness(4),
                 Background = new SolidColorBrush(Color.FromRgb(17, 23, 31))
             };
-            Grid.SetColumn(treeScroll, 1);
-            workspace.Children.Add(treeScroll);
+            _treeScrollViewer.Loaded += (sender, args) => CenterTreeBoard();
+            Grid.SetColumn(_treeScrollViewer, 1);
+            workspace.Children.Add(_treeScrollViewer);
             Grid.SetRow(workspace, 1);
             root.Children.Add(workspace);
 
             _status = new TextBlock
             {
+                Text = "Kacheln per Drag-and-drop verschieben. Rechtsklick: Rangstufen und Abzweigungsoptionen.",
                 Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
                 Margin = new Thickness(6, 3, 0, 0)
             };
@@ -1793,8 +1800,27 @@ namespace OOPGames
 
         private void OnCanvasDragOver(object sender, DragEventArgs e)
         {
+            string nodeId = GetDraggedNodeId(e.Data);
+            if (nodeId != null)
+            {
+                ArenaSkillTreeNode node = _tree.Nodes.FirstOrDefault(
+                    item => ArenaSkillTreeRepository.GetNodeId(item) == nodeId);
+                if (node == null)
+                {
+                    HideTreeDragPreview();
+                    e.Effects = DragDropEffects.None;
+                    e.Handled = true;
+                    return;
+                }
+                ShowTreeNodeDragPreview(
+                    node, GetNodePosition(e.GetPosition(_treeCanvas)));
+                e.Effects = DragDropEffects.Move;
+                e.Handled = true;
+                return;
+            }
+
             ArenaSkillInfo skill = GetDraggedSkill(e.Data);
-            if (skill == null)
+            if (skill == null || !CanPlaceSkill(skill))
             {
                 HideTreeDragPreview();
                 e.Effects = DragDropEffects.None;
@@ -1815,25 +1841,55 @@ namespace OOPGames
 
         private void OnCanvasDrop(object sender, DragEventArgs e)
         {
+            string nodeId = GetDraggedNodeId(e.Data);
+            if (nodeId != null)
+            {
+                ArenaSkillTreeNode node = _tree.Nodes.FirstOrDefault(
+                    item => ArenaSkillTreeRepository.GetNodeId(item) == nodeId);
+                if (node != null)
+                {
+                    Point nodePosition =
+                        GetNodePosition(e.GetPosition(_treeCanvas));
+                    node.X = nodePosition.X;
+                    node.Y = nodePosition.Y;
+                    _selectedSkillId = nodeId;
+                    RedrawTree();
+                    SetStatus("Kachel verschoben. Die Rangreihenfolge bleibt erhalten.");
+                }
+                HideTreeDragPreview();
+                e.Handled = true;
+                return;
+            }
+
             ArenaSkillInfo skill = GetDraggedSkill(e.Data);
             if (skill == null)
             {
                 return;
             }
             HideTreeDragPreview();
-            if (_tree.Nodes.Any(node => node.SkillId == skill.Id))
+            if (!CanPlaceSkill(skill))
             {
-                SetStatus("Dieser Skill liegt bereits auf der Fläche.");
+                SetStatus("Für diesen Skill ist kein weiteres Rangbudget verfügbar.");
                 return;
             }
 
             Point position = GetNodePosition(e.GetPosition(_treeCanvas));
             bool isFork = skill.Id == ArenaSkillTreeRepository.ForkPaletteId;
+            int rankStages = isFork
+                ? 0
+                : ArenaSkillTreeRepository.GetMaximumRank(skill.Id)
+                    - _tree.Nodes.Where(node => !node.IsFork
+                        && node.SkillId == skill.Id)
+                        .Sum(ArenaSkillTreeRepository.GetRankStages);
             ArenaSkillTreeNode newNode = new ArenaSkillTreeNode
             {
                 SkillId = isFork
                     ? ArenaSkillTreeRepository.CreateForkNodeId()
                     : skill.Id,
+                NodeId = isFork
+                    ? null
+                    : ArenaSkillTreeRepository.CreateSkillNodeId(),
+                RankStages = rankStages,
                 X = position.X,
                 Y = position.Y,
                 IsFork = isFork
@@ -1841,7 +1897,7 @@ namespace OOPGames
             _tree.Nodes.Add(newNode);
             if (isFork)
             {
-                _selectedSkillId = newNode.SkillId;
+                _selectedSkillId = ArenaSkillTreeRepository.GetNodeId(newNode);
                 UpdateForkDecisionOption();
             }
             RedrawTree();
@@ -1859,6 +1915,32 @@ namespace OOPGames
                 return null;
             }
             return _paletteItems.FirstOrDefault(skill => skill.Id == skillId);
+        }
+
+        private string GetDraggedNodeId(IDataObject data)
+        {
+            return data.GetDataPresent(SkillNodeDragFormat)
+                ? data.GetData(SkillNodeDragFormat) as string
+                : null;
+        }
+
+        private bool CanPlaceSkill(ArenaSkillInfo skill)
+        {
+            if (skill.Id == ArenaSkillTreeRepository.ForkPaletteId)
+            {
+                return true;
+            }
+            List<ArenaSkillTreeNode> existingNodes = _tree.Nodes
+                .Where(node => !node.IsFork && node.SkillId == skill.Id)
+                .ToList();
+            if (existingNodes.Count == 0)
+            {
+                return true;
+            }
+            int maximumRank = ArenaSkillTreeRepository.GetMaximumRank(skill.Id);
+            int allocatedStages = existingNodes.Sum(
+                ArenaSkillTreeRepository.GetRankStages);
+            return maximumRank > 1 && allocatedStages < maximumRank;
         }
 
         private static Point GetNodePosition(Point pointer)
@@ -1893,6 +1975,27 @@ namespace OOPGames
             Canvas.SetTop(_treeDragPreview, position.Y);
         }
 
+        private void ShowTreeNodeDragPreview(
+            ArenaSkillTreeNode node, Point position)
+        {
+            string nodeId = ArenaSkillTreeRepository.GetNodeId(node);
+            if (_treeDragPreview == null || _treeDragPreviewNodeId != nodeId)
+            {
+                HideTreeDragPreview();
+                ArenaSkillInfo info = GetSkill(nodeId);
+                _treeDragPreview = node.IsFork
+                    ? ArenaSkillTreeVisuals.CreateForkTile(node.ForceDecision)
+                    : ArenaSkillTreeVisuals.CreateNodeTile(
+                        info.Name, "Verschieben", ArenaSkillTreeTileState.Available);
+                _treeDragPreview.Opacity = 0.6;
+                _treeDragPreview.IsHitTestVisible = false;
+                _treeDragPreviewNodeId = nodeId;
+                _treeCanvas.Children.Add(_treeDragPreview);
+            }
+            Canvas.SetLeft(_treeDragPreview, position.X);
+            Canvas.SetTop(_treeDragPreview, position.Y);
+        }
+
         private void HideTreeDragPreview()
         {
             if (_treeDragPreview != null)
@@ -1900,28 +2003,29 @@ namespace OOPGames
                 _treeCanvas.Children.Remove(_treeDragPreview);
                 _treeDragPreview = null;
                 _treeDragPreviewSkillId = null;
+                _treeDragPreviewNodeId = null;
             }
         }
 
-        private void OnNodeClicked(string skillId)
+        private void OnNodeClicked(string nodeId)
         {
-            _selectedSkillId = skillId;
+            _selectedSkillId = nodeId;
             if (!_connectionMode)
             {
                 UpdateForkDecisionOption();
-                SetStatus("Ausgewählt: " + GetSkill(skillId).Name);
+                SetStatus("Ausgewählt: " + GetSkill(nodeId).Name);
                 RedrawTree();
                 return;
             }
             if (String.IsNullOrEmpty(_pendingConnectionStart))
             {
-                _pendingConnectionStart = skillId;
-                SetStatus("Verbindungsquelle: " + GetSkill(skillId).Name
+                _pendingConnectionStart = nodeId;
+                SetStatus("Verbindungsquelle: " + GetSkill(nodeId).Name
                     + ". Klicke jetzt den Skill, der dadurch freigeschaltet werden soll.");
                 RedrawTree();
                 return;
             }
-            if (String.Equals(_pendingConnectionStart, skillId, StringComparison.Ordinal))
+            if (String.Equals(_pendingConnectionStart, nodeId, StringComparison.Ordinal))
             {
                 _pendingConnectionStart = null;
                 SetStatus("Verbindung abgebrochen.");
@@ -1933,7 +2037,7 @@ namespace OOPGames
             {
                 ArenaSkillTreeConnection existing = _tree.Connections.FirstOrDefault(
                     connection => connection.FromSkillId == _pendingConnectionStart
-                        && connection.ToSkillId == skillId);
+                        && connection.ToSkillId == nodeId);
                 if (existing != null)
                 {
                     _tree.Connections.Remove(existing);
@@ -1949,7 +2053,7 @@ namespace OOPGames
                 _tree.Connections.Add(new ArenaSkillTreeConnection
                 {
                     FromSkillId = _pendingConnectionStart,
-                    ToSkillId = skillId
+                    ToSkillId = nodeId
                 });
                 try
                 {
@@ -1975,7 +2079,8 @@ namespace OOPGames
             }
 
             ArenaSkillTreeNode fork = _tree.Nodes.FirstOrDefault(
-                node => node.IsFork && node.SkillId == _selectedSkillId);
+                node => node.IsFork
+                    && ArenaSkillTreeRepository.GetNodeId(node) == _selectedSkillId);
             if (fork == null)
             {
                 return;
@@ -1991,7 +2096,8 @@ namespace OOPGames
         private void UpdateForkDecisionOption()
         {
             ArenaSkillTreeNode fork = _tree.Nodes.FirstOrDefault(
-                node => node.IsFork && node.SkillId == _selectedSkillId);
+                node => node.IsFork
+                    && ArenaSkillTreeRepository.GetNodeId(node) == _selectedSkillId);
             _suppressForkDecisionChanged = true;
             try
             {
@@ -2018,9 +2124,10 @@ namespace OOPGames
 
             foreach (ArenaSkillTreeNode node in _tree.Nodes)
             {
+                string nodeId = ArenaSkillTreeRepository.GetNodeId(node);
                 bool isStartNode = ArenaSkillTreeRepository.IsStartNode(node.SkillId);
                 bool isFork = node.IsFork;
-                ArenaSkillInfo skill = GetSkill(node.SkillId);
+                ArenaSkillInfo skill = GetSkill(nodeId);
                 Border tile = isStartNode
                     ? ArenaSkillTreeVisuals.CreateNodeTile(
                         skill.Name, "Baumstart", ArenaSkillTreeTileState.Start)
@@ -2028,19 +2135,168 @@ namespace OOPGames
                         ? ArenaSkillTreeVisuals.CreateForkTile(node.ForceDecision)
                         : ArenaSkillTreeVisuals.CreateNodeTile(
                             skill.Name, "Fähigkeit", ArenaSkillTreeTileState.Available);
-                tile.Tag = node.SkillId;
+                tile.Tag = nodeId;
                 tile.ToolTip = skill.Description;
                 tile.Cursor = Cursors.Hand;
-                tile.MouseLeftButtonDown += (sender, args) =>
+                tile.PreviewMouseLeftButtonDown += (sender, args) =>
                 {
-                    OnNodeClicked((string)((FrameworkElement)sender).Tag);
+                    _draggedNodeId = (string)((FrameworkElement)sender).Tag;
+                    _dragStart = args.GetPosition(_treeCanvas);
+                    _nodeDragStarted = false;
                     args.Handled = true;
                 };
+                tile.MouseMove += OnTreeNodeMouseMove;
+                tile.PreviewMouseLeftButtonUp += (sender, args) =>
+                {
+                    if (_draggedNodeId == nodeId)
+                    {
+                        if (!_nodeDragStarted)
+                        {
+                            OnNodeClicked(nodeId);
+                        }
+                        _draggedNodeId = null;
+                        _nodeDragStarted = false;
+                        args.Handled = true;
+                    }
+                };
+                if (!isStartNode)
+                {
+                    tile.ContextMenu = CreateNodeContextMenu(node);
+                }
                 Canvas.SetLeft(tile, node.X);
                 Canvas.SetTop(tile, node.Y);
                 _treeCanvas.Children.Add(tile);
             }
             UpdateForkDecisionOption();
+        }
+
+        private void OnTreeNodeMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed
+                || String.IsNullOrEmpty(_draggedNodeId)
+                || _nodeDragStarted)
+            {
+                return;
+            }
+            Point current = e.GetPosition(_treeCanvas);
+            if (Math.Abs(current.X - _dragStart.X)
+                    < SystemParameters.MinimumHorizontalDragDistance
+                && Math.Abs(current.Y - _dragStart.Y)
+                    < SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+            _nodeDragStarted = true;
+            DataObject data = new DataObject(
+                SkillNodeDragFormat, _draggedNodeId);
+            DragDrop.DoDragDrop(
+                _treeCanvas, data, DragDropEffects.Move);
+            _draggedNodeId = null;
+            _nodeDragStarted = false;
+            e.Handled = true;
+        }
+
+        private ContextMenu CreateNodeContextMenu(ArenaSkillTreeNode node)
+        {
+            ContextMenu menu = new ContextMenu();
+            if (node.IsFork)
+            {
+                MenuItem forceDecision = new MenuItem
+                {
+                    Header = "Auswahl erzwingen",
+                    IsCheckable = true,
+                    IsChecked = node.ForceDecision
+                };
+                forceDecision.Click += (sender, args) =>
+                {
+                    node.ForceDecision = forceDecision.IsChecked;
+                    _selectedSkillId =
+                        ArenaSkillTreeRepository.GetNodeId(node);
+                    UpdateForkDecisionOption();
+                    RedrawTree();
+                };
+                menu.Items.Add(forceDecision);
+
+                int inputCount = ArenaSkillTreeRepository.GetForkInputCount(
+                    _tree, ArenaSkillTreeRepository.GetNodeId(node));
+                MenuItem requiredInputs = new MenuItem
+                {
+                    Header = "Benötigte Eingänge"
+                };
+                MenuItem allInputs = new MenuItem
+                {
+                    Header = "Alle verbundenen Eingänge",
+                    IsCheckable = true,
+                    IsChecked = node.RequiredInputs == 0
+                };
+                allInputs.Click += (sender, args) =>
+                    SetForkRequiredInputs(node, 0);
+                requiredInputs.Items.Add(allInputs);
+
+                int maximumInputRequirement =
+                    Math.Max(1, Math.Max(inputCount, node.RequiredInputs));
+                for (int count = 1; count <= maximumInputRequirement; count++)
+                {
+                    int selectedCount = count;
+                    MenuItem option = new MenuItem
+                    {
+                        Header = count.ToString(),
+                        IsCheckable = true,
+                        IsChecked = node.RequiredInputs == count
+                    };
+                    option.Click += (sender, args) =>
+                        SetForkRequiredInputs(node, selectedCount);
+                    requiredInputs.Items.Add(option);
+                }
+                menu.Items.Add(requiredInputs);
+            }
+            else
+            {
+                int maximumRank =
+                    ArenaSkillTreeRepository.GetMaximumRank(node.SkillId);
+                int allocatedByOtherNodes = _tree.Nodes
+                    .Where(other => !other.IsFork
+                        && other.SkillId == node.SkillId
+                        && !ReferenceEquals(other, node))
+                    .Sum(ArenaSkillTreeRepository.GetRankStages);
+                int maximumForThisNode = maximumRank - allocatedByOtherNodes;
+                MenuItem rankStages = new MenuItem
+                {
+                    Header = "Rangstufen dieser Kachel"
+                };
+                for (int count = 1; count <= maximumForThisNode; count++)
+                {
+                    int selectedCount = count;
+                    MenuItem option = new MenuItem
+                    {
+                        Header = count.ToString(),
+                        IsCheckable = true,
+                        IsChecked = ArenaSkillTreeRepository.GetRankStages(node)
+                            == count
+                    };
+                    option.Click += (sender, args) =>
+                    {
+                        node.RankStages = selectedCount;
+                        RedrawTree();
+                        SetStatus("Kachel reserviert jetzt "
+                            + selectedCount + " Rangstufe(n).");
+                    };
+                    rankStages.Items.Add(option);
+                }
+                menu.Items.Add(rankStages);
+            }
+            return menu;
+        }
+
+        private void SetForkRequiredInputs(
+            ArenaSkillTreeNode node, int requiredInputs)
+        {
+            node.RequiredInputs = requiredInputs;
+            RedrawTree();
+            SetStatus(requiredInputs == 0
+                ? "Die Abzweigung wartet auf alle verbundenen Eingänge."
+                : "Die Abzweigung benötigt " + requiredInputs
+                    + " aktive Eingänge.");
         }
 
         private void SetConnectionMode(bool removeConnection)
@@ -2080,7 +2336,8 @@ namespace OOPGames
                 return;
             }
             string removedNodeName = GetSkill(_selectedSkillId).Name;
-            _tree.Nodes.RemoveAll(node => node.SkillId == _selectedSkillId);
+            _tree.Nodes.RemoveAll(node =>
+                ArenaSkillTreeRepository.GetNodeId(node) == _selectedSkillId);
             _tree.Connections.RemoveAll(connection =>
                 connection.FromSkillId == _selectedSkillId
                 || connection.ToSkillId == _selectedSkillId);
@@ -2099,8 +2356,8 @@ namespace OOPGames
                     new ArenaSkillTreeNode
                     {
                         SkillId = ArenaSkillTreeRepository.StartNodeId,
-                        X = 100,
-                        Y = 300
+                        X = (BoardWidth - ArenaSkillTreeVisuals.NodeWidth) / 2,
+                        Y = (BoardHeight - ArenaSkillTreeVisuals.NodeHeight) / 2
                     }
                 },
                 Connections = new List<ArenaSkillTreeConnection>()
@@ -2110,7 +2367,16 @@ namespace OOPGames
             _selectedSkillId = null;
             _pendingConnectionStart = null;
             RedrawTree();
+            CenterTreeBoard();
             SetStatus("Neuer Skilltree mit Startkachel. Verbinde den Start mit den zuerst freischaltbaren Skills.");
+        }
+
+        private void CenterTreeBoard()
+        {
+            _treeScrollViewer.ScrollToHorizontalOffset(
+                Math.Max(0, (BoardWidth - _treeScrollViewer.ViewportWidth) / 2));
+            _treeScrollViewer.ScrollToVerticalOffset(
+                Math.Max(0, (BoardHeight - _treeScrollViewer.ViewportHeight) / 2));
         }
 
         private void SaveTree()
@@ -2171,18 +2437,27 @@ namespace OOPGames
 
         private ArenaSkillInfo GetSkill(string skillId)
         {
-            if (ArenaSkillTreeRepository.IsStartNode(skillId))
+            ArenaSkillTreeNode node = _tree.Nodes.FirstOrDefault(
+                item => ArenaSkillTreeRepository.GetNodeId(item) == skillId);
+            if (node == null)
+            {
+                throw new InvalidDataException(
+                    "Der Skilltree enthält eine unbekannte Kachel.");
+            }
+            if (ArenaSkillTreeRepository.IsStartNode(node.SkillId))
             {
                 return ArenaSkillTreeRepository.StartNodeInfo;
             }
-            ArenaSkillTreeNode fork = _tree.Nodes.FirstOrDefault(
-                node => node.IsFork && node.SkillId == skillId);
-            if (fork != null)
+            if (node.IsFork)
             {
                 return ArenaSkillTreeRepository.GetForkNodeInfo(
-                    fork.ForceDecision);
+                    node.ForceDecision,
+                    node.RequiredInputs,
+                    ArenaSkillTreeRepository.GetForkInputCount(
+                        _tree, ArenaSkillTreeRepository.GetNodeId(node)));
             }
-            ArenaSkillInfo skill = _skills.FirstOrDefault(item => item.Id == skillId);
+            ArenaSkillInfo skill =
+                _skills.FirstOrDefault(item => item.Id == node.SkillId);
             if (skill == null)
             {
                 throw new InvalidDataException("Der Skilltree enthält einen unbekannten Skill.");
