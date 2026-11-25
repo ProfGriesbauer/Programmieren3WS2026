@@ -60,7 +60,7 @@ namespace OOPGames
             }
         }
 
-        private static double Ease(double t)
+        private static double Ease(double t)    // ease-in/ease-out function for smooth animation
         {
             return t * t * (3 - 2 * t);
         }

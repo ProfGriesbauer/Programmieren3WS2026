@@ -10,7 +10,8 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
-    public sealed partial class Gruppe2_TrainRunPainter : IPaintGame2
+    public sealed partial class Gruppe2_TrainRunPainter : IPaintGame2   // paints the Train Run game in 3D with a 2D overlay (HUD)
+
     {
         private static readonly Brush SkyBrush = CreateSkyBrush();
         private static readonly Model3DGroup SceneLights = Gruppe2_TrainRunSceneLighting.CreateLights();
@@ -33,7 +34,7 @@ namespace OOPGames
         private static readonly Model3DGroup JetpackFlameModel = CreateJetpackFlameModel();
         private static readonly Model3DGroup JumpStickModel = CreateJumpStickModel();
 
-        private enum JumpStickPose
+        private enum JumpStickPose  // the pose of the runner while using the jump stick
         {
             None,
             Carried,
@@ -46,7 +47,7 @@ namespace OOPGames
             Color.FromRgb(255, 203, 32), Color.FromRgb(179, 126, 16), glow: true);
         // Every upgrade has its own coin colour, so it can be recognised from far away.
         private static readonly Dictionary<Gruppe2_TrainRunUpgradeKind, Model3DGroup> UpgradeCoinModels =
-            new Dictionary<Gruppe2_TrainRunUpgradeKind, Model3DGroup>
+            new Dictionary<Gruppe2_TrainRunUpgradeKind, Model3DGroup>   // the 3D model of the coin for each upgrade kind
             {
                 { Gruppe2_TrainRunUpgradeKind.Magnet, CreateUpgradeCoinModel(Color.FromRgb(222, 44, 44)) },
                 { Gruppe2_TrainRunUpgradeKind.DoubleCoins, CreateUpgradeCoinModel(Color.FromRgb(255, 140, 16)) },
@@ -86,7 +87,7 @@ namespace OOPGames
         // Smooth, arc-shaped lane change of the runner; the camera follows it.
         private readonly Gruppe2_TrainRunLaneChange _laneChange = new Gruppe2_TrainRunLaneChange();
 
-        public void PaintGameField(Canvas canvas, IGameField currentField)
+        public void PaintGameField(Canvas canvas, IGameField currentField)  // paints the game field on the given canvas, using the current state of the game
         {
             canvas.Focusable = true;
             _laneChange.Reset(RunnerLaneX(currentField));
@@ -94,20 +95,20 @@ namespace OOPGames
             Keyboard.Focus(canvas);
         }
 
-        public void TickPaintGameField(Canvas canvas, IGameField currentField)
+        public void TickPaintGameField(Canvas canvas, IGameField currentField)  // advances the animation by one frame and repaints the game field on the given canvas, using the current state of the game
         {
             _laneChange.Update(RunnerLaneX(currentField));
             Draw(canvas, currentField, _laneChange, _scene);
         }
 
         /// <summary>X position of the lane the rules put the runner on.</summary>
-        private static double RunnerLaneX(IGameField currentField)
+        private static double RunnerLaneX(IGameField currentField)  // returns the X position of the lane the rules put the runner on, based on the current game field
         {
             IGruppe2_TrainRunField field = currentField as IGruppe2_TrainRunField;
             return field == null ? 0 : LaneWorldX(field.Lane);
         }
 
-        private static Brush CreateSkyBrush()
+        private static Brush CreateSkyBrush()   // creates a vertical gradient brush for the sky background
         {
             LinearGradientBrush sky = new LinearGradientBrush
             {
@@ -121,7 +122,7 @@ namespace OOPGames
             return sky;
         }
 
-        private static Brush Brush(Color color)
+        private static Brush Brush(Color color) // creates a solid color brush for the given color
         {
             SolidColorBrush brush = new SolidColorBrush(color);
             brush.Freeze();
@@ -129,7 +130,7 @@ namespace OOPGames
         }
 
         private static void Draw(Canvas canvas, IGameField currentField, Gruppe2_TrainRunLaneChange laneChange,
-            RetainedScene scene)
+            RetainedScene scene)    // draws the game field on the given canvas, using the current state of the game and the lane change animation
         {
             IGruppe2_TrainRunField field = currentField as IGruppe2_TrainRunField;
             if (field == null)
@@ -206,7 +207,7 @@ namespace OOPGames
         private static readonly object RunnerKey = new object();
         private static readonly object GuardKey = new object();
 
-        private static Model3DGroup CreateTrackModel()
+        private static Model3DGroup CreateTrackModel() // creates the 3D model of the track with ballast, rails and sleepers
         {
             Material ballast = Material(Color.FromRgb(82, 78, 72));
             Material rail = Material(Color.FromRgb(183, 190, 195));
@@ -229,7 +230,7 @@ namespace OOPGames
             return track;
         }
 
-        private static Model3DGroup CreateSleeperModel()
+        private static Model3DGroup CreateSleeperModel()    // creates the 3D model of a single wooden sleeper (ties) for the track
         {
             Model3DGroup sleeper = new Model3DGroup();
             AddBox(sleeper, -2.45, -0.01, -0.10, 2.45, 0.04, 0.10,
@@ -239,7 +240,7 @@ namespace OOPGames
         }
 
         private static void AddThreeDimensionalObstacle(
-            Gruppe2_TrainRunVisualPool pool, Gruppe2_TrainRunObstacle obstacle)
+            Gruppe2_TrainRunVisualPool pool, Gruppe2_TrainRunObstacle obstacle) // adds a 3D model of an obstacle to the scene, with the correct position and scale
         {
             double x = LaneWorldX(obstacle.Lane);
             double z = WorldZ(obstacle.Distance);
@@ -278,7 +279,7 @@ namespace OOPGames
         /// so the runner can walk from wagon to locomotive.
         /// </summary>
         private static void AddTrainPart(
-            Gruppe2_TrainRunVisualPool pool, Model3D model, Gruppe2_TrainRunObstacle obstacle, bool mirrorDepth)
+            Gruppe2_TrainRunVisualPool pool, Model3D model, Gruppe2_TrainRunObstacle obstacle, bool mirrorDepth)    // adds a train part (locomotive, cargo wagon or ramp) to the scene, fitting it into the space reserved for it by the rules
         {
             double nearZ = WorldZ(Gruppe2_TrainRunLayout.NearEnd(obstacle));
             double farZ = WorldZ(Gruppe2_TrainRunLayout.FarEnd(obstacle));
@@ -295,7 +296,7 @@ namespace OOPGames
             pool.Show(obstacle, model, transform);
         }
 
-        private static double WorldZ(double distance)
+        private static double WorldZ(double distance)   // returns the Z position in world units for the given distance in game units
         {
             return RunnerWorldZ - distance * WorldUnitsPerDistance;
         }
@@ -304,7 +305,7 @@ namespace OOPGames
         /// Height the runner stands on: track, rising ramp, train roof or the arc
         /// when dropping off a roof. The camera follows this height.
         /// </summary>
-        private static double RunnerGroundHeight(IGruppe2_TrainRunField field)
+        private static double RunnerGroundHeight(IGruppe2_TrainRunField field)  // returns the height of the surface the runner stands on, based on the current game field
         {
             double jetpackHeight = field.JetpackHeight * Gruppe2_TrainRunLayout.JetpackAltitudeInRoofHeights;
             return CarRoofHeight * Math.Max(Math.Max(RunnerSupportLevel(field), field.DropHeight), jetpackHeight);
@@ -314,14 +315,14 @@ namespace OOPGames
         /// Height of the surface below the runner in roof heights: 1 on a train roof,
         /// rising on a ramp, otherwise 0. The runner's shadow falls onto this surface.
         /// </summary>
-        private static double RunnerSupportLevel(IGruppe2_TrainRunField field)
+        private static double RunnerSupportLevel(IGruppe2_TrainRunField field)  // returns the height of the surface below the runner in roof heights, based on the current game field
         {
             return field.Level == Gruppe2_TrainRunLevel.TrainRoof
                 ? 1
                 : Gruppe2_TrainRunLayout.RampProgressUnderRunner(field.Obstacles, field.Lane);
         }
 
-        private static Dictionary<Gruppe2_TrainRunObstacleKind, Model3DGroup> CreateObstacleModels()
+        private static Dictionary<Gruppe2_TrainRunObstacleKind, Model3DGroup> CreateObstacleModels()    // creates the 3D models for all obstacle kinds except trains, cargo wagons and ramps
         {
             return new Dictionary<Gruppe2_TrainRunObstacleKind, Model3DGroup>
             {
@@ -338,7 +339,7 @@ namespace OOPGames
             Gruppe2_TrainRunReward reward,
             IGruppe2_TrainRunField field,
             double runnerX,
-            int animationTicks)
+            int animationTicks) // adds a 3D model of a coin to the scene, with the correct position and scale, and applies magnet pull if active
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(0.34, 0.34, 0.10));
@@ -374,7 +375,7 @@ namespace OOPGames
         }
 
         private static void AddThreeDimensionalUpgradeCoin(
-            Gruppe2_TrainRunVisualPool pool, Gruppe2_TrainRunReward reward)
+            Gruppe2_TrainRunVisualPool pool, Gruppe2_TrainRunReward reward) // adds a 3D model of an upgrade coin to the scene, with the correct position and scale
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(0.62, 0.62, 0.16));
@@ -387,7 +388,7 @@ namespace OOPGames
         /// How far a coin has been pulled towards the runner by the magnet (0 = not at all,
         /// 1 = at the runner). Uses the same conditions as the rules for collecting it.
         /// </summary>
-        private static double MagnetPull(Gruppe2_TrainRunReward reward, IGruppe2_TrainRunField field)
+        private static double MagnetPull(Gruppe2_TrainRunReward reward, IGruppe2_TrainRunField field)   // returns how far a coin has been pulled towards the runner by the magnet, based on the current game field
         {
             // The magnet pulls coins from every height level (ground, roof, flight level).
             if (!field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.Magnet)
@@ -406,7 +407,7 @@ namespace OOPGames
         /// as well as on a train roof). A normal jump stays below the train roof; with the jump
         /// stick the arc goes higher than the roof, because only then can a train be climbed.
         /// </summary>
-        private static double RunnerJumpHeight(IGruppe2_TrainRunField field)
+        private static double RunnerJumpHeight(IGruppe2_TrainRunField field)    // returns the height of the jump arc above the surface, based on the current game field
         {
             double jumpPeak = field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.JumpStick)
                 ? CarRoofHeight * 1.25
@@ -418,7 +419,7 @@ namespace OOPGames
         /// Height of the camera: it follows the surface the runner is on and, with the jump stick,
         /// most of the high jump arc, so the runner stays in view while still visibly rising.
         /// </summary>
-        private static double CameraHeight(IGruppe2_TrainRunField field)
+        private static double CameraHeight(IGruppe2_TrainRunField field)    // returns the height of the camera above the track, based on the current game field
         {
             const double JumpStickCameraFollow = 0.8;
             double jumpFollow = field.ActiveUpgrades.ContainsKey(Gruppe2_TrainRunUpgradeKind.JumpStick)
@@ -432,7 +433,7 @@ namespace OOPGames
             IGruppe2_TrainRunField field,
             Gruppe2_TrainRunLaneChange laneChange,
             bool guard,
-            int guardIntroTicks)
+            int guardIntroTicks)    // adds the 3D model of the runner or guard to the scene, with the correct pose and position
         {
             double x = laneChange.X - (guard ? 0.35 : 0);
             bool guardIntro = guard && guardIntroTicks > 0;
@@ -501,7 +502,7 @@ namespace OOPGames
         }
 
         private static void AddWorldModel(
-            Gruppe2_TrainRunVisualPool pool, object key, Model3D model, double x, double y, double z, double scale)
+            Gruppe2_TrainRunVisualPool pool, object key, Model3D model, double x, double y, double z, double scale) // adds a 3D model to the scene at the given world coordinates, with the given scale
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(scale, scale, scale));
@@ -509,7 +510,7 @@ namespace OOPGames
             pool.Show(key, model, transform);
         }
 
-        private static Model3DGroup CreateTrainModel()
+        private static Model3DGroup CreateTrainModel()  // creates the 3D model of the train locomotive, with the correct size and colours
         {
             Model3DGroup train = new Model3DGroup();
             Material red = Material(Color.FromRgb(188, 47, 39));
@@ -553,7 +554,7 @@ namespace OOPGames
         /// direction, and dark wooden side walls.
         /// AddTrainPart mirrors it so the low end faces the runner.
         /// </summary>
-        private static Model3DGroup CreateCargoRampModel()
+        private static Model3DGroup CreateCargoRampModel()  // creates the 3D model of the cargo ramp, with the correct size and colours
         {
             const double Start = -0.75;
             const double End = 0.75;
@@ -618,7 +619,7 @@ namespace OOPGames
             return ramp;
         }
 
-        private static Model3DGroup CreateObstacleModel(Gruppe2_TrainRunObstacleKind kind)
+        private static Model3DGroup CreateObstacleModel(Gruppe2_TrainRunObstacleKind kind)  // creates a 3D model of the given obstacle kind, with the correct size and colours
         {
             Model3DGroup model = new Model3DGroup();
             Material dark = Material(Color.FromRgb(70, 68, 62));
@@ -670,7 +671,7 @@ namespace OOPGames
         }
 
         /// <summary>Diffuse colour plus a slight glow of the same colour (about 45 %).</summary>
-        private static Material GlowingMaterial(Color color)
+        private static Material GlowingMaterial(Color color)    // creates a material that emits light of the given colour, so it looks bright even on the side facing away from the sun
         {
             MaterialGroup material = new MaterialGroup();
             material.Children.Add(new DiffuseMaterial(Brush(color)));
@@ -681,13 +682,13 @@ namespace OOPGames
         }
 
         /// <summary>Upgrade coin: face in the upgrade colour, edge in a darker shade of it.</summary>
-        private static Model3DGroup CreateUpgradeCoinModel(Color color)
+        private static Model3DGroup CreateUpgradeCoinModel(Color color) // creates a 3D model of an upgrade coin with the given face colour and a darker edge
         {
             Color edge = Color.FromRgb((byte)(color.R * 0.62), (byte)(color.G * 0.62), (byte)(color.B * 0.62));
             return CreateCoinModel(color, edge);
         }
 
-        private static Model3DGroup CreateCoinModel(Color faceColor, Color edgeColor, bool glow = false)
+        private static Model3DGroup CreateCoinModel(Color faceColor, Color edgeColor, bool glow = false)    // creates a 3D model of a coin with the given face and edge colour, optionally glowing
         {
             Model3DGroup coin = new Model3DGroup();
             // A slight glow keeps the gold coins bright even on the side facing away from the sun.
@@ -719,7 +720,7 @@ namespace OOPGames
         }
 
         private static Model3DGroup CreateRunnerModel(
-            bool guard, double run, bool hasSkateboard, bool jetpack, bool flying, JumpStickPose jumpStick)
+            bool guard, double run, bool hasSkateboard, bool jetpack, bool flying, JumpStickPose jumpStick) // creates the 3D model of the runner or guard, with running animation and optional skateboard, jetpack and jump stick
         {
             Model3DGroup runner = new Model3DGroup();
             Model3DGroup rider = new Model3DGroup();
@@ -838,7 +839,7 @@ namespace OOPGames
         /// Jetpack worn on the back (in the runner model the back is the -z side):
         /// two silver tanks with red caps on a dark frame, nozzles at the bottom.
         /// </summary>
-        private static Model3DGroup CreateJetpackModel()
+        private static Model3DGroup CreateJetpackModel()    // Jetpack in model space: back at z = -0.18, nozzles at z = -0.34, top at y = 1.58, bottom at y = 1.02.
         {
             Model3DGroup jetpack = new Model3DGroup();
             Material frame = Material(Color.FromRgb(52, 56, 62));
@@ -860,7 +861,7 @@ namespace OOPGames
         /// Pogo-style jump stick, standing on its rubber tip at y = 0:
         /// spring, foot pegs at <see cref="JumpStickPegHeight"/>, shaft and handlebar on top.
         /// </summary>
-        private static Model3DGroup CreateJumpStickModel()
+        private static Model3DGroup CreateJumpStickModel()  // Jump stick in model space: tip at y = 0, handlebar at y = 1.8, pegs at <see cref="JumpStickPegHeight"/>.
         {
             Model3DGroup stick = new Model3DGroup();
             Material rubber = Material(Color.FromRgb(34, 34, 38));
@@ -891,7 +892,7 @@ namespace OOPGames
         /// Jumping: in front of the runner (model front is +z), feet on the pegs,
         /// handlebar at hand height and the tip reaching below the feet.
         /// </summary>
-        private static Model3DGroup PlaceJumpStick(JumpStickPose pose, double run)
+        private static Model3DGroup PlaceJumpStick(JumpStickPose pose, double run)  // Jump stick in model space: carried in the hand or placed under the feet while jumping.
         {
             Transform3D transform = pose == JumpStickPose.Jumping
                 ? new TranslateTransform3D(0, 0.20 - JumpStickPegHeight, 0.30)
@@ -907,7 +908,7 @@ namespace OOPGames
         }
 
         /// <summary>Glowing exhaust flames below the two jetpack nozzles.</summary>
-        private static Model3DGroup CreateJetpackFlameModel()
+        private static Model3DGroup CreateJetpackFlameModel()   // Jetpack flames in model space: two orange/yellow spheres below the nozzles, mirrored on the x axis.
         {
             Model3DGroup flames = new Model3DGroup();
             Material outer = new EmissiveMaterial(Brush(Color.FromRgb(255, 120, 24)));
@@ -924,7 +925,7 @@ namespace OOPGames
             return flames;
         }
 
-        private static Model3DGroup CreateSkateboardModel()
+        private static Model3DGroup CreateSkateboardModel() // Skateboard in model space: deck, graphic, trucks and wheels. The runner model places it under the feet.
         {
             Model3DGroup skateboard = new Model3DGroup();
             AddBox(skateboard, -0.24, 0.12, -0.52, 0.24, 0.19, 0.52, SkateboardDeckMaterial);
@@ -947,7 +948,7 @@ namespace OOPGames
 
         private static void AddRunnerLimb(
             Model3DGroup runner, double x1, double y1, double z1,
-            double x2, double y2, double z2, double angle, Material material)
+            double x2, double y2, double z2, double angle, Material material)   // Add a limb (arm or leg) to the runner model, represented as a box between the two specified points, rotated around the first point by the given angle, with the specified material.
         {
             double thickness = 0.12;
             Model3DGroup limb = new Model3DGroup();
@@ -963,7 +964,7 @@ namespace OOPGames
         }
 
         private static void AddRunningArm(
-            Model3DGroup rider, int side, double stride, Material outfit)
+            Model3DGroup rider, int side, double stride, Material outfit)   // Add a running arm to the runner model, with the shoulder at (side * 0.22, 1.57, -0.01), the elbow and hand positioned based on the stride, and the hand wearing the specified outfit material.
         {
             double shoulderX = side * 0.22;
             Point3D elbow = new Point3D(side * 0.35, 1.30, stride * 0.13);
@@ -976,7 +977,7 @@ namespace OOPGames
         }
 
         private static void AddRunningLeg(
-            Model3DGroup rider, double hipX, double stride, Material shoeMaterial)
+            Model3DGroup rider, double hipX, double stride, Material shoeMaterial)  // Add a running leg to the runner model, with the hip at (hipX, 0.82, 0), the knee and foot positioned based on the stride, and the foot wearing the specified shoe material.
         {
             const double HipHeight = 0.82;
             double footX = hipX * 0.75;
@@ -1000,7 +1001,7 @@ namespace OOPGames
 
         private static void AddScaledSphere(
             Model3DGroup model, double x, double y, double z,
-            double radiusX, double radiusY, double radiusZ, Material material)
+            double radiusX, double radiusY, double radiusZ, Material material)  // Add a sphere to the model at the specified position, scaled in each axis by the given radii, with the specified material.
         {
             GeometryModel3D sphere = new GeometryModel3D(SphereMesh, material)
             {
@@ -1018,7 +1019,7 @@ namespace OOPGames
             model.Children.Add(sphere);
         }
 
-        private static Model3DGroup CreateCityModel()
+        private static Model3DGroup CreateCityModel()   // Create a simple cityscape with buildings of different heights and colors on both sides of the track.
         {
             Model3DGroup city = new Model3DGroup();
             Color[] facades =
@@ -1061,7 +1062,7 @@ namespace OOPGames
 
         private static void AddCityBuilding(
             Model3DGroup city, double x, double z, double width, double depth, double height,
-            Color facadeColor, int style)
+            Color facadeColor, int style)   // Add a building to the city model with specified dimensions, position, and facade color.
         {
             Material facade = Material(facadeColor);
             Material sideFacade = Material(Color.FromRgb(
@@ -1125,7 +1126,7 @@ namespace OOPGames
         /// on a dark underframe with two bogies. Model space: front (+z) faces the runner,
         /// AddTrainPart fits the model into the space the rules reserve for a car.
         /// </summary>
-        private static Model3DGroup CreateCargoWagonModel()
+        private static Model3DGroup CreateCargoWagonModel() //  Create a freight boxcar model with a rust-red body, vertical ribs, sliding doors, and a low arched roof.
         {
             const double HalfWidth = 0.78;
             const double HalfLength = 1.55;
@@ -1216,7 +1217,7 @@ namespace OOPGames
             return model;
         }
 
-        private static Model3DGroup CreateBushModel()
+        private static Model3DGroup CreateBushModel()   //  Create a small bush with a brown trunk and several green leaves, for use in the city scene.
         {
             Model3DGroup bush = new Model3DGroup();
             AddBox(bush, -0.15, -0.78, -0.15, 0.15, -0.18, 0.15,
@@ -1235,7 +1236,7 @@ namespace OOPGames
             return bush;
         }
 
-        private static Model3DGroup CreateSignalModel()
+        private static Model3DGroup CreateSignalModel() // Create a traffic signal with three colored lenses, a pole and a housing, for use in the city scene.
         {
             Model3DGroup signal = new Model3DGroup();
             Material pole = Material(Color.FromRgb(71, 77, 79));
@@ -1257,7 +1258,7 @@ namespace OOPGames
             return signal;
         }
 
-        private static void AddSignalLens(Model3DGroup signal, double y, Color color)
+        private static void AddSignalLens(Model3DGroup signal, double y, Color color)   // Add a signal lens at the specified height with the specified color, consisting of a backing sphere and a smaller emissive lens sphere.
         {
             Material backing = Material(Color.FromRgb(12, 14, 16));
             Material lens = new EmissiveMaterial(Brush(color));
@@ -1266,7 +1267,7 @@ namespace OOPGames
             AddScaledSphere(signal, 0, y, 0.31, 0.15, 0.15, 0.12, lens);
         }
 
-        private static MeshGeometry3D CreateSphereMesh()
+        private static MeshGeometry3D CreateSphereMesh()    // Create a mesh representing a unit sphere centered at the origin, with vertices and triangle indices for each face.
         {
             const int rings = 8;
             const int segments = 12;
@@ -1305,7 +1306,7 @@ namespace OOPGames
             return mesh;
         }
 
-        private static Material Material(Color color)
+        private static Material Material(Color color)   // Create a frozen diffuse material with the specified color, using a solid color brush.
         {
             DiffuseMaterial material = new DiffuseMaterial(Brush(color));
             material.Freeze();
@@ -1313,7 +1314,7 @@ namespace OOPGames
         }
 
         private static void AddBox(Model3DGroup model,
-            double x1, double y1, double z1, double x2, double y2, double z2, Material material)
+            double x1, double y1, double z1, double x2, double y2, double z2, Material material)    // Add a rectangular box to the model, defined by its corner coordinates and material, using a unit cube mesh scaled and translated to fit the specified dimensions.
         {
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new ScaleTransform3D(x2 - x1, y2 - y1, z2 - z1));
@@ -1328,7 +1329,7 @@ namespace OOPGames
             model.Children.Add(box);
         }
 
-        private static MeshGeometry3D CreateBoxMesh()
+        private static MeshGeometry3D CreateBoxMesh()   // Create a mesh representing a unit cube centered at the origin, with vertices and triangle indices for each face.
         {
             Point3D[][] faces =
             {
@@ -1385,7 +1386,7 @@ namespace OOPGames
         }
 
         private static void AddQuad(Model3DGroup model, Point3D a, Point3D b, Point3D c, Point3D d,
-            Material material)
+            Material material)  // Add a quadrilateral face to the model using two triangles defined by points a, b, c, and d, with the specified material.
         {
             MeshGeometry3D mesh = new MeshGeometry3D
             {
@@ -1399,7 +1400,7 @@ namespace OOPGames
         }
 
         private static void AddTriangle(Model3DGroup model, Point3D a, Point3D b, Point3D c,
-            Material material)
+            Material material)  // Add a triangle to the model with the specified vertices and material, creating a mesh with one triangle and adding it to the model's children.
         {
             MeshGeometry3D mesh = new MeshGeometry3D
             {
@@ -1412,7 +1413,7 @@ namespace OOPGames
             model.Children.Add(face);
         }
 
-        private static void DrawHud(Canvas canvas, double width, double height, IGruppe2_TrainRunField field)
+        private static void DrawHud(Canvas canvas, double width, double height, IGruppe2_TrainRunField field)   // Draw the heads-up display (HUD) on the canvas, showing speed, score, coins, upgrades, and messages.
         {
             // Left: speed and active upgrades.
             AddPanel(canvas, 12, 12, 188, 58);
@@ -1459,7 +1460,7 @@ namespace OOPGames
         private static readonly Brush HudLabelBrush = Brush(Color.FromRgb(196, 206, 220));
         private static readonly Brush HudGoldBrush = Brush(Color.FromRgb(250, 196, 46));
 
-        private static void AddPanel(Canvas canvas, double x, double y, double width, double height)
+        private static void AddPanel(Canvas canvas, double x, double y, double width, double height)    // Add a rounded rectangle panel to the canvas at the specified position with the given width and height, using a semi-transparent background color.
         {
             Rectangle panel = new Rectangle
             {
@@ -1475,7 +1476,7 @@ namespace OOPGames
         }
 
         private static void AddCenteredText(Canvas canvas, string text, double x, double y, double width,
-            double size, Brush brush, FontWeight weight)
+            double size, Brush brush, FontWeight weight)    // Add a text block to the canvas at the specified position with the given width, font size, color, and weight, centered horizontally within the width.
         {
             TextBlock block = new TextBlock
             {
@@ -1492,7 +1493,7 @@ namespace OOPGames
             canvas.Children.Add(block);
         }
 
-        private static string UpgradeLabel(Gruppe2_TrainRunUpgradeKind upgrade)
+        private static string UpgradeLabel(Gruppe2_TrainRunUpgradeKind upgrade) // Return a human-readable label for the given upgrade kind.
         {
             switch (upgrade)
             {
@@ -1505,7 +1506,7 @@ namespace OOPGames
             }
         }
 
-        private static void DrawGameOver(Canvas canvas, double width, double height)
+        private static void DrawGameOver(Canvas canvas, double width, double height)    // Draw a semi-transparent overlay with a "Game Over" message and instructions to start a new game.
         {
             double panelWidth = Math.Min(width - 40, 420);
             double left = (width - panelWidth) / 2;
@@ -1518,7 +1519,7 @@ namespace OOPGames
         }
 
         private static void AddRectangle(Canvas canvas, double x, double y, double width, double height,
-            Brush fill, Brush stroke = null, double strokeWidth = 0)
+            Brush fill, Brush stroke = null, double strokeWidth = 0)    // Add a rectangle to the canvas at the specified position with the given width, height, fill color, stroke color, and stroke thickness.
         {
             Rectangle shape = new Rectangle { Width = width, Height = height, Fill = fill, Stroke = stroke, StrokeThickness = strokeWidth };
             Canvas.SetLeft(shape, x);
@@ -1527,7 +1528,7 @@ namespace OOPGames
         }
 
         private static void AddEllipse(Canvas canvas, double x, double y, double width, double height,
-            Brush fill, Brush stroke, double strokeWidth)
+            Brush fill, Brush stroke, double strokeWidth)   // Add an ellipse to the canvas at the specified position with the given width, height, fill color, stroke color, and stroke thickness.
         {
             Ellipse shape = new Ellipse { Width = width, Height = height, Fill = fill, Stroke = stroke, StrokeThickness = strokeWidth };
             Canvas.SetLeft(shape, x);
@@ -1536,7 +1537,7 @@ namespace OOPGames
         }
 
         private static void AddText(Canvas canvas, string text, double x, double y, double size,
-            Brush brush, FontWeight weight)
+            Brush brush, FontWeight weight) // Add a text block to the canvas at the specified position with the given font size, color, and weight.
         {
             TextBlock block = new TextBlock
             {

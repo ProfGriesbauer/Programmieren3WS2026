@@ -5,7 +5,7 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
-    public sealed class Gruppe2_TrainRunRules : IGameRules2
+    public sealed class Gruppe2_TrainRunRules : IGameRules2 // the game rules for the Train Run game, handling the game state and player moves
     {
         private const double SignalLaneChangeCollisionDistance = 8;
         private readonly Random _random = new Random();
@@ -77,7 +77,7 @@ namespace OOPGames
         {
         }
 
-        public void ClearField()
+        public void ClearField()    // reset the game to the initial state, ready for a new run
         {
             _field.Reset();
             _passedTrainParts.Clear();
@@ -88,7 +88,7 @@ namespace OOPGames
             _nextWaveAt = 25;
         }
 
-        public void DoMove(IPlayMove move)
+        public void DoMove(IPlayMove move)  // handle a key press: change lane, jump or roll
         {
             IGruppe2_TrainRunMove trainRunMove = move as IGruppe2_TrainRunMove;
             if (trainRunMove == null || !MovesPossible
@@ -151,32 +151,32 @@ namespace OOPGames
             }
         }
 
-        public int CheckIfPLayerWon()
+        public int CheckIfPLayerWon()   // the game is endless, so no player can win
         {
             return -1;
         }
 
-        public void TickGameCall()
+        public void TickGameCall()  // one tick of the game: move the runner forward, spawn new obstacles and rewards, move them closer, check for collisions and collect coins
         {
             if (_field.GameOver)
             {
                 return;
             }
 
-            _field.AnimationTicks++;
-            _ticksSinceUpgradeSpawn++;
-            _field.Distance += _field.Speed;
-            _field.Score = (int)_field.Distance + _field.Coins * 10;
+            _field.AnimationTicks++;    // advance the animation of the runner and the obstacles, so the train wheels turn and the bushes sway
+            _ticksSinceUpgradeSpawn++;  // count ticks since the last upgrade coin was spawned, to keep a pause between two upgrades
+            _field.Distance += _field.Speed;    // the runner moves forward at the current speed, which rises with the score
+            _field.Score = (int)_field.Distance + _field.Coins * 10;    // the score is the distance plus 10 points per coin
             // The speed keeps rising with the score, without an upper limit.
-            _field.Speed = 1 + _field.Score / 1500.0;
+            _field.Speed = 1 + _field.Score / 1500.0;   // the speed is 1 at the start, and rises by 1 for every 1500 points scored
 
-            TickTimers();
-            SpawnWaves();
-            ExtendJetpackCoinTrail();
-            AdvanceObjects();
-            CollectRewards();
-            ResolveObstacles();
-            UpdateTrainRoof();
+            TickTimers();       // decrease jump, drop, roll, jetpack and upgrade timers, and the guard intro timer
+            SpawnWaves();       // spawn new obstacles and rewards at the spawn line, as long as the runner has passed the next wave distance
+            ExtendJetpackCoinTrail(); // add coins at flight level along the jetpack trail, until the runner sinks again
+            AdvanceObjects();       // move all obstacles and rewards closer to the runner, remove those that are behind the camera
+            CollectRewards();       // collect coins and upgrade boxes that are in range, grant upgrades and remove collected rewards
+            ResolveObstacles();     // check for collisions with obstacles and trains, handle signals, ramps and gaps
+            UpdateTrainRoof();      // check if the runner is still on a train roof, or drops off to the track or into the air
 
             if (_field.GuardGap < 100)
             {
@@ -189,7 +189,7 @@ namespace OOPGames
             }
         }
 
-        private void TickTimers()
+        private void TickTimers()   // decrease jump, drop, roll, jetpack and upgrade timers, and the guard intro timer
         {
             DecreaseTimers(_field.MutableUpgrades);
             _field.GuardIntroTicks = Math.Max(0, _field.GuardIntroTicks - 1);
@@ -221,7 +221,7 @@ namespace OOPGames
         /// A train roof can only be reached without a ramp by jumping with the
         /// jump stick, or by flying with the jetpack. A normal jump is too low.
         /// </summary>
-        private bool CanReachTrainRoof()
+        private bool CanReachTrainRoof()    //  true if the runner can reach a train roof without a ramp, by jumping with the jump stick or flying with the jetpack
         {
             bool jumpingWithStick = _field.JumpTicks > 0
                 && _field.HasUpgrade(Gruppe2_TrainRunUpgradeKind.JumpStick);
@@ -229,10 +229,10 @@ namespace OOPGames
         }
 
         /// <summary>
-        /// The front of a car reaches the runner: walk on (roof), fly over (jetpack),
+        /// The front of a train reaches the runner: walk on (roof), fly over (jetpack),
         /// land on the roof (jump stick) or crash.
         /// </summary>
-        private void ReachCarFront(string crashMessage)
+        private void ReachCarFront(string crashMessage) // the front of a train reaches the runner: walk on (roof), fly over (jetpack), land on the roof (jump stick) or crash
         {
             if (_field.Level == Gruppe2_TrainRunLevel.TrainRoof || _field.JetpackTicks > 0)
             {
@@ -289,7 +289,7 @@ namespace OOPGames
             }
         }
 
-        private static void DecreaseTimers(Dictionary<Gruppe2_TrainRunUpgradeKind, int> upgrades)
+        private static void DecreaseTimers(Dictionary<Gruppe2_TrainRunUpgradeKind, int> upgrades)   // decrease the remaining ticks of all active upgrades, and remove those that have run out
         {
             foreach (Gruppe2_TrainRunUpgradeKind upgrade in upgrades.Keys.ToArray())
             {
@@ -301,7 +301,7 @@ namespace OOPGames
             }
         }
 
-        private void SpawnWaves()
+        private void SpawnWaves() // spawn new obstacles and rewards at the spawn line, as long as the runner has passed the next wave distance
         {
             if (!_trackPrefilled)
             {
@@ -466,7 +466,7 @@ namespace OOPGames
             _missedRewards.RemoveWhere(reward => reward.Distance < RewardRemoveBehindDistance);
         }
 
-        private void CollectRewards()
+        private void CollectRewards()   // collect coins and upgrade boxes that are in range, grant upgrades and remove collected rewards
         {
             foreach (Gruppe2_TrainRunReward reward in _field.MutableRewards.ToArray())
             {
@@ -658,7 +658,7 @@ namespace OOPGames
             }
         }
 
-        private void ResolveObstacles()
+        private void ResolveObstacles() // check for collisions with obstacles and trains, handle signals, ramps and gaps
         {
             foreach (Gruppe2_TrainRunObstacle obstacle in _field.MutableObstacles
                 .Where(item => item.Kind != Gruppe2_TrainRunObstacleKind.Signal
@@ -759,7 +759,7 @@ namespace OOPGames
             ResolveSignalLaneChange(previousLane, targetLane);
         }
 
-        private void ResolveSignalLaneChange(int previousLane, int currentLane)
+        private void ResolveSignalLaneChange(int previousLane, int currentLane) // check if a signal was crossed when changing lanes, and hit the runner if so
         {
             if (previousLane == currentLane || _field.JetpackTicks > 0)
             {
@@ -794,7 +794,7 @@ namespace OOPGames
             }
         }
 
-        private void HitOrEnd(bool fatal, string message)
+        private void HitOrEnd(bool fatal, string message)   // hits the runner (fatal or not) unless the surfboard upgrade saves him, and ends the run if fatal
         {
             if (_field.HasUpgrade(Gruppe2_TrainRunUpgradeKind.Surfboard))
             {
