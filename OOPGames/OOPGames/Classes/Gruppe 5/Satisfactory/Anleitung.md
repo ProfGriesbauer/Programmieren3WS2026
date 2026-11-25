@@ -3,7 +3,9 @@
 ## Spielstart
 
 Wähle im Framework die Regeln **„G5 Fabrikregeln“**, den Painter
-**„G5 Fabrik-Welt“** und den menschlichen Spieler **„G5 Fabrik-Spieler“**.
+**„G5 Fabrik-Welt“** und für beide Spielerplätze **„G5 Fabrik-Spieler“**.
+Das Framework wechselt nach jeder Eingabe zwischen den beiden Spielerplätzen;
+beide steuern dieselbe Spielfigur.
 Du startest auf einer großen Weltkarte ohne Gebäude und ohne Rohstoffe im
 Inventar. Die Einstellungen bestimmen den Vorrat der Vorkommen und das
 Produktionstempo.
@@ -15,7 +17,7 @@ Produktionstempo.
 | Spieler bewegen und Blickrichtung ändern | `W`, `A`, `S`, `D` |
 | Rohstoff vor dem Spieler abbauen | `E` |
 | Baumenü öffnen oder schließen | `Tab` oder auf die Menü-Überschrift klicken |
-| Gebäude auswählen und bauen | Im Baumenü auswählen, dann auf die gelbe Zielkachel ziehen oder **Bauen** klicken |
+| Gebäude auswählen und bauen | Aus dem Baumenü auf ein freies sichtbares Feld ziehen oder **Bauen** für die gelbe Zielkachel klicken |
 | Gebäudeinformationen öffnen | Gebäude auf der Karte anklicken |
 | Fördererausgabe abholen | Förderer anklicken, Anzahl mit Zahlentasten eingeben, dann **Abholen** |
 | Gebäude verkaufen | Gebäudemenü oder `Entf` |
@@ -24,6 +26,7 @@ Produktionstempo.
 | Gegenstand manuell herstellen | Im Inventar bei **Handwerk** auf **Herstellen** klicken; ein Produkt dauert zwei Sekunden |
 | Gegenstand ablegen | Inventarzeile anklicken, Anzahl eingeben und **Ablegen** klicken |
 | Abgelegte Gegenstände aufnehmen | Auf den Ablageort gehen und **Aufnehmen** klicken |
+| Statistik öffnen oder schließen | `F2`, **Statistik** oder das `×` im Statistikfenster |
 
 Die gelbe Umrandung zeigt das Feld vor dem Spieler. Rohstoffe sammelst du,
 indem du dich neben ein Vorkommen stellst, darauf schaust und `E` drückst.
@@ -39,7 +42,7 @@ Die Spalte **Handwerk** bietet für herstellbare Gegenstände eine Schaltfläche
 Ein Klick startet genau ein Produkt; nach zwei Sekunden ist es fertig. Während
 eine Herstellung läuft, startet kein weiteres Produkt automatisch.
 Wähle ein Gebäude im Baumenü aus
-und ziehe es auf das gelb markierte Feld oder bestätige mit **Bauen**; das Feld
+und ziehe es auf ein freies sichtbares Feld oder bestätige mit **Bauen** für das gelb markierte Feld; das Feld
 muss frei und bebaubar sein. Ein Förderer muss auf einem noch verfügbaren
 Vorkommen stehen. Gebäude und Vorkommen belegen jeweils ein Rasterfeld.
 
@@ -58,12 +61,34 @@ Handwerk müssen im Rucksack liegen:
 - Kohlekraftwerk: 6 Eisenbarren, 3 Eisenplatten, 2 Beton, 4 Kohle, 4 Holz
 - Strommast: 1 Eisenplatte, 1 Eisenstange, 1 Beton, 2 Holz
 - Lager: 3 Eisenplatten, 2 Eisenstangen, 4 Beton, 6 Holz
+- Rakete: 40 Eisenplatten, 30 Beton, 20 Rotoren
 
 Ein Klick auf ein Gebäude öffnet seine Details. Dort kannst du – abhängig von
 Gebäudetyp und Stufe – Rezepte auswählen und eine Verbesserung kaufen. Verbesserungen
 beschleunigen die Produktion oder erhöhen Kapazität und Leistung. Ab Stufe 2
-werden zusätzliche Rezepte freigeschaltet. Ein Verkauf erstattet 50 Prozent der
+werden zusätzliche Rezepte freigeschaltet. Die Gebäudestufe steht im Menü und
+wird nicht als Schild auf der Kachel angezeigt. Ein Verkauf erstattet 50 Prozent der
 Bau- und Verbesserungskosten; Bruchteile werden abgerundet.
+
+## Spielziel: den Planeten verlassen
+
+Baue ein Lager und eine Produktionskette für Rotoren. Die Rakete ist das
+teuerste Gebäude und kann nur einmal gleichzeitig platziert werden. Stelle dich
+direkt neben sie und öffne ihr Gebäudemenü. Mit **Uran einfüllen** wird das
+vorhandene Uran aus Rucksack und Lagern eingefüllt, bis der Tank 50 Uran enthält.
+Du kannst in mehreren Schritten tanken. Wähle anschließend **Einsteigen und
+starten**. Die Rakete hebt ab und eine Gewinnansicht erscheint. Ein Uranvorkommen
+befindet sich garantiert fünf Felder rechts und fünf Felder unter dem Startpunkt.
+
+Beim Verkauf einer betankten Rakete erhältst du das gesamte eingefüllte Uran
+zusätzlich zur üblichen Rückerstattung zurück. Ist dafür nicht genug Platz frei,
+wird der Verkauf abgelehnt.
+
+Die Statistik zeigt getrennt nach Rohstoff und Produkt die tatsächlich
+abgebauten beziehungsweise fertig hergestellten Mengen sowie die Zahl aller
+gebauten Gebäude und die Spielzeit. Auch Handabbau und Handwerk zählen;
+Transporte und Verkäufe nicht. Nach dem Sieg bleibt die Statistik über die
+Schaltfläche oder `F2` erreichbar.
 
 ## Produktion und Transport
 
@@ -84,6 +109,10 @@ Förderband dauert der Transport etwa 0,6 Sekunden. Währenddessen bewegt sich
 eine neutrale Transportbox über das Band; sie stellt keine konkrete Ressource
 oder Menge dar. Schmelzen, Konstruktoren, Montagewerke und Förderer haben eigene
 Verarbeitungszyklen.
+
+Mit ausgewähltem Förderband zeigt Ziehen auf der Karte eine Linienvorschau.
+Der automatische Bau einer ganzen Reihe ist noch nicht angeschlossen; baue
+die Förderbänder einzeln.
 
 ## Welt
 

@@ -80,6 +80,8 @@ namespace OOPGames
                         return G5_FabrikAktion.GebaeudeVerkaufen(_playerNumber);
                     case Key.Tab:
                         return G5_FabrikAktion.BaumenueUmschalten(_playerNumber);
+                    case Key.F2:
+                        return G5_FabrikAktion.StatistikUmschalten(_playerNumber);
                     case Key.Escape:
                         return G5_FabrikAktion.GebaeudeAnsehen(_playerNumber, -1, -1);
                     default:
@@ -122,6 +124,12 @@ namespace OOPGames
                         return G5_FabrikAktion.GebaeudeUpgraden(_playerNumber);
                     case G5_FabrikAktionstyp.GebaeudeVerkaufen:
                         return G5_FabrikAktion.GebaeudeVerkaufen(_playerNumber);
+                    case G5_FabrikAktionstyp.RaketeBetanken:
+                        return G5_FabrikAktion.RaketeBetanken(_playerNumber);
+                    case G5_FabrikAktionstyp.RaketeStarten:
+                        return G5_FabrikAktion.RaketeStarten(_playerNumber);
+                    case G5_FabrikAktionstyp.StatistikUmschalten:
+                        return G5_FabrikAktion.StatistikUmschalten(_playerNumber);
                     case G5_FabrikAktionstyp.GegenstandAbholen:
                         return G5_FabrikAktion.GegenstandAbholen(_playerNumber, wert);
                     case G5_FabrikAktionstyp.ManuellHerstellen:
@@ -135,6 +143,14 @@ namespace OOPGames
                     case G5_FabrikAktionstyp.GebaeudeAnsehen:
                         return G5_FabrikAktion.GebaeudeAnsehen(_playerNumber, -1, -1);
                 }
+            }
+
+            if (field is SatisfactoryFieldView menuView &&
+                (menuView.Spielfeld.StatistikGeoeffnet ||
+                 menuView.IsMenueBereich(clickSelection.XClickPos, clickSelection.YClickPos) ||
+                 menuView.IsInventarBereich(clickSelection.XClickPos, clickSelection.YClickPos)))
+            {
+                return null;
             }
 
             if (field is IG5_WeltSpielfeld welt &&
@@ -239,6 +255,21 @@ namespace OOPGames
         internal static G5_FabrikAktion GebaeudeVerkaufen(int playerNumber)
         {
             return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.GebaeudeVerkaufen, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion RaketeBetanken(int playerNumber)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.RaketeBetanken, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion RaketeStarten(int playerNumber)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.RaketeStarten, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion StatistikUmschalten(int playerNumber)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.StatistikUmschalten, G5_Bauwerkzeug.Keines, -1, -1);
         }
 
         internal static G5_FabrikAktion GegenstandAbholen(int playerNumber, string anzahl)

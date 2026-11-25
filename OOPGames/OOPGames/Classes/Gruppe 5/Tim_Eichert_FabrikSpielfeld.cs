@@ -5,16 +5,26 @@ using System.Linq;
 
 namespace OOPGames
 {
+    internal enum G5_Spielphase
+    {
+        Fabrik,
+        Raketenstart,
+        Gewonnen
+    }
+
     internal sealed class G5_FabrikSpielfeld : IG5_FabrikSpielInfo, IG5_KartenansichtSteuerung
     {
         internal const int SpielerInventarKapazitaetMax = 50;
         internal const int HandabbauCooldownTicks = 50;
         internal const int ManuellesHandwerkDauerTicks = 50;
+        internal const int RaketenstartDauerTicks = 100;
         internal static readonly TimeSpan AbwurfLebensdauer = TimeSpan.FromMinutes(2);
 
         private readonly G5_WeltSpielfeld _welt;
         private readonly G5_FactorySimulation _simulation;
         private readonly Dictionary<G5_Item, int> _spielerInventar = new Dictionary<G5_Item, int>();
+        private readonly Dictionary<G5_Item, long> _abgebauteRohstoffe = new Dictionary<G5_Item, long>();
+        private readonly Dictionary<G5_Item, long> _hergestellteProdukte = new Dictionary<G5_Item, long>();
         private readonly List<AbgelegterGegenstand> _abgelegteGegenstaende =
             new List<AbgelegterGegenstand>();
         private G5_Bauwerkzeug _aktuellesWerkzeug;
@@ -30,11 +40,14 @@ namespace OOPGames
         private G5_Recipe _laufendesHandwerk;
         private int _verbleibendeHandwerkTicks;
         private int _reservierteHandwerkKapazitaet;
+        private int _raketenstartTicks;
 
         internal G5_FabrikSpielfeld(G5_WeltSpielfeld welt, int spielerX, int spielerY)
         {
             _welt = welt ?? throw new ArgumentNullException(nameof(welt));
             _simulation = new G5_FactorySimulation();
+            _simulation.RohstoffGefoerdert += ErfasseAbbau;
+            _simulation.ProduktHergestellt += ErfasseProduktion;
             _spielerPosition = new G5_GridPosition(spielerX, spielerY);
             _spielerBlickrichtung = G5_SpielerBlickrichtung.Sueden;
             _statusMeldung = "WASD: bewegen | E: abbauen | Baumenü: Gebäude kaufen und am markierten Feld bauen.";
@@ -45,6 +58,122 @@ namespace OOPGames
         internal IReadOnlyList<G5_Building> InterneGebaeude => _simulation.Buildings;
         internal bool BaumenueGeoeffnet => _baumenueGeoeffnet;
         internal bool GebaeuderegisterGeoeffnet => _baumenueGeoeffnet;
+        internal G5_Spielphase Spielphase { get; private set; }
+        internal int RaketenstartTicks => _raketenstartTicks;
+        internal bool StatistikGeoeffnet { get; private set; }
+        internal int GebauteGebaeude { get; private set; }
+        internal IReadOnlyDictionary<G5_Item, long> AbgebauteRohstoffe =>
+            new ReadOnlyDictionary<G5_Item, long>(_abgebauteRohstoffe);
+        internal IReadOnlyDictionary<G5_Item, long> HergestellteProdukte =>
+            new ReadOnlyDictionary<G5_Item, long>(_hergestellteProdukte);
+
+        internal void ErfasseAbbau(G5_Item item, int menge)
+        {
+            Zaehle(_abgebauteRohstoffe, item, menge);
+        }
+
+        internal void ErfasseProduktion(G5_Item item, int menge)
+        {
+            Zaehle(_hergestellteProdukte, item, menge);
+        }
+
+        private static void Zaehle(Dictionary<G5_Item, long> zaehler, G5_Item item, int menge)
+        {
+            if (menge <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(menge));
+            }
+
+            zaehler[item] = checked((zaehler.TryGetValue(item, out long wert) ? wert : 0) + menge);
+        }
+
+        internal void ErfasseGebaeudebau()
+        {
+            GebauteGebaeude = checked(GebauteGebaeude + 1);
+        }
+
+        internal void ToggleStatistik()
+        {
+            StatistikGeoeffnet = !StatistikGeoeffnet;
+        }
+
+        internal bool TryBetankeRakete(G5_Rakete rakete, out string meldung)
+        {
+            if (!IstAnRakete(rakete))
+            {
+                meldung = "Stelle dich direkt neben die ausgewählte Rakete.";
+                return false;
+            }
+
+            int fehlend = G5_Rakete.UranBedarf - rakete.UranVorrat;
+            if (fehlend == 0)
+            {
+                meldung = "Die Rakete ist bereits vollgetankt.";
+                return false;
+            }
+
+            int menge = Math.Min(fehlend, Gesamtmenge(G5_Item.Uran));
+            if (menge == 0)
+            {
+                meldung = "Zum Betanken wird Uran im Rucksack oder Lager benötigt.";
+                return false;
+            }
+
+            if (!TryVerbraucheRessourcen(new Dictionary<G5_Item, int> { [G5_Item.Uran] = menge }))
+            {
+                throw new InvalidOperationException("Das Uran konnte nicht aus Rucksack und Lagern entnommen werden.");
+            }
+
+            rakete.Betanken(menge);
+            meldung = "Rakete betankt: " + rakete.UranVorrat + "/" + G5_Rakete.UranBedarf + " Uran.";
+            return true;
+        }
+
+        internal bool TryStarteRakete(G5_Rakete rakete, out string meldung)
+        {
+            if (!IstAnRakete(rakete))
+            {
+                meldung = "Stelle dich direkt neben die ausgewählte Rakete.";
+                return false;
+            }
+
+            if (!rakete.Startbereit)
+            {
+                meldung = "Die Rakete benötigt " + G5_Rakete.UranBedarf + " Uran zum Start.";
+                return false;
+            }
+
+            if (Spielphase != G5_Spielphase.Fabrik)
+            {
+                meldung = "Der Raketenstart läuft bereits.";
+                return false;
+            }
+
+            Spielphase = G5_Spielphase.Raketenstart;
+            StatistikGeoeffnet = false;
+            meldung = "Du steigst ein. Der Raketenstart beginnt!";
+            return true;
+        }
+
+        private bool IstAnRakete(G5_Rakete rakete)
+        {
+            return rakete != null && _simulation.Buildings.Contains(rakete) &&
+                _spielerPosition.ManhattanDistanceTo(rakete.Position) == 1;
+        }
+
+        internal void TickRaketenstart()
+        {
+            if (Spielphase != G5_Spielphase.Raketenstart)
+            {
+                return;
+            }
+
+            _raketenstartTicks++;
+            if (_raketenstartTicks >= RaketenstartDauerTicks)
+            {
+                Spielphase = G5_Spielphase.Gewonnen;
+            }
+        }
 
         int IG5_WeltSpielfeld.Breite => ((IG5_WeltSpielfeld)_welt).Breite;
         int IG5_WeltSpielfeld.Hoehe => ((IG5_WeltSpielfeld)_welt).Hoehe;
@@ -528,6 +657,7 @@ namespace OOPGames
 
             _laufendesHandwerk = null;
             _verbleibendeHandwerkTicks = 0;
+            ErfasseProduktion(abgeschlossenesRezept.Output, abgeschlossenesRezept.OutputAmount);
             return abgeschlossenesRezept;
         }
 
@@ -692,6 +822,7 @@ namespace OOPGames
             get
             {
                 if (_gebaeude is G5_Storage) return G5_FabrikGebaeudeTyp.Lager;
+                if (_gebaeude is G5_Rakete) return G5_FabrikGebaeudeTyp.Rakete;
                 if (_gebaeude is G5_Miner) return G5_FabrikGebaeudeTyp.Foerderer;
                 if (_gebaeude is G5_Smelter) return G5_FabrikGebaeudeTyp.Schmelze;
                 if (_gebaeude is G5_Constructor) return G5_FabrikGebaeudeTyp.Konstruktor;
@@ -726,6 +857,11 @@ namespace OOPGames
                 if (_gebaeude is G5_BurningGenerator) return "Erzeugt Strom aus Kohle.";
                 if (_gebaeude is G5_PowerPole) return "Verbindet Gebäude mit dem Stromnetz.";
                 if (_gebaeude is G5_Storage) return "Lagert Gegenstände für deine Fabrik.";
+                if (_gebaeude is G5_Rakete rakete)
+                {
+                    return "Verlässt den Planeten. Treibstoff: " + rakete.UranVorrat +
+                        "/" + G5_Rakete.UranBedarf + " Uran.";
+                }
                 return "Gebäude deiner Fabrik.";
             }
         }
@@ -786,7 +922,8 @@ namespace OOPGames
 
         bool IG5_GebaeudeInfo.KannVerbessertWerden =>
             _gebaeude.Level < G5_FabrikKosten.MaxUpgradeLevel &&
-            !(_gebaeude is G5_PowerPole);
+            !(_gebaeude is G5_PowerPole) &&
+            !(_gebaeude is G5_Rakete);
     }
 
     internal static class G5_FabrikKosten
@@ -803,7 +940,8 @@ namespace OOPGames
                 [G5_Bauwerkzeug.Assembler] = Kosten((G5_Item.Eisenbarren, 10), (G5_Item.Eisenplatte, 6), (G5_Item.Eisenstange, 4), (G5_Item.Beton, 6)),
                 [G5_Bauwerkzeug.Verbrennungsgenerator] = Kosten((G5_Item.Eisenbarren, 6), (G5_Item.Eisenplatte, 3), (G5_Item.Beton, 2), (G5_Item.Kohle, 4), (G5_Item.Holz, 4)),
                 [G5_Bauwerkzeug.Strommast] = Kosten((G5_Item.Eisenplatte, 1), (G5_Item.Eisenstange, 1), (G5_Item.Beton, 1), (G5_Item.Holz, 2)),
-                [G5_Bauwerkzeug.Lager] = Kosten((G5_Item.Eisenplatte, 3), (G5_Item.Eisenstange, 2), (G5_Item.Beton, 4), (G5_Item.Holz, 6))
+                [G5_Bauwerkzeug.Lager] = Kosten((G5_Item.Eisenplatte, 3), (G5_Item.Eisenstange, 2), (G5_Item.Beton, 4), (G5_Item.Holz, 6)),
+                [G5_Bauwerkzeug.Rakete] = Kosten((G5_Item.Eisenplatte, 40), (G5_Item.Beton, 30), (G5_Item.Rotor, 20))
             };
 
         internal static IReadOnlyDictionary<G5_Item, int> Baupreis(G5_Bauwerkzeug werkzeug)

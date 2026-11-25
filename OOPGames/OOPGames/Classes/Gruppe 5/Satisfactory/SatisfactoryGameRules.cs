@@ -62,9 +62,20 @@ namespace OOPGames
                     _gameStarted = true;
                     _mentor.Skip();
                     ClearField();
-                    _field.SetStatusMeldung("WASD: bewegen | E: abbauen | Gebäude am markierten Feld bauen.");
+                    _field.SetStatusMeldung("WASD: bewegen | E: abbauen | Gebäude über das Baumenü platzieren.");
                 }
 
+                return;
+            }
+
+            if (action.Aktionstyp == G5_FabrikAktionstyp.StatistikUmschalten)
+            {
+                _field.ToggleStatistik();
+                return;
+            }
+
+            if (_field.Spielphase != G5_Spielphase.Fabrik)
+            {
                 return;
             }
 
@@ -93,6 +104,14 @@ namespace OOPGames
                     break;
                 case G5_FabrikAktionstyp.GebaeudeVerkaufen:
                     SellSelectedBuilding();
+                    break;
+                case G5_FabrikAktionstyp.RaketeBetanken:
+                    _field.TryBetankeRakete(_field.AusgewaehltesInternesGebaeude as G5_Rakete, out string tankmeldung);
+                    _field.SetStatusMeldung(tankmeldung);
+                    break;
+                case G5_FabrikAktionstyp.RaketeStarten:
+                    _field.TryStarteRakete(_field.AusgewaehltesInternesGebaeude as G5_Rakete, out string startmeldung);
+                    _field.SetStatusMeldung(startmeldung);
                     break;
                 case G5_FabrikAktionstyp.GegenstandAbholen:
                     CollectSelectedMinerOutput(action.Wert);
@@ -151,7 +170,7 @@ namespace OOPGames
 
             _fieldView = new SatisfactoryFieldView(_field, _startScreen, _mentor, _gameStarted);
             _field.SetStatusMeldung(
-                "WASD: bewegen | E: Rohstoff abbauen | Baumenü: kaufen und am markierten Feld bauen.");
+                "WASD: bewegen | E: Rohstoff abbauen | Baumenü: Gebäude auswählen und platzieren.");
         }
 
         public int CheckIfPLayerWon()
@@ -174,11 +193,23 @@ namespace OOPGames
                 return;
             }
 
+            if (_field.Spielphase != G5_Spielphase.Fabrik)
+            {
+                _field.TickRaketenstart();
+                return;
+            }
+
             if (_fieldView.TryConsumePendingBuild(
                 out G5_Bauwerkzeug droppedTool,
                 out G5_GridPosition dropPosition))
             {
                 PlaceBuilding(droppedTool, dropPosition);
+            }
+
+            if (_fieldView.TryConsumePendingConveyorLine(out _, out _))
+            {
+                _field.SetStatusMeldung(
+                    "Förderband-Reihenbau ist noch nicht verfügbar. Baue Förderbänder einzeln.");
             }
 
             _field.TickHandabbauCooldown();
@@ -258,6 +289,7 @@ namespace OOPGames
             }
 
             _field.AddInventar(deposit.Item, extracted);
+            _field.ErfasseAbbau(deposit.Item, extracted);
             _field.SetStatusMeldung("+" + extracted + " " +
                 G5_FabrikBezeichnungen.Gegenstand(deposit.Item) + " gesammelt.");
         }
@@ -292,7 +324,7 @@ namespace OOPGames
 
             _field.SetWerkzeug(tool);
             _field.SetStatusMeldung(G5_FabrikBezeichnungen.Werkzeug(tool) +
-                " ausgewählt. Ziehe es auf die markierte Kachel oder drücke Bauen.");
+                " ausgewählt. Ziehe es auf die Karte oder drücke Bauen für die Zielkachel.");
         }
 
         private void PlaceBuilding(G5_Bauwerkzeug tool, G5_GridPosition? buildPosition = null)
@@ -313,6 +345,13 @@ namespace OOPGames
             }
 
             G5_GridPosition target = buildPosition ?? _field.ZielKachel;
+            if (tool == G5_Bauwerkzeug.Rakete &&
+                _field.InterneGebaeude.OfType<G5_Rakete>().Any())
+            {
+                _field.SetStatusMeldung("Du hast bereits eine Rakete gebaut.");
+                return;
+            }
+
             if (!IsBuildableArea(target.X, target.Y, BuildingWidth, BuildingHeight, null))
             {
                 _field.SetStatusMeldung("Das markierte Feld ist nicht frei oder bebaubar.");
@@ -393,6 +432,10 @@ namespace OOPGames
             {
                 building = new G5_Storage(target, capacity: 500);
             }
+            else if (tool == G5_Bauwerkzeug.Rakete)
+            {
+                building = new G5_Rakete(target);
+            }
             else
             {
                 _field.SetStatusMeldung("Dieses Gebäude wird nicht unterstützt.");
@@ -413,6 +456,7 @@ namespace OOPGames
             }
 
             _buildingInvestments.Add(building, new Dictionary<G5_Item, int>(cost));
+            _field.ErfasseGebaeudebau();
             RefreshConveyorConnections();
             _field.SetStatusMeldung(building.Name + " gebaut. Kosten: " + FormatCost(cost) + ".");
         }
@@ -536,6 +580,12 @@ namespace OOPGames
             Dictionary<G5_Item, int> refund = investment.ToDictionary(
                 item => item.Key,
                 item => item.Value / 2);
+            if (building is G5_Rakete rakete && rakete.UranVorrat > 0)
+            {
+                refund[G5_Item.Uran] = checked(
+                    (refund.TryGetValue(G5_Item.Uran, out int vorhandenesUran) ? vorhandenesUran : 0) +
+                    rakete.UranVorrat);
+            }
             if (!_field.KannEinlagern(refund, storage))
             {
                 _field.SetStatusMeldung("Rucksack und Lager sind voll. Schaffe Platz für die Rückerstattung.");
@@ -798,6 +848,7 @@ namespace OOPGames
             AddDeposit(playerX - 3, playerY, G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz, _resourceAmount);
             AddDeposit(playerX, playerY + 3, G5_Rohstofftyp.Holz, G5_Item.Holz, 15);
             AddDeposit(playerX, playerY - 3, G5_Rohstofftyp.Kohle, G5_Item.Kohle, _resourceAmount);
+            AddDeposit(playerX + 5, playerY + 5, G5_Rohstofftyp.Uran, G5_Item.Uran, _resourceAmount);
 
             (G5_Rohstofftyp Type, G5_Item Item)[] resources =
             {

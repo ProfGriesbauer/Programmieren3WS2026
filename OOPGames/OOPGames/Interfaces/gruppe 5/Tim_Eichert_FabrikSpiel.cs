@@ -14,7 +14,8 @@ namespace OOPGames
         Assembler,
         Verbrennungsgenerator,
         Strommast,
-        Lager
+        Lager,
+        Rakete
     }
 
     public enum G5_FabrikGebaeudeTyp
@@ -29,7 +30,8 @@ namespace OOPGames
         Lager,
         Laufband,
         Splitter,
-        Merger
+        Merger,
+        Rakete
     }
 
     public enum G5_FabrikAktionstyp
@@ -43,6 +45,9 @@ namespace OOPGames
         RezeptWaehlen,
         GebaeudeUpgraden,
         GebaeudeVerkaufen,
+        RaketeBetanken,
+        RaketeStarten,
+        StatistikUmschalten,
         GegenstandAbholen,
         ManuellHerstellen,
         InventarGegenstandWaehlen,

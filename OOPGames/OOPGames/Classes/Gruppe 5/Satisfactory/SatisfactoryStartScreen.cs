@@ -191,7 +191,7 @@ namespace OOPGames
             DrawStep(canvas, left + 28, top + 280, "01", "Rohstoffe sammeln",
                 "Stelle dich neben einen Baum oder ein Erz und drücke E.");
             DrawStep(canvas, left + 28, top + 350, "02", "Gebäude bauen",
-                "Wähle ein Gebäude im Baumenü. Es entsteht am gelb markierten Feld.");
+                "Ziehe ein Gebäude auf die Karte oder baue am gelb markierten Feld.");
             DrawStep(canvas, left + 28, top + 420, "03", "Fabrik verwalten",
                 "Klicke Gebäude für Rezepte und Upgrades. Entf verkauft mit Rückerstattung.");
         }
@@ -282,16 +282,17 @@ namespace OOPGames
             AddText(canvas, "Bewege dich frei und baue deine Fabrik aus gesammelten Rohstoffen:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
-            DrawStep(canvas, left + 30, top + 155, "01", "Laufen und abbauen",
+            double stepsTop = top + Math.Max(136, (height - 330) / 2);
+            DrawStep(canvas, left + 30, stepsTop, "01", "Laufen und abbauen",
                 "WASD bewegt dich. Schaue ein Feld an und drücke E, um Holz oder Erz abzubauen.");
-            DrawStep(canvas, left + 30, top + 225, "02", "Gebäude kaufen",
-                "Das Baumenü zeigt Kosten. Ein Klick baut am gelb markierten Feld.");
-            DrawStep(canvas, left + 30, top + 295, "03", "Produktion einstellen",
+            DrawStep(canvas, left + 30, stepsTop + 70, "02", "Gebäude kaufen",
+                "Ziehe ein Gebäude auf die Karte oder baue auf dem markierten Feld.");
+            DrawStep(canvas, left + 30, stepsTop + 140, "03", "Produktion einstellen",
                 "Klicke ein Gebäude für Details, freigeschaltete Rezepte und Upgrades.");
-            DrawStep(canvas, left + 30, top + 365, "04", "Verkaufen",
+            DrawStep(canvas, left + 30, stepsTop + 210, "04", "Verkaufen",
                 "Verkaufe im Gebäudemenü oder mit Entf. Du erhältst 50 % der Kosten zurück.");
-            AddText(canvas, "Gebäude und Förderbänder benötigen jeweils ein Rasterfeld.",
-                MutedBrush, left + 30, top + 440, width - 60, 40, 10);
+            AddText(canvas, "Endziel: Rakete bauen, mit Uran betanken und einsteigen. Statistik: F2.",
+                MutedBrush, left + 30, stepsTop + 275, width - 60, 40, 10);
 
             DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
                 "SPIEL STARTEN", " ", AccentBrush, BrushFromRgb(13, 30, 24), Action.Start);
@@ -517,9 +518,11 @@ namespace OOPGames
         private Rect _inventarBereich;
         private Rect _baumenueBereich;
         private Rect _gebaeudeMenueBereich;
+        private Rect _statistikBereich = Rect.Empty;
         private readonly List<(Rect Bereich, G5_FabrikAktionstyp Typ, G5_Bauwerkzeug Werkzeug, string Wert)> _menuAktionen =
             new List<(Rect, G5_FabrikAktionstyp, G5_Bauwerkzeug, string)>();
         private (G5_Bauwerkzeug Werkzeug, G5_GridPosition Position)? _pendingBuild;
+        private (G5_GridPosition Start, G5_GridPosition Ende)? _pendingConveyorLine;
         private bool _inventarGeoeffnet = true;
 
         internal SatisfactoryFieldView(
@@ -539,6 +542,7 @@ namespace OOPGames
         internal SatisfactoryStartScreen StartScreen { get { return _startScreen; } }
         internal SatisfactoryGameMentor Mentor { get { return _mentor; } }
         internal Canvas MentorOverlay { get; }
+        internal G5_FabrikSpielfeld Spielfeld => _field;
         internal bool GebaeuderegisterGeoeffnet => _field.GebaeuderegisterGeoeffnet;
         internal bool InventarGeoeffnet => _inventarGeoeffnet;
         internal IG5_GebaeudeInfo AusgewaehltesGebaeude =>
@@ -578,6 +582,12 @@ namespace OOPGames
         internal void BeginMenuAktionen()
         {
             _menuAktionen.Clear();
+            _statistikBereich = Rect.Empty;
+        }
+
+        internal void SetStatistikBereich(Rect bereich)
+        {
+            _statistikBereich = bereich;
         }
 
         internal void RegisterMenuAktion(
@@ -634,6 +644,26 @@ namespace OOPGames
             return true;
         }
 
+        internal void QueuePendingConveyorLine(G5_GridPosition start, G5_GridPosition ende)
+        {
+            _pendingConveyorLine = (start, ende);
+        }
+
+        internal bool TryConsumePendingConveyorLine(out G5_GridPosition start, out G5_GridPosition ende)
+        {
+            if (!_pendingConveyorLine.HasValue)
+            {
+                start = default;
+                ende = default;
+                return false;
+            }
+
+            start = _pendingConveyorLine.Value.Start;
+            ende = _pendingConveyorLine.Value.Ende;
+            _pendingConveyorLine = null;
+            return true;
+        }
+
         internal void CenterCamera(double viewportWidth, double viewportHeight)
         {
             if (viewportWidth <= 0 || viewportHeight <= 66)
@@ -659,10 +689,16 @@ namespace OOPGames
             return _inventarBereich.Contains(new Point(screenX, screenY));
         }
 
+        internal bool IsGebaeudeMenueBereich(int screenX, int screenY)
+        {
+            return _gebaeudeMenueBereich.Contains(new Point(screenX, screenY));
+        }
+
         internal bool IsMenueBereich(int screenX, int screenY)
         {
             Point position = new Point(screenX, screenY);
-            return _baumenueBereich.Contains(position) || _gebaeudeMenueBereich.Contains(position);
+            return _baumenueBereich.Contains(position) || _gebaeudeMenueBereich.Contains(position) ||
+                _statistikBereich.Contains(position);
         }
 
         internal bool TryGetConveyorRoute(
@@ -900,7 +936,7 @@ namespace OOPGames
             }
 
             double registerWidth = _field.GebaeuderegisterGeoeffnet ? 220 : 38;
-            double registerHeight = _field.GebaeuderegisterGeoeffnet ? 253 : 42;
+            double registerHeight = _field.GebaeuderegisterGeoeffnet ? 420 : 42;
             if (screenX >= 10 && screenX <= 10 + registerWidth &&
                 screenY >= 66 && screenY <= 66 + registerHeight)
             {

@@ -213,6 +213,29 @@ namespace OOPGames
             Status = status;
         }
     }
+    internal sealed class G5_Rakete : G5_Building
+    {
+        internal const int UranBedarf = 50;
+
+        internal G5_Rakete(G5_GridPosition position) : base(position, 1, 1)
+        {
+        }
+
+        public override string Name => "Rakete";
+        internal int UranVorrat { get; private set; }
+        internal bool Startbereit => UranVorrat == UranBedarf;
+
+        internal void Betanken(int menge)
+        {
+            if (menge <= 0 || menge > UranBedarf - UranVorrat)
+            {
+                throw new ArgumentOutOfRangeException(nameof(menge));
+            }
+
+            UranVorrat += menge;
+        }
+    }
+
     public sealed class G5_ResourceDeposit
     {
         public G5_ResourceDeposit(G5_Item item, long? amount)

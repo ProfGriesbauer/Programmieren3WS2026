@@ -19,6 +19,7 @@ namespace OOPGames
                 case G5_FabrikGebaeudeTyp.Laufband: return "Förderband";
                 case G5_FabrikGebaeudeTyp.Splitter: return "Verteiler";
                 case G5_FabrikGebaeudeTyp.Merger: return "Zusammenführer";
+                case G5_FabrikGebaeudeTyp.Rakete: return "Rakete";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(typ), typ, "Unbekannter Gebäudetyp.");
             }
@@ -38,6 +39,7 @@ namespace OOPGames
                 case G5_Bauwerkzeug.Verbrennungsgenerator: return "Kohlekraftwerk";
                 case G5_Bauwerkzeug.Strommast: return "Strommast";
                 case G5_Bauwerkzeug.Lager: return "Lager";
+                case G5_Bauwerkzeug.Rakete: return "Rakete";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(werkzeug), werkzeug, "Unbekanntes Bauwerkzeug.");
             }
