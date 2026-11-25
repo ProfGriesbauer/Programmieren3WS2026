@@ -1,11 +1,87 @@
 #if GROUP5_TESTS
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using OOPGames;
 
 namespace Gruppe5Tests;
 
 public sealed class SatisfactoryGameplayTests
 {
+    [Fact]
+    public void QueuedBuildKeepsItsDropPositionUntilConsumed()
+    {
+        RunOnSta(() =>
+        {
+            G5_FabrikSpielfeld field = CreateField();
+            SatisfactoryFieldView view = new SatisfactoryFieldView(
+                field, new SatisfactoryStartScreen(), new SatisfactoryGameMentor(), true);
+            G5_GridPosition droppedAt = new G5_GridPosition(4, 5);
+
+            view.QueuePendingBuild(G5_Bauwerkzeug.Lager, droppedAt);
+            field.MoveSpieler(1, 0);
+
+            Assert.True(view.TryConsumePendingBuild(out G5_Bauwerkzeug tool, out G5_GridPosition position));
+            Assert.Equal(G5_Bauwerkzeug.Lager, tool);
+            Assert.Equal(droppedAt, position);
+            Assert.False(view.TryConsumePendingBuild(out _, out _));
+        });
+    }
+
+    [Theory]
+    [InlineData(0, -1)]
+    [InlineData(1, 0)]
+    [InlineData(0, 1)]
+    [InlineData(-1, 0)]
+    public void PlayerFacePointsTowardsActionTile(int dx, int dy)
+    {
+        RunOnSta(() =>
+        {
+            G5_FabrikSpielfeld field = CreateField();
+            field.MoveSpieler(dx, dy);
+            SatisfactoryFieldView view = new SatisfactoryFieldView(
+                field, new SatisfactoryStartScreen(), new SatisfactoryGameMentor(), true);
+            Canvas canvas = new Canvas { Width = 800, Height = 600 };
+            canvas.Measure(new Size(800, 600));
+            canvas.Arrange(new Rect(0, 0, 800, 600));
+
+            new G5_FabrikPainter().PaintGameField(canvas, view);
+
+            Image player = Assert.Single(canvas.Children.OfType<Canvas>()
+                .SelectMany(layer => layer.Children.OfType<Image>()),
+                image => image.RenderTransform is RotateTransform);
+            Vector front = player.RenderTransform.Transform(new Point(0, 1)) -
+                player.RenderTransform.Transform(new Point(0, 0));
+            G5_GridPosition position = ((IG5_FabrikSpielInfo)view).SpielerPosition;
+            G5_GridPosition target = ((IG5_FabrikSpielInfo)view).ZielKachel;
+            Assert.Equal(target.X - position.X, front.X, 6);
+            Assert.Equal(target.Y - position.Y, front.Y, 6);
+        });
+    }
+
+    private static void RunOnSta(Action action)
+    {
+        Exception? failure = null;
+        Thread thread = new Thread(() =>
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (failure != null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        }
+    }
+
     [Fact]
     public void StartingCameraUsesLargerTiles()
     {
