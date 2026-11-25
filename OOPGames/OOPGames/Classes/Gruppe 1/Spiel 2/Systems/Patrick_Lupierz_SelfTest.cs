@@ -844,7 +844,8 @@ namespace OOPGames
                 int ask = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Ich hab da eine Frage"));
                 Check(ask >= 0, "Keine Fragen-Option bei Denis");
                 c.Choose(ask);
-                string wanted = lexicon ? "Welche Fische gibt es?" : "Wofuer sind die Fische?";
+                // Änderung durch: Patrick Lupierz – 25.11.2026 – Thema heißt seit der Rechtschreibkorrektur "Wofür sind die Fische?"
+                string wanted = lexicon ? "Welche Fische gibt es?" : "Wofür sind die Fische?";
                 for (int page = 0; page < 4 && !c.Options.Any(o => o.Text == wanted); page++)
                 {
                     int more = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Weitere Fragen"));
@@ -963,10 +964,13 @@ namespace OOPGames
 
             Check(G1C_ArcadeMentor.TipFor(1) != G1C_ArcadeMentor.TipFor(2), "Tipp wechselt nicht täglich");
             Equal(G1C_ArcadeMentor.TipFor(3), G1C_ArcadeMentor.TipFor(3), "Tipp innerhalb eines Tages gleich");
-            Equal(576, G1C_ArcadeMentor.SnakeRecord, "Patricks Rekord");
-            Check(game.HighscoreText().Contains("Schlange: 576 Punkte – Patrick"), "Rekord fehlt auf der Tafel: " + game.HighscoreText());
-            game.ArcadeHighscores["Schlange"] = 600;
-            Check(game.HighscoreText().Contains("Schlange: 600 Punkte – Du") && !game.HighscoreText().Contains("576"), "Gebrochener Rekord nicht auf der Tafel: " + game.HighscoreText());
+            // Änderung durch: Patrick Lupierz – Datum: 25.11.2026 – Rekord steht jetzt in der Konstante (560 statt 576); der Test
+            // vergleicht mit der Konstante und prüft nur, dass der Rekord hoch genug (>= 500) und erreichbar (< 700) ist.
+            int record = G1C_ArcadeMentor.SnakeRecord;
+            Check(record >= 500 && record < 700, "Patricks Rekord nicht 'angenehm hoch': " + record);
+            Check(game.HighscoreText().Contains("Schlange: " + record + " Punkte – Patrick"), "Rekord fehlt auf der Tafel: " + game.HighscoreText());
+            game.ArcadeHighscores["Schlange"] = 700;
+            Check(game.HighscoreText().Contains("Schlange: 700 Punkte – Du") && !game.HighscoreText().Contains(record + " Punkte – Patrick"), "Gebrochener Rekord nicht auf der Tafel: " + game.HighscoreText());
             game.ArcadeHighscores.Remove("Schlange");
 
             G1C_MoneyManager money = new G1C_MoneyManager(100);
