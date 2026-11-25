@@ -59,23 +59,25 @@ namespace OOPGames
             "Kurt",
             new[] { "Character", "Kurt", "Kurt.png" },
             new[] { "Character", "Kurt", "Kurt.json" });
-        private static readonly string[] EnemySpriteSheetPath =
-            { "Enemies", "Enemie1.png" };
-        private static readonly string[] EnemyAnimationMetadataPath =
-            { "Enemies", "Enemie1.json" };
+        // Enemy tint overlays (enemy kinds) are drawn at this strength over the sprite.
+        private const double EnemyTintOpacity = 0.55;
         private AnimationProfile _selectedAnimationProfile = BoxingKnightProfile;
         private SpriteSheetAnimator _playerAnimator;
         private AnimationProfile _playerAnimatorProfile;
         private readonly Dictionary<MirrorImage, SpriteSheetAnimator>
             _mirrorImageAnimators = new Dictionary<MirrorImage, SpriteSheetAnimator>();
         private AnimationProfile _mirrorImageAnimatorProfile;
-        private SpriteSheetAnimator _enemyAnimator;
+        // One animator per enemy sprite sheet (enemy kinds can choose their sheet).
+        private readonly Dictionary<string, SpriteSheetAnimator> _enemyAnimators =
+            new Dictionary<string, SpriteSheetAnimator>(StringComparer.OrdinalIgnoreCase);
         private readonly ArenaAudio _audio = new ArenaAudio();
         private Canvas _menuClickCanvas;
         private ArenaField _pauseMenuField;
         private ArenaField _menuStateField;
         private MenuPage _menuPage;
-        private MenuPage _menuPageBeforeWeaponUpgrades = MenuPage.Main;
+        // Where each open page came from; Back and Escape return there. MenuPage.Game
+        // means the page was opened by a key during the game, so leaving it resumes play.
+        private readonly Stack<MenuPage> _menuHistory = new Stack<MenuPage>();
         private ArenaAction? _keyBindingCaptureAction;
         private bool _lastGameStarted;
         private double _pauseMenuCanvasWidth;
@@ -98,10 +100,8 @@ namespace OOPGames
             _playerAnimatorProfile = null;
             _mirrorImageAnimators.Clear();
             _mirrorImageAnimatorProfile = null;
-            _enemyAnimator = null;
-            _menuPage = MenuPage.Main;
-            _menuPageBeforeWeaponUpgrades = MenuPage.Main;
-            _keyBindingCaptureAction = null;
+            _enemyAnimators.Clear();
+            ResetMenuPages();
         }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
@@ -172,6 +172,9 @@ namespace OOPGames
                 RenderTransform = new ScaleTransform(
                     field.ZoomLevel, field.ZoomLevel, width / 2, height / 2)
             };
+            // Pixel art (map, characters, enemies, weapons) stays sharp when scaled up;
+            // the setting applies to everything drawn inside the world.
+            RenderOptions.SetBitmapScalingMode(worldCanvas, BitmapScalingMode.NearestNeighbor);
 
             // Offset map coordinates by the player's position to keep the camera centered.
             double left = field.Player.PositionX - width / 2;
@@ -264,22 +267,26 @@ namespace OOPGames
 
             PaintMirrorImages(worldCanvas, field, left, top);
 
-            foreach (PursuerEnemy enemy in field.Enemies)
+            foreach (NonPlayerCharacter enemy in field.Enemies)
             {
                 if (!enemy.IsAlive)
                 {
                     continue;
                 }
 
-                if (_enemyAnimator == null)
-                {
-                    _enemyAnimator = new SpriteSheetAnimator(
-                        FindAssetPath(EnemySpriteSheetPath),
-                        FindAssetPath(EnemyAnimationMetadataPath));
-                }
-
-                BitmapSource enemyFrame = _enemyAnimator.GetFrame(
-                    GetEnemyAnimationName(enemy), field.GameTimeScale);
+                SpriteSheetAnimator enemyAnimator = GetEnemyAnimator(enemy.Type.SpriteSheet);
+                // A missing sheet falls back to the standard enemy's animator and names.
+                bool standardSheet = ReferenceEquals(enemyAnimator,
+                    GetEnemyAnimator(EnemyType.DefaultSpriteSheet));
+                BitmapSource enemyFrame = enemyAnimator.GetFrame(standardSheet
+                        ? GetEnemyAnimationName(enemy)
+                        : GetKindAnimationName(enemy, enemyAnimator),
+                    field.GameTimeScale);
+                // The standard enemy turns right and grows while striking by scaling;
+                // sheets with their own (or mirrored) clips show that themselves.
+                double enemyScale = standardSheet && enemy.HasActiveAttack ? 1.2 : 1;
+                bool flipEnemy = standardSheet
+                    && enemy.Facing == PlayerFacing.Right && !enemy.IsMoving;
                 double enemyHeight = enemy.Size * 2;
                 double enemyWidth = enemyHeight * enemyFrame.PixelWidth / enemyFrame.PixelHeight;
                 Image enemyImage = new Image
@@ -290,10 +297,8 @@ namespace OOPGames
                     Stretch = Stretch.Uniform,
                     RenderTransformOrigin = new Point(0.5, 0.5),
                     RenderTransform = new ScaleTransform(
-                        enemy.Facing == PlayerFacing.Right && !enemy.IsMoving
-                            ? (enemy.HasActiveAttack ? -1.2 : -1)
-                            : (enemy.HasActiveAttack ? 1.2 : 1),
-                        enemy.HasActiveAttack ? 1.2 : 1),
+                        flipEnemy ? -enemyScale : enemyScale, enemyScale),
+                    Opacity = enemy.Type.Opacity,
                     IsHitTestVisible = false
                 };
                 Canvas.SetLeft(enemyImage,
@@ -301,12 +306,16 @@ namespace OOPGames
                 Canvas.SetTop(enemyImage,
                     enemy.PositionY - top - enemyHeight / 2);
                 worldCanvas.Children.Add(enemyImage);
+                AddEnemyTint(worldCanvas, enemy.Type, enemyImage);
                 AddDamageFlashOverlay(worldCanvas, enemy, enemyImage);
 
                 _hudRenderer.PaintStatusPlaceholder(
                     worldCanvas, enemy, enemy.PositionX - left, enemy.PositionY - top);
-                _hudRenderer.PaintEntityHealth(worldCanvas, enemy,
-                    enemy.PositionX - left, enemy.PositionY - top - enemyHeight / 2 - 10);
+                if (enemy.Type.ShowHealthBar)
+                {
+                    _hudRenderer.PaintEntityHealth(worldCanvas, enemy,
+                        enemy.PositionX - left, enemy.PositionY - top - enemyHeight / 2 - 10);
+                }
             }
 
             _weaponRenderer.PaintProjectiles(worldCanvas, field, left, top);
@@ -347,12 +356,11 @@ namespace OOPGames
             if (!ReferenceEquals(_menuStateField, field)
                 || _lastGameStarted != field.IsGameStarted)
             {
-                _menuPage = MenuPage.Main;
-                _menuPageBeforeWeaponUpgrades = MenuPage.Main;
-                _keyBindingCaptureAction = null;
+                ResetMenuPages();
                 _menuStateField = field;
             }
             _lastGameStarted = field.IsGameStarted;
+            OpenRequestedMenu(field);
             
             // Update player's animation profile name for correct hand positioning
             if (field.Player != null)
@@ -361,7 +369,78 @@ namespace OOPGames
             }
         }
 
-        private static string GetEnemyAnimationName(PursuerEnemy enemy)
+        // Enemy kinds with their own sheet (e.g. Frog) use the names "Idle <side>",
+        // "Walk <side>" and, while attacking or devouring, "[Walk ]Attack <direction>".
+        // Missing clips fall back to idle/walk; the animator mirrors missing Left/Right.
+        private static string GetKindAnimationName(
+            NonPlayerCharacter enemy, SpriteSheetAnimator animator)
+        {
+            string basic = (enemy.IsMoving ? "Walk " : "Idle ") + GetSideName(enemy.Facing);
+            if (enemy.CurrentWindupClip != null && animator.HasClip(enemy.CurrentWindupClip))
+            {
+                // Windup steps name their clip (e.g. the mine turtle's "Hello").
+                return enemy.CurrentWindupClip;
+            }
+            if (enemy.HasActiveAttack || enemy.IsDevouring)
+            {
+                string attack = GetAttackAnimationName(enemy.Facing, enemy.IsMoving,
+                    enemy.AttackDirectionX, enemy.AttackDirectionY);
+                if (animator.HasClip(attack))
+                {
+                    return attack;
+                }
+                string standing = GetAttackAnimationName(enemy.Facing, false,
+                    enemy.AttackDirectionX, enemy.AttackDirectionY);
+                if (animator.HasClip(standing))
+                {
+                    return standing;
+                }
+            }
+            if (animator.HasClip(basic))
+            {
+                return basic;
+            }
+            string idle = "Idle " + GetSideName(enemy.Facing);
+            // Sheets without directions (e.g. the mine turtle) have a single "Idle" clip.
+            return animator.HasClip(idle) ? idle : "Idle";
+        }
+
+        private static string GetSideName(PlayerFacing facing)
+        {
+            switch (facing)
+            {
+                case PlayerFacing.Back: return "Back";
+                case PlayerFacing.Left: return "Left";
+                case PlayerFacing.Right: return "Right";
+                default: return "Front";
+            }
+        }
+
+        // The attack clip for a direction (screen y points down) in eight sectors. Seen
+        // from the side (facing left/right), diagonals use the side clips ("Attack Right
+        // Up"); seen from the front or back the front/back clips ("Attack Back Right").
+        internal static string GetAttackAnimationName(
+            PlayerFacing facing, bool moving, double directionX, double directionY)
+        {
+            int sector = (int)Math.Round(Math.Atan2(directionY, directionX) / (Math.PI / 4));
+            sector = ((sector % 8) + 8) % 8;
+            bool sideView = facing == PlayerFacing.Left || facing == PlayerFacing.Right;
+            string name;
+            switch (sector)
+            {
+                case 0: name = "Attack Right"; break;
+                case 1: name = sideView ? "Attack Right Down" : "Attack Front Right"; break;
+                case 2: name = "Attack Front"; break;
+                case 3: name = sideView ? "Attack Left Down" : "Attack Front Left"; break;
+                case 4: name = "Attack Left"; break;
+                case 5: name = sideView ? "Attack Left Up" : "Attack Back Left"; break;
+                case 6: name = "Attack Back"; break;
+                default: name = sideView ? "Attack Right Up" : "Attack Back Right"; break;
+            }
+            return moving ? "Walk " + name : name;
+        }
+
+        private static string GetEnemyAnimationName(NonPlayerCharacter enemy)
         {
             switch (enemy.Facing)
             {
@@ -504,6 +583,7 @@ namespace OOPGames
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
+                _zoomInputWindow.KeyDown -= OnDevToolKeyDown;
                 _zoomInputWindow.PreviewKeyUp -= OnZoomKeyUp;
                 _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
                 _zoomInputWindow.PreviewMouseMove -= OnAimMouseMove;
@@ -518,6 +598,7 @@ namespace OOPGames
             {
                 _zoomInputCanvas.PreviewMouseDown += OnAttackMouseDown;
                 _zoomInputWindow.PreviewKeyDown += OnZoomKeyDown;
+                _zoomInputWindow.KeyDown += OnDevToolKeyDown;
                 _zoomInputWindow.PreviewKeyUp += OnZoomKeyUp;
                 _zoomInputWindow.PreviewMouseWheel += OnZoomMouseWheel;
                 _zoomInputWindow.PreviewMouseMove += OnAimMouseMove;
@@ -660,6 +741,14 @@ namespace OOPGames
                 }
 
                 if (_zoomInputField != null
+                    && _zoomInputField.KeyBindings.MatchesKey(ArenaAction.Pause, e.Key)
+                    && HandleMenuEscape(_zoomInputCanvas, _zoomInputField))
+                {
+                    e.Handled = true;
+                    return;
+                }
+
+                if (_zoomInputField != null
                     && _zoomInputField.HandleKeyDown(e.Key))
                 {
                     if (_zoomInputCanvas != null)
@@ -668,6 +757,28 @@ namespace OOPGames
                     }
                     e.Handled = true;
                 }
+            }
+        }
+
+        // Escape in the dev tool arrives here only when no editor used it (e.g. to discard
+        // a placement preview) and no text field has the focus; it asks before leaving
+        // because unsaved editor changes are lost.
+        private void OnDevToolKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Handled || e.IsRepeat || _menuPage != MenuPage.DevTools
+                || _zoomInputField == null || IsTextEntryFocused()
+                || !_zoomInputField.KeyBindings.MatchesKey(ArenaAction.Pause, e.Key))
+            {
+                return;
+            }
+            e.Handled = true;
+            if (MessageBox.Show(
+                "Dev Tool verlassen? Nicht gespeicherte Änderungen im Map-, Skilltree- "
+                    + "und Gegner-Editor gehen verloren.",
+                "Dev Tool", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                == MessageBoxResult.Yes)
+            {
+                GoBack(_zoomInputCanvas, _zoomInputField);
             }
         }
 
@@ -749,6 +860,7 @@ namespace OOPGames
             if (_zoomInputWindow != null)
             {
                 _zoomInputWindow.PreviewKeyDown -= OnZoomKeyDown;
+                _zoomInputWindow.KeyDown -= OnDevToolKeyDown;
                 _zoomInputWindow.PreviewKeyUp -= OnZoomKeyUp;
                 _zoomInputWindow.PreviewMouseWheel -= OnZoomMouseWheel;
                 _zoomInputWindow.PreviewMouseMove -= OnAimMouseMove;
@@ -762,6 +874,7 @@ namespace OOPGames
 
         private void OnZoomWindowDeactivated(object sender, EventArgs e)
         {
+            _zoomInputField?.ReleaseHeldModifiers();
             if (_zoomInputField != null && _zoomInputField.IsWeaponWheelOpen)
             {
                 _zoomInputField.CancelWeaponWheel();
@@ -935,11 +1048,7 @@ namespace OOPGames
             if (_menuPage == MenuPage.DevTools)
             {
                 DrawStartMenuFullScreen(canvas,
-                    new ArenaDevToolsControl(field, () =>
-                    {
-                        _menuPage = MenuPage.Main;
-                        canvas.Tag = null;
-                    }),
+                    new ArenaDevToolsControl(field, () => GoBack(canvas, field)),
                     width, height);
                 return;
             }
@@ -953,12 +1062,7 @@ namespace OOPGames
                 skillTreePage.Children.Add(_progressionMenuRenderer.CreateSkillTree(
                     field, () => canvas.Tag = null,
                     Math.Max(0, width - 48), Math.Max(0, height - 48)));
-                Button backButton = CreateMenuButton("Back",
-                    () =>
-                    {
-                        _menuPage = MenuPage.Main;
-                        canvas.Tag = null;
-                    });
+                Button backButton = CreateMenuButton("Back", () => GoBack(canvas, field));
                 Grid.SetRow(backButton, 1);
                 skillTreePage.Children.Add(backButton);
                 DrawStartMenuFullScreen(canvas, skillTreePage, width, height);
@@ -969,12 +1073,7 @@ namespace OOPGames
             {
                 contents.Children.Add(_progressionMenuRenderer.CreateWeaponUpgrades(
                     field, () => canvas.Tag = null));
-                contents.Children.Add(CreateMenuButton("Back",
-                    () =>
-                    {
-                        _menuPage = _menuPageBeforeWeaponUpgrades;
-                        canvas.Tag = null;
-                    }));
+                contents.Children.Add(CreateMenuButton("Back", () => GoBack(canvas, field)));
                 panel.Child = contents;
                 DrawStartMenuPanel(canvas, panel, width, height);
                 return;
@@ -1006,13 +1105,7 @@ namespace OOPGames
                         canvas.Tag = null;
                     },
                     () => canvas.Tag = null));
-                contents.Children.Add(CreateMenuButton("Back",
-                    () =>
-                    {
-                        _menuPage = MenuPage.Main;
-                        _keyBindingCaptureAction = null;
-                        canvas.Tag = null;
-                    }));
+                contents.Children.Add(CreateMenuButton("Back", () => GoBack(canvas, field)));
                 panel.Child = contents;
                 DrawStartMenuPanel(canvas, panel, width, height);
                 return;
@@ -1064,8 +1157,7 @@ namespace OOPGames
                     bool canUpgrade = field.HasActiveGame && !field.IsGameOver;
                     ArenaUiButton treeButton = new ArenaUiButton(
                         "Baum",
-                        () => OpenWeaponUpgrades(
-                            canvas, field, weapon, MenuPage.Equipment),
+                        () => OpenWeaponUpgrades(canvas, field, weapon),
                         ArenaUiButtonShape.SplitShort)
                     {
                         IsEnabled = canUpgrade,
@@ -1080,12 +1172,7 @@ namespace OOPGames
                     contents.Children.Add(ArenaUiButton.CreateSplitRow(
                         selectButton, treeButton, MenuButtonWidth, MenuButtonHeight));
                 }
-                contents.Children.Add(CreateMenuButton("Back",
-                    () =>
-                    {
-                        _menuPage = MenuPage.Main;
-                        canvas.Tag = null;
-                    }));
+                contents.Children.Add(CreateMenuButton("Back", () => GoBack(canvas, field)));
                 panel.Child = contents;
                 DrawStartMenuPanel(canvas, panel, width, height);
                 return;
@@ -1116,12 +1203,7 @@ namespace OOPGames
                 contents.Children.Add(CreateMenuButton("Kurt (mit Schlaganimation)",
                     () => SelectAnimationProfile(canvas, KurtProfile),
                     isChosen: IsSelectedAnimationProfile(KurtProfile)));
-                contents.Children.Add(CreateMenuButton("Back",
-                    () =>
-                    {
-                        _menuPage = MenuPage.Main;
-                        canvas.Tag = null;
-                    }));
+                contents.Children.Add(CreateMenuButton("Back", () => GoBack(canvas, field)));
                 panel.Child = contents;
                 DrawStartMenuPanel(canvas, panel, width, height);
                 return;
@@ -1177,28 +1259,24 @@ namespace OOPGames
             contents.Children.Add(CreateMenuButton("Spielstände",
                 () =>
                 {
-                    _menuPage = MenuPage.SaveGames;
-                    canvas.Tag = null;
+                    OpenMenuPage(canvas, MenuPage.SaveGames);
                 }));
             contents.Children.Add(CreateMenuButton("How to Play",
                 () => ShowNotImplemented("How to Play")));
             contents.Children.Add(CreateMenuButton("Ausrüstung",
                 () =>
                 {
-                    _menuPage = MenuPage.Equipment;
-                    canvas.Tag = null;
+                    OpenMenuPage(canvas, MenuPage.Equipment);
                 }));
             contents.Children.Add(CreateMenuButton("Choose Animation",
                 () =>
                 {
-                    _menuPage = MenuPage.Animation;
-                    canvas.Tag = null;
+                    OpenMenuPage(canvas, MenuPage.Animation);
                 }));
             contents.Children.Add(CreateMenuButton("Dev Tool",
                 () =>
                 {
-                    _menuPage = MenuPage.DevTools;
-                    canvas.Tag = null;
+                    OpenMenuPage(canvas, MenuPage.DevTools);
                 }));
             if (field.HasActiveGame && !field.IsGameOver)
             {
@@ -1241,22 +1319,19 @@ namespace OOPGames
                 contents.Children.Add(CreateMenuButton("Skilltree",
                     () =>
                     {
-                        _menuPage = MenuPage.SkillTree;
-                        canvas.Tag = null;
+                        OpenMenuPage(canvas, MenuPage.SkillTree);
                     }));
                 // Weapon trees are reached from the equipment selection (tree button per weapon).
             }
             contents.Children.Add(CreateMenuButton("Tastenbelegung",
                 () =>
                 {
-                    _menuPage = MenuPage.KeyBindings;
-                    canvas.Tag = null;
+                    OpenMenuPage(canvas, MenuPage.KeyBindings);
                 }));
             contents.Children.Add(CreateMenuButton("High Scores",
                 () =>
                 {
-                    _menuPage = MenuPage.HighScores;
-                    canvas.Tag = null;
+                    OpenMenuPage(canvas, MenuPage.HighScores);
                 }));
             panel.Child = contents;
 
@@ -1266,6 +1341,60 @@ namespace OOPGames
         // A hit entity lights up itself: a white copy of its own sprite, shaped by the
         // sprite's alpha, lies on top of it and fades out with the damage flash.
         private const double MaximumDamageFlashOpacity = 0.85;
+
+        // The kind's sprite sheet; an unreadable sheet falls back to the standard enemy.
+        private SpriteSheetAnimator GetEnemyAnimator(string spriteSheet)
+        {
+            string sheet = String.IsNullOrEmpty(spriteSheet)
+                ? EnemyType.DefaultSpriteSheet
+                : spriteSheet;
+            if (_enemyAnimators.TryGetValue(sheet, out SpriteSheetAnimator animator))
+            {
+                return animator;
+            }
+            try
+            {
+                animator = new SpriteSheetAnimator(
+                    FindAssetPath("Enemies", sheet),
+                    FindAssetPath("Enemies", System.IO.Path.GetFileNameWithoutExtension(sheet)
+                        + ".json"));
+            }
+            catch (Exception exception) when (!String.Equals(sheet,
+                EnemyType.DefaultSpriteSheet, StringComparison.OrdinalIgnoreCase)
+                && (exception is IOException || exception is System.Text.Json.JsonException
+                    || exception is InvalidOperationException
+                    || exception is KeyNotFoundException || exception is NotSupportedException))
+            {
+                animator = GetEnemyAnimator(EnemyType.DefaultSpriteSheet);
+            }
+            _enemyAnimators[sheet] = animator;
+            return animator;
+        }
+
+        // Enemy kinds may tint their sprite: a coloured copy shaped by the sprite's alpha.
+        private static void AddEnemyTint(Canvas canvas, EnemyType type, Image sprite)
+        {
+            if (!type.Tint.HasValue || sprite.Source == null)
+            {
+                return;
+            }
+
+            Rectangle tint = new Rectangle
+            {
+                Width = sprite.Width,
+                Height = sprite.Height,
+                Fill = new SolidColorBrush(type.Tint.Value),
+                OpacityMask = new ImageBrush(sprite.Source) { Stretch = sprite.Stretch },
+                Opacity = EnemyTintOpacity * type.Opacity,
+                RenderTransformOrigin = sprite.RenderTransformOrigin,
+                RenderTransform = sprite.RenderTransform,
+                IsHitTestVisible = false
+            };
+            RenderOptions.SetBitmapScalingMode(tint, BitmapScalingMode.NearestNeighbor);
+            Canvas.SetLeft(tint, Canvas.GetLeft(sprite));
+            Canvas.SetTop(tint, Canvas.GetTop(sprite));
+            canvas.Children.Add(tint);
+        }
 
         private static void AddDamageFlashOverlay(Canvas canvas, Entity entity, Image sprite)
         {
@@ -1385,13 +1514,84 @@ namespace OOPGames
             };
         }
 
-        private void OpenWeaponUpgrades(
-            Canvas canvas, ArenaField field, Weapon weapon, MenuPage returnPage)
+        private void OpenWeaponUpgrades(Canvas canvas, ArenaField field, Weapon weapon)
         {
             field.SelectPlayerWeapon(weapon);
-            _menuPageBeforeWeaponUpgrades = returnPage;
-            _menuPage = MenuPage.WeaponUpgrades;
-            canvas.Tag = null;
+            OpenMenuPage(canvas, MenuPage.WeaponUpgrades);
+        }
+
+        private void OpenMenuPage(Canvas canvas, MenuPage page)
+        {
+            _menuHistory.Push(_menuPage);
+            _menuPage = page;
+            _keyBindingCaptureAction = null;
+            if (canvas != null)
+            {
+                canvas.Tag = null;
+            }
+        }
+
+        private void ResetMenuPages()
+        {
+            _menuPage = MenuPage.Main;
+            _menuHistory.Clear();
+            _keyBindingCaptureAction = null;
+        }
+
+        // Back and Escape: return to the page this one was opened from, or into the game
+        // when it was opened by a key during play.
+        private void GoBack(Canvas canvas, ArenaField field)
+        {
+            MenuPage previous = _menuHistory.Count > 0 ? _menuHistory.Pop() : MenuPage.Main;
+            _keyBindingCaptureAction = null;
+            if (previous == MenuPage.Game)
+            {
+                ResetMenuPages();
+                if (field.ContinueGame())
+                {
+                    return;
+                }
+            }
+            else
+            {
+                _menuPage = previous;
+            }
+            if (canvas != null)
+            {
+                canvas.Tag = null;
+            }
+        }
+
+        // Keys 2 and 3 open the weapon tree and the skill tree, from the game or a menu.
+        private void OpenRequestedMenu(ArenaField field)
+        {
+            ArenaMenuRequest request = field.ConsumeMenuRequest();
+            if (request == ArenaMenuRequest.None)
+            {
+                return;
+            }
+            MenuPage target = request == ArenaMenuRequest.WeaponTree
+                ? MenuPage.WeaponUpgrades
+                : MenuPage.SkillTree;
+            if (_menuPage == target)
+            {
+                return;
+            }
+            _menuHistory.Push(field.MenuRequestedFromGame ? MenuPage.Game : _menuPage);
+            _menuPage = target;
+            _keyBindingCaptureAction = null;
+        }
+
+        // Escape (the pause key) leaves any open sub page; on the main menu it keeps its
+        // usual meaning (continue the game). Returns true when a page was left.
+        internal bool HandleMenuEscape(Canvas canvas, ArenaField field)
+        {
+            if (field == null || field.IsGameStarted || _menuPage == MenuPage.Main)
+            {
+                return false;
+            }
+            GoBack(canvas, field);
+            return true;
         }
 
         private static readonly Brush MenuTextBrush =
@@ -1440,12 +1640,7 @@ namespace OOPGames
                     AddSaveSlotRow(canvas, field, contents, slot);
                 }
             }
-            contents.Children.Add(CreateMenuButton("Back",
-                () =>
-                {
-                    _menuPage = MenuPage.Main;
-                    canvas.Tag = null;
-                }));
+            contents.Children.Add(CreateMenuButton("Back", () => GoBack(canvas, field)));
         }
 
         private void AddSaveSlotRow(
@@ -1474,7 +1669,7 @@ namespace OOPGames
                         // The running game is saved first, then the new run takes this slot.
                         field.SaveNow();
                         field.StartNewGameInSlot(slot);
-                        _menuPage = MenuPage.Main;
+                        ResetMenuPages();
                         canvas.Tag = null;
                     }));
                 return;
@@ -1491,7 +1686,7 @@ namespace OOPGames
                     {
                         ResetAnimationProfile(field.Player.AnimationProfileName);
                     }
-                    _menuPage = MenuPage.Main;
+                    ResetMenuPages();
                     canvas.Tag = null;
                 },
                 ArenaUiButtonShape.SplitLong)
@@ -1560,12 +1755,7 @@ namespace OOPGames
                         + (field.IsGodMode ? " — Godmode, zählt nicht" : string.Empty),
                     14, HighlightTextBrush));
             }
-            contents.Children.Add(CreateMenuButton("Back",
-                () =>
-                {
-                    _menuPage = MenuPage.Main;
-                    canvas.Tag = null;
-                }));
+            contents.Children.Add(CreateMenuButton("Back", () => GoBack(canvas, field)));
         }
 
         private static string GetWeaponName(string weaponId)
@@ -1582,6 +1772,8 @@ namespace OOPGames
 
         private enum MenuPage
         {
+            // Not a page: marks in the history that a page was opened from the game.
+            Game,
             Main,
             Equipment,
             Animation,

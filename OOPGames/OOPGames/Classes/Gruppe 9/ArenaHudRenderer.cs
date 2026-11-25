@@ -32,14 +32,14 @@ namespace OOPGames
             double scaleX = width / 1800;
             double scaleY = height / 1200;
 
-            canvas.Children.Add(new Image
+            canvas.Children.Add(Sharp(new Image
             {
                 Source = _overlay,
                 Width = width,
                 Height = height,
                 Stretch = Stretch.Fill,
                 IsHitTestVisible = false
-            });
+            }));
             PaintPortrait(canvas, portraitSource, scaleX, scaleY);
 
             AddHudText(canvas, "Kills: " + field.Score, 16, 16);
@@ -73,6 +73,11 @@ namespace OOPGames
                     + (field.SlowMotionTimeScale * 100).ToString("0")
                     + " % Tempo  |  noch " + field.SlowMotionRemainingSeconds.ToString("0.0")
                     + " s", 16, statusTop);
+                statusTop += 28;
+            }
+            if (field.SaveNoticeRemainingSeconds > 0)
+            {
+                AddHudText(canvas, field.SaveNoticeText + " (Strg + S)", 16, statusTop);
             }
 
             PaintHealthBar(canvas, player, scaleX, scaleY);
@@ -118,13 +123,14 @@ namespace OOPGames
         public void PaintStatusPlaceholder(
             Canvas canvas, Entity entity, double centerX, double centerY)
         {
-            // Freezing is shown by ice crystals around the entity (ArenaParticleRenderer), so
-            // it gets no ring; the other movement statuses (slow, stun) keep theirs.
+            // Freezing is shown by ice crystals around the entity (ArenaParticleRenderer) and
+            // being devoured by the frog's tongue, so neither gets a ring; the other movement
+            // statuses (slow, stun) keep theirs.
             bool hasRingStatus = false;
             bool isStunned = false;
             foreach (ActiveStatusEffect effect in entity.ActiveStatusEffects)
             {
-                if (effect.Id == "freeze")
+                if (effect.Id == "freeze" || effect.Id == "devoured")
                 {
                     continue;
                 }
@@ -188,6 +194,13 @@ namespace OOPGames
             canvas.Children.Add(indicator);
         }
 
+        // HUD textures are pixel art: scaled without smoothing they stay sharp.
+        private static Image Sharp(Image image)
+        {
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
+            return image;
+        }
+
         private void PaintPortrait(
             Canvas canvas, BitmapSource portraitSource, double scaleX, double scaleY)
         {
@@ -202,6 +215,7 @@ namespace OOPGames
                     0, 0, diameter * scaleX, diameter * scaleY)),
                 IsHitTestVisible = false
             };
+            Sharp(portrait);
             Canvas.SetLeft(portrait, (98 - diameter / 2) * scaleX);
             Canvas.SetTop(portrait, (1101 - diameter / 2) * scaleY);
             canvas.Children.Add(portrait);
@@ -235,12 +249,12 @@ namespace OOPGames
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Fill = Brushes.IndianRed
             });
-            healthBar.Children.Add(new Image
+            healthBar.Children.Add(Sharp(new Image
             {
                 Source = _healthBarTexture,
                 Stretch = Stretch.Fill,
                 IsHitTestVisible = false
-            });
+            }));
             healthBar.Children.Add(new TextBlock
             {
                 Text = "HP: " + player.CurrentHitPoints + " / " + player.MaxHitPoints,
@@ -325,6 +339,7 @@ namespace OOPGames
                     Stretch = Stretch.Fill,
                     IsHitTestVisible = false
                 };
+                Sharp(indicator);
                 Canvas.SetLeft(indicator, iconLeft);
                 Canvas.SetTop(indicator, iconTop);
                 canvas.Children.Add(indicator);

@@ -353,7 +353,7 @@ namespace OOPGames
             {
                 entities.Add(field.Player);
             }
-            foreach (PursuerEnemy enemy in field.Enemies)
+            foreach (NonPlayerCharacter enemy in field.Enemies)
             {
                 entities.Add(enemy);
             }
@@ -735,7 +735,7 @@ namespace OOPGames
             {
                 entities.Add(field.Player);
             }
-            foreach (PursuerEnemy enemy in field.Enemies)
+            foreach (NonPlayerCharacter enemy in field.Enemies)
             {
                 entities.Add(enemy);
             }

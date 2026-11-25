@@ -19,6 +19,8 @@ namespace OOPGames
             new List<ActiveStatusEffect>();
         private readonly List<ActiveDamageOverTimeEffect> _damageOverTimeEffects =
             new List<ActiveDamageOverTimeEffect>();
+        private readonly HashSet<string> _statusImmunities =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         protected Entity(double positionX, double positionY, int maxHitPoints,
             double maxSpeed, double size, Brush color,
@@ -122,6 +124,29 @@ namespace OOPGames
         public bool IsAlive { get; private set; } = true;
         public bool CanBePushed { get; set; }
         public bool IsInvulnerable { get; set; }
+        // Whether other entities are stopped (or pushed) by this one. Mirror images and
+        // e.g. mines that are stepped on do not block.
+        public bool BlocksMovement { get; set; } = true;
+        // Armour (< 1) or vulnerability (> 1) against all damage taken; 1 = normal.
+        public double DamageTakenMultiplier { get; set; } = 1;
+        // Share of knockback the entity ignores: 0 = full knockback, 1 = none.
+        public double KnockbackResistance { get; set; }
+        // Status ids (poison, burning, freeze, stun, slow, weakness) without effect on it.
+        public IReadOnlyCollection<string> StatusImmunities { get { return _statusImmunities; } }
+
+        public void SetStatusImmunities(IEnumerable<string> statusIds)
+        {
+            _statusImmunities.Clear();
+            if (statusIds != null)
+            {
+                _statusImmunities.UnionWith(statusIds);
+            }
+        }
+
+        public bool IsImmuneTo(string statusId)
+        {
+            return statusId != null && _statusImmunities.Contains(statusId);
+        }
         // Raised with the hit points actually lost, so presentation code (sounds) can react.
         public event Action<Entity, int> Damaged;
         // Raised with the hit points actually restored; from is the entity the life was stolen
@@ -319,6 +344,10 @@ namespace OOPGames
             {
                 return;
             }
+            if (DamageTakenMultiplier != 1)
+            {
+                damage = (int)Math.Round(damage * Math.Max(0, DamageTakenMultiplier));
+            }
 
             int previousHitPoints = CurrentHitPoints;
             CurrentHitPoints -= damage;
@@ -331,6 +360,25 @@ namespace OOPGames
             if (lostHitPoints > 0)
             {
                 Damaged?.Invoke(this, lostHitPoints);
+            }
+        }
+
+        // Kills at once, past armour (e.g. devoured); invulnerable entities survive.
+        public void TakeFatalDamage()
+        {
+            if (!IsAlive || IsInvulnerable)
+            {
+                return;
+            }
+            double multiplier = DamageTakenMultiplier;
+            DamageTakenMultiplier = 1;
+            try
+            {
+                TakeDamage(CurrentHitPoints);
+            }
+            finally
+            {
+                DamageTakenMultiplier = multiplier;
             }
         }
 
@@ -380,7 +428,7 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(durationSeconds));
             }
-            if (!IsAlive)
+            if (!IsAlive || IsImmuneTo(id))
             {
                 return;
             }
@@ -421,7 +469,7 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(durationSeconds));
             }
-            if (!IsAlive)
+            if (!IsAlive || IsImmuneTo("weakness"))
             {
                 return;
             }
@@ -458,7 +506,7 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(spreadRadius));
             }
-            if (!IsAlive)
+            if (!IsAlive || IsImmuneTo(id))
             {
                 return;
             }

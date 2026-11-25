@@ -24,6 +24,8 @@ namespace OOPGames
         EntityAbility3,
         EntityAbility4,
         Pause,
+        OpenWeaponTree,
+        OpenSkillTree,
         ToggleDebugRanges,
         ToggleDebugHud,
         ZoomIn,
@@ -113,6 +115,11 @@ namespace OOPGames
                 Converters = { new JsonStringEnumConverter() }
             };
 
+        // Held together with the debug keys (F4 + B, F4 + H); it cannot be assigned itself.
+        public const Key DevModifierKey = Key.F4;
+        // Ctrl + this key saves the running game (fixed, not configurable).
+        public const Key SaveShortcutKey = Key.S;
+
         private readonly Dictionary<ArenaAction, ArenaInputBinding> _bindings;
 
         private ArenaKeyBindings(
@@ -184,6 +191,10 @@ namespace OOPGames
             }
 
             MigrateWeaponWheelBindings(bindings);
+            MigrateMenuKey(bindings, savedActions,
+                ArenaAction.OpenWeaponTree, Key.D2, ArenaAction.WeaponAbility2, Key.G);
+            MigrateMenuKey(bindings, savedActions,
+                ArenaAction.OpenSkillTree, Key.D3, ArenaAction.WeaponAbility3, Key.Y);
             MoveNewActionsOffTakenInputs(bindings, savedActions);
 
             if (bindings[ArenaAction.WeaponAttack]
@@ -267,6 +278,11 @@ namespace OOPGames
                 throw new ArgumentOutOfRangeException(nameof(action));
             }
             ValidateBinding(binding);
+            if (binding.MatchesKey(DevModifierKey))
+            {
+                throw new InvalidOperationException(
+                    "F4 ist für die Debug-Tastenkombinationen (F4 + Taste) reserviert.");
+            }
             if (binding.Device == ArenaInputDevice.Mouse && !IsMouseBindable(action))
             {
                 throw new InvalidOperationException(
@@ -334,8 +350,10 @@ namespace OOPGames
                 case ArenaAction.EntityAbility3: return "Spielerfähigkeit 3";
                 case ArenaAction.EntityAbility4: return "Spielerfähigkeit 4";
                 case ArenaAction.Pause: return "Pause / Menü";
-                case ArenaAction.ToggleDebugRanges: return "Debugbereiche";
-                case ArenaAction.ToggleDebugHud: return "Debug-HUD";
+                case ArenaAction.OpenWeaponTree: return "Waffenbaum der ausgerüsteten Waffe";
+                case ArenaAction.OpenSkillTree: return "Skilltree";
+                case ArenaAction.ToggleDebugRanges: return "Debugbereiche (F4 + Taste)";
+                case ArenaAction.ToggleDebugHud: return "Debug-HUD (F4 + Taste)";
                 case ArenaAction.ZoomIn: return "Zoom hinein";
                 case ArenaAction.ZoomOut: return "Zoom heraus";
                 case ArenaAction.SpawnEnemy: return "Testgegner spawnen";
@@ -416,14 +434,16 @@ namespace OOPGames
                 { ArenaAction.WeaponWheel, ArenaInputBinding.ForKey(Key.D1) },
                 { ArenaAction.WeaponAttack, ArenaInputBinding.ForMouseButton(MouseButton.Left) },
                 { ArenaAction.WeaponAbility1, ArenaInputBinding.ForMouseButton(MouseButton.Right) },
-                { ArenaAction.WeaponAbility2, ArenaInputBinding.ForKey(Key.D2) },
-                { ArenaAction.WeaponAbility3, ArenaInputBinding.ForKey(Key.D3) },
+                { ArenaAction.WeaponAbility2, ArenaInputBinding.ForKey(Key.G) },
+                { ArenaAction.WeaponAbility3, ArenaInputBinding.ForKey(Key.Y) },
                 { ArenaAction.WeaponAbility4, ArenaInputBinding.ForKey(Key.D4) },
                 { ArenaAction.EntityAbility1, ArenaInputBinding.ForKey(Key.Q) },
                 { ArenaAction.EntityAbility2, ArenaInputBinding.ForKey(Key.E) },
                 { ArenaAction.EntityAbility3, ArenaInputBinding.ForKey(Key.R) },
                 { ArenaAction.EntityAbility4, ArenaInputBinding.ForKey(Key.F) },
                 { ArenaAction.Pause, ArenaInputBinding.ForKey(Key.Escape) },
+                { ArenaAction.OpenWeaponTree, ArenaInputBinding.ForKey(Key.D2) },
+                { ArenaAction.OpenSkillTree, ArenaInputBinding.ForKey(Key.D3) },
                 { ArenaAction.ToggleDebugRanges, ArenaInputBinding.ForKey(Key.B) },
                 { ArenaAction.ToggleDebugHud, ArenaInputBinding.ForKey(Key.H) },
                 { ArenaAction.ZoomIn, ArenaInputBinding.ForKey(Key.K) },
@@ -433,17 +453,18 @@ namespace OOPGames
             };
         }
 
+        private static readonly Key[] FallbackKeys =
+        {
+            Key.T, Key.G, Key.Y, Key.U, Key.I, Key.O, Key.P,
+            Key.F5, Key.F6, Key.F7, Key.F8, Key.F9, Key.F10
+        };
+
         // Actions added after a settings file was saved get their default input. If the
         // player already uses that input elsewhere, the new action moves to a free key.
         private static void MoveNewActionsOffTakenInputs(
             Dictionary<ArenaAction, ArenaInputBinding> bindings,
             HashSet<ArenaAction> savedActions)
         {
-            Key[] fallbackKeys =
-            {
-                Key.T, Key.G, Key.Y, Key.U, Key.I, Key.O, Key.P,
-                Key.F5, Key.F6, Key.F7, Key.F8, Key.F9, Key.F10
-            };
             foreach (ArenaAction action in Actions)
             {
                 if (savedActions.Contains(action)
@@ -451,16 +472,43 @@ namespace OOPGames
                 {
                     continue;
                 }
+                MoveToFreeFallbackKey(bindings, action);
+            }
+        }
 
-                foreach (Key key in fallbackKeys)
+        private static void MoveToFreeFallbackKey(
+            Dictionary<ArenaAction, ArenaInputBinding> bindings, ArenaAction action)
+        {
+            foreach (Key key in FallbackKeys)
+            {
+                ArenaInputBinding candidate = ArenaInputBinding.ForKey(key);
+                if (!IsInputTakenByOtherAction(bindings, action, candidate))
                 {
-                    ArenaInputBinding candidate = ArenaInputBinding.ForKey(key);
-                    if (!IsInputTakenByOtherAction(bindings, action, candidate))
-                    {
-                        bindings[action] = candidate;
-                        break;
-                    }
+                    bindings[action] = candidate;
+                    return;
                 }
+            }
+        }
+
+        // Keys 2 and 3 used to trigger weapon abilities 2 and 3 and now open the weapon tree
+        // and the skill tree. Settings saved before that keep their other keys; the ability
+        // moves to its new default (G or Y) or, if that is taken, to a free key.
+        private static void MigrateMenuKey(
+            Dictionary<ArenaAction, ArenaInputBinding> bindings,
+            HashSet<ArenaAction> savedActions,
+            ArenaAction menuAction, Key menuKey, ArenaAction ability, Key abilityKey)
+        {
+            if (savedActions.Contains(menuAction)
+                || !bindings[ability].MatchesKey(menuKey))
+            {
+                return;
+            }
+
+            bindings[menuAction] = ArenaInputBinding.ForKey(menuKey);
+            bindings[ability] = ArenaInputBinding.ForKey(abilityKey);
+            if (IsInputTakenByOtherAction(bindings, ability, bindings[ability]))
+            {
+                MoveToFreeFallbackKey(bindings, ability);
             }
         }
 

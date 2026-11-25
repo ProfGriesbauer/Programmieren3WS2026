@@ -14,6 +14,8 @@ namespace OOPGames
         public string RunId { get; set; }
         public DateTime SavedAt { get; set; }
         public string MapFileName { get; set; }
+        // Skill tree of the run (older saves have none and keep the current tree).
+        public string SkillTreeName { get; set; }
         public int Score { get; set; }
         public int Deaths { get; set; }
         public string SelectedWeaponId { get; set; }
@@ -22,7 +24,11 @@ namespace OOPGames
         public bool ShowDamageRanges { get; set; }
         public bool ShowDebugHud { get; set; }
         public double GameSpeed { get; set; } = 1;
+        // Only read from saves made before enemy kinds (single spawn timer).
         public double EnemySpawnElapsedSeconds { get; set; }
+        // Spawn timer per enemy kind id and the run's game time (spawn conditions).
+        public Dictionary<string, double> EnemySpawnTimers { get; set; }
+        public double RunSeconds { get; set; }
         public double AimDirectionX { get; set; }
         public double AimDirectionY { get; set; } = 1;
         public ArenaProgressionSave Progression { get; set; }
@@ -74,6 +80,10 @@ namespace OOPGames
             new List<ArenaDamageOverTimeSave>();
         public double WeaknessMultiplier { get; set; } = 1;
         public double WeaknessSeconds { get; set; }
+        // Enemies only: their kind (missing = Standard) and the remaining time of an
+        // alert after a hit (see NonPlayerCharacter.Alert).
+        public string EnemyTypeId { get; set; }
+        public double AlertSeconds { get; set; }
     }
 
     public sealed class ArenaStatusSave

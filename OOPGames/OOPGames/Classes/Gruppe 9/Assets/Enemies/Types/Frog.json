@@ -1,0 +1,37 @@
+{
+  "Id": "Frog",
+  "Name": "Frosch",
+  "Description": "Hüpft langsam auf eine zufällige Entity zu und verschlingt alles, was in seinen Zungenradius kommt (auch den Spieler und andere Gegner). Es gibt immer nur einen; er stirbt durch einen Schlag und kommt nach kurzer Zeit wieder.",
+  "MaxHitPoints": 1,
+  "SpeedFactor": 0.6,
+  "Size": 45,
+  "WarnsOthers": false,
+  "CanBeWarned": false,
+  "TargetSelection": "RandomEntity",
+  "RetargetSeconds": 15,
+  "MovementStyle": "Hop",
+  "HopSeconds": 0.35,
+  "HopPauseSeconds": 0.9,
+  "IdleSound": "FrogCroak",
+  "IdleSoundMinSeconds": 2,
+  "IdleSoundMaxSeconds": 6,
+  "Attacks": [
+    {
+      "Pattern": "Cone",
+      "Range": 70,
+      "AngleDegrees": 60,
+      "DurationSeconds": 0.25,
+      "CooldownSeconds": 1.2,
+      "Damage": 0,
+      "Knockback": 0,
+      "Devour": true,
+      "Sound": "FrogCroak",
+      "DevourPullSeconds": 0.5,
+      "Targets": "Everyone"
+    }
+  ],
+  "StartCount": 1,
+  "MaxAlive": 1,
+  "SpawnIntervalSeconds": 5,
+  "SpriteSheet": "Frog.png"
+}

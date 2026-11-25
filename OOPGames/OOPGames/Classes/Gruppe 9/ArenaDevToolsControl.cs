@@ -18,6 +18,10 @@ namespace OOPGames
     {
         private readonly ArenaField _field;
         private readonly Action _close;
+        private ComboBox _gameMapSelection;
+        private ArenaEnemyEditorControl _enemyEditor;
+        private ComboBox _gameTreeSelection;
+        private TextBlock _applyStatus;
 
         public ArenaDevToolsControl(ArenaField field, Action close)
         {
@@ -65,25 +69,157 @@ namespace OOPGames
             tabs.Items.Add(new TabItem
             {
                 Header = "Map Editor",
-                Content = new ArenaMapEditorControl(_field)
+                Content = new ArenaMapEditorControl(OnMapSaved)
+            });
+            tabs.Items.Add(new TabItem
+            {
+                Header = "Spawn-Regionen",
+                Content = new ArenaRegionEditorControl(
+                    _field, () => _enemyEditor?.RefreshRegionNames())
             });
             tabs.Items.Add(new TabItem
             {
                 Header = "Skilltree Editor",
-                Content = new ArenaSkillTreeEditorControl(_field)
+                Content = new ArenaSkillTreeEditorControl(OnTreeSaved)
+            });
+            _enemyEditor = new ArenaEnemyEditorControl(_field);
+            tabs.Items.Add(new TabItem
+            {
+                Header = "Gegner-Editor",
+                Content = _enemyEditor
             });
             Grid.SetRow(tabs, 1);
             root.Children.Add(tabs);
 
-            TextBlock hint = new TextBlock
-            {
-                Text = "Die Editoren nutzen den verfügbaren Spielbereich; F11 schaltet in die Vollbildansicht.",
-                Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
-                Margin = new Thickness(0, 8, 0, 0)
-            };
-            Grid.SetRow(hint, 2);
-            root.Children.Add(hint);
+            UIElement gameSettings = BuildGameSettingsBar();
+            Grid.SetRow(gameSettings, 2);
+            root.Children.Add(gameSettings);
             return root;
+        }
+
+        // Map and skill tree of the game are chosen here together and applied with one
+        // button, so both can change in one step without restarting the run.
+        private UIElement BuildGameSettingsBar()
+        {
+            Brush textBrush = new SolidColorBrush(Color.FromRgb(183, 197, 212));
+            StackPanel bar = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            StackPanel controls = new StackPanel { Orientation = Orientation.Horizontal };
+            controls.Children.Add(new TextBlock
+            {
+                Text = "Spiel-Map:",
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
+            });
+            _gameMapSelection = new ComboBox
+            {
+                MinWidth = 220,
+                ItemsSource = ArenaMapAssets.GetMapFileNames(),
+                SelectedItem = _field.MapFileName,
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            controls.Children.Add(_gameMapSelection);
+            controls.Children.Add(new TextBlock
+            {
+                Text = "Skilltree:",
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
+            });
+            _gameTreeSelection = new ComboBox
+            {
+                MinWidth = 180,
+                ItemsSource = ArenaSkillTreeRepository.GetTreeNames(),
+                SelectedItem = _field.SkillTreeName,
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            controls.Children.Add(_gameTreeSelection);
+            Button apply = new Button
+            {
+                Content = "Map & Skilltree übernehmen",
+                Padding = new Thickness(10, 5, 10, 5),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            apply.Click += (sender, args) => ApplyGameSettings();
+            controls.Children.Add(apply);
+            _applyStatus = new TextBlock
+            {
+                Foreground = textBrush,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(12, 0, 0, 0)
+            };
+            controls.Children.Add(_applyStatus);
+            bar.Children.Add(controls);
+            bar.Children.Add(new TextBlock
+            {
+                Text = "Der laufende Run bleibt erhalten: Die Figur erscheint in der Mitte der Map, "
+                    + "der Skilltree gilt sofort. F11 schaltet in die Vollbildansicht.",
+                Foreground = textBrush,
+                Margin = new Thickness(0, 6, 0, 0)
+            });
+            return bar;
+        }
+
+        private void OnMapSaved(string fileName)
+        {
+            _gameMapSelection.ItemsSource = ArenaMapAssets.GetMapFileNames();
+            _gameMapSelection.SelectedItem = fileName;
+        }
+
+        private void OnTreeSaved(string name)
+        {
+            _gameTreeSelection.ItemsSource = ArenaSkillTreeRepository.GetTreeNames();
+            _gameTreeSelection.SelectedItem = name;
+        }
+
+        internal void ApplyGameSettings()
+        {
+            if (!(_gameMapSelection.SelectedItem is string mapFileName)
+                || !(_gameTreeSelection.SelectedItem is string treeName))
+            {
+                ShowApplyError("Wähle eine Map und einen Skilltree aus.");
+                return;
+            }
+            try
+            {
+                if (!_field.ApplyMapAndSkillTree(mapFileName, treeName))
+                {
+                    _applyStatus.Text = "Map und Skilltree sind bereits aktiv.";
+                    return;
+                }
+                _applyStatus.Text = _field.HasActiveGame
+                    ? "Übernommen: " + mapFileName + " / " + treeName
+                        + ". Der Run läuft weiter, die Figur steht in der Mitte der Map."
+                    : "Übernommen: " + mapFileName + " / " + treeName + ".";
+            }
+            catch (ArgumentException exception)
+            {
+                ShowApplyError(exception.Message);
+            }
+            catch (InvalidDataException exception)
+            {
+                ShowApplyError(exception.Message);
+            }
+            catch (IOException exception)
+            {
+                ShowApplyError(exception.Message);
+            }
+            catch (InvalidOperationException exception)
+            {
+                ShowApplyError(exception.Message);
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                ShowApplyError(exception.Message);
+            }
+        }
+
+        private void ShowApplyError(string message)
+        {
+            _applyStatus.Text = message;
+            MessageBox.Show(message, "Arena Dev Tool",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -94,13 +230,12 @@ namespace OOPGames
         private const int MajorMapGridSize = 256;
         private const int RandomBushFreeCheckRadius = 55;
         private const byte BackgroundColorTolerance = 12;
-        private readonly ArenaField _field;
+        private readonly Action<string> _mapSaved;
         private readonly List<ArenaMapElement> _elements;
         private readonly List<ArenaMapPlacement> _placements =
             new List<ArenaMapPlacement>();
         private readonly Canvas _mapCanvas;
         private readonly ListBox _palette;
-        private readonly ComboBox _mapSelection;
         private readonly ComboBox _baseSelection;
         private readonly TextBox _widthInput;
         private readonly TextBox _heightInput;
@@ -122,9 +257,9 @@ namespace OOPGames
         private bool _isMovingPendingPlacement;
         private bool _snapToGrid = true;
 
-        public ArenaMapEditorControl(ArenaField field)
+        public ArenaMapEditorControl(Action<string> mapSaved)
         {
-            _field = field;
+            _mapSaved = mapSaved;
             PreviewKeyDown += OnMapEditorPreviewKeyDown;
             _elements = ArenaMapAssets.LoadMapElements().ToList();
             _baseImage = ArenaMapAssets.LoadMapBase();
@@ -221,11 +356,13 @@ namespace OOPGames
                 Width = 1800,
                 Height = 1200,
                 Background = Brushes.Black,
+                // Map elements are pixel art; zooming keeps them sharp (set below).
                 AllowDrop = true,
                 Focusable = true,
                 LayoutTransform = _mapZoomTransform,
                 ClipToBounds = true
             };
+            RenderOptions.SetBitmapScalingMode(_mapCanvas, BitmapScalingMode.NearestNeighbor);
             _mapCanvas.DragEnter += OnMapDragOver;
             _mapCanvas.DragOver += OnMapDragOver;
             _mapCanvas.DragLeave += OnMapDragLeave;
@@ -336,17 +473,6 @@ namespace OOPGames
             Button newMap = CreateButton("Neue Karte");
             newMap.Click += (sender, args) => StartNewMap();
             footer.Children.Add(newMap);
-            _mapSelection = new ComboBox
-            {
-                MinWidth = 220,
-                ItemsSource = ArenaMapAssets.GetMapFileNames(),
-                SelectedItem = _field.MapFileName,
-                Margin = new Thickness(14, 0, 5, 0)
-            };
-            footer.Children.Add(_mapSelection);
-            Button selectMap = CreateButton("Als Spielhintergrund verwenden");
-            selectMap.Click += (sender, args) => SelectMap();
-            footer.Children.Add(selectMap);
             _status = new TextBlock
             {
                 Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
@@ -1176,10 +1302,9 @@ namespace OOPGames
                 RedrawMap();
                 string fileName = ArenaMapAssets.SaveMap(
                     _mapNameInput.Text, width, height, _baseImage, _placements);
-                _mapSelection.ItemsSource = ArenaMapAssets.GetMapFileNames();
-                _mapSelection.SelectedItem = fileName;
+                _mapSaved?.Invoke(fileName);
                 SetStatus("Gespeichert: Assets\\Background\\" + fileName
-                    + ". Wähle „Als Spielhintergrund verwenden“, um die Karte zu aktivieren."
+                    + ". Unten „Map & Skilltree übernehmen“ wählen, um die Karte zu spielen."
                     + (_pendingPlacement == null
                         ? String.Empty
                         : " Die offene Vorschau wurde nicht gespeichert; Enter platziert sie."));
@@ -1197,36 +1322,6 @@ namespace OOPGames
                 ShowError(exception.Message);
             }
             catch (UnauthorizedAccessException exception)
-            {
-                ShowError(exception.Message);
-            }
-        }
-
-        private void SelectMap()
-        {
-            if (!(_mapSelection.SelectedItem is string fileName))
-            {
-                ShowError("Wähle zuerst eine Karte aus.");
-                return;
-            }
-            try
-            {
-                _field.SelectMap(fileName);
-                _widthInput.Text = ((int)_field.WorldWidth).ToString();
-                _heightInput.Text = ((int)_field.WorldHeight).ToString();
-                SetStatus(_field.HasActiveGame
-                    ? "Map übernommen. Der Arena-Lauf wurde neu gestartet und pausiert."
-                    : "Aktiver Spielhintergrund: " + fileName);
-            }
-            catch (ArgumentException exception)
-            {
-                ShowError(exception.Message);
-            }
-            catch (IOException exception)
-            {
-                ShowError(exception.Message);
-            }
-            catch (InvalidOperationException exception)
             {
                 ShowError(exception.Message);
             }
@@ -1319,6 +1414,10 @@ namespace OOPGames
     {
         private int? _selectionAnchor;
 
+        // Also accepts one decimal separator (comma or point, shown as comma), e.g. for
+        // the enemy editor's speed factors.
+        public bool AllowDecimalSeparator { get; set; }
+
         public ArenaIntegerTextBox()
         {
             AddHandler(
@@ -1357,8 +1456,10 @@ namespace OOPGames
                         : String.Empty;
                     string digits = new string(
                         clipboardText.Where(character =>
-                            character >= '0' && character <= '9').ToArray());
-                    ReplaceSelection(digits);
+                            (character >= '0' && character <= '9')
+                            || (AllowDecimalSeparator
+                                && (character == ',' || character == '.'))).ToArray());
+                    ReplaceSelection(AllowDecimalSeparator ? digits.Replace('.', ',') : digits);
                     return true;
                 }
             }
@@ -1366,6 +1467,16 @@ namespace OOPGames
             if (TryGetDigit(key, out char digit))
             {
                 ReplaceSelection(digit.ToString());
+                return true;
+            }
+
+            if (AllowDecimalSeparator
+                && (key == Key.OemComma || key == Key.OemPeriod || key == Key.Decimal))
+            {
+                if (!Text.Remove(SelectionStart, SelectionLength).Contains(","))
+                {
+                    ReplaceSelection(",");
+                }
                 return true;
             }
 
@@ -1476,7 +1587,7 @@ namespace OOPGames
         private const double BoardWidth = 2048;
         private const double BoardHeight = 1280;
         private const string SkillDragFormat = "OOPGames.ArenaSkill";
-        private readonly ArenaField _field;
+        private readonly Action<string> _treeSaved;
         private readonly IReadOnlyList<ArenaSkillInfo> _skills;
         private readonly IReadOnlyList<ArenaSkillInfo> _paletteItems;
         private readonly ListBox _palette;
@@ -1499,9 +1610,9 @@ namespace OOPGames
         private bool _suppressForkDecisionChanged;
         private Point _dragStart;
 
-        public ArenaSkillTreeEditorControl(ArenaField field)
+        public ArenaSkillTreeEditorControl(Action<string> treeSaved)
         {
-            _field = field;
+            _treeSaved = treeSaved;
             _skills = ArenaSkillTreeRepository.GetImplementedSkills();
             _paletteItems = _skills.Concat(new[]
             {
@@ -1631,11 +1742,9 @@ namespace OOPGames
                 _selectedSkillId = null;
                 _treeNameInput.Text = name == ArenaSkillTreeRepository.DefaultTreeName
                     ? "MeinSkilltree" : name;
-                _field.SelectSkillTree(name);
                 RedrawTree();
-                SetStatus(_field.HasActiveGame
-                    ? "Skilltree übernommen. Der Arena-Lauf wurde neu gestartet und pausiert."
-                    : "Aktiver Skilltree: " + name);
+                SetStatus("Skilltree „" + name + "“ zum Bearbeiten geladen. "
+                    + "Gespielt wird er erst nach „Map & Skilltree übernehmen“.");
             }
             catch (ArgumentException exception)
             {
@@ -2019,7 +2128,7 @@ namespace OOPGames
                     return;
                 }
                 ArenaSkillTreeRepository.SaveTree(name, _tree);
-                _field.SelectSkillTree(name);
+                _treeSaved?.Invoke(name);
                 _treeName = name;
                 _suppressTreeSelectionChanged = true;
                 try
@@ -2031,9 +2140,8 @@ namespace OOPGames
                 {
                     _suppressTreeSelectionChanged = false;
                 }
-                SetStatus(_field.HasActiveGame
-                    ? "Gespeichert und übernommen. Der Arena-Lauf wurde neu gestartet und pausiert."
-                    : "Gespeichert und im Spiel ausgewählt: " + name);
+                SetStatus("Gespeichert: " + name
+                    + ". Unten „Map & Skilltree übernehmen“ wählen, um ihn zu spielen.");
             }
             catch (ArgumentException exception)
             {

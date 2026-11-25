@@ -56,12 +56,51 @@ namespace OOPGames
             new SoundGroupDefinition("playerHeal*.wav", 0.8, 0, 2);
         private static readonly SoundGroupDefinition PowerBlast =
             new SoundGroupDefinition("powerBlast*.wav", 0.8, 0, 2);
+        // The mine turtle's "Hello!" right before it explodes.
+        private static readonly SoundGroupDefinition MineTurtleHello =
+            new SoundGroupDefinition("mineTurtleHello*.wav", 0.9, 0, 2);
+        // Frog croaks (0.4-0.6 s): one voice and a pause longer than a croak, so croaks
+        // never overlap.
+        private static readonly SoundGroupDefinition FrogCroak =
+            new SoundGroupDefinition("frogCroak_*.wav", 0.7, 0.7, 1);
         private static readonly SoundGroupDefinition[] AllGroups =
         {
             PlayerDamage, PlayerDeath, PlayerLowHealth, NonPlayerEntityDamage,
             EntityDeath, SwordSwing, PaySkill, Turn, Brake, MenuClick, Footstep,
-            ElectricDamage, ElectricDamageShort, PlayerHeal, PowerBlast
+            ElectricDamage, ElectricDamageShort, PlayerHeal, PowerBlast, MineTurtleHello,
+            FrogCroak
         };
+        // Sounds an enemy kind may name for an attack or a windup step (enemy editor).
+        private static readonly Dictionary<string, SoundGroupDefinition> EnemySounds =
+            new Dictionary<string, SoundGroupDefinition>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "PowerBlast", PowerBlast },
+                { "MineTurtleHello", MineTurtleHello },
+                { "FrogCroak", FrogCroak },
+                { "SwordSwing", SwordSwing },
+                { "ElectricDamage", ElectricDamage },
+                { "EntityDeath", EntityDeath }
+            };
+
+        public static IReadOnlyList<string> EnemySoundNames
+        {
+            get { return new List<string>(EnemySounds.Keys); }
+        }
+
+        // File patterns of every sound group and the sprint engine loop; each WAV in
+        // Assets/Sounds should match one (checked by the test harness).
+        internal static IReadOnlyList<string> SoundFilePatterns
+        {
+            get
+            {
+                List<string> patterns = new List<string> { EngineLoopPattern };
+                foreach (SoundGroupDefinition group in AllGroups)
+                {
+                    patterns.Add(group.FilePattern);
+                }
+                return patterns;
+            }
+        }
         private double _lastShockSeconds = double.NegativeInfinity;
         // The death sound follows the lethal hit's damage sound a moment later, so it does not
         // cover it.
@@ -100,6 +139,7 @@ namespace OOPGames
                 _field.EntityStatusApplied -= OnEntityStatusApplied;
                 _field.PlayerHealingPulse -= OnPlayerHealingPulse;
                 _field.PlayerPowerBlast -= OnPlayerPowerBlast;
+                _field.EnemySoundRequested -= OnEnemySoundRequested;
                 _field.Progression.UpgradePurchased -= OnUpgradePurchased;
             }
 
@@ -117,6 +157,7 @@ namespace OOPGames
                 _field.EntityStatusApplied += OnEntityStatusApplied;
                 _field.PlayerHealingPulse += OnPlayerHealingPulse;
                 _field.PlayerPowerBlast += OnPlayerPowerBlast;
+                _field.EnemySoundRequested += OnEnemySoundRequested;
                 _field.Progression.UpgradePurchased += OnUpgradePurchased;
             }
         }
@@ -281,6 +322,14 @@ namespace OOPGames
         private void OnPlayerHealingPulse()
         {
             Play(PlayerHeal);
+        }
+
+        private void OnEnemySoundRequested(NonPlayerCharacter enemy, string sound)
+        {
+            if (sound != null && EnemySounds.TryGetValue(sound, out SoundGroupDefinition group))
+            {
+                Play(group);
+            }
         }
 
         private void OnPlayerPowerBlast()
