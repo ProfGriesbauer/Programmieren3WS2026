@@ -44,10 +44,26 @@ namespace OOPGames
         }
 
         public event Action<Entity, Entity, Weapon> EntityDefeated;
+        // A direct hit (attack or chain lightning) from the first entity on the second.
+        // Damage over time and ground traces are not direct hits.
+        public event Action<Entity, Entity> EntityStruck;
         // A lightning bolt jumped from the first entity to the second (Kettenblitz).
         public event Action<Entity, Entity> LightningChained;
 
         public int ActiveAttackCount { get { return _runningAttacks.Count; } }
+
+        // Whether an attack started by the entity is still running in this system.
+        public bool IsAttacking(Entity source)
+        {
+            foreach (RunningAttack attack in _runningAttacks)
+            {
+                if (ReferenceEquals(attack.Source, source))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public bool TryStartAttack(Entity source, double directionX, double directionY)
         {
@@ -297,6 +313,7 @@ namespace OOPGames
                     {
                         attack.Source.EffectWeaponContext = null;
                     }
+                    EntityStruck?.Invoke(attack.Source, target);
                     SpreadChainLightning(attack, target, entities);
                     IgniteFromBurningAttacker(attack.Source, target);
                     // Invulnerability (godmode) only prevents damage; hits still push.
@@ -393,6 +410,13 @@ namespace OOPGames
                             targets.Add(entity);
                         }
                         break;
+                    case WeaponTargetingMode.Everyone:
+                        if (!ReferenceEquals(entity, attack.Source)
+                            && entity.Team != CombatTeam.Neutral)
+                        {
+                            targets.Add(entity);
+                        }
+                        break;
                     default:
                         if (!ReferenceEquals(entity, attack.Source)
                             && entity.Team != CombatTeam.Neutral
@@ -410,6 +434,7 @@ namespace OOPGames
             Entity source, Entity target, double distance,
             IReadOnlyList<Entity> entities, Rect? movementBounds)
         {
+            distance *= 1 - Math.Max(0, Math.Min(1, target.KnockbackResistance));
             if (distance <= 0 || target is MirrorImage || !target.CanBePushed)
             {
                 return;
@@ -527,6 +552,7 @@ namespace OOPGames
                 {
                     attack.Source.EffectWeaponContext = null;
                 }
+                EntityStruck?.Invoke(attack.Source, next);
                 LightningChained?.Invoke(current, next);
                 current = next;
             }

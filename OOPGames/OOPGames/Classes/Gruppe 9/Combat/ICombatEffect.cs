@@ -380,6 +380,57 @@ namespace OOPGames
         }
     }
 
+    // Devour (frog tongue): pulls the hit entity to the attacker within PullSeconds and
+    // kills it there at once, past armour. An NPC attacker carries out the pull (see
+    // NonPlayerCharacter.StartDevouring); any other attacker kills at once. Invulnerable
+    // entities (godmode, respawn protection) are not devoured.
+    public sealed class DevourEffect : ICombatEffect
+    {
+        public DevourEffect(double pullSeconds)
+        {
+            if (pullSeconds < 0 || double.IsNaN(pullSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(pullSeconds));
+            }
+            PullSeconds = pullSeconds;
+        }
+
+        public double PullSeconds { get; }
+        public string Name { get { return "Devour"; } }
+        public string Description { get { return "pulls in and devours"; } }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Mixed; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            if (target == null || !target.IsAlive || target.IsInvulnerable)
+            {
+                return;
+            }
+            if (source is NonPlayerCharacter eater && PullSeconds > 0)
+            {
+                eater.StartDevouring(target, PullSeconds);
+            }
+            else
+            {
+                target.TakeFatalDamage();
+            }
+        }
+    }
+
+    // Lethal: every hit entity dies at once, past armour (e.g. the mine turtle's
+    // explosion). Invulnerable entities (godmode, respawn protection) survive.
+    public sealed class LethalEffect : ICombatEffect
+    {
+        public string Name { get { return "Lethal"; } }
+        public string Description { get { return "kills at once"; } }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Damage; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            target?.TakeFatalDamage();
+        }
+    }
+
     public sealed class CompositeCombatEffect : ICombatEffect
     {
         private readonly IReadOnlyList<ICombatEffect> _effects;

@@ -242,23 +242,38 @@ namespace OOPGames
 
         public void AwardKill(Weapon weapon)
         {
+            AwardKill(weapon, 1, WeaponPointsPerKill);
+        }
+
+        // An enemy kind can count as several kills (or none) towards the skill-point
+        // milestones and give its own number of weapon points.
+        public void AwardKill(Weapon weapon, int kills, int weaponPoints)
+        {
             if (weapon == null)
             {
                 throw new ArgumentNullException(nameof(weapon));
             }
+            if (kills < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kills));
+            }
+            if (weaponPoints < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(weaponPoints));
+            }
 
-            TotalKills++;
+            int killsBefore = TotalKills;
+            TotalKills += kills;
             string weaponId = weapon.Id == MagicWandUpgradeCatalog.StrikeAbility
                 ? WeaponCatalog.MagicWand.Id
                 : weapon.Id == SwordUpgradeCatalog.SpinAbility
                     ? WeaponCatalog.Sword.Id
                     : weapon.Id;
             _weaponPoints[weaponId] =
-                GetStoredWeaponPoints(weaponId) + WeaponPointsPerKill;
-            if (TotalKills % KillsPerUniversalPoint == 0)
-            {
-                _universalPoints += UniversalPointsPerKillMilestone;
-            }
+                GetStoredWeaponPoints(weaponId) + weaponPoints;
+            int milestones = TotalKills / KillsPerUniversalPoint
+                - killsBefore / KillsPerUniversalPoint;
+            _universalPoints += milestones * UniversalPointsPerKillMilestone;
         }
 
         public bool TryUpgradeSkill(string skillId)

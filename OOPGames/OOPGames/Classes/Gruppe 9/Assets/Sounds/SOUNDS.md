@@ -20,6 +20,7 @@ Where a group has several numbered variants, play a **random** one each time so 
 | `sword_swing_01.wav` – `sword_swing_06.wav` | Normal sword attack | One-shot, random variant |
 | `sword_swing_light.wav` | Fast / light attack (optional) | One-shot |
 | `sword_swing_heavy.wav` | Heavy / charged attack (optional) | One-shot |
+| `powerBlast.wav` | Player fires the **power blast** (special attack) | One-shot (explosion, 2.3 s). Play when the blast is released / explodes; it's a big moment, so it may be the loudest sound – don't stack several at once |
 | `electricDamage_01.wav` – `electricDamage_04.wav` | Someone takes **electric / shock damage** (player or enemy) | One-shot, random variant (01–03 ≈ 1 s, 04 = short 0.55 s version for rapid or repeated hits). Can play together with the normal damage sound |
 | `hit_impact_01.wav` – `hit_impact_06.wav` | An attack hits something | One-shot, random variant. Can play together with a damage sound |
 
@@ -29,6 +30,8 @@ Where a group has several numbered variants, play a **random** one each time so 
 |---|---|---|
 | `entity_death_01.wav` – `entity_death_05.wav` | Enemy / NPC dies | One-shot, random variant (04 = small enemy, 05 = big enemy) |
 | `entity_death_06.wav` | Enemy dies while many die at once | One-shot, short version |
+| `frogCroak_01.wav` – `frogCroak_08.wav` | The **frog** enemy/creature croaks ("ribbit", 0.4–0.6 s) – e.g. idle every few seconds, when it notices the player, or when it jumps/attacks | One-shot, random variant. For idle, use a random delay (e.g. 2–6 s) between croaks so it doesn't sound mechanical; don't let one frog play several at once |
+| `mineTurtleHello.wav` | The **Mine Turtle** enemy greets the player ("Hello!", 0.7 s) – e.g. when the player gets close / steps on it, right before it explodes | One-shot, play once per trigger (not every frame). If it explodes afterwards, play the explosion sound after this one |
 
 ## Sprinting (shrill F1 race-car style)
 

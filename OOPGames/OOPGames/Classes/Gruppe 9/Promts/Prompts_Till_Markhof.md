@@ -175,3 +175,143 @@ Die Promptdatei enthält weitere historische Wünsche und Ergebnisse. Behandle s
 | 25.11.2026 09:44:44 | „merge das projekt einmal auf den Master, danach möchte ich aber weiter in meinem branch arbeiten“ (Till Markhof) | Lokalen `master` auf `origin/master` vorgespult (44 neue Commits anderer Gruppen), `Gruppe-9` (11 Commits) ohne Konflikte hineingemergt. Außerhalb von Gruppe 9 ändert sich nur `MainWindow.xaml.cs` (Tastatur geht nicht ans Spiel, solange ein Textfeld fokussiert ist; Framework-Interfaces unverändert). Build des zusammengeführten Stands erfolgreich (0 Warnungen/Fehler), Arena-Testharness erfolgreich (456 Assertions). Merge-Commit `f0bff2f` auf `master` gepusht, danach zurück auf `Gruppe-9` (synchron mit `origin/Gruppe-9`). Dieser Eintrag ist noch nicht committet. |
 | 25.11.2026 09:48:05 | „ja merge den master in meinen branch“ (Till Markhof) | `origin/master` per Vorlauf (fast-forward, kein Merge-Commit nötig, da `master` `Gruppe-9` bereits enthielt) in `Gruppe-9` übernommen; der Branch steht auf `f0bff2f` und enthält jetzt auch die 44 Commits der anderen Gruppen. Dieser Stand wurde zuvor gebaut und getestet (0 Warnungen/Fehler, 456 Assertions). Lokal 45 Commits vor `origin/Gruppe-9`, nicht gepusht; Promptdatei-Einträge noch nicht committet. |
 | 25.11.2026 09:49:01 | „ja pushe die änderungen auf meinen branch“ (Till Markhof) | Promptverlauf committet und `Gruppe-9` (inkl. der aus `master` übernommenen Commits) nach `origin/Gruppe-9` gepusht. |
+
+## Übergabe-Prompt für ein anderes Modell (Stand 25.11.2026)
+
+```text
+Du übernimmst die Weiterentwicklung von „Arena Survival“, dem C#/WPF-Spiel von Gruppe 9 im
+OOPGames-Framework. Ich bin Till Markhof. Arbeite direkt im Repository, prüfe vor jeder
+Änderung den tatsächlichen Code und Git-Status und beginne erst mit meiner nächsten konkreten
+Aufgabe. Antworte auf Deutsch und knapp; ich schreibe informell und mit Tippfehlern.
+
+Verbindliche Regeln
+- Ändere niemals die vorgegebenen Framework-Interfaces (IGameRules2, IGameField, IPaintGame2,
+  IPlayMove usw.).
+- Bewahre vorhandene Änderungen (auch die meiner Teammitglieder); überschreibe oder verwerfe
+  nichts ungefragt. Lies eine Datei, bevor du sie änderst.
+- Folge den vorhandenen C#- und WPF-Mustern; ändere nur, was die Aufgabe erfordert.
+- Committe oder pushe nur, wenn ich es ausdrücklich verlange.
+- Ergänze nach jedem meiner Prompts den Verlauf in
+  OOPGames/OOPGames/Classes/Gruppe 9/Promts/Prompts_Till_Markhof.md (Tabelle mit Datum/Uhrzeit,
+  meinem Prompt, Ergebnis; Name Till Markhof). Vorher lesen, bisherigen Inhalt bewahren.
+- Stelle Rückfragen, wenn eine Verhaltensentscheidung unklar ist (am besten mit Auswahl und
+  Empfehlung), statt zu raten.
+- Fasse am Ende Änderungen sowie Build- und Testergebnisse knapp zusammen.
+
+Build und Tests
+- Spiel bauen: dotnet build OOPGames/OOPGames/OOPGames.csproj
+- Testharness: dotnet run --project "OOPGames/OOPGames/Classes/Gruppe 9/tests/Gruppe9Tests.csproj"
+  (Konsolenprogramm mit eigenem Assert; bricht beim ersten Fehler ab; neue Tests in Main
+  registrieren). Aktuell: 0 Warnungen/Fehler, 456 Assertions.
+- Läuft das Spiel, sperrt es bin/.../OOPGames.exe. Dann das Spiel in einen separaten Ordner bauen
+  (-o <temp>) und die Tests mit -o "OOPGames/OOPGames/Classes/Gruppe 9/tests/bin/isolated" bauen
+  und die DLL direkt starten (der Ordner muss im Repo liegen, weil die Tests OOPGames.csproj
+  aufwärts suchen). Das laufende Spiel nicht beenden.
+- Bei rein dokumentarischen Änderungen ist kein Build nötig.
+
+Erfahrungen, die du beachten solltest
+- Dateien können sich außerhalb deiner Sitzung ändern (Teammitglieder, Pulls, IDE). Einmal hat
+  ein offener Editor-Tab eine alte Fassung von PainterG9.cs gespeichert und mehrere Änderungen
+  gelöscht. Prüfe nach größeren Änderungen per grep, dass sie noch da sind.
+- ArenaField.Tick liest die echte Tastatur. Tests, die Positionen messen, nicht über Tick laufen
+  lassen (sonst stören gedrückte Tasten, wenn das Spiel parallel läuft).
+- Tests dürfen keine echten Nutzerdaten schreiben: ArenaField speichert nur, wenn SaveGames und
+  Scoreboard gesetzt sind (das macht ArenaRules); Tests nutzen Temp-Ordner.
+- FindMenuButton im Test wirft bei fehlendem Knopf; für „Knopf fehlt“ FindMenuButtonIn nutzen.
+- Die LibreSprite-JSONs enthalten nur volle 128x128-Frames ("trimmed": false). Lage von Händen,
+  Griffpunkten und sichtbaren Pixeln per Pixelanalyse (Python/PIL) bestimmen.
+- Optik lässt sich gut ohne Fenster prüfen: Canvas anlegen, PainterG9.TickPaintGameField
+  aufrufen, mit RenderTargetBitmap als PNG speichern und ansehen.
+- Neue Sounds: Assets/Sounds/SOUNDS.md beachten. Der Test TestSoundFilesMatchGroups verlangt,
+  dass jede WAV einer Soundgruppe in Audio/ArenaAudio.cs zugeordnet ist.
+
+Repository-Stand (zu Beginn erneut prüfen)
+- Branch Gruppe-9 = origin/Gruppe-9 (Commit 8bf99de). master enthält Gruppe 9 (Merge f0bff2f)
+  und wurde danach in Gruppe-9 übernommen.
+- Ein Teammitglied (Verlauf in Promts/Prompts_Jonas_Frey.md) arbeitet am Dev-Tool
+  (Map-/Skilltree-Editor, Weltgenerator) und hat die Fähigkeit MirrorImage gebaut. Bei
+  Merge-Konflikten beide Seiten erhalten.
+
+Projektstruktur (OOPGames/OOPGames/Classes/Gruppe 9/)
+- ArenaRules.cs: Framework-Regeln; hängt Spielstände und Bestenliste an das Feld; ClearField
+  setzt den zuletzt gespeicherten Run fort.
+- ArenaField.cs: Spielzustand, Tick, Bewegung/Kollision, Angriffe, Spawn, Zoom, Zielen,
+  Waffenrad, Godmode, Ereignisse für Sounds/Partikel, Speichern/Laden, Respawn.
+- Entity.cs, PlayerCharacter.cs (Hand-Positionen je Figur und Blickrichtung,
+  Angriffs-Blickrichtung), PursuerEnemy.cs, MirrorImage.cs, EntityHitboxCatalog.cs
+  (Rechteck-Hitboxen aus den PNGs gemessen).
+- PainterG9.cs: WPF-Zeichnen, Menüs (Pause, Spielstände, High Scores, Ausrüstung, Skilltree,
+  Tastenbelegung, Dev Tool); dazu ArenaWeaponRenderer, ArenaParticleRenderer, ArenaHudRenderer,
+  ArenaDebugRenderer, ArenaWeaponWheelRenderer, ArenaUiButton, SpriteSheetAnimator.
+- Combat/: Waffen, Angriffsmuster (Klinge, Kegel, Projektil, Welle, Drehwirbel), AttackGeometry
+  (Rechteck-Geometrie), Effekte, Bodeneffekte, Kettenblitz, WeaponAppearance (Sprite-Clips).
+- Progression/: Run-Progression, Upgrade-Kataloge (Schwert, Zauberstab, Bogen),
+  Spielerfähigkeiten, Skilltree-Repository, Menü-Renderer, Skillpunkt-Rückfragedialog.
+- SaveGames/: Spielstand-Daten, 5-Slot-Repository, Bestenliste.
+- Audio/: Soundgruppen, Schleifen, ArenaAudio. Input/: Tastenbelegung, Einstellungen.
+- Assets/: Character (BoxingKnight, Kurt), Enemies, Weapons, Particals, Sounds, Background,
+  SkillTrees, Overlay. tests/: Testharness.
+
+Aktuell umgesetztes Spiel (vor Änderungen im Code abgleichen)
+- Steuerung: WASD/Pfeile, Strg schaltet Sprint um. Die Maus zielt; der Zielpunkt ist der
+  Mauszeiger, Projektile fliegen von der rechten Hand dorthin. LMB Grundangriff, RMB
+  Waffenfähigkeit 1, Q/E/R/F Spielerfähigkeiten, 2/3/4 weitere Waffenfähigkeiten, Waffenrad mit
+  Taste 1 halten (15 % Zeitlupe), B Debugbereiche, H Debug-HUD, Escape Pause. Keybinds
+  konfigurierbar und lokal gespeichert.
+- Waffen liegen in der rechten Hand der Figur (Ritter oder Kurt), je nach Handseite vor oder
+  hinter dem Körper. Beim Angriff dreht sich der Spieler in Schlagrichtung und hält sie.
+  - Schwert: Der Schadensbereich ist die Klinge selbst; Hiebdauer = Abklingzeit; Drehwirbel;
+    Elemente Gift/Blitz/Feuer/Frost oder Schwarzstahl (Weakness) mit Leach (Lebensraub).
+  - Zauberstab: Das Projektil ist der Stabkopf; der Stab bleibt leer, bis er nachgeladen ist.
+    Der Stabschlag legt Spuren seines Elements.
+  - Bogen: wird beim Ausrüsten und Nachladen synchron zur Abklingzeit gespannt, Pfeil liegt in
+    der Sehne. Scope ab Autoaim-Rang 1, Raketenpfeile auf Rang 5.
+  - Für alle Waffen: Kettenblitz-Upgrade beim Blitz-Element, Upgrades für Reichweite, Rückstoß
+    und Tempo.
+- Gegner streunen (Sicht 200, nach Entdeckung 250) und verfolgen den Spieler oder Spiegelbilder.
+  Sie halten am Hitbox-Kontakt und greifen an, wenn die Hitbox ihres Ziels höchstens 60 entfernt
+  ist (10 Schaden, höchstens einmal pro Sekunde, Rückstoß 16 auch im Godmode). Neuer Gegner alle
+  7 s, höchstens 15.
+- Effekte: Gift, Feuer (steckt nur per Treffer an, Brandspur ist nur Optik), Blitz/Betäubung,
+  Frost (feste Eiskristalle statt Ring), Weakness, Lebensraub.
+- Spielerfähigkeiten: Power Blast (Welle von den Füßen), Heilimpuls, Zeitlupe/Bullet Time,
+  MirrorImage.
+- Partikel und Sounds für Blut, Treffer-Aufleuchten, Statuseffekte, Wooshes, Schritte,
+  Sprint-Motor, Elektroschock, Heilung, Power Blast, Waffenrad und Menü.
+- Progression: Start mit 10 Skillpunkten, +1 je 5 Kills, +1 Waffenpunkt je Kill. Fehlende
+  Waffenpunkte optional aus Skillpunkten (mit Rückfrage und „Nicht erneut fragen“). Die Menüs
+  merken sich die Scrollposition. Waffenbäume erreicht man über „Ausrüstung“.
+- Spielstände: 5 Slots unter %LocalAppData%\OOPGames\ArenaSurvival (nicht in Git, zusätzlich
+  abgesichert durch Classes/Gruppe 9/.gitignore). Automatisches Speichern beim Pausieren/Menü,
+  beim Schließen, alle 30 s und beim Tod; gespeichert wird der komplette Run inkl. Gegnern,
+  Spiegelbildern und Abklingzeiten. Tod kostet 3 Skillpunkte und 5 Waffenpunkte der
+  ausgerüsteten Waffe (jeweils min. 0); Respawn in der Mitte mit 2 s Schutz. Bestenliste
+  (Top 10, Score = Kills − 5 je Tod, Godmode zählt nicht).
+
+Beginne mit meiner nächsten konkreten Aufgabe.
+```
+
+| Datum und Uhrzeit | Mein Prompt (Benutzer) | Ergebnis |
+|---|---|---|
+| 25.11.2026 09:54:05 | „schreibe mir einen übergabe promt für ein anderes modell“ (Till Markhof) | Neuen Übergabe-Prompt (Stand 25.11.2026) als eigenen Abschnitt angehängt; der ältere Übergabe-Abschnitt bleibt als Verlauf erhalten. Nicht committet. |
+| 25.11.2026 09:59:52 | Übergabe-Prompt an neues Modell eingefügt („Du übernimmst die Weiterentwicklung von ‚Arena Survival‘ … Beginne mit meiner nächsten konkreten Aufgabe.“) (Till Markhof) | Repository-Stand geprüft: Branch Gruppe-9 = origin/Gruppe-9 (8bf99de), einzige lokale Änderung ist der Übergabe-Abschnitt in dieser Datei. Keine Code-Änderungen; warte auf die nächste konkrete Aufgabe. Nicht committet. |
+| 25.11.2026 10:36:25 | „füge strg+s zu speicher hinzu, die dev tolls sollen absofort mit f4+b oder f4+h geöfnet werden, es soll 2 soll den weapon tree der aktuell ausgewälten waffen“ (Till Markhof; Rückfrage zu Taste 2 beantwortet mit „Nur 2“) | Strg+S speichert den laufenden Run (Sprint wird dabei nicht umgeschaltet) und zeigt im HUD 2 s „Spiel gespeichert“. Debugbereiche/Debug-HUD nur noch mit F4+B bzw. F4+H (F4 nicht belegbar, wird bei Fokusverlust gelöst). Neue Aktion „Waffenbaum der ausgerüsteten Waffe“ auf Taste 2: pausiert und öffnet den Baum (auch aus dem Pausemenü), Back führt ins Pausemenü. Waffenfähigkeit 2 jetzt standardmäßig auf G; gespeicherte Tastenbelegungen werden migriert. Tests ergänzt/angepasst: Build 0 Warnungen/0 Fehler, 471 Assertions grün. Nicht committet. |
+| 25.11.2026 10:39:33 | „setzte das alles um“ (Till Markhof; bezieht sich auf die drei Strukturvorschläge) | ArenaField: Grundangriff/Waffen-/Spielerfähigkeiten laufen für Maus und Tastatur über eine gemeinsame Methode TryTriggerCombatAction (doppelte Schleifen entfernt); die übrigen Tasten (Waffenbaum, F4+B, F4+H, Testgegner, Zoom) stehen in einer Tastenkürzel-Tabelle (KeyShortcut mit „nur im Spiel“/„nur mit F4“); HandleZoomKey mit festen K/L-Tasten entfernt, Zoomtasten rufen ChangeZoom(+1/-1). Verhalten unverändert. Test für Zoom per Taste und umgelegte Zoomtaste ergänzt. Build 0 Warnungen/0 Fehler, 473 Assertions grün. Nicht committet. |
+| 25.11.2026 10:55:33 | „wenn man einen neue map läd wird das spiel komplet neugestarten und der aktuelle spielstand wird überschrieben, ändere das“ (Till Markhof; Rückfragen: zunächst „Neuer Run, neuer Slot“, Map und Skilltree sollen in einem Menü gewählt und am Ende zusammen gespeichert werden) | Ursache: SelectMap/SelectSkillTree starteten den Run neu und speicherten ihn in den aktiven Slot. Vor der Umsetzung durch den folgenden Prompt ersetzt. |
+| 25.11.2026 10:55:33 | „oder lasse das mit dem neuen run kommplet ich möchte einfach in der mitte der map gespwant werden und den neuen skiltree haben“ (Till Markhof) | Dev Tool: neue Leiste unten mit „Spiel-Map“, „Skilltree“ und „Map & Skilltree übernehmen“ (ersetzt „Als Spielhintergrund verwenden“ und das sofortige Übernehmen im Skilltree-Editor; gespeicherte Maps/Skilltrees werden dort vorausgewählt). ArenaField.ApplyMapAndSkillTree: kein Neustart, Fortschritt und Slot bleiben; Figur in der Mitte mit 2 s Schutz, laufende Angriffe/Bodeneffekte/Spiegelbilder entfernt (Abklingzeiten bleiben), Gegner außerhalb der Map oder nahe der Mitte werden versetzt; danach Speichern in denselben Slot. Spielstände merken sich jetzt den Skilltree (SkillTreeName) und laden ihn wieder. Tests angepasst/ergänzt: Build 0 Warnungen/0 Fehler, 479 Assertions grün. Nicht committet. |
+| 25.11.2026 11:07:49 | „serhgut der skilltre soll mit 3 geöffnet werden können, und man soll alle untermenus mit esc verlassen können um zurück zur ansicht zu kommen in der man vorher war, also wenn man im spile z.b3 drüch brigt einen esc zurück ins spiel und wenn man den skilltre über das menu auswählt landete man dort auh wieder“ (Till Markhof; Rückfragen: Waffenfähigkeit 3 auf Y, Esc im Dev Tool mit Rückfrage) | Taste 3 öffnet den Skilltree (neue Aktion „Skilltree“, im Spiel und aus Menüs), Waffenfähigkeit 3 jetzt auf Y; gespeicherte Belegungen werden wie bei Taste 2 migriert (gemeinsame Methode MigrateMenuKey). ArenaField: RequestMenu/ConsumeMenuRequest mit ArenaMenuRequest (WeaponTree/SkillTree) und MenuRequestedFromGame statt der Waffenbaum-Sonderlösung. PainterG9: Menü-Verlauf (Stack) – jede Seite merkt sich, woher sie kam; „Back“ und Esc führen dorthin zurück, per Taste aus dem Spiel geöffnete Seiten zurück ins Spiel; _menuPageBeforeWeaponUpgrades entfällt. Esc im Dev Tool fragt vorher nach (nicht in Textfeldern oder beim Verwerfen einer Platzierungs-Vorschau). Tests angepasst/ergänzt: Build 0 Warnungen/0 Fehler, 489 Assertions grün. Nicht committet. |
+| 25.11.2026 11:17:32 | „wenn man gegnern schaden macht besonders beim schiesen, wiessen sie so lange wo du bist bis entwder 20s vergangen sind oder du einmal in ihere sichtreichweite warst, und greifen an, sie benachrichtigen auch gener der selben spezies in einem 30 einheiten radius“ (Till Markhof; Rückfragen: Radius 100 statt 30, Feuer/Gift u. Ä. zählen nicht, Kettenreaktionen erlaubt) | ArenaCombatSystem: neues Ereignis EntityStruck für direkte Treffer (Angriffe, Projektile, Wellen, Kettenblitz; nicht Schaden über Zeit/Bodenspuren). ArenaField: Treffer von der Spielerseite alarmieren den Gegner und per Kettenreaktion alle Gegner derselben Art im Radius 100 (AlertEnemyAndNeighbours). PursuerEnemy: Alarm 20 s Spielzeit (folgt Zeitlupe); alarmierte Gegner gehen ohne Sicht direkt zum Spieler und greifen an; Alarm endet nach Ablauf oder sobald der Spieler einmal in Sichtweite war (dann normale Verfolgung). Alarmzeit wird im Spielstand gespeichert. Test ergänzt: Build 0 Warnungen/0 Fehler, 500 Assertions grün. Nicht committet. |
+| 25.11.2026 11:19:39 | „nein gener die sterben warnen nicht, es soll nicht visuell erkenbar sein, es kommen später noch sounds“ (Till Markhof) | AlertEnemyAndNeighbours: ein durch den Treffer getöteter Gegner wird nicht alarmiert und warnt niemanden. Keine sichtbare Alarm-Anzeige (wie gewünscht, nichts hinzugefügt); Sounds folgen später. Test ergänzt: Build 0 Warnungen/0 Fehler, 501 Assertions grün. Nicht committet. |
+| 25.11.2026 14:39:23 | „ich möchte ein weiteres dev tool haben, das es mir erlaubt schnell neue gener zu erstellen, und deren waffen und spawning und angrivsverhaltennund evt noch mehr einzustellen, lasu uns das gemeinsam palnen ich möchte so viele atribute wie möglich anpassen können aber nicht müssen“ (Till Markhof; Rückfragen: Waffen-Baukasten plus fertige Waffen, Verhaltenstyp + Feinwerte, Spawn-Regionen im Map-Editor, eigener Takt pro Art mit Spawnbedingungen (z. B. Spieler im Spawnbereich), Gesamt-Cap im Code + Max. pro Art, JSON im Repo + Sprite wählbar, Umsetzung in Phasen + Planungsdokument) | Bestandsaufnahme der fest verdrahteten Gegnerwerte. Planungsdokument Classes/Gruppe 9/Docs/Gegner-Editor-Plan.md angelegt (Datenmodell mit allen optionalen Feldern und Standardwerten, Waffen, Verhalten, Spawning pro Art, Regionen, Editor-Oberfläche, Spielstand-Kompatibilität, technischer Aufbau, 4 Phasen, offene Fragen). Noch kein Code geändert; kein Build nötig. Nicht committet. |
+| 25.11.2026 14:53:31 | „ja starte mit phase 1“ (Till Markhof; Zwischennachrichten: „es gibt non plaer entetys kanst du sies klasse bzw das intreface nicht verwenden dafür ist es da“ → Rückfrage beantwortet mit „Direkt in NonPlayerCharacter“; „baue gerne interfacese aus, wenn sinvoll, sag nur vorher bescheid“) | Phase 1 des Gegner-Editors: neuer Ordner Enemies/ (EnemyTypeDefinition, EnemyType mit Prüfung/Standardwerten, EnemyTypeRepository für Assets/Enemies/Types, EnemySpawnDirector mit Takt pro Art, Max. pro Art, Start-Anzahl, Gruppengröße, Mindestabstand, ab/bis Kills, ab Spielzeit; Gesamt-Cap 15 im Code), Assets/Enemies/Types/Standard.json. NonPlayerCharacter trägt jetzt Gegnerart, Sicht, Alarm, Streunen, Ziel und Angriffs-Einstieg; PursuerEnemy und MirrorImage nutzen das gemeinsame Streunen (Doppelcode in MirrorImage entfernt). ArenaField führt Gegner als NonPlayerCharacter, spawnt pro Art, Alarm nur innerhalb derselben Art, kein Absturz mehr ohne freie Spawn-Position; Spielstände mit Gegnerart, Spawn-Takten und Run-Zeit (alte Spielstände kompatibel). IEntities unverändert. Planungsdokument um Abschnitt 10 (Stand Phase 1) ergänzt. Tests: eigener temporärer Gegnerarten-Ordner, neue Tests für Standardwerte/Prüfung, Repository, Takte/Bedingungen/Spielstand/Alarm; Build 0 Warnungen/0 Fehler, 519 Assertions grün. Nicht committet. |
+| 25.11.2026 15:14:22 | „ja starte mit phase 2, und füge noch die möglichkeit hinzu neben den spanversuchen pro zeit einen spawnwarscheinlichkeit pro versuch hinzuzufügen“ (Till Markhof) | Phase 2: neuer Tab „Gegner-Editor“ im Dev Tool (Enemies/ArenaEnemyEditorControl.cs) mit Liste, Formular für alle Werte (leer = Standard, Standardwert daneben), Live-Vorschau (Sprite vergrößert mit Hitbox, Sicht-/Alarmradien, Kurzübersicht, Probleme), Neu/Duplizieren/Löschen/Speichern (nur gültige Werte, Arten werden im Spiel neu geladen), „Gegner neben mir spawnen“ (aktuelle auch ungespeicherte Fassung, auch im pausierten Run) und „Alle Gegner entfernen“ (ArenaField.SpawnEnemyNearPlayer/RemoveAllEnemies). Neues Feld SpawnChancePercent (Wahrscheinlichkeit pro Spawn-Versuch, Standard 100 %). ArenaIntegerTextBox: Option AllowDecimalSeparator für Kommazahlen. Optik per Render-PNG geprüft. Planungsdokument Abschnitt 11. Tests ergänzt: Build 0 Warnungen/0 Fehler, 538 Assertions grün. Nicht committet. |
+| 25.11.2026 15:43:42 | „ja starte mit phase 3“ (Till Markhof) | Phase 3 des Gegner-Editors: Entity bekommt Schadensfaktor, Rückstoßresistenz und Status-Immunitäten (wirkt im Kampfsystem); NonPlayerCharacter Regeneration (still) und Verhaltens-/Angriffswerte; Belohnung pro Art (Score, Skillpunkt-Kills, Waffenpunkte; neue Überladung ArenaProgression.AwardKill). Neue Klassen Enemies/EnemyAttack (Angriffe aus fertiger Waffe oder Baukasten mit Reichweite/Winkel/Dauer/Projektil/Schaden/Abklingzeit/Rückstoß und Zusatzeffekten Gift/Feuer/Frost/Betäubung/Verlangsamung/Schwäche/Lebensraub, Auswahl nach Abstand und Gewichtung), EnemyBehavior (Verfolger/Fernkämpfer/Turm/Feigling in PursuerEnemy), EnemyValueChecker. Aussehen: Spritesheet pro Art (Animator pro Sheet, Hitbox pro Sheet gemessen), Tönung und Deckkraft im Painter. Editor: neue Abschnitte, Immunitäten, Auswahllisten, Angriffsliste mit passenden Feldern je Muster, erweiterte Vorschau; per Render-PNG geprüft. Testdatei-Zeilenenden vereinheitlicht. Planungsdokument Abschnitt 12. Tests ergänzt: Build 0 Warnungen/0 Fehler, 572 Assertions grün. Nicht committet. |
+| 25.11.2026 16:07:49 | „ja starte mit phase 4“ (Till Markhof; Rückfragen: eigener Tab „Spawn-Regionen“ statt Modus im Map-Editor, Formen Rechtecke und Kreise) | Phase 4: neuer Dev-Tool-Tab „Spawn-Regionen“ (Enemies/ArenaRegionEditorControl.cs: vorhandene Map wählen, Rechtecke/Kreise aufziehen, verschieben, Rechtsklick löschen, umbenennen, speichern, verwerfen, Zoom). Regionen als Assets/Background/<Map>.regions.json (Enemies/ArenaMapRegions.cs). Gegnerart: Regions und PlayerCondition (immer/Spieler in/außerhalb der Regionen); Spawn-Punkte innerhalb der Regionen (flächengewichtet), fehlende Regionen = überall; Bedingung in der Spawn-Steuerung. Spielfeld lädt Regionen der gespielten Map; F4+B zeigt sie. Gegner-Editor: Regionsauswahl (behält unbekannte Namen, aktualisiert sich nach dem Speichern) und Spielerbedingung. Optik per Render-PNG geprüft. Planungsdokument Abschnitt 13. Tests mit eigenem temporären Regionen-Ordner ergänzt: Build 0 Warnungen/0 Fehler, 600 Assertions grün. Nicht committet. |
+| 25.11.2026 16:10:18 | „lagere die spawn-positionssuche in eine eigene klasse aus“ (Till Markhof) | Neue Klasse Enemies/EnemySpawnPositionFinder.cs mit FindAwayFromPlayer (Arena oder Spawn-Regionen, Mindestabstand, keine Überlappung) und FindBesidePlayer (Test-Spawn); bekommt Arena-Fläche, Spieler und Überlappungsprüfung als Funktionen. ArenaField nutzt sie für Spawns, Test-Spawn und das Wegsetzen von Gegnern (Respawn/Map-Wechsel); drei Methoden entfernt (ca. 100 Zeilen). Spiegelbild-Positionen bleiben im Spielfeld. Verhalten unverändert. Planungsdokument Abschnitt 14. Direkter Test der neuen Klasse ergänzt: Build 0 Warnungen/0 Fehler, 623 Assertions grün. Nicht committet. |
+| 25.11.2026 16:36:17 | „annimire frog als gener, wenn frame für bestimte richtungen fehlen versuche sie zu spigeln erweiter den schon bestehnedne animator dafür, frösche sollen langsam auf zufälige entety zuhüfen und dan fressen, das heist wenn etetys in den angrifsradius des frosches kommen ziht er sie zu sich und dan sterben sie sofort, es gibt nur einen frosch der respawnt wen e stirbt, und sich durch einen schlag töten läst, implemetir alle nötige fähigekten und baue diesen gegner“ (Till Markhof; Rückfragen: Frog-Assets JSON + PNG korrigieren, Frosch frisst auch den Spieler; Zwischennachricht: „korigire gerne die schreibung der namen“) | SpriteSheetAnimator spiegelt fehlende Left/Right-Clips (HasClip, GetMirroredClipName). Frog.json-Tags vereinheitlicht/korrigiert, Frog.png Frame 44/45 getauscht (Originale gesichert). Neue Fähigkeiten im Gegnerart-System und Editor: Zielwahl RandomEntity, Bewegungsart Hop, Angriffsziele Everyone, Effekt Verschlingen (DevourEffect; NonPlayerCharacter zieht heran und tötet, Entity.TakeFatalDamage, Event Devoured; Spielfeld entfernt Gefressene). Painter: eigene Clips je Sheet inkl. 8-Richtungs-Zungenclips; Standardgegner unverändert. Gegnerart Assets/Enemies/Types/Frog.json (1 LP, genau einer, Respawn, hüpft, Zungenkegel 70). Fehler behoben: „Puls“ traf nur den Angreifer selbst und ist für Gegner entfernt. Optik per Render geprüft. Tests ergänzt: Build 0 Warnungen/0 Fehler, 645 Assertions grün; danach schlägt TestSoundFilesMatchGroups wegen der während der Sitzung extern hinzugefügten mineTurtleHello.wav fehl (nicht angefasst). Nicht committet. |
+| 25.11.2026 16:36:17 | „korigire gerne die schreibung der namen“ (Till Markhof, Zwischennachricht) | In der Frosch-Aufgabe umgesetzt: Tag-Namen in Frog.json korrigiert und vereinheitlicht. |
+| 25.11.2026 16:48:42 | „Nutze die neuenen assets um die Minet turtel zu bauen sie ist nicht verscheibbar und bewegt sich nicht, sie stirbt bei iherer attack und führt einen powerbalst durch dar alles töten nutze den creacher creator zur umsetzung, wenn ein spiler auf die hitbox der schildkrötet trit soll der knopf rutegehn sie sagt hello, explodirt und tötet alles im explosionsradius“ (Till Markhof) | Gegnerart Assets/Enemies/Types/MineTurtle.json (Sheet „Mine Turtel.png“): steht still, nicht verschiebbar, blockiert nicht; Kontakt des Spielers -> Vorlauf „Aktive“ (0,3 s) -> „Hello“ mit mineTurtleHello.wav (0,7 s) -> Welle Radius 160 mit Power-Blast-Ton, tödlich für alle im Radius (Godmode schützt), danach stirbt sie selbst. Neue allgemeine Fähigkeiten im Gegnerart-System und Editor: BlocksMovement (auch Entity, Spiegelbilder nutzen es), Angriffs-Auslöser Contact, TriggeredBy, Vorlauf-Schritte (Clip/Sekunden/Sound), Sound beim Angriff, Tödlich (LethalEffect), Stirbt nach dem Angriff; ArenaAudio: Gruppe mineTurtleHello und EnemySoundNames; Painter: Vorlauf-Clip und „Idle“-Rückfall. Fehler behoben: Angriff ohne Richtung (Ziel genau im Mittelpunkt) wiederholte den Vorlauf endlos. Beim Test-Umbau versehentlich überschriebene Frosch-Tests aus dem Patch-Skript wiederhergestellt. Optik per Render geprüft. Build 0 Warnungen/0 Fehler; 644 Assertions grün ohne TestSoundFilesMatchGroups, der wegen der während der Sitzung extern hinzugefügten frogCroak_01–08.wav fehlschlägt (nicht angefasst). Nicht committet. |
+| 25.11.2026 16:57:36 | „manche bilder sind noch nicht scharf, besonders beim frosch fäät das gerade auf kümmere dich darum, und lase den frosch die froschsounds machen die dazugekommen sind“ (Till Markhof) | Schärfe: BitmapScalingMode.NearestNeighbor für die Spielwelt (Map, Figuren, Gegner, Waffen, Partikel), HUD-Bilder, Vorschauen im Gegner-Editor, Regionen-Tab und Map-Fläche im Map-Editor; per Render bei Zoom 2 geprüft. Froschsounds: Soundgruppe frogCroak_*.wav (1 Stimme, 0,7 s Abstand, keine Überlagerung), neue Gegnerart-Felder IdleSound/IdleSoundMin/MaxSeconds (auch im Editor); Frosch quakt alle 2–6 s und bei jedem Zungenangriff. ArenaAudio.SoundFilePatterns; Soundtest nutzt sie statt eigener Liste. Spiel lief: Build in separaten Ordner, Tests isoliert. Build 0 Warnungen/0 Fehler, 665 Assertions grün. MineTurtle.json wurde parallel im Spiel per Editor geändert (Takt 10 s, Max 8) und so belassen. Nicht committet. |
+| 25.11.2026 17:02:06 | „wenn der frosch gegner frist soll kein wieser ring kommen und die mine turtel soll keine healbar haben,“ (Till Markhof) | Weißer Ring kam von der Statusanzeige (Verschlingen hält das Opfer per Bewegungsstatus „devoured“, gezeichnet wie Betäubung): „devoured“ bekommt wie Frost keinen Ring mehr. Neue Gegnerart-Einstellung ShowHealthBar („Lebensleiste anzeigen“, auch im Editor, Standard ja); MineTurtle.json: false. Tests ergänzt: Build 0 Warnungen/0 Fehler, 670 Assertions grün. Nicht committet. |
+| 25.11.2026 17:05:33 | „gennerire mir plantumlcode der mir die struktur des gesamten gruppe 9 projekts möglichst übersichtlich in einem kalssendiagram darstellt“ (Till Markhof) | Begonnen (Typen und Vererbung erfasst), vom Benutzer vor der Ausgabe unterbrochen; noch kein Diagramm erstellt. |
+| 25.11.2026 17:05:33 | „pushe alle änderungen“ (Till Markhof) | Alle Änderungen der Sitzung (Tastenkürzel, Menü-Navigation, Map-/Skilltree-Wechsel, Gegneralarm, Gegner-Editor Phasen 1–4, Spawn-Regionen, Spawn-Positionssuche, Frosch, Mine Turtle, Schärfe, Sounds) inkl. der neuen Assets und dieses Verlaufs auf Gruppe-9 committet und nach origin/Gruppe-9 gepusht. |

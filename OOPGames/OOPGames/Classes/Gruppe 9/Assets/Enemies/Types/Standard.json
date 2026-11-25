@@ -1,0 +1,5 @@
+{
+  "Id": "Standard",
+  "Name": "Standardgegner",
+  "Description": "Der ursprüngliche Verfolger. Leere Felder nutzen die Standardwerte aus dem Code (siehe Docs/Gegner-Editor-Plan.md)."
+}

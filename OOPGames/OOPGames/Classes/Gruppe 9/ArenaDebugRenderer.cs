@@ -39,12 +39,18 @@ namespace OOPGames
         private static readonly Brush DamageEffectBrush =
             new SolidColorBrush(Color.FromArgb(100, 255, 100, 70));
 
+        private static readonly Brush RegionStrokeBrush =
+            new SolidColorBrush(Color.FromArgb(220, 120, 220, 255));
+        private static readonly Brush RegionFillBrush =
+            new SolidColorBrush(Color.FromArgb(28, 120, 220, 255));
+
         public void PaintWorldOverlays(
             Canvas canvas, ArenaField field, double left, double top)
         {
             if (field.ShowDamageRanges)
             {
-                foreach (PursuerEnemy enemy in field.Enemies)
+                PaintSpawnRegions(canvas, field, left, top);
+                foreach (NonPlayerCharacter enemy in field.Enemies)
                 {
                     if (!enemy.IsAlive)
                     {
@@ -53,7 +59,7 @@ namespace OOPGames
 
                     AddPlannedEnemyPath(canvas, enemy, field, left, top);
                     AddSightRange(canvas, enemy.PositionX - left,
-                        enemy.PositionY - top, PursuerEnemy.SightRange, false);
+                        enemy.PositionY - top, enemy.SightRange, false);
                     if (enemy.HasSeenPlayer)
                     {
                         AddSightRange(canvas, enemy.PositionX - left,
@@ -69,7 +75,7 @@ namespace OOPGames
                     field.Player.PositionX - left, field.Player.PositionY - top,
                     field.AimDirectionX, field.AimDirectionY);
                 AddEntityHitbox(canvas, field.Player.Hitbox, left, top);
-                foreach (PursuerEnemy enemy in field.Enemies)
+                foreach (NonPlayerCharacter enemy in field.Enemies)
                 {
                     if (enemy.IsAlive)
                     {
@@ -256,7 +262,7 @@ namespace OOPGames
                 "Gegner: {0} | Kills: {1}", field.Enemies.Count, field.Score));
 
             int shownEnemies = 0;
-            foreach (PursuerEnemy enemy in field.Enemies)
+            foreach (NonPlayerCharacter enemy in field.Enemies)
             {
                 if (!enemy.IsAlive || shownEnemies >= 5)
                 {
@@ -459,8 +465,41 @@ namespace OOPGames
             canvas.Children.Add(range);
         }
 
+        // Spawn regions of the map: outlined shapes with their names (F4 + B).
+        private static void PaintSpawnRegions(
+            Canvas canvas, ArenaField field, double left, double top)
+        {
+            foreach (ArenaMapRegion region in field.MapRegions)
+            {
+                Rect bounds = region.Bounds;
+                Shape shape = region.Shape == ArenaRegionShape.Circle
+                    ? (Shape)new Ellipse()
+                    : new Rectangle();
+                shape.Width = bounds.Width;
+                shape.Height = bounds.Height;
+                shape.Stroke = RegionStrokeBrush;
+                shape.StrokeThickness = 2;
+                shape.StrokeDashArray = new DoubleCollection { 6, 4 };
+                shape.Fill = RegionFillBrush;
+                shape.IsHitTestVisible = false;
+                Canvas.SetLeft(shape, bounds.X - left);
+                Canvas.SetTop(shape, bounds.Y - top);
+                canvas.Children.Add(shape);
+                TextBlock label = new TextBlock
+                {
+                    Text = region.Name,
+                    Foreground = RegionStrokeBrush,
+                    FontWeight = FontWeights.Bold,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(label, bounds.X - left + 4);
+                Canvas.SetTop(label, bounds.Y - top + 2);
+                canvas.Children.Add(label);
+            }
+        }
+
         private static void AddPlannedEnemyPath(
-            Canvas canvas, PursuerEnemy enemy, ArenaField field, double left, double top)
+            Canvas canvas, NonPlayerCharacter enemy, ArenaField field, double left, double top)
         {
             Point start = new Point(enemy.PositionX - left, enemy.PositionY - top);
             Point destination = enemy.GetPlannedDestination(field);

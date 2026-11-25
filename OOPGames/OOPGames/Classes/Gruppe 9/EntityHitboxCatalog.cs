@@ -41,9 +41,50 @@ namespace OOPGames
                     Enemy, new SpriteSource(
                         new[] { "Enemies", "Enemie1.png" },
                         new[] { "Enemies", "Enemie1.json" },
-                        new[] { "IdleFront", "IdleBack", "idleLeft" })
+                        EnemyClips)
                 }
             };
+
+        private static string[] EnemyClips
+        {
+            // Enemie1 names its idle clips without spaces; newer sheets (Frog) with.
+            get
+            {
+                return new[]
+                {
+                    "IdleFront", "IdleBack", "idleLeft",
+                    "Idle Front", "Idle Back", "Idle Left", "Idle Right", "Idle"
+                };
+            }
+        }
+
+        // Sprite sheets of enemy kinds (Assets/Enemies/<name>.png with <name>.json) are
+        // measured like Enemie1, from the same idle clips; null when they cannot be read.
+        public static Rect? GetEnemyHitboxOffset(string spriteSheetFile, double drawnFrameHeight)
+        {
+            if (String.IsNullOrWhiteSpace(spriteSheetFile))
+            {
+                return null;
+            }
+            string name = Path.GetFileNameWithoutExtension(spriteSheetFile);
+            if (String.Equals(name, Enemy, StringComparison.OrdinalIgnoreCase))
+            {
+                return GetHitboxOffset(Enemy, drawnFrameHeight);
+            }
+
+            string key = "Enemies/" + name;
+            lock (MeasureLock)
+            {
+                if (!Sources.ContainsKey(key))
+                {
+                    Sources.Add(key, new SpriteSource(
+                        new[] { "Enemies", name + ".png" },
+                        new[] { "Enemies", name + ".json" },
+                        EnemyClips));
+                }
+            }
+            return GetHitboxOffset(key, drawnFrameHeight);
+        }
 
         private static string[] CharacterClips
         {

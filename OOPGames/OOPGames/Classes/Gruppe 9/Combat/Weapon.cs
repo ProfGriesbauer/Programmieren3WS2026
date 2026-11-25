@@ -6,7 +6,9 @@ namespace OOPGames
     {
         Opponents,
         Allies,
-        Self
+        Self,
+        // Every entity but the attacker, of any team (e.g. a frog eating everything).
+        Everyone
     }
 
     public sealed class Weapon

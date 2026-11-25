@@ -4,17 +4,25 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace OOPGames
 {
     // Loads a tagged sprite-sheet atlas and plays any named clip from its JSON metadata.
+    // A clip that is missing for one side ("... Right ...") is taken from the other side
+    // ("... Left ...") and mirrored horizontally, so sheets only need one of the two.
     public sealed class SpriteSheetAnimator
     {
         private const string NotFoundAnimationName = "NotFound";
+        private static readonly Regex SidePattern =
+            new Regex("left|right", RegexOptions.IgnoreCase);
         private readonly Dictionary<string, AnimationClip> _clips =
             new Dictionary<string, AnimationClip>(StringComparer.OrdinalIgnoreCase);
+        // Mirrored copies of frames, made once when first needed.
+        private readonly Dictionary<BitmapSource, BitmapSource> _mirroredFrames =
+            new Dictionary<BitmapSource, BitmapSource>();
         private string _currentClipName;
         private double _elapsedMilliseconds;
         private long _lastTimestamp;
@@ -61,7 +69,7 @@ namespace OOPGames
             {
                 throw new ArgumentOutOfRangeException(nameof(timeScale));
             }
-            if (!_clips.TryGetValue(animationName, out AnimationClip clip))
+            if (!TryResolveClip(animationName, out AnimationClip clip, out bool mirrored))
             {
                 if (!_clips.TryGetValue(NotFoundAnimationName, out clip))
                 {
@@ -96,7 +104,7 @@ namespace OOPGames
             {
                 if (frameTime < frame.DurationMilliseconds)
                 {
-                    return frame.Image;
+                    return mirrored ? GetMirroredFrame(frame.Image) : frame.Image;
                 }
                 frameTime -= frame.DurationMilliseconds;
             }
@@ -107,24 +115,81 @@ namespace OOPGames
 
         public int GetFrameCount(string animationName)
         {
-            return animationName != null
-                && _clips.TryGetValue(animationName, out AnimationClip clip)
-                    ? clip.Frames.Count
-                    : 0;
+            return TryResolveClip(animationName, out AnimationClip clip, out bool mirrored)
+                ? clip.Frames.Count
+                : 0;
+        }
+
+        // Whether the clip exists, directly or as the mirrored clip of the other side.
+        public bool HasClip(string animationName)
+        {
+            return TryResolveClip(animationName, out AnimationClip clip, out bool mirrored);
+        }
+
+        // "Attack Right Down" -> "Attack Left Down"; null when the name names no side.
+        public static string GetMirroredClipName(string animationName)
+        {
+            if (animationName == null || !SidePattern.IsMatch(animationName))
+            {
+                return null;
+            }
+            return SidePattern.Replace(animationName, match =>
+            {
+                string swapped = match.Value.Equals("left", StringComparison.OrdinalIgnoreCase)
+                    ? "right"
+                    : "left";
+                return Char.IsUpper(match.Value[0])
+                    ? Char.ToUpperInvariant(swapped[0]) + swapped.Substring(1)
+                    : swapped;
+            });
+        }
+
+        private bool TryResolveClip(string animationName, out AnimationClip clip, out bool mirrored)
+        {
+            mirrored = false;
+            clip = null;
+            if (animationName == null)
+            {
+                return false;
+            }
+            if (_clips.TryGetValue(animationName, out clip))
+            {
+                return true;
+            }
+            string otherSide = GetMirroredClipName(animationName);
+            if (otherSide != null && _clips.TryGetValue(otherSide, out clip))
+            {
+                mirrored = true;
+                return true;
+            }
+            clip = null;
+            return false;
+        }
+
+        private BitmapSource GetMirroredFrame(BitmapSource frame)
+        {
+            if (!_mirroredFrames.TryGetValue(frame, out BitmapSource mirrored))
+            {
+                TransformedBitmap flipped = new TransformedBitmap(
+                    frame, new ScaleTransform(-1, 1));
+                flipped.Freeze();
+                mirrored = flipped;
+                _mirroredFrames.Add(frame, mirrored);
+            }
+            return mirrored;
         }
 
         // Returns one frame of a clip by index without touching the playback clock, so
         // callers can drive the frame from game state; the index is clamped to the clip.
         public BitmapSource GetClipFrame(string animationName, int frameIndex)
         {
-            if (animationName == null
-                || !_clips.TryGetValue(animationName, out AnimationClip clip))
+            if (!TryResolveClip(animationName, out AnimationClip clip, out bool mirrored))
             {
                 return null;
             }
 
             int index = Math.Max(0, Math.Min(clip.Frames.Count - 1, frameIndex));
-            return clip.Frames[index].Image;
+            return mirrored ? GetMirroredFrame(clip.Frames[index].Image) : clip.Frames[index].Image;
         }
 
         private static BitmapImage LoadSheet(string path)

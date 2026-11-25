@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Polygon = System.Windows.Shapes.Polygon;
 using Polyline = System.Windows.Shapes.Polyline;
+using Rectangle = System.Windows.Shapes.Rectangle;
 using OOPGames;
 
 internal static class Program
@@ -24,10 +25,45 @@ internal static class Program
         string previousSelection = hadSelection
             ? File.ReadAllText(selectionPath)
             : null;
+        // Tests use their own (empty) enemy-kind folder: kinds made by the team must
+        // neither change the results nor be overwritten.
+        string enemyTypeFolder = Path.Combine(
+            Path.GetTempPath(), "arena-enemy-types-" + Guid.NewGuid().ToString("N"));
+        string regionFolder = Path.Combine(
+            Path.GetTempPath(), "arena-regions-" + Guid.NewGuid().ToString("N"));
         try
         {
+            TestShippedEnemyTypesLoad();
+            EnemyTypeRepository.DirectoryOverride = enemyTypeFolder;
+            Directory.CreateDirectory(regionFolder);
+            ArenaMapRegionRepository.DirectoryOverride = regionFolder;
             ArenaSkillTreeRepository.SelectTree(
                 ArenaSkillTreeRepository.DefaultTreeName);
+            TestEnemyTypeDefaultsAndValidation();
+            TestEnemyTypeRepositoryRoundTrip();
+            TestEnemyKindsSpawnOnOwnTimers();
+            TestEnemySpawnChance();
+            TestDecimalNumberInput();
+            TestEnemyEditorWorkflow();
+            TestEnemyAttackResolution();
+            TestEnemyResistancesAndRegeneration();
+            TestEnemyKillRewards();
+            TestEnemyBehaviorTypes();
+            TestEnemyChoosesAttackByDistance();
+            TestEnemySpriteSheetsAndTint();
+            TestEnemyEditorAttacks();
+            TestMapRegionModelAndRepository();
+            TestEnemySpawnPositionFinder();
+            TestEnemiesSpawnInRegions();
+            TestRegionEditor();
+            TestAnimatorMirrorsMissingSides();
+            TestFrogAttackAnimationNames();
+            TestFrogDevoursEntities();
+            TestFrogHopsAndRespawnsAlone();
+            TestFrogCroaks();
+            TestMineTurtleExplodesWhenSteppedOn();
+            TestDevourRingAndHiddenHealthBar();
+            TestWindupTextFormat();
             TestDamageHealingAndDeath();
             TestSlowAndFreezeExpire();
             TestMeleeTargetsAndCooldown();
@@ -42,6 +78,7 @@ internal static class Program
             TestWeaponSpriteAppearances();
             TestPlayerKeepsStrikeFacing();
             TestEnemyHitsPushPlayer();
+            TestEnemyAlertAfterDirectHits();
             TestShockAndHealSoundEvents();
             TestChainLightning();
             TestSkillPointQuestionPreference();
@@ -67,11 +104,12 @@ internal static class Program
             TestRandomBushPixelMatching();
             TestArenaMapPlacementTransforms();
             TestArenaDevToolMenu();
-            TestArenaMapRestart();
-            TestArenaSkillTreeRestart();
+            TestArenaMapChangeKeepsRun();
+            TestArenaSkillTreeChangeKeepsRun();
             TestKeyBindingPersistenceAndConflicts();
             TestInputSeparatesAbilityTypes();
             TestWeaponWheelHoldAndReleaseSelection();
+            TestDevShortcutsSaveShortcutAndWeaponTreeKey();
             TestKillsGrantRunProgression();
             TestWeaponSelectionSurvivesRestart();
             TestEquipmentMenuSelection();
@@ -101,6 +139,16 @@ internal static class Program
         }
         finally
         {
+            EnemyTypeRepository.DirectoryOverride = null;
+            if (Directory.Exists(enemyTypeFolder))
+            {
+                Directory.Delete(enemyTypeFolder, true);
+            }
+            ArenaMapRegionRepository.DirectoryOverride = null;
+            if (Directory.Exists(regionFolder))
+            {
+                Directory.Delete(regionFolder, true);
+            }
             if (hadSelection)
             {
                 File.WriteAllText(selectionPath, previousSelection);
@@ -110,6 +158,1428 @@ internal static class Program
                 File.Delete(selectionPath);
             }
         }
+    }
+
+    // The kinds in the repository (Assets/Enemies/Types) load; only reads them.
+    private static void TestShippedEnemyTypesLoad()
+    {
+        List<string> problems = new List<string>();
+        IReadOnlyList<EnemyType> types = EnemyTypeRepository.LoadAll(problems);
+        Assert(types.Count >= 1 && types[0].Id == EnemyType.StandardId,
+            "the shipped enemy kinds load with Standard first");
+        Assert(problems.Count == 0,
+            "the shipped enemy kinds have no problems: " + String.Join(" | ", problems));
+        _shippedFrog = types.FirstOrDefault(type => type.Id == "Frog");
+        Assert(_shippedFrog != null && _shippedFrog.MaxHitPoints == 1
+            && _shippedFrog.StartCount == 1 && _shippedFrog.MaxAlive == 1
+            && _shippedFrog.TargetSelection == EnemyTargetSelection.RandomEntity
+            && _shippedFrog.MovementStyle == EnemyMovementStyle.Hop
+            && _shippedFrog.SpriteSheet == "Frog.png"
+            && _shippedFrog.Attacks.Count == 1
+            && _shippedFrog.Attacks[0].Weapon.TargetingMode == WeaponTargetingMode.Everyone
+            && _shippedFrog.Attacks[0].Weapon.Effect.Description.Contains("devours"),
+            "the shipped frog: one hit point, alone, hops to random entities and devours");
+        _shippedTurtle = types.FirstOrDefault(type => type.Id == "MineTurtle");
+        EnemyAttack blast = _shippedTurtle?.Attacks[0];
+        Assert(_shippedTurtle != null && !_shippedTurtle.BlocksMovement
+            && !_shippedTurtle.CanBePushed && _shippedTurtle.SpeedFactor == 0
+            && _shippedTurtle.Behavior == EnemyBehavior.Turret
+            && _shippedTurtle.SpriteSheet == "Mine Turtel.png"
+            && blast.Trigger == EnemyAttackTrigger.Contact
+            && blast.TriggeredBy == EnemyTriggerSource.Player
+            && blast.WindupSteps.Select(step => step.Clip).SequenceEqual(new[] { "Aktive", "Hello" })
+            && blast.WindupSteps[1].Sound == "MineTurtleHello" && blast.Sound == "PowerBlast"
+            && blast.KillsAttacker && blast.Weapon.AttackPattern is RadialAttackPattern
+            && blast.Weapon.TargetingMode == WeaponTargetingMode.Everyone
+            && blast.Weapon.Effect.Description.Contains("kills at once"),
+            "the shipped mine turtle stands still, lets the player step on it and explodes lethally");
+    }
+
+    private static EnemyType _shippedFrog;
+    private static EnemyType _shippedTurtle;
+
+    private static void TestEnemyTypeDefaultsAndValidation()
+    {
+        EnemyType standard = EnemyType.Resolve(new EnemyTypeDefinition { Id = "Leer" });
+        Assert(standard.Name == "Leer" && standard.Enabled
+            && standard.MaxHitPoints == 30 && Math.Abs(standard.SpeedFactor - 0.75) < 1e-9
+            && standard.Size == PursuerEnemy.HitboxSize && standard.CanBePushed
+            && standard.SightRange == 200 && standard.SightBonusAfterDetection == 50
+            && standard.AlertDurationSeconds == 20 && standard.AlertRadius == 100
+            && standard.StartCount == 1
+            && standard.SpawnIntervalSeconds == ArenaField.EnemySpawnIntervalSeconds
+            && standard.FirstSpawnDelaySeconds == ArenaField.EnemySpawnIntervalSeconds
+            && standard.MaxAlive == ArenaField.MaximumEnemyCount
+            && standard.GroupSizeMin == 1 && standard.GroupSizeMax == 1
+            && standard.MinDistanceToPlayer == 250 && !standard.MaxKills.HasValue,
+            "an empty enemy kind has the values of the original enemy");
+
+        List<string> problems = new List<string>();
+        EnemyType repaired = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Kaputt",
+            MaxHitPoints = 0,
+            SpawnIntervalSeconds = -1,
+            GroupSizeMin = 3,
+            GroupSizeMax = 2,
+            MinKills = 5,
+            MaxKills = 5,
+            SightRange = 300
+        }, problems);
+        Assert(repaired.MaxHitPoints == 30
+            && repaired.SpawnIntervalSeconds == ArenaField.EnemySpawnIntervalSeconds
+            && repaired.GroupSizeMin == 3 && repaired.GroupSizeMax == 3
+            && !repaired.MaxKills.HasValue && problems.Count == 4,
+            "invalid values fall back to the standard values and are reported");
+        Assert(repaired.MinDistanceToPlayer == 350,
+            "the spawn distance follows the kind's own sight range");
+
+        bool rejected = false;
+        try
+        {
+            EnemyType.Resolve(new EnemyTypeDefinition { Id = "../böse" });
+        }
+        catch (ArgumentException)
+        {
+            rejected = true;
+        }
+        Assert(rejected, "enemy kind ids cannot be file paths");
+    }
+
+    private static void TestEnemyTypeRepositoryRoundTrip()
+    {
+        EnemyTypeRepository.SaveDefinition(new EnemyTypeDefinition
+        {
+            Id = "Brute",
+            Name = "Schläger",
+            MaxHitPoints = 80,
+            SpeedFactor = 0.5
+        });
+        string json = File.ReadAllText(
+            Path.Combine(EnemyTypeRepository.TypesDirectory, "Brute.json"));
+        Assert(json.Contains("\"MaxHitPoints\": 80") && !json.Contains("SightRange"),
+            "only the values that differ from the standard enemy are written");
+
+        List<string> problems = new List<string>();
+        IReadOnlyList<EnemyType> types = EnemyTypeRepository.LoadAll(problems);
+        EnemyType brute = types.FirstOrDefault(type => type.Id == "Brute");
+        Assert(types[0].Id == EnemyType.StandardId && brute != null
+            && brute.Name == "Schläger" && brute.MaxHitPoints == 80
+            && brute.SightRange == 200 && problems.Count == 0,
+            "saved kinds load again, unset values use the standard enemy");
+
+        File.WriteAllText(Path.Combine(EnemyTypeRepository.TypesDirectory, "Defekt.json"),
+            "{ kein json");
+        problems.Clear();
+        types = EnemyTypeRepository.LoadAll(problems);
+        Assert(types.All(type => type.Id != "Defekt") && problems.Count == 1,
+            "a broken file is skipped and reported instead of stopping the game");
+
+        EnemyTypeRepository.DeleteDefinition("Brute");
+        EnemyTypeRepository.DeleteDefinition("Defekt");
+        Assert(EnemyTypeRepository.GetTypeIds().SequenceEqual(new[] { EnemyType.StandardId }),
+            "deleted kinds disappear; Standard always exists");
+    }
+
+    private static void TestEnemySpawnChance()
+    {
+        Assert(EnemyType.Standard.SpawnChancePercent == 100,
+            "enemies spawn on every attempt by default");
+        List<string> problems = new List<string>();
+        EnemyType.Resolve(new EnemyTypeDefinition { Id = "Zuviel", SpawnChancePercent = 150 },
+            problems);
+        Assert(problems.Count == 1, "a spawn chance above 100 % is reported");
+
+        EnemyType never = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Never", StartCount = 0, SpawnIntervalSeconds = 1, SpawnChancePercent = 0
+        });
+        EnemyType always = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Always", StartCount = 0, SpawnIntervalSeconds = 1, MaxAlive = 3
+        });
+        EnemyType coin = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Coin", StartCount = 0, SpawnIntervalSeconds = 1, SpawnChancePercent = 50,
+            MaxAlive = 1000
+        });
+        ArenaField field = new ArenaField();
+        field.SetEnemyTypes(new[] { never, always });
+        field.StartNewGame();
+        field.Player.IsInvulnerable = true;
+        for (int tick = 0; tick < 3 / ArenaField.GameTickDurationSeconds + 1; tick++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        Assert(field.Enemies.Count(enemy => enemy.TypeId == "Never") == 0
+            && field.Enemies.Count(enemy => enemy.TypeId == "Always") == 3,
+            "0 % never spawns, 100 % spawns on every attempt");
+
+        // Many attempts at 50 %: some succeed, some fail (statistically certain).
+        EnemySpawnDirector director = new EnemySpawnDirector();
+        CountingSpawnHost host = new CountingSpawnHost();
+        director.Reset(new[] { coin });
+        for (int attempt = 0; attempt < 400; attempt++)
+        {
+            director.Update(1, new[] { coin }, host);
+        }
+        Assert(host.Spawned > 100 && host.Spawned < 300,
+            "a 50 % chance spawns on about half of the attempts (" + host.Spawned + "/400)");
+    }
+
+    private sealed class CountingSpawnHost : IEnemySpawnHost
+    {
+        public int Spawned;
+        public int LivingEnemyCount { get { return 0; } }
+        public int CountLivingEnemies(string typeId) { return 0; }
+        public int Kills { get { return 0; } }
+        public double RunSeconds { get { return 1000; } }
+        public bool IsPlayerConditionMet(EnemyType type) { return true; }
+        public bool TrySpawnEnemy(EnemyType type)
+        {
+            Spawned++;
+            return true;
+        }
+    }
+
+    private static void TestDecimalNumberInput()
+    {
+        ArenaIntegerTextBox integerBox = new ArenaIntegerTextBox { Text = "1" };
+        integerBox.CaretIndex = 1;
+        Assert(!integerBox.ProcessEditorKey(Key.OemComma, ModifierKeys.None)
+            && integerBox.Text == "1",
+            "integer fields ignore the decimal separator");
+        ArenaIntegerTextBox numberBox = new ArenaIntegerTextBox
+        {
+            Text = "0",
+            AllowDecimalSeparator = true
+        };
+        numberBox.CaretIndex = 1;
+        numberBox.ProcessEditorKey(Key.OemPeriod, ModifierKeys.None);
+        numberBox.ProcessEditorKey(Key.D7, ModifierKeys.None);
+        numberBox.ProcessEditorKey(Key.OemComma, ModifierKeys.None);
+        numberBox.ProcessEditorKey(Key.D5, ModifierKeys.None);
+        Assert(numberBox.Text == "0,75",
+            "decimal fields accept one separator (comma or point, shown as comma)");
+    }
+
+    private static void TestEnemyEditorWorkflow()
+    {
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            ArenaField field = new ArenaField();
+            List<string> errors = new List<string>();
+            ArenaEnemyEditorControl editor = new ArenaEnemyEditorControl(field)
+            {
+                Confirm = message => true,
+                ShowError = errors.Add
+            };
+            Assert(editor.LoadedId == EnemyType.StandardId && !editor.IsDirty
+                && editor.GetFieldValue("Lebenspunkte") == "",
+                "the editor opens with the standard enemy; empty fields mean standard values");
+
+            FindMenuButtonIn(editor, "Neu").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert(editor.LoadedId == null && editor.IsDirty
+                && editor.GetFieldValue("Id (Dateiname)") == "NeuerGegner",
+                "New starts an unsaved kind with a free id");
+            editor.SetFieldValue("Id (Dateiname)", "Tank");
+            editor.SetFieldValue("Lebenspunkte", "120");
+            editor.SetFieldValue("Tempo (× Spielertempo)", "0,4");
+            editor.SetFieldValue("Lässt sich schubsen", "nein");
+            editor.SetFieldValue("Spawn-Wahrscheinlichkeit (%)", "50");
+            Assert(editor.PreviewText.Contains("120 LP") && editor.PreviewText.Contains("50 %"),
+                "the preview follows the form");
+            Assert(editor.SaveType() && editor.LoadedId == "Tank" && !editor.IsDirty,
+                "a valid kind is saved");
+            string json = File.ReadAllText(
+                Path.Combine(EnemyTypeRepository.TypesDirectory, "Tank.json"));
+            EnemyType tank = field.EnemyTypes.FirstOrDefault(type => type.Id == "Tank");
+            Assert(json.Contains("\"SpeedFactor\": 0.4") && json.Contains("\"CanBePushed\": false")
+                && !json.Contains("SightRange") && tank != null && tank.MaxHitPoints == 120
+                && tank.SpawnChancePercent == 50,
+                "saving writes only the set values and reloads the field's kinds");
+
+            editor.SetFieldValue("Lebenspunkte", "0");
+            Assert(editor.PreviewText.Contains("Probleme") && !editor.SaveType()
+                && errors.Count == 1 && errors[0].Contains("Lebenspunkte"),
+                "values out of range are shown and block saving");
+            editor.SetFieldValue("Lebenspunkte", "1,2");
+            Assert(!editor.SaveType() && errors[1].Contains("keine ganze Zahl"),
+                "unreadable numbers block saving");
+            editor.SetFieldValue("Lebenspunkte", "120");
+
+            editor.SpawnTestEnemy();
+            Assert(errors.Count == 3 && errors[2].Contains("laufenden Run"),
+                "the test spawn needs a running game");
+            field.StartNewGame();
+            field.ReturnToStartMenu();
+            int enemiesBefore = field.Enemies.Count;
+            editor.SetFieldValue("Größe", "60");
+            editor.SpawnTestEnemy();
+            NonPlayerCharacter spawned = field.Enemies.LastOrDefault();
+            double distance = spawned == null ? double.MaxValue : Math.Sqrt(
+                Math.Pow(spawned.PositionX - field.Player.PositionX, 2)
+                + Math.Pow(spawned.PositionY - field.Player.PositionY, 2));
+            Assert(field.Enemies.Count == enemiesBefore + 1 && spawned.TypeId == "Tank"
+                && spawned.Size == 60 && distance < 200 && !field.IsGameStarted,
+                "the test spawn places the current (unsaved) version beside the paused player");
+            field.RemoveAllEnemies();
+            Assert(field.Enemies.Count == 0, "all enemies can be removed for testing");
+
+            FindMenuButtonIn(editor, "Duplizieren").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            Assert(editor.GetFieldValue("Id (Dateiname)") == "Tank_Kopie" && editor.SaveType(),
+                "Duplicate copies the form under a new id");
+            FindMenuButtonIn(editor, "Löschen").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            editor.SelectType("Tank");
+            FindMenuButtonIn(editor, "Löschen").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert(EnemyTypeRepository.GetTypeIds().SequenceEqual(new[] { EnemyType.StandardId })
+                && field.EnemyTypes.All(type => type.Id == EnemyType.StandardId)
+                && editor.LoadedId == EnemyType.StandardId,
+                "Delete removes the kind from the files and the field");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    // A field without start enemies, so tests place exactly the enemies they need.
+    private static ArenaField CreateEmptyEnemyField(params EnemyType[] types)
+    {
+        ArenaField field = new ArenaField();
+        field.SetEnemyTypes(new[]
+        {
+            EnemyType.Resolve(new EnemyTypeDefinition
+            {
+                Id = EnemyType.StandardId, StartCount = 0, Enabled = false
+            })
+        }.Concat(types));
+        field.StartNewGame();
+        field.Player.IsInvulnerable = true;
+        return field;
+    }
+
+    private static NonPlayerCharacter PlaceEnemy(
+        ArenaField field, EnemyType type, double offsetX, double offsetY)
+    {
+        Assert(field.SpawnEnemy(type), "the test enemy " + type.Id + " spawns");
+        NonPlayerCharacter enemy = field.Enemies.Last();
+        enemy.SetPosition(field.Player.PositionX + offsetX, field.Player.PositionY + offsetY);
+        return enemy;
+    }
+
+    private static void TestEnemyAttackResolution()
+    {
+        EnemyType standard = EnemyType.Standard;
+        Assert(standard.Attacks.Count == 1
+            && standard.Attacks[0].Weapon == WeaponCatalog.EnemyClaws
+            && standard.Behavior == EnemyBehavior.Chaser
+            && standard.SpriteSheet == EnemyType.DefaultSpriteSheet && !standard.Tint.HasValue
+            && standard.DamageTakenMultiplier == 1 && standard.KnockbackResistance == 0
+            && standard.StatusImmunities.Count == 0 && standard.ScoreValue == 1,
+            "the standard enemy keeps the claws, chases and has no resistances");
+
+        EnemyType archer = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Archer",
+            Attacks = new List<EnemyAttackDefinition>
+            {
+                new EnemyAttackDefinition
+                {
+                    BaseWeapon = "bow", Damage = 5, PoisonDamagePerSecond = 2, LifeStealPercent = 50
+                },
+                new EnemyAttackDefinition
+                {
+                    Pattern = "Cone", Range = 80, AngleDegrees = 120, CooldownSeconds = 2
+                }
+            }
+        });
+        Weapon bow = archer.Attacks[0].Weapon;
+        Weapon cone = archer.Attacks[1].Weapon;
+        Assert(bow.Id == "enemy-Archer-1" && bow.AttackPattern is ProjectileAttackPattern
+            && bow.AttackPattern.Range == WeaponCatalog.Bow.AttackPattern.Range
+            && bow.Effect is LifeStealEffect && bow.Effect.Description.Contains("5 damage")
+            && bow.Effect.Description.Contains("damage/s"),
+            "a finished weapon keeps its pattern; damage and effects are overridden and added");
+        Assert(cone.AttackPattern is MeleeConeAttackPattern coneShape
+            && coneShape.Range == 80
+            && Math.Abs(coneShape.DebugHalfAngleRadians - Math.PI / 3) < 1e-9
+            && cone.CooldownSeconds == 2
+            && archer.Attacks[1].UseUpToDistance == 80,
+            "a pattern built from the toolbox uses the given range, angle and cooldown");
+
+        List<string> problems = new List<string>();
+        EnemyType broken = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Broken",
+            BehaviorType = "Flieger",
+            Tint = "rot",
+            StatusImmunities = new List<string> { "poison", "lava" },
+            Attacks = new List<EnemyAttackDefinition>
+            {
+                new EnemyAttackDefinition { BaseWeapon = "laser", Pattern = "Strahl", AngleDegrees = 400 }
+            }
+        }, problems);
+        Assert(problems.Count == 6 && broken.Behavior == EnemyBehavior.Chaser
+            && !broken.Tint.HasValue && broken.StatusImmunities.SequenceEqual(new[] { "poison" })
+            && broken.Attacks[0].Weapon.AttackPattern is MeleeConeAttackPattern,
+            "unknown behaviour, tint, immunity, weapon, pattern and angle are reported ("
+                + problems.Count + ")");
+        Assert(problems.Any(problem => problem.StartsWith("Broken Angriff 1: Waffe")),
+            "attack problems name the attack");
+    }
+
+    private static void TestEnemyResistancesAndRegeneration()
+    {
+        EnemyType tank = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Tank",
+            MaxHitPoints = 100,
+            DamageTakenMultiplier = 0.5,
+            KnockbackResistance = 1,
+            StatusImmunities = new List<string> { "poison", "stun" },
+            RegenerationPerSecond = 10
+        });
+        PursuerEnemy enemy = new PursuerEnemy(540, 500, PlayerCharacter.BaseMaxSpeed, tank);
+        enemy.TakeDamage(10);
+        Assert(enemy.CurrentHitPoints == 95, "armour halves the damage taken");
+        new PoisonEffect(5, 3).Apply(null, enemy);
+        new StunEffect(2).Apply(null, enemy);
+        new SlowEffect(0.5, 2).Apply(null, enemy);
+        Assert(enemy.ActiveDamageOverTimeEffects.Count == 0
+            && enemy.ActiveStatusEffects.Count(effect => effect.Id == "stun") == 0
+            && enemy.ActiveStatusEffects.Count(effect => effect.Id == "slow") == 1,
+            "immunities ignore exactly the chosen statuses");
+
+        TestEntity attacker = new TestEntity(500, 500, 30, 10, CombatTeam.Player)
+        {
+            EquippedWeapon = WeaponCatalog.EnemyClaws
+        };
+        ArenaCombatSystem combat = new ArenaCombatSystem();
+        Assert(combat.TryStartAttack(attacker, 1, 0), "the test hit starts");
+        combat.Update(ArenaField.GameTickDurationSeconds,
+            new List<Entity> { attacker, enemy });
+        Assert(enemy.PositionX == 540 && enemy.CurrentHitPoints == 90,
+            "full knockback resistance keeps the enemy in place");
+
+        enemy.UpdateStatusEffects(1.05);
+        Assert(enemy.CurrentHitPoints == 100,
+            "regeneration heals over time up to the maximum");
+    }
+
+    private static void TestEnemyKillRewards()
+    {
+        EnemyType boss = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Boss", StartCount = 0, ScoreValue = 3, WeaponPointsPerKill = 4,
+            KillsTowardSkillPoint = 5
+        });
+        ArenaField field = CreateEmptyEnemyField(boss);
+        int pointsBefore = field.Progression.UniversalPoints;
+        int weaponPointsBefore = field.Progression.GetWeaponPoints(WeaponCatalog.Sword.Id);
+        NonPlayerCharacter enemy = PlaceEnemy(field, boss, 50, 0);
+        enemy.CurrentHitPoints = 1;
+        field.AttackWithPlayer(1, 0);
+        for (int i = 0; i < 20 && enemy.IsAlive; i++)
+        {
+            field.UpdateCombat(0.04);
+        }
+        Assert(!enemy.IsAlive && field.Score == 3
+            && field.Progression.TotalKills == 5
+            && field.Progression.UniversalPoints == pointsBefore + 1
+            && field.Progression.GetWeaponPoints(WeaponCatalog.Sword.Id) == weaponPointsBefore + 4,
+            "a kill rewards score, skill-point kills and weapon points of the kind");
+    }
+
+    private static void TestEnemyBehaviorTypes()
+    {
+        EnemyType turret = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Turret", StartCount = 0, BehaviorType = "Turret"
+        });
+        EnemyType ranged = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Ranged", StartCount = 0, BehaviorType = "Ranged", PreferredDistance = 150,
+            SightRange = 400, SpeedFactor = 2
+        });
+        EnemyType coward = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Coward", StartCount = 0, BehaviorType = "Coward", FleeBelowHealthPercent = 50
+        });
+
+        ArenaField field = CreateEmptyEnemyField(turret);
+        NonPlayerCharacter tower = PlaceEnemy(field, turret, 150, 0);
+        double towerX = tower.PositionX;
+        for (int i = 0; i < 25; i++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        Assert(tower.PositionX == towerX && tower.CurrentTarget == field.Player,
+            "a turret sees the player but does not move");
+
+        field = CreateEmptyEnemyField(ranged);
+        NonPlayerCharacter shooter = PlaceEnemy(field, ranged, 320, 0);
+        for (int i = 0; i < 60; i++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        double distance = shooter.PositionX - field.Player.PositionX;
+        Assert(Math.Abs(distance - 150) <= 15,
+            "a ranged enemy approaches to its preferred distance (" + distance + ")");
+        shooter.SetPosition(field.Player.PositionX + 70, field.Player.PositionY);
+        for (int i = 0; i < 60; i++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        distance = shooter.PositionX - field.Player.PositionX;
+        Assert(Math.Abs(distance - 150) <= 15,
+            "a ranged enemy backs away to its preferred distance (" + distance + ")");
+
+        field = CreateEmptyEnemyField(coward);
+        PursuerEnemy runner = (PursuerEnemy)PlaceEnemy(field, coward, 120, 0);
+        field.UpdateEnemyPositions();
+        Assert(!runner.IsFleeing && runner.PositionX - field.Player.PositionX < 120,
+            "a healthy coward attacks like a chaser");
+        runner.CurrentHitPoints = 10;
+        double before = runner.PositionX - field.Player.PositionX;
+        field.UpdateEnemyPositions();
+        Assert(runner.IsFleeing && runner.PositionX - field.Player.PositionX > before
+            && !runner.TryAttackTargetInRange(field.Player, new ArenaCombatSystem()),
+            "a hurt coward flees and does not attack");
+    }
+
+    private static void TestEnemyChoosesAttackByDistance()
+    {
+        EnemyType mixed = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Mixed", StartCount = 0, SightRange = 500,
+            Attacks = new List<EnemyAttackDefinition>
+            {
+                new EnemyAttackDefinition { BaseWeapon = "enemy-claws" },
+                new EnemyAttackDefinition { BaseWeapon = "bow", UseFromDistance = 100 }
+            }
+        });
+        ArenaField field = CreateEmptyEnemyField(mixed);
+        PursuerEnemy enemy = (PursuerEnemy)PlaceEnemy(field, mixed, 300, 0);
+        ArenaCombatSystem combat = new ArenaCombatSystem();
+        Assert(enemy.TryAttackTargetInRange(field.Player, combat)
+            && combat.GetCooldownRemaining(enemy, mixed.Attacks[1].Weapon) > 0
+            && combat.GetCooldownRemaining(enemy, mixed.Attacks[0].Weapon) == 0,
+            "far away the enemy shoots with the bow");
+        Assert(!enemy.TryAttackTargetInRange(field.Player, combat),
+            "a new attack waits until the running one has ended");
+
+        combat = new ArenaCombatSystem();
+        enemy.SetPosition(field.Player.PositionX + 40, field.Player.PositionY);
+        Assert(enemy.TryAttackTargetInRange(field.Player, combat)
+            && combat.GetCooldownRemaining(enemy, mixed.Attacks[0].Weapon) > 0
+            && combat.GetCooldownRemaining(enemy, mixed.Attacks[1].Weapon) == 0,
+            "close by the enemy uses its claws");
+    }
+
+    private static void TestEnemySpriteSheetsAndTint()
+    {
+        Rect? standardHitbox = EntityHitboxCatalog.GetHitboxOffset(EntityHitboxCatalog.Enemy, 68);
+        Assert(standardHitbox.HasValue
+            && EntityHitboxCatalog.GetEnemyHitboxOffset("Enemie1.png", 68) == standardHitbox
+            && !EntityHitboxCatalog.GetEnemyHitboxOffset("Fehlt.png", 68).HasValue
+            && PursuerEnemy.GetHitboxOffsetForSize(34, "Fehlt.png") == new Rect(-17, -17, 34, 34),
+            "hitboxes are measured per sprite sheet; missing sheets use a square");
+
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            EnemyType red = EnemyType.Resolve(new EnemyTypeDefinition
+            {
+                Id = "Red", StartCount = 0, Tint = "#FF0000", Opacity = 0.8,
+                SpriteSheet = "Fehlt.png"
+            });
+            ArenaField field = CreateEmptyEnemyField(red);
+            PlaceEnemy(field, red, 120, 0);
+            PainterG9 painter = new PainterG9();
+            Canvas canvas = new Canvas { Width = 800, Height = 600 };
+            canvas.Measure(new Size(800, 600));
+            canvas.Arrange(new Rect(0, 0, 800, 600));
+            painter.PaintGameField(canvas, field);
+            List<Rectangle> rectangles = new List<Rectangle>();
+            CollectRectangles(canvas, rectangles);
+            Assert(rectangles.Any(rectangle => rectangle.Fill is SolidColorBrush brush
+                    && brush.Color == Colors.Red && rectangle.OpacityMask is ImageBrush),
+                "a tinted kind is drawn with a coloured copy of its sprite (missing sheet: standard)");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    private static void CollectRectangles(DependencyObject parent, List<Rectangle> found)
+    {
+        if (parent is Rectangle rectangle)
+        {
+            found.Add(rectangle);
+        }
+        foreach (object child in LogicalTreeHelper.GetChildren(parent))
+        {
+            if (child is DependencyObject dependency)
+            {
+                CollectRectangles(dependency, found);
+            }
+        }
+    }
+
+    private static void TestEnemyEditorAttacks()
+    {
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            ArenaField field = new ArenaField();
+            List<string> errors = new List<string>();
+            ArenaEnemyEditorControl editor = new ArenaEnemyEditorControl(field)
+            {
+                Confirm = message => true,
+                ShowError = errors.Add
+            };
+            FindMenuButtonIn(editor, "Neu").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            editor.SetFieldValue(ArenaEnemyEditorControl.IdLabel, "Schuetze");
+            editor.SetFieldValue("Verhaltenstyp", "Ranged");
+            editor.SetFieldValue("Immun gegen", "poison,stun");
+            editor.SetFieldValue("Tönung (#RRGGBB)", "#00FF00");
+            FindMenuButtonIn(editor, "+ Angriff").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            editor.SetAttackFieldValue(0, "Waffe", "bow");
+            Assert(editor.AttackCount == 1
+                && !editor.IsAttackFieldVisible(0, "Winkel (°)")
+                && editor.IsAttackFieldVisible(0, "Projektiltempo"),
+                "attack rows show the fields of the weapon's pattern");
+            editor.SetAttackFieldValue(0, "Muster", "Cone");
+            editor.SetAttackFieldValue(0, "Schaden", "7");
+            editor.SetAttackFieldValue(0, "Frost (s)", "1,5");
+            Assert(editor.IsAttackFieldVisible(0, "Winkel (°)")
+                && !editor.IsAttackFieldVisible(0, "Projektiltempo")
+                && editor.PreviewText.Contains("Fernkämpfer")
+                && editor.PreviewText.Contains("Angriff 1: Bogen, Kegel"),
+                "choosing another pattern switches the fields; the preview follows");
+            FindMenuButtonIn(editor, "+ Angriff").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            editor.RemoveAttackAt(1);
+            Assert(editor.AttackCount == 1, "attacks can be removed again");
+
+            Assert(editor.SaveType() && errors.Count == 0, "the kind with an attack is saved");
+            string json = File.ReadAllText(
+                Path.Combine(EnemyTypeRepository.TypesDirectory, "Schuetze.json"));
+            EnemyType saved = field.EnemyTypes.First(type => type.Id == "Schuetze");
+            Assert(json.Contains("\"BaseWeapon\": \"bow\"") && json.Contains("\"FreezeSeconds\": 1.5")
+                && saved.Behavior == EnemyBehavior.Ranged
+                && saved.StatusImmunities.Count == 2 && saved.Tint == Colors.Lime
+                && saved.Attacks.Count == 1
+                && saved.Attacks[0].Weapon.AttackPattern is MeleeConeAttackPattern,
+                "attacks, behaviour, immunities and tint are saved and used by the game");
+            editor.SelectType(EnemyType.StandardId);
+            editor.SelectType("Schuetze");
+            Assert(editor.AttackCount == 1 && editor.GetFieldValue("Immun gegen") == "poison,stun",
+                "loading a kind restores its attacks and immunities");
+
+            editor.SetFieldValue("Spritesheet", "Fehlt.png");
+            Assert(!editor.SaveType() && errors.Last().Contains("Fehlt.png"),
+                "a missing sprite sheet blocks saving");
+            EnemyTypeRepository.DeleteDefinition("Schuetze");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    private static void TestMapRegionModelAndRepository()
+    {
+        ArenaMapRegion box = new ArenaMapRegion
+        {
+            Name = "Box", Shape = ArenaRegionShape.Rectangle, X = 100, Y = 50, Width = 200, Height = 100
+        };
+        ArenaMapRegion ring = new ArenaMapRegion
+        {
+            Name = "Ring", Shape = ArenaRegionShape.Circle, X = 500, Y = 500, Radius = 40
+        };
+        Assert(box.Contains(150, 60) && !box.Contains(310, 60)
+            && ring.Contains(530, 520) && !ring.Contains(540, 540)
+            && Math.Abs(ring.Area - Math.PI * 1600) < 1e-6
+            && ring.Bounds == new Rect(460, 460, 80, 80),
+            "rectangle and circle regions know their area and contain points");
+        Random random = new Random(7);
+        Assert(Enumerable.Range(0, 200).All(i =>
+            {
+                Point inBox = box.GetRandomPoint(random);
+                Point inRing = ring.GetRandomPoint(random);
+                return box.Contains(inBox.X, inBox.Y) && ring.Contains(inRing.X, inRing.Y);
+            }),
+            "random spawn points lie inside their shape");
+        Assert(new ArenaMapRegion { Name = " ", Width = 5, Height = 5 }.Validate() != null
+            && new ArenaMapRegion { Name = "A", Shape = ArenaRegionShape.Circle }.Validate() != null,
+            "regions need a name and a size");
+
+        const string map = "RegionTest.png";
+        ArenaMapRegionRepository.Save(map, new[] { box, ring });
+        IReadOnlyList<ArenaMapRegion> loaded = ArenaMapRegionRepository.Load(map);
+        Assert(loaded.Count == 2 && loaded[1].Shape == ArenaRegionShape.Circle
+            && loaded[1].Radius == 40 && loaded[0].Width == 200
+            && File.ReadAllText(ArenaMapRegionRepository.GetPath(map)).Contains("\"Circle\"")
+            && ArenaMapRegionRepository.GetAllRegionNames().SequenceEqual(new[] { "Box", "Ring" }),
+            "regions are saved next to the map and loaded again");
+        ArenaMapRegionRepository.Save(map, new ArenaMapRegion[0]);
+        Assert(!File.Exists(ArenaMapRegionRepository.GetPath(map))
+            && ArenaMapRegionRepository.Load(map).Count == 0,
+            "saving no regions removes the file");
+        File.WriteAllText(ArenaMapRegionRepository.GetPath(map), "[ { \"Name\": \"\" } ]");
+        bool rejected = false;
+        try
+        {
+            ArenaMapRegionRepository.Load(map);
+        }
+        catch (InvalidDataException)
+        {
+            rejected = true;
+        }
+        Assert(rejected, "invalid region files are rejected");
+        File.Delete(ArenaMapRegionRepository.GetPath(map));
+    }
+
+    private static void TestEnemySpawnPositionFinder()
+    {
+        PlayerCharacter player = new PlayerCharacter(500, 400);
+        Rect area = new Rect(32, 32, 936, 736);
+        List<Rect> occupied = new List<Rect>();
+        EnemySpawnPositionFinder finder = new EnemySpawnPositionFinder(
+            () => area, () => player,
+            hitbox => occupied.Any(other => AttackGeometry.RectsOverlap(hitbox, other)));
+        Rect enemyHitbox = PursuerEnemy.GetHitboxOffsetForSize(34);
+        Func<Point, Rect> place = point => new Rect(point.X + enemyHitbox.X,
+            point.Y + enemyHitbox.Y, enemyHitbox.Width, enemyHitbox.Height);
+
+        for (int i = 0; i < 20; i++)
+        {
+            Point? away = finder.FindAwayFromPlayer(34, EnemyType.DefaultSpriteSheet, 250);
+            Assert(away.HasValue && area.Contains(place(away.Value))
+                && (away.Value - new Point(500, 400)).Length >= 250
+                && !occupied.Any(other => AttackGeometry.RectsOverlap(place(away.Value), other)),
+                "positions away from the player keep the distance, stay inside and do not overlap");
+            occupied.Add(place(away.Value));
+        }
+
+        ArenaMapRegion corner = new ArenaMapRegion
+        {
+            Name = "Ecke", Shape = ArenaRegionShape.Circle, X = 150, Y = 150, Radius = 80
+        };
+        Point? inRegion = finder.FindAwayFromPlayer(34, EnemyType.DefaultSpriteSheet, 0,
+            new[] { corner });
+        Assert(inRegion.HasValue && corner.Contains(inRegion.Value.X, inRegion.Value.Y),
+            "with regions the position lies inside one of them");
+
+        Point? beside = finder.FindBesidePlayer(34, EnemyType.DefaultSpriteSheet);
+        Assert(beside.HasValue && (beside.Value - new Point(500, 400)).Length < 150
+            && !AttackGeometry.RectsOverlap(place(beside.Value), player.Hitbox),
+            "beside the player the enemy stands close without touching the player");
+
+        Assert(!finder.FindAwayFromPlayer(34, EnemyType.DefaultSpriteSheet, 5000).HasValue,
+            "no position is found when the distance cannot be met (the spawn is skipped)");
+    }
+
+    private static void TestEnemiesSpawnInRegions()
+    {
+        List<string> problems = new List<string>();
+        EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "NoRegion", PlayerCondition = "PlayerInsideRegion"
+        }, problems);
+        EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Odd", Regions = new List<string> { "Nord" }, PlayerCondition = "Manchmal"
+        }, problems);
+        Assert(problems.Count == 2,
+            "a player condition needs regions and must be known");
+
+        EnemyType north = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "North", StartCount = 0, MinDistanceToPlayer = 0,
+            Regions = new List<string> { "Nord", "Gibtsnicht" }
+        });
+        EnemyType inside = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Inside", StartCount = 0, SpawnIntervalSeconds = 1, MinDistanceToPlayer = 0,
+            Regions = new List<string> { "Nord" }, PlayerCondition = "PlayerInsideRegion"
+        });
+        EnemyType outside = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Outside", Regions = new List<string> { "Nord" },
+            PlayerCondition = "PlayerOutsideRegion"
+        });
+        EnemyType missing = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Missing", StartCount = 0, Regions = new List<string> { "Gibtsnicht" },
+            PlayerCondition = "PlayerInsideRegion"
+        });
+
+        ArenaField field = CreateEmptyEnemyField(north, inside, missing);
+        ArenaMapRegion northRegion = new ArenaMapRegion
+        {
+            Name = "Nord", Shape = ArenaRegionShape.Rectangle, X = 100, Y = 100,
+            Width = 300, Height = 200
+        };
+        ArenaMapRegionRepository.Save(field.MapFileName, new[] { northRegion });
+        field.ReloadMapRegions();
+        try
+        {
+            Assert(field.MapRegions.Count == 1 && field.GetSpawnRegions(north).Count == 1
+                && field.GetSpawnRegions(missing).Count == 0,
+                "the field loads its map's regions; unknown names are ignored");
+            for (int i = 0; i < 5; i++)
+            {
+                Assert(field.SpawnEnemy(north), "an enemy spawns in its region");
+            }
+            Assert(field.Enemies.All(enemy => northRegion.Contains(enemy.PositionX, enemy.PositionY)),
+                "enemies of a kind with regions spawn inside them");
+
+            Assert(!field.IsPlayerConditionMet(inside) && field.IsPlayerConditionMet(outside)
+                && field.IsPlayerConditionMet(missing),
+                "outside the region only the outside condition holds; missing regions are ignored");
+            field.RemoveAllEnemies();
+            int ticksPerSecond = (int)Math.Round(1 / ArenaField.GameTickDurationSeconds);
+            for (int tick = 0; tick < 2 * ticksPerSecond; tick++)
+            {
+                field.UpdateEnemyPositions();
+            }
+            Assert(field.Enemies.Count(enemy => enemy.TypeId == "Inside") == 0,
+                "a kind waiting for the player in its region does not spawn elsewhere");
+            field.Player.SetPosition(250, 200);
+            Assert(field.IsPlayerConditionMet(inside) && !field.IsPlayerConditionMet(outside),
+                "inside the region the inside condition holds");
+            for (int tick = 0; tick < 2 * ticksPerSecond; tick++)
+            {
+                field.UpdateEnemyPositions();
+            }
+            Assert(field.Enemies.Any(enemy => enemy.TypeId == "Inside"),
+                "the kind spawns once the player entered its region");
+
+            string previousDirectory = Environment.CurrentDirectory;
+            try
+            {
+                Environment.CurrentDirectory = FindGameProjectDirectory();
+                field.ToggleDamageRanges();
+                PainterG9 painter = new PainterG9();
+                Canvas canvas = new Canvas { Width = 800, Height = 600 };
+                canvas.Measure(new Size(800, 600));
+                canvas.Arrange(new Rect(0, 0, 800, 600));
+                painter.PaintGameField(canvas, field);
+                Assert(ContainsText(canvas, "Nord"), "F4 + B shows the spawn regions");
+            }
+            finally
+            {
+                Environment.CurrentDirectory = previousDirectory;
+            }
+        }
+        finally
+        {
+            ArenaMapRegionRepository.Save(field.MapFileName, new ArenaMapRegion[0]);
+        }
+    }
+
+    private static bool ContainsText(DependencyObject parent, string text)
+    {
+        if (parent is TextBlock block && block.Text == text)
+        {
+            return true;
+        }
+        foreach (object child in LogicalTreeHelper.GetChildren(parent))
+        {
+            if (child is DependencyObject dependency && ContainsText(dependency, text))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void TestRegionEditor()
+    {
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            ArenaField field = new ArenaField();
+            int savedCalls = 0;
+            List<string> errors = new List<string>();
+            ArenaRegionEditorControl editor = new ArenaRegionEditorControl(field, () => savedCalls++)
+            {
+                Confirm = message => true,
+                ShowError = errors.Add
+            };
+            Assert(editor.MapFileName == field.MapFileName && editor.Regions.Count == 0,
+                "the regions tab opens with the played map");
+
+            editor.PointerDown(new Point(50, 50));
+            editor.PointerMove(new Point(150, 100));
+            editor.PointerUp(new Point(250, 150));
+            Assert(editor.Regions.Count == 1 && editor.Regions[0].Name == "Region1"
+                && editor.Regions[0].Width == 200 && editor.Regions[0].Height == 100
+                && editor.SelectedIndex == 0 && editor.IsDirty,
+                "dragging on free ground draws a rectangle");
+
+            editor.DrawCircles = true;
+            editor.NewShapeName = "Lichtung";
+            editor.PointerDown(new Point(600, 600));
+            editor.PointerUp(new Point(650, 600));
+            Assert(editor.Regions.Count == 2 && editor.Regions[1].Shape == ArenaRegionShape.Circle
+                && Math.Abs(editor.Regions[1].Radius - 50) < 1e-9
+                && editor.Regions[1].Name == "Lichtung",
+                "with the circle tool a drag draws a circle with the chosen name");
+
+            editor.PointerDown(new Point(700, 700));
+            editor.PointerUp(new Point(702, 701));
+            Assert(editor.Regions.Count == 2, "a click without dragging adds no shape");
+
+            editor.PointerDown(new Point(100, 100));
+            editor.PointerUp(new Point(200, 120));
+            Assert(editor.Regions[0].X == 150 && editor.Regions[0].Y == 70,
+                "dragging a shape moves it");
+            editor.NewShapeName = "Nordlager";
+            editor.RenameSelected();
+            Assert(editor.Regions[0].Name == "Nordlager", "the selected shape can be renamed");
+
+            Assert(editor.Save() && savedCalls == 1 && !editor.IsDirty
+                && field.MapRegions.Count == 2
+                && ArenaMapRegionRepository.GetAllRegionNames().Contains("Lichtung"),
+                "saving writes the regions and the played map uses them at once");
+
+            ArenaEnemyEditorControl enemyEditor = new ArenaEnemyEditorControl(field)
+            {
+                Confirm = message => true,
+                ShowError = errors.Add
+            };
+            enemyEditor.SetFieldValue(ArenaEnemyEditorControl.RegionsLabel, "Lichtung,Verloren");
+            Assert(enemyEditor.GetFieldValue(ArenaEnemyEditorControl.RegionsLabel)
+                    == "Lichtung,Verloren",
+                "the enemy editor offers saved regions and keeps unknown names");
+            editor.DeleteSelected();
+            editor.Save();
+            enemyEditor.RefreshRegionNames();
+            Assert(enemyEditor.GetFieldValue(ArenaEnemyEditorControl.RegionsLabel)
+                    == "Lichtung,Verloren" && errors.Count == 0,
+                "refreshing the region names keeps the choice");
+
+            ArenaMapRegionRepository.Save(field.MapFileName, new ArenaMapRegion[0]);
+            field.ReloadMapRegions();
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    private static byte[] GetPixels(BitmapSource image)
+    {
+        FormatConvertedBitmap converted = new FormatConvertedBitmap(
+            image, PixelFormats.Bgra32, null, 0);
+        byte[] pixels = new byte[converted.PixelWidth * converted.PixelHeight * 4];
+        converted.CopyPixels(pixels, converted.PixelWidth * 4, 0);
+        return pixels;
+    }
+
+    private static bool IsMirrorOf(BitmapSource mirrored, BitmapSource original)
+    {
+        byte[] a = GetPixels(mirrored);
+        byte[] b = GetPixels(original);
+        int width = original.PixelWidth;
+        int height = original.PixelHeight;
+        if (mirrored.PixelWidth != width || mirrored.PixelHeight != height)
+        {
+            return false;
+        }
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                for (int c = 0; c < 4; c++)
+                {
+                    if (a[(y * width + x) * 4 + c] != b[(y * width + (width - 1 - x)) * 4 + c])
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private static void TestAnimatorMirrorsMissingSides()
+    {
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            Assert(SpriteSheetAnimator.GetMirroredClipName("Walk Attack Right Down")
+                    == "Walk Attack Left Down"
+                && SpriteSheetAnimator.GetMirroredClipName("idleLeft") == "idleRight"
+                && SpriteSheetAnimator.GetMirroredClipName("Idle Front") == null,
+                "mirrored clip names swap Left and Right");
+
+            SpriteSheetAnimator frog = new SpriteSheetAnimator(
+                PainterG9.FindAssetPath("Enemies", "Frog.png"),
+                PainterG9.FindAssetPath("Enemies", "Frog.json"));
+            Assert(frog.HasClip("Attack Right Down") && frog.HasClip("Walk Attack Right Down")
+                && frog.GetFrameCount("Walk Attack Right Down") == 2
+                && IsMirrorOf(frog.GetClipFrame("Attack Right Down", 0),
+                    frog.GetClipFrame("Attack Left Down", 0))
+                && IsMirrorOf(frog.GetFrame("Walk Attack Right Down"),
+                    frog.GetClipFrame("Walk Attack Left Down", 0)),
+                "a missing right-side clip is the mirrored left-side clip");
+            Assert(!frog.HasClip("Attack Diagonal")
+                && !IsMirrorOf(frog.GetClipFrame("Idle Right", 0),
+                    frog.GetClipFrame("Idle Left", 0)),
+                "existing clips are used as they are, unknown ones are not invented");
+
+            byte[] notFound = GetPixels(frog.GetClipFrame("NotFound", 0));
+            Assert(frog.GetFrameCount("Walk Attack Left Up") == 2
+                && !GetPixels(frog.GetClipFrame("Walk Attack Left Up", 1)).SequenceEqual(notFound)
+                && frog.HasClip("Idle Front") && frog.HasClip("Walk Back"),
+                "the corrected frog sheet has its walk frames in order and readable names");
+
+            SpriteSheetAnimator enemy = new SpriteSheetAnimator(
+                PainterG9.FindAssetPath("Enemies", "Enemie1.png"),
+                PainterG9.FindAssetPath("Enemies", "Enemie1.json"));
+            Assert(IsMirrorOf(enemy.GetClipFrame("idleRight", 0),
+                    enemy.GetClipFrame("idleLeft", 0)),
+                "the standard enemy gets its missing right idle clip by mirroring");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    private static void TestFrogAttackAnimationNames()
+    {
+        Assert(PainterG9.GetAttackAnimationName(PlayerFacing.Right, false, 1, 1)
+                == "Attack Right Down"
+            && PainterG9.GetAttackAnimationName(PlayerFacing.Left, false, -1, -1)
+                == "Attack Left Up"
+            && PainterG9.GetAttackAnimationName(PlayerFacing.Front, false, -1, 1)
+                == "Attack Front Left"
+            && PainterG9.GetAttackAnimationName(PlayerFacing.Back, true, 1, -1)
+                == "Walk Attack Back Right"
+            && PainterG9.GetAttackAnimationName(PlayerFacing.Front, false, 0, 1) == "Attack Front"
+            && PainterG9.GetAttackAnimationName(PlayerFacing.Left, true, -1, 0)
+                == "Walk Attack Left",
+            "the tongue clip follows the attack direction and the side the frog faces");
+
+        List<string> problems = new List<string>();
+        EnemyType selfPulse = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "SelfPulse",
+            Attacks = new List<EnemyAttackDefinition> { new EnemyAttackDefinition { Pattern = "Pulse" } }
+        }, problems);
+        Assert(problems.Count == 1 && !EnemyAttack.Patterns.Contains(EnemyAttack.PatternPulse)
+            && selfPulse.Attacks[0].Weapon.AttackPattern is MeleeConeAttackPattern,
+            "enemy attacks do not offer the self pulse (it would only hit the enemy itself)");
+    }
+
+    private static NonPlayerCharacter GetFrog(ArenaField field)
+    {
+        return field.Enemies.FirstOrDefault(enemy => enemy.TypeId == "Frog" && enemy.IsAlive);
+    }
+
+    private static void RunArena(ArenaField field, double seconds)
+    {
+        int ticks = (int)Math.Round(seconds / ArenaField.GameTickDurationSeconds);
+        for (int tick = 0; tick < ticks; tick++)
+        {
+            field.UpdateEnemyPositions();
+            field.UpdateCombat(ArenaField.GameTickDurationSeconds);
+        }
+    }
+
+    private static void TestFrogDevoursEntities()
+    {
+        EnemyType victimType = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Victim", StartCount = 0, BehaviorType = "Turret", MaxHitPoints = 500,
+            DamageTakenMultiplier = 0.1
+        });
+        ArenaField field = CreateEmptyEnemyField(_shippedFrog, victimType);
+        NonPlayerCharacter frog = GetFrog(field);
+        Assert(frog != null && field.Enemies.Count == 1,
+            "a run starts with exactly one frog");
+        frog.SetPosition(field.Player.PositionX + 400, field.Player.PositionY);
+        NonPlayerCharacter victim = PlaceEnemy(field, victimType, 450, 0);
+        int scoreBefore = field.Score;
+        RunArena(field, 0.2);
+        Assert(frog.IsDevouring && victim.IsAlive
+            && Math.Abs(victim.PositionX - frog.PositionX) < 50,
+            "an enemy in the tongue radius is held and pulled towards the frog");
+        RunArena(field, 1);
+        Assert(!victim.IsAlive && !field.Enemies.Contains(victim) && field.Score == scoreBefore
+            && !frog.IsDevouring,
+            "the pulled-in enemy dies at once (despite armour), leaves the arena, no kill");
+
+        field.Player.IsInvulnerable = true;
+        frog.SetPosition(field.Player.PositionX + 50, field.Player.PositionY);
+        RunArena(field, 1.5);
+        Assert(field.Player.IsAlive && !frog.IsDevouring,
+            "godmode (or the respawn protection) keeps the player from being eaten");
+
+        field.Player.IsInvulnerable = false;
+        int deathsBefore = field.Deaths;
+        frog.SetPosition(field.Player.PositionX + 50, field.Player.PositionY);
+        RunArena(field, 1.5);
+        Assert(!field.Player.IsAlive && field.IsGameOver && field.Deaths == deathsBefore + 1,
+            "the frog also eats the player, which ends the life like any death");
+    }
+
+    private static void TestFrogHopsAndRespawnsAlone()
+    {
+        EnemyType bystanderType = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Bystander", StartCount = 0, BehaviorType = "Turret"
+        });
+        ArenaField field = CreateEmptyEnemyField(_shippedFrog, bystanderType);
+        NonPlayerCharacter frog = GetFrog(field);
+        frog.SetPosition(field.Player.PositionX + 400, field.Player.PositionY + 200);
+        int stillTicks = 0;
+        int movingTicks = 0;
+        Entity firstTarget = null;
+        double startDistance = 0;
+        for (int tick = 0; tick < 75; tick++)
+        {
+            double x = frog.PositionX;
+            double y = frog.PositionY;
+            field.UpdateEnemyPositions();
+            if (firstTarget == null)
+            {
+                firstTarget = frog.CurrentTarget;
+                startDistance = Math.Sqrt(Math.Pow(firstTarget.PositionX - x, 2)
+                    + Math.Pow(firstTarget.PositionY - y, 2));
+            }
+            if (frog.PositionX == x && frog.PositionY == y)
+            {
+                stillTicks++;
+            }
+            else
+            {
+                movingTicks++;
+            }
+        }
+        double endDistance = Math.Sqrt(Math.Pow(firstTarget.PositionX - frog.PositionX, 2)
+            + Math.Pow(firstTarget.PositionY - frog.PositionY, 2));
+        Assert(firstTarget == field.Player && stillTicks > movingTicks && movingTicks > 0
+            && endDistance < startDistance,
+            "the frog hops (mostly pausing) towards a random entity, here the only one: the player");
+
+        PlaceEnemy(field, bystanderType, -400, -200);
+        HashSet<Entity> targets = new HashSet<Entity>();
+        for (int i = 0; i < 40; i++)
+        {
+            ((PursuerEnemy)frog).GetPlannedDestination(field);
+            targets.Add(frog.CurrentTarget);
+            ((PursuerEnemy)frog).ForceRetarget();
+        }
+        Assert(targets.Contains(field.Player) && targets.Count == 2,
+            "random targets include other enemies, not the frog itself");
+
+        frog.TakeDamage(1);
+        Assert(!frog.IsAlive, "a single hit kills the frog");
+        field.RemoveAllEnemies();
+        Assert(GetFrog(field) == null, "the dead frog is gone");
+        RunArena(field, _shippedFrog.SpawnIntervalSeconds + 0.1);
+        Assert(field.Enemies.Count(enemy => enemy.TypeId == "Frog") == 1,
+            "the frog respawns at its next spawn attempt (at most one interval later)");
+        field.Player.IsInvulnerable = true;
+        RunArena(field, 20);
+        Assert(field.Enemies.Count(enemy => enemy.TypeId == "Frog" && enemy.IsAlive) <= 1,
+            "there is never more than one frog");
+
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            PainterG9 painter = new PainterG9();
+            Canvas canvas = new Canvas { Width = 800, Height = 600 };
+            canvas.Measure(new Size(800, 600));
+            canvas.Arrange(new Rect(0, 0, 800, 600));
+            painter.PaintGameField(canvas, field);
+            Assert(canvas.Children.Count > 0, "the frog is drawn with its own sprite sheet");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    private static void TestFrogCroaks()
+    {
+        Assert(_shippedFrog.IdleSound == "FrogCroak" && _shippedFrog.IdleSoundMinSeconds == 2
+            && _shippedFrog.IdleSoundMaxSeconds == 6
+            && _shippedFrog.Attacks[0].Sound == "FrogCroak"
+            && ArenaAudio.EnemySoundNames.Contains("FrogCroak")
+            && ArenaAudio.SoundFilePatterns.Contains("frogCroak_*.wav"),
+            "the frog croaks now and then and when its tongue shoots out");
+
+        ArenaField field = CreateEmptyEnemyField(_shippedFrog);
+        NonPlayerCharacter frog = GetFrog(field);
+        frog.SetPosition(field.Player.PositionX + 600, field.Player.PositionY);
+        List<string> sounds = new List<string>();
+        field.EnemySoundRequested += (enemy, sound) => sounds.Add(sound);
+        for (int tick = 0; tick < 12 / ArenaField.GameTickDurationSeconds; tick++)
+        {
+            // Keep it far from the player so only idle croaks count.
+            frog.SetPosition(field.Player.PositionX + 600, field.Player.PositionY);
+            field.UpdateEnemyPositions();
+        }
+        Assert(sounds.All(sound => sound == "FrogCroak") && sounds.Count >= 2 && sounds.Count <= 6,
+            "idle croaks come every 2-6 s of game time (" + sounds.Count + " in 12 s)");
+    }
+
+    private static void TestDevourRingAndHiddenHealthBar()
+    {
+        ArenaHudRenderer hud = new ArenaHudRenderer();
+        TestEntity held = new TestEntity(100, 100, 30, 10, CombatTeam.Enemies);
+        held.ApplyMovementStatus("devoured", "Verschlungen", 0, 1);
+        Canvas heldCanvas = new Canvas();
+        hud.PaintStatusPlaceholder(heldCanvas, held, 100, 100);
+        TestEntity stunned = new TestEntity(100, 100, 30, 10, CombatTeam.Enemies);
+        stunned.ApplyMovementStatus("stun", "Stun", 0, 1);
+        Canvas stunnedCanvas = new Canvas();
+        hud.PaintStatusPlaceholder(stunnedCanvas, stunned, 100, 100);
+        Assert(heldCanvas.Children.Count == 0 && stunnedCanvas.Children.Count > 0,
+            "being devoured shows no white ring (a stun still does)");
+
+        Assert(!_shippedTurtle.ShowHealthBar && EnemyType.Standard.ShowHealthBar
+            && _shippedFrog.ShowHealthBar,
+            "the mine turtle hides its health bar, other kinds show theirs");
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            ArenaField field = CreateEmptyEnemyField(_shippedTurtle);
+            field.RemoveAllEnemies();
+            PlaceEnemy(field, _shippedTurtle, 150, 0);
+            PainterG9 painter = new PainterG9();
+            Canvas canvas = new Canvas { Width = 800, Height = 600 };
+            canvas.Measure(new Size(800, 600));
+            canvas.Arrange(new Rect(0, 0, 800, 600));
+            painter.PaintGameField(canvas, field);
+            int withoutBar = CountBorders(canvas);
+            EnemyType visibleTurtle = EnemyType.Resolve(new EnemyTypeDefinition
+            {
+                Id = "VisibleTurtle", StartCount = 0, SpriteSheet = "Mine Turtel.png"
+            });
+            field.SetEnemyTypes(new[] { visibleTurtle });
+            field.RemoveAllEnemies();
+            PlaceEnemy(field, visibleTurtle, 150, 0);
+            painter.PaintGameField(canvas, field);
+            Assert(CountBorders(canvas) == withoutBar + 1,
+                "a kind with ShowHealthBar false is drawn without its health bar");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    private static int CountBorders(DependencyObject parent)
+    {
+        int count = parent is Border ? 1 : 0;
+        foreach (object child in LogicalTreeHelper.GetChildren(parent))
+        {
+            if (child is DependencyObject dependency)
+            {
+                count += CountBorders(dependency);
+            }
+        }
+        return count;
+    }
+
+    private static void TestMineTurtleExplodesWhenSteppedOn()
+    {
+        EnemyType victimType = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Victim", StartCount = 0, BehaviorType = "Turret", MaxHitPoints = 500,
+            DamageTakenMultiplier = 0.1
+        });
+        ArenaField field = CreateEmptyEnemyField(_shippedTurtle, victimType);
+        Assert(field.Enemies.Count(enemy => enemy.TypeId == "MineTurtle") == 2,
+            "a run starts with the mine turtles of its start count");
+        field.RemoveAllEnemies();
+        List<string> sounds = new List<string>();
+        field.EnemySoundRequested += (enemy, sound) => sounds.Add(sound);
+        PursuerEnemy turtle = (PursuerEnemy)PlaceEnemy(field, _shippedTurtle, 300, 0);
+        NonPlayerCharacter neighbour = PlaceEnemy(field, victimType, 300, 120);
+        NonPlayerCharacter farAway = PlaceEnemy(field, victimType, -400, 0);
+        double turtleX = turtle.PositionX;
+        double turtleY = turtle.PositionY;
+
+        RunArena(field, 1);
+        Assert(turtle.PositionX == turtleX && turtle.PositionY == turtleY
+            && !turtle.IsWindingUp && turtle.IsAlive,
+            "the mine turtle does not move and waits");
+        neighbour.SetPosition(turtleX, turtleY);
+        RunArena(field, 0.5);
+        Assert(!turtle.IsWindingUp, "other enemies on the turtle do not set it off");
+        neighbour.SetPosition(turtleX, turtleY + 120);
+
+        // The player stays protected here so the game keeps running during the blast.
+        int scoreBefore = field.Score;
+        field.Player.SetPosition(turtleX + 5, turtleY);
+        RunArena(field, 0.1);
+        Assert(turtle.IsWindingUp && turtle.CurrentWindupClip == "Aktive" && sounds.Count == 0,
+            "stepping on the turtle presses its button");
+        RunArena(field, 0.4);
+        Assert(turtle.CurrentWindupClip == "Hello" && sounds.SequenceEqual(new[] { "MineTurtleHello" })
+            && neighbour.IsAlive,
+            "then it says hello");
+        RunArena(field, 1);
+        Assert(sounds.SequenceEqual(new[] { "MineTurtleHello", "PowerBlast" })
+            && !turtle.IsAlive && !field.Enemies.Contains(turtle)
+            && !neighbour.IsAlive && !field.Enemies.Contains(neighbour)
+            && farAway.IsAlive && field.Player.IsAlive && field.Score == scoreBefore,
+            "and explodes: everything in the radius dies (also the turtle), nothing outside; "
+                + "godmode protects the player");
+
+        field = CreateEmptyEnemyField(_shippedTurtle);
+        field.RemoveAllEnemies();
+        turtle = (PursuerEnemy)PlaceEnemy(field, _shippedTurtle, 300, 0);
+        field.Player.IsInvulnerable = false;
+        int deathsBefore = field.Deaths;
+        field.Player.SetPosition(turtle.PositionX, turtle.PositionY);
+        RunArena(field, 1.6);
+        Assert(!field.Player.IsAlive && field.Deaths == deathsBefore + 1,
+            "an unprotected player on the mine dies in the explosion");
+
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            field = CreateEmptyEnemyField(_shippedTurtle);
+            PainterG9 painter = new PainterG9();
+            Canvas canvas = new Canvas { Width = 800, Height = 600 };
+            canvas.Measure(new Size(800, 600));
+            canvas.Arrange(new Rect(0, 0, 800, 600));
+            painter.PaintGameField(canvas, field);
+            Assert(canvas.Children.Count > 0,
+                "a sheet with a single Idle clip and no NotFound clip is drawn");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
+    private static void TestWindupTextFormat()
+    {
+        List<EnemyWindupStepDefinition> steps =
+            ArenaEnemyEditorControl.ParseWindup("Aktive:0,3; Hello:0,7:MineTurtleHello");
+        Assert(steps.Count == 2 && steps[0].Clip == "Aktive" && steps[0].Seconds == 0.3
+            && steps[1].Sound == "MineTurtleHello"
+            && ArenaEnemyEditorControl.FormatWindup(steps)
+                == "Aktive:0,3; Hello:0,7:MineTurtleHello"
+            && ArenaEnemyEditorControl.ParseWindup("  ") == null,
+            "the windup text field reads and writes clip:seconds:sound steps");
+
+        List<string> problems = new List<string>();
+        EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "BadWindup",
+            Attacks = new List<EnemyAttackDefinition>
+            {
+                new EnemyAttackDefinition
+                {
+                    Windup = ArenaEnemyEditorControl.ParseWindup("Knopf:abc; :1"),
+                    Sound = "Trompete",
+                    Trigger = "Zufall"
+                }
+            }
+        }, problems);
+        Assert(problems.Count == 4 && ArenaAudio.EnemySoundNames.Contains("MineTurtleHello"),
+            "unreadable windup steps, unknown sounds and triggers are reported (" + problems.Count + ")");
+    }
+
+    private static void TestEnemyKindsSpawnOnOwnTimers()
+    {
+        EnemyType fast = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Fast",
+            StartCount = 0,
+            SpawnIntervalSeconds = 2,
+            MaxAlive = 2,
+            MaxHitPoints = 50,
+            SpeedFactor = 1,
+            Size = 50,
+            SightRange = 100
+        });
+        EnemyType late = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Late",
+            StartCount = 0,
+            SpawnIntervalSeconds = 1,
+            MaxAlive = 1,
+            MinRunSeconds = 5
+        });
+        EnemyType hunter = EnemyType.Resolve(new EnemyTypeDefinition
+        {
+            Id = "Hunter",
+            StartCount = 3,
+            MinKills = 1
+        });
+        ArenaField field = new ArenaField();
+        field.SetEnemyTypes(new[] { EnemyType.Standard, fast, late, hunter });
+        field.StartNewGame();
+        field.Player.IsInvulnerable = true;
+        Func<string, int> count = id => field.Enemies.Count(enemy => enemy.TypeId == id);
+        Assert(count(EnemyType.StandardId) == 1 && field.Enemies.Count == 1,
+            "a run starts with each kind's start count; kinds waiting for kills stay away");
+
+        int ticksPerSecond = (int)Math.Round(1 / ArenaField.GameTickDurationSeconds);
+        for (int tick = 0; tick < 2 * ticksPerSecond; tick++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        NonPlayerCharacter fastEnemy = field.Enemies.FirstOrDefault(enemy => enemy.TypeId == "Fast");
+        Assert(count("Fast") == 1 && count(EnemyType.StandardId) == 1 && count("Late") == 0,
+            "each kind spawns on its own timer");
+        Assert(fastEnemy.MaxHitPoints == 50 && fastEnemy.Size == 50
+            && Math.Abs(fastEnemy.MaxSpeed - field.Player.MaxSpeed) < 1e-9
+            && fastEnemy.SightRange == 100,
+            "a spawned enemy takes its values from its kind");
+
+        for (int tick = 0; tick < 4 * ticksPerSecond; tick++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        Assert(count("Fast") == 2 && count("Late") == 1 && count("Hunter") == 0,
+            "kinds respect their maximum, the run-time condition and the kill condition");
+        Assert(Math.Abs(field.RunSeconds - 6) < 1e-6, "the run time is counted in game time");
+
+        ArenaSaveGame save = field.CreateSaveGame();
+        Assert(save.Enemies.Count(enemy => enemy.EnemyTypeId == "Fast") == 2
+            && save.EnemySpawnTimers.ContainsKey("Late") && save.RunSeconds > 5,
+            "save games keep each enemy's kind, the spawn timers and the run time");
+        save.Enemies.First(enemy => enemy.EnemyTypeId == EnemyType.StandardId)
+            .EnemyTypeId = null;
+        field.LoadSaveGame(save, null);
+        Assert(count("Fast") == 2 && count(EnemyType.StandardId) == 1
+            && field.Enemies.First(enemy => enemy.TypeId == "Fast").MaxHitPoints == 50
+            && Math.Abs(field.RunSeconds - save.RunSeconds) < 1e-9,
+            "loading restores the kinds; enemies without a kind become Standard");
+
+        NonPlayerCharacter standardEnemy =
+            field.Enemies.First(enemy => enemy.TypeId == EnemyType.StandardId);
+        NonPlayerCharacter otherKind = field.Enemies.First(enemy => enemy.TypeId == "Fast");
+        standardEnemy.SetPosition(field.Player.PositionX + 500, field.Player.PositionY);
+        otherKind.SetPosition(field.Player.PositionX + 500, field.Player.PositionY + 60);
+        field.AlertEnemyAndNeighbours(standardEnemy);
+        Assert(standardEnemy.IsAlerted && !otherKind.IsAlerted,
+            "an alert only spreads to enemies of the same kind");
     }
 
     private static void TestSlowMotionScalesGameTime()
@@ -530,7 +2000,7 @@ internal static class Program
             File.WriteAllText(path, "{\"MoveUp\":\"T\"}");
             ArenaKeyBindings migrated = ArenaKeyBindings.Load(path);
             Assert(migrated.GetKey(ArenaAction.MoveUp) == Key.T
-                    && migrated.GetKey(ArenaAction.GameSpeed) == Key.G,
+                    && migrated.GetKey(ArenaAction.GameSpeed) == Key.U,
                 "older settings that already use T move the new action to a free key");
         }
         finally
@@ -1182,12 +2652,12 @@ internal static class Program
         // An enemy walking towards the player stops where the rectangles touch.
         ArenaField field = new ArenaField();
         field.StartNewGame();
-        List<PursuerEnemy> enemies = field.Enemies.ToList();
+        List<NonPlayerCharacter> enemies = field.Enemies.ToList();
         for (int i = 1; i < enemies.Count; i++)
         {
             enemies[i].TakeDamage(enemies[i].MaxHitPoints);
         }
-        PursuerEnemy walker = enemies[0];
+        NonPlayerCharacter walker = enemies[0];
         walker.PositionX = field.Player.PositionX;
         walker.PositionY = field.Player.PositionY + 150;
         for (int i = 0; i < 40; i++)
@@ -1197,7 +2667,7 @@ internal static class Program
         Assert(!AttackGeometry.RectsOverlap(walker.Hitbox, field.Player.Hitbox)
             && walker.Hitbox.Top - field.Player.Hitbox.Bottom < 1,
             "an approaching enemy stops at the edge of the player's texture");
-        Assert(walker.TryAttackPlayerInRange(field.Player, new ArenaCombatSystem()),
+        Assert(walker.TryAttackTargetInRange(field.Player, new ArenaCombatSystem()),
             "an enemy touching the tall player from below can attack");
     }
 
@@ -1346,7 +2816,7 @@ internal static class Program
             field.Player.PositionX = 400;
             field.Player.PositionY = 300;
             field.Player.TakeDamage(17);
-            PursuerEnemy enemy = field.Enemies[0];
+            NonPlayerCharacter enemy = field.Enemies[0];
             enemy.PositionX = 900;
             enemy.PositionY = 700;
             enemy.TakeDamage(4);
@@ -1382,7 +2852,7 @@ internal static class Program
                 && Math.Abs(loaded.Player.PositionY - 300) < 1e-6
                 && loaded.Player.CurrentHitPoints == field.Player.CurrentHitPoints,
                 "the player is restored with character, position and hit points");
-            PursuerEnemy loadedEnemy = loaded.Enemies.Single();
+            NonPlayerCharacter loadedEnemy = loaded.Enemies.Single();
             Assert(Math.Abs(loadedEnemy.PositionX - 900) < 1e-6
                 && loadedEnemy.CurrentHitPoints == enemy.CurrentHitPoints
                 && loadedEnemy.ActiveDamageOverTimeEffects.Any(effect => effect.Id == "poison"
@@ -1458,7 +2928,7 @@ internal static class Program
                 "a death is counted and saved at once");
 
             field.Player.PositionX = 100;
-            PursuerEnemy nearMiddle = field.Enemies[0];
+            NonPlayerCharacter nearMiddle = field.Enemies[0];
             nearMiddle.PositionX = field.WorldWidth / 2 + 40;
             nearMiddle.PositionY = field.WorldHeight / 2;
             Assert(field.Respawn(), "a dead player can respawn");
@@ -1577,6 +3047,118 @@ internal static class Program
                     ? "enemy hits push the player even in godmode"
                     : "enemy hits push the player back noticeably");
         }
+    }
+
+    private static void TestEnemyAlertAfterDirectHits()
+    {
+        // Only direct hits are reported, damage over time is not.
+        TestEntity shooter = new TestEntity(500, 500, 30, 10, CombatTeam.Player)
+        {
+            EquippedWeapon = WeaponCatalog.EnemyClaws
+        };
+        TestEntity struckEnemy = new TestEntity(540, 500, 100, 10, CombatTeam.Enemies);
+        ArenaCombatSystem combat = new ArenaCombatSystem();
+        List<Entity> struck = new List<Entity>();
+        combat.EntityStruck += (source, target) => struck.Add(target);
+        Assert(combat.TryStartAttack(shooter, 1, 0), "the test attack starts");
+        combat.Update(ArenaField.GameTickDurationSeconds,
+            new List<Entity> { shooter, struckEnemy });
+        Assert(struck.Count == 1 && struck[0] == struckEnemy,
+            "a direct hit is reported as a strike");
+        TestEntity poisoned = new TestEntity(900, 900, 100, 10, CombatTeam.Enemies);
+        new PoisonEffect(3, 5).Apply(shooter, poisoned);
+        for (int i = 0; i < 20; i++)
+        {
+            combat.Update(0.1, new List<Entity> { poisoned });
+        }
+        Assert(poisoned.CurrentHitPoints < 100 && struck.Count == 1,
+            "poison damage over time is not a strike and alerts no one");
+
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        field.Player.IsInvulnerable = true;
+        while (field.Enemies.Count < 4)
+        {
+            field.SpawnEnemy();
+        }
+        double playerX = field.Player.PositionX;
+        double playerY = field.Player.PositionY;
+        NonPlayerCharacter hit = field.Enemies[0];
+        NonPlayerCharacter near = field.Enemies[1];
+        NonPlayerCharacter chained = field.Enemies[2];
+        NonPlayerCharacter far = field.Enemies[3];
+        hit.SetPosition(playerX + 500, playerY);
+        near.SetPosition(playerX + 500, playerY + 80);
+        chained.SetPosition(playerX + 500, playerY + 160);
+        far.SetPosition(playerX + 500, playerY - 300);
+
+        field.AlertEnemyAndNeighbours(hit);
+        Assert(hit.IsAlerted && near.IsAlerted && chained.IsAlerted && !far.IsAlerted
+            && Math.Abs(hit.AlertRemainingSeconds - EnemyType.DefaultAlertDurationSeconds) < 1e-9,
+            "a hit alerts the enemy and, as a chain within 100 units, its neighbours");
+
+        double distanceBefore = playerX + 500 - playerX;
+        field.UpdateEnemyPositions();
+        Assert(hit.CurrentTarget == field.Player && far.CurrentTarget == null
+            && hit.PositionX - field.Player.PositionX < distanceBefore,
+            "alerted enemies walk to the player outside their sight range");
+
+        far.RestoreAlert(ArenaField.GameTickDurationSeconds);
+        field.UpdateEnemyPositions();
+        field.UpdateEnemyPositions();
+        Assert(!far.IsAlerted && far.CurrentTarget == null,
+            "the alert ends when its time is up");
+
+        ArenaSaveGame save = field.CreateSaveGame();
+        Assert(save.Enemies.Count(enemy => enemy.AlertSeconds > 0) == 3,
+            "save games keep running alerts");
+        field.LoadSaveGame(save, null);
+        Assert(field.Enemies.Count(enemy => enemy.IsAlerted) == 3,
+            "loading restores running alerts");
+
+        NonPlayerCharacter seeing = field.Enemies.First(enemy => enemy.IsAlerted);
+        seeing.SetPosition(field.Player.PositionX + 150, field.Player.PositionY);
+        field.UpdateEnemyPositions();
+        Assert(!seeing.IsAlerted && seeing.CurrentTarget == field.Player,
+            "once the player is in sight the alert ends and normal pursuit continues");
+        seeing.SetPosition(field.Player.PositionX + 600, field.Player.PositionY);
+        field.UpdateEnemyPositions();
+        Assert(seeing.CurrentTarget == null,
+            "after the alert ended the enemy only follows players it can see");
+
+        ArenaField attackField = new ArenaField();
+        attackField.StartNewGame();
+        if (attackField.Enemies.Count == 0)
+        {
+            attackField.SpawnEnemy();
+        }
+        NonPlayerCharacter target = attackField.Enemies[0];
+        target.SetPosition(attackField.Player.PositionX + 50, attackField.Player.PositionY);
+        attackField.AttackWithPlayer(1, 0);
+        for (int i = 0; i < 20 && !target.IsAlerted; i++)
+        {
+            attackField.UpdateCombat(0.04);
+        }
+        Assert(target.IsAlerted, "a real player attack alerts the hit enemy");
+
+        ArenaField killField = new ArenaField();
+        killField.StartNewGame();
+        while (killField.Enemies.Count < 2)
+        {
+            killField.SpawnEnemy();
+        }
+        NonPlayerCharacter victim = killField.Enemies[0];
+        NonPlayerCharacter neighbour = killField.Enemies[1];
+        victim.SetPosition(killField.Player.PositionX + 50, killField.Player.PositionY);
+        neighbour.SetPosition(killField.Player.PositionX + 50, killField.Player.PositionY + 60);
+        victim.CurrentHitPoints = 1;
+        killField.AttackWithPlayer(1, 0);
+        for (int i = 0; i < 20 && victim.IsAlive; i++)
+        {
+            killField.UpdateCombat(0.04);
+        }
+        Assert(!victim.IsAlive && !victim.IsAlerted && !neighbour.IsAlerted,
+            "an enemy killed by the hit warns no one");
     }
 
     private static void TestFireTrailsAndStrikeTraces()
@@ -1795,7 +3377,7 @@ internal static class Program
         Assert(movingImage.IsInvulnerable && !movingImage.CanBePushed,
             "the image remains invulnerable and collisionless after it starts moving");
 
-        PursuerEnemy overlappingEnemy = field.Enemies[0];
+        NonPlayerCharacter overlappingEnemy = field.Enemies[0];
         overlappingEnemy.PositionX = movingImage.PositionX;
         overlappingEnemy.PositionY = movingImage.PositionY;
         double enemyX = overlappingEnemy.PositionX;
@@ -1830,7 +3412,7 @@ internal static class Program
         field.Player.PositionY = 600;
         mirrorImage.PositionX = 500;
         mirrorImage.PositionY = 600;
-        PursuerEnemy enemy = field.Enemies[0];
+        NonPlayerCharacter enemy = field.Enemies[0];
         enemy.PositionX = 400;
         enemy.PositionY = 600;
 
@@ -1919,8 +3501,37 @@ internal static class Program
                 "{\"WeaponAbility2\":{\"Device\":\"Keyboard\",\"Key\":\"D1\"}}");
             ArenaKeyBindings migratedWeaponWheel = ArenaKeyBindings.Load(path);
             Assert(migratedWeaponWheel.GetKey(ArenaAction.WeaponWheel) == Key.D1
-                && migratedWeaponWheel.GetKey(ArenaAction.WeaponAbility2) == Key.D2,
-                "saved ability bindings migrate away from the new weapon-wheel key");
+                && migratedWeaponWheel.GetKey(ArenaAction.WeaponAbility2) == Key.G
+                && migratedWeaponWheel.GetKey(ArenaAction.OpenWeaponTree) == Key.D2,
+                "saved ability bindings migrate away from the weapon-wheel and weapon-tree keys");
+
+            File.WriteAllText(path,
+                "{\"WeaponAbility2\":{\"Device\":\"Keyboard\",\"Key\":\"D2\"},"
+                + "\"ZoomIn\":{\"Device\":\"Keyboard\",\"Key\":\"G\"}}");
+            ArenaKeyBindings migratedWeaponTree = ArenaKeyBindings.Load(path);
+            Assert(migratedWeaponTree.GetKey(ArenaAction.OpenWeaponTree) == Key.D2
+                && migratedWeaponTree.GetKey(ArenaAction.ZoomIn) == Key.G
+                && migratedWeaponTree.GetKey(ArenaAction.WeaponAbility2) == Key.U,
+                "ability 2 leaves key 2 for the weapon tree and avoids keys already in use");
+
+            File.WriteAllText(path,
+                "{\"WeaponAbility3\":{\"Device\":\"Keyboard\",\"Key\":\"D3\"}}");
+            ArenaKeyBindings migratedSkillTree = ArenaKeyBindings.Load(path);
+            Assert(migratedSkillTree.GetKey(ArenaAction.OpenSkillTree) == Key.D3
+                && migratedSkillTree.GetKey(ArenaAction.WeaponAbility3) == Key.Y,
+                "ability 3 leaves key 3 for the skill tree and moves to Y");
+
+            bool rejectedDevModifier = false;
+            try
+            {
+                migratedWeaponTree.SetKey(ArenaAction.MoveUp, Key.F4);
+            }
+            catch (InvalidOperationException)
+            {
+                rejectedDevModifier = true;
+            }
+            Assert(rejectedDevModifier,
+                "F4 stays reserved for the debug key combinations");
         }
         finally
         {
@@ -1965,8 +3576,11 @@ internal static class Program
         field.KeyBindings.ResetToDefaults();
         field.StartNewGame();
         Assert(field.KeyBindings.GetKey(ArenaAction.WeaponWheel) == Key.D1
-            && field.KeyBindings.GetKey(ArenaAction.WeaponAbility2) == Key.D2,
-            "weapon wheel defaults to 1 without colliding with weapon ability bindings");
+            && field.KeyBindings.GetKey(ArenaAction.OpenWeaponTree) == Key.D2
+            && field.KeyBindings.GetKey(ArenaAction.WeaponAbility2) == Key.G
+            && field.KeyBindings.GetKey(ArenaAction.OpenSkillTree) == Key.D3
+            && field.KeyBindings.GetKey(ArenaAction.WeaponAbility3) == Key.Y,
+            "1 opens the weapon wheel, 2 the weapon tree, 3 the skill tree; abilities use G and Y");
 
         field.SetAimDirection(0, -1);
         Assert(field.HandleKeyDown(Key.D1) && field.IsWeaponWheelOpen,
@@ -2020,6 +3634,160 @@ internal static class Program
             "entity movement applies the weapon-wheel slow-motion scale");
     }
 
+    private static void TestDevShortcutsSaveShortcutAndWeaponTreeKey()
+    {
+        ArenaField field = new ArenaField();
+        field.KeyBindings.ResetToDefaults();
+        field.StartNewGame();
+
+        Assert(!field.HandleKeyDown(Key.B) && !field.HandleKeyDown(Key.H)
+            && !field.ShowDamageRanges && !field.ShowDebugHud,
+            "B and H alone no longer toggle the debug views");
+        Assert(field.HandleKeyDown(Key.F4)
+            && field.HandleKeyDown(Key.B) && field.ShowDamageRanges
+            && field.HandleKeyDown(Key.H) && field.ShowDebugHud,
+            "F4 + B and F4 + H toggle the debug ranges and the debug HUD");
+        field.HandleKeyUp(Key.F4);
+        Assert(!field.HandleKeyDown(Key.B) && field.ShowDamageRanges,
+            "releasing F4 ends the debug key combination");
+        field.HandleKeyDown(Key.F4);
+        field.ReleaseHeldModifiers();
+        Assert(!field.HandleKeyDown(Key.H) && field.ShowDebugHud,
+            "losing window focus releases a held F4");
+
+        double zoomBefore = field.ZoomLevel;
+        Assert(field.HandleKeyDown(Key.K) && field.ZoomLevel > zoomBefore
+            && field.HandleKeyDown(Key.L) && Math.Abs(field.ZoomLevel - zoomBefore) < 1e-9,
+            "K zooms in and L zooms out");
+        field.KeyBindings.SetKey(ArenaAction.ZoomIn, Key.I);
+        Assert(!field.HandleKeyDown(Key.K) && field.HandleKeyDown(Key.I)
+            && field.ZoomLevel > zoomBefore,
+            "a rebound zoom key zooms instead of the fixed K");
+        field.KeyBindings.ResetToDefaults();
+
+        string folder = CreateTemporaryFolder();
+        try
+        {
+            ArenaField savingField = CreateSavingField(folder);
+            savingField.KeyBindings.ResetToDefaults();
+            savingField.StartNewGame();
+            bool sprintBefore = savingField.IsSprintEnabled;
+            savingField.HandleKeyDown(Key.LeftCtrl);
+            Assert(savingField.HandleKeyDown(Key.S)
+                && savingField.ActiveSaveSlot.HasValue
+                && savingField.SaveGames.Load(savingField.ActiveSaveSlot.Value) != null
+                && savingField.SaveNoticeRemainingSeconds > 0
+                && savingField.SaveNoticeText == "Spiel gespeichert",
+                "Ctrl + S saves the running game and shows a confirmation");
+            savingField.HandleKeyUp(Key.LeftCtrl);
+            Assert(savingField.IsSprintEnabled == sprintBefore
+                && savingField.IsGameStarted,
+                "Ctrl + S neither toggles sprint nor pauses the game");
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+
+        ArenaField menuField = new ArenaField();
+        menuField.KeyBindings.ResetToDefaults();
+        Assert(!menuField.HandleKeyDown(Key.D2) && !menuField.HandleKeyDown(Key.D3)
+            && menuField.MenuRequest == ArenaMenuRequest.None,
+            "keys 2 and 3 do nothing without an active run");
+
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = FindGameProjectDirectory();
+            ArenaField treeField = new ArenaField();
+            treeField.KeyBindings.ResetToDefaults();
+            treeField.StartNewGame();
+            treeField.SelectPlayerWeapon(WeaponCatalog.Bow);
+            treeField.Progression.AwardKill(WeaponCatalog.Bow);
+            PainterG9 painter = new PainterG9();
+            Canvas canvas = new Canvas { Width = 1024, Height = 768 };
+            canvas.Measure(new Size(1024, 768));
+            canvas.Arrange(new Rect(0, 0, 1024, 768));
+            painter.PaintGameField(canvas, treeField);
+
+            Assert(treeField.HandleKeyDown(Key.D2)
+                && !treeField.IsGameStarted
+                && treeField.MenuRequest == ArenaMenuRequest.WeaponTree,
+                "key 2 pauses the run and requests the weapon tree");
+            painter.PaintGameField(canvas, treeField);
+            Assert(treeField.MenuRequest == ArenaMenuRequest.None
+                && FindMenuButtonIn(canvas, "Spiel fortsetzen") == null,
+                "the painter opens the weapon tree instead of the pause menu");
+            FindMenuButton(canvas, "Verbessern (1 Waffenpunkte)").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            Assert(treeField.Progression.GetWeaponUpgradeRank(
+                BowUpgradeCatalog.AutoAim) == 1,
+                "key 2 opens the tree of the equipped weapon (bow)");
+            FindMenuButton(canvas, "Back").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            Assert(treeField.IsGameStarted,
+                "Back from a weapon tree opened in the game returns to the game");
+            painter.PaintGameField(canvas, treeField);
+
+            Assert(treeField.HandleKeyDown(Key.D3)
+                && treeField.MenuRequest == ArenaMenuRequest.SkillTree,
+                "key 3 pauses the run and requests the skill tree");
+            painter.PaintGameField(canvas, treeField);
+            Assert(FindMenuButton(canvas, "Freischalten (3 universelle Punkte)") != null,
+                "key 3 opens the skill tree");
+            Assert(painter.HandleMenuEscape(canvas, treeField) && treeField.IsGameStarted,
+                "Escape in a skill tree opened in the game returns to the game");
+            painter.PaintGameField(canvas, treeField);
+
+            treeField.ReturnToStartMenu();
+            painter.PaintGameField(canvas, treeField);
+            FindMenuButton(canvas, "Skilltree").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            painter.PaintGameField(canvas, treeField);
+            Assert(painter.HandleMenuEscape(canvas, treeField)
+                && !treeField.IsGameStarted,
+                "Escape in a skill tree opened from the menu stays in the menu");
+            painter.PaintGameField(canvas, treeField);
+            Assert(FindMenuButton(canvas, "Spiel fortsetzen") != null,
+                "... and returns to the pause menu it was opened from");
+            Assert(!painter.HandleMenuEscape(canvas, treeField),
+                "Escape on the pause menu itself is left to the game (continue)");
+
+            FindMenuButton(canvas, "Ausrüstung").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            painter.PaintGameField(canvas, treeField);
+            FindMenuButton(canvas, "Bogen — Waffenbaum").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            painter.PaintGameField(canvas, treeField);
+            painter.HandleMenuEscape(canvas, treeField);
+            painter.PaintGameField(canvas, treeField);
+            Assert(FindMenuButton(canvas, "Bogen — Waffenbaum") != null,
+                "Escape in a weapon tree returns to the equipment page");
+            painter.HandleMenuEscape(canvas, treeField);
+            painter.PaintGameField(canvas, treeField);
+            Assert(FindMenuButton(canvas, "Spiel fortsetzen") != null,
+                "Escape in the equipment page returns to the pause menu");
+
+            Assert(treeField.HandleKeyDown(Key.D2),
+                "key 2 also opens the weapon tree from the pause menu");
+            canvas.Tag = null;
+            painter.PaintGameField(canvas, treeField);
+            Assert(FindMenuButtonIn(canvas, "Spiel fortsetzen") == null
+                && FindMenuButton(canvas, "Back") != null,
+                "the pause menu switches to the weapon tree");
+            FindMenuButton(canvas, "Back").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            painter.PaintGameField(canvas, treeField);
+            Assert(!treeField.IsGameStarted
+                && FindMenuButton(canvas, "Spiel fortsetzen") != null,
+                "Back from a weapon tree opened in the pause menu returns there");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+        }
+    }
+
     private static void TestKillsGrantRunProgression()
     {
         ArenaField field = new ArenaField();
@@ -2031,7 +3799,7 @@ internal static class Program
             {
                 field.SpawnEnemy();
             }
-            PursuerEnemy enemy = field.Enemies[0];
+            NonPlayerCharacter enemy = field.Enemies[0];
             enemy.PositionX = field.Player.PositionX + 50;
             enemy.PositionY = field.Player.PositionY;
 
@@ -2908,6 +4676,11 @@ internal static class Program
         painter.PaintGameField(canvas, field);
         Assert(FindMenuButton(canvas, "Zurück zum Startmenü") != null,
             "start menu opens the full-area map and skilltree editor");
+        Assert(FindMenuButtonIn(canvas, "Gegner neben mir spawnen") != null,
+            "the dev tool has the enemy editor tab");
+        Assert(FindMenuButton(canvas, "Map & Skilltree übernehmen") != null
+            && FindMenuButtonIn(canvas, "Als Spielhintergrund verwenden") == null,
+            "map and skill tree are applied together from one bar in the dev tool");
 
         FindMenuButton(canvas, "Zurück zum Startmenü").RaiseEvent(
             new RoutedEventArgs(Button.ClickEvent));
@@ -2927,7 +4700,7 @@ internal static class Program
             "dev tool opens from the pause menu without restarting the OOP window");
     }
 
-    private static void TestArenaMapRestart()
+    private static void TestArenaMapChangeKeepsRun()
     {
         string directory = ArenaMapAssets.BackgroundDirectory;
         string selectionPath = Path.Combine(directory, "ArenaMapSelection.json");
@@ -2946,14 +4719,26 @@ internal static class Program
             ArenaField field = new ArenaField();
             field.StartNewGame();
             field.Progression.AwardKill(WeaponCatalog.Sword);
+            NonPlayerCharacter enemy = field.Enemies[0];
+            enemy.SetPosition(1500, 1100);
             field.ReturnToStartMenu();
+            string runId = field.RunId;
 
-            field.SelectMap(savedFileName);
-            Assert(field.MapFileName == savedFileName
+            Assert(field.ApplyMapAndSkillTree(savedFileName, field.SkillTreeName)
+                && field.MapFileName == savedFileName
                 && field.WorldWidth == 512 && field.WorldHeight == 768
                 && field.HasActiveGame && !field.IsGameStarted
-                && field.Progression.TotalKills == 0,
-                "applying a map from the pause menu resets the arena run and returns to pause");
+                && field.RunId == runId
+                && field.Progression.TotalKills == 1,
+                "applying a map keeps the running game and its progress");
+            Assert(Math.Abs(field.Player.PositionX - 256) < 1e-9
+                && Math.Abs(field.Player.PositionY - 384) < 1e-9
+                && field.HasRespawnProtection,
+                "the player appears in the middle of the new map with spawn protection");
+            Assert(field.MovementArea.Contains(enemy.PositionX, enemy.PositionY),
+                "enemies outside the new map are moved onto it");
+            Assert(!field.ApplyMapAndSkillTree(savedFileName, field.SkillTreeName),
+                "applying the active map and skill tree again changes nothing");
         }
         finally
         {
@@ -3024,7 +4809,7 @@ internal static class Program
         }
     }
 
-    private static void TestArenaSkillTreeRestart()
+    private static void TestArenaSkillTreeChangeKeepsRun()
     {
         string directory = ArenaSkillTreeRepository.TreeDirectory;
         string selectionPath = Path.Combine(directory, "SelectedSkillTree.txt");
@@ -3032,23 +4817,43 @@ internal static class Program
         string previousSelection = hadSelection
             ? File.ReadAllText(selectionPath)
             : null;
+        string treeName = "ArenaTest-" + Guid.NewGuid().ToString("N");
+        string treePath = Path.Combine(directory, treeName + ".json");
 
         try
         {
+            ArenaSkillTreeRepository.SaveTree(treeName,
+                ArenaSkillTreeRepository.LoadTreeByName(
+                    ArenaSkillTreeRepository.DefaultTreeName));
             ArenaField field = new ArenaField();
             field.StartNewGame();
             field.Progression.AwardKill(WeaponCatalog.Sword);
+            field.Player.SetPosition(300, 300);
             field.ReturnToStartMenu();
 
-            field.SelectSkillTree(ArenaSkillTreeRepository.DefaultTreeName);
-            Assert(field.HasActiveGame && !field.IsGameStarted
-                && field.Progression.TotalKills == 0
-                && field.Progression.SkillTree.Name
-                    == ArenaSkillTreeRepository.DefaultTreeName,
-                "applying a skilltree from the pause menu resets the run and returns to pause");
+            Assert(field.ApplyMapAndSkillTree(field.MapFileName, treeName)
+                && field.SkillTreeName == treeName
+                && field.HasActiveGame && !field.IsGameStarted
+                && field.Progression.TotalKills == 1
+                && Math.Abs(field.Player.PositionX - field.WorldWidth / 2) < 1e-9
+                && Math.Abs(field.Player.PositionY - field.WorldHeight / 2) < 1e-9,
+                "applying a skill tree keeps the run and places the player in the middle");
+
+            ArenaSaveGame save = field.CreateSaveGame();
+            Assert(save.SkillTreeName == treeName,
+                "save games remember the skill tree of the run");
+            field.ApplyMapAndSkillTree(
+                field.MapFileName, ArenaSkillTreeRepository.DefaultTreeName);
+            field.LoadSaveGame(save, null);
+            Assert(field.SkillTreeName == treeName,
+                "loading a save game restores its skill tree");
         }
         finally
         {
+            if (File.Exists(treePath))
+            {
+                File.Delete(treePath);
+            }
             if (hadSelection)
             {
                 File.WriteAllText(selectionPath, previousSelection);
@@ -3173,11 +4978,11 @@ internal static class Program
         pushableField.StartNewGame();
         pushableField.Player.PositionX = 650;
         pushableField.Player.PositionY = 600;
-        PursuerEnemy pusher = pushableField.Enemies[0];
+        NonPlayerCharacter pusher = pushableField.Enemies[0];
         pusher.PositionX = 500;
         pusher.PositionY = 600;
         pushableField.SpawnEnemy();
-        PursuerEnemy pushable = pushableField.Enemies[1];
+        NonPlayerCharacter pushable = pushableField.Enemies[1];
         // A small gap between the hitboxes, closed by the pusher's next step.
         double pushableStartX = 500 + pusher.Hitbox.Width + 3;
         pushable.PositionX = pushableStartX;
@@ -3195,11 +5000,11 @@ internal static class Program
         fixedField.StartNewGame();
         fixedField.Player.PositionX = 650;
         fixedField.Player.PositionY = 600;
-        PursuerEnemy blockedMover = fixedField.Enemies[0];
+        NonPlayerCharacter blockedMover = fixedField.Enemies[0];
         blockedMover.PositionX = 500;
         blockedMover.PositionY = 600;
         fixedField.SpawnEnemy();
-        PursuerEnemy fixedEntity = fixedField.Enemies[1];
+        NonPlayerCharacter fixedEntity = fixedField.Enemies[1];
         double fixedStartX = 500 + blockedMover.Hitbox.Width + 3;
         fixedEntity.PositionX = fixedStartX;
         fixedEntity.PositionY = 600;
@@ -3261,7 +5066,7 @@ internal static class Program
         Assert(playerDeaths == 1, "the player death is reported exactly once");
 
         field.ResetPlayer();
-        PursuerEnemy enemy = field.Enemies[0];
+        NonPlayerCharacter enemy = field.Enemies[0];
         enemy.TakeDamage(5);
         enemy.TakeDamage(enemy.CurrentHitPoints);
         Assert(enemyDamage.Count == 2 && enemyDeaths.SequenceEqual(new Entity[] { enemy })
@@ -3421,14 +5226,8 @@ internal static class Program
     {
         string sounds = Path.Combine(
             FindGameProjectDirectory(), "Classes", "Gruppe 9", "Assets", "Sounds");
-        string[] patterns =
-        {
-            "playerDamage_*.wav", "player_death*.wav", "nonPlayerEntityDamage_*.wav",
-            "entity_death_*.wav", "sword_swing_*.wav", "paySkill*.wav",
-            "playerLowHealth*.wav", "sprint_loop_*.wav", "sprint_turn_neeow_*.wav",
-            "sprint_stop_brake*.wav", "ui_menu_click*.wav", "playerFootstep_*.wav",
-            "electricDamage_*.wav", "playerHeal*.wav", "powerBlast*.wav"
-        };
+        // The patterns come from ArenaAudio itself, so new groups need no second list.
+        IReadOnlyList<string> patterns = ArenaAudio.SoundFilePatterns;
         foreach (string pattern in patterns)
         {
             Assert(Directory.GetFiles(sounds, pattern).Length > 0,
