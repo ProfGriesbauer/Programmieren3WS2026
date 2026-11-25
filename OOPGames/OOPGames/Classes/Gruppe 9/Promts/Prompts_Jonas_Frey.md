@@ -2,14 +2,57 @@
 
 Diese Datei dokumentiert die in diesem Projektverlauf verfügbaren Prompts und ihre Ergebnisse.
 
-**KI-Werkzeug:** Copilot SDK in VS Code
-**Modell der älteren Sitzungsdaten:** nicht ausgewiesen
+**KI-Werkzeug der lokalen Projekt-Sitzungen:** Copilot SDK in VS Code
+**Modell der archivierten Word- und PDF-Prompts:** nicht ausgewiesen
 **Projekt:** OOPGames, Gruppe 9
 **Arbeitsverzeichnis:** `OOPGames/OOPGames`
 
-Ältere Prompts aus früheren Projektsitzungen sind bereits vollständig in
-`Promts/Prompts_Till_Markhof.md` dokumentiert. Diese Datei ergänzt die aus der
-lokalen Sitzungs-Historie nachweisbaren späteren Anfragen.
+Diese Datei ergänzt die lokale Sitzungs-Historie um ältere Prompts, die nur noch
+in den Word- und PDF-Archiven erhalten sind. Die Quellenangabe unterscheidet
+zwischen dem Word-Archiv und Prompts aus Gemini außerhalb von VS Code. Wenn eine
+Antwort im Word-Dokument nur als Screenshot vorliegt, ist sie hier daraus
+zusammengefasst; fehlende Antworten und Zeitstempel sind ausdrücklich markiert.
+
+## Ältere Prompts aus dem Word-Archiv
+
+Das Dokument `promts.docx` enthält einen Abschnitt ohne ausgewiesenes KI-Werkzeug
+und danach einen ausdrücklich als „Gemini chat“ bezeichneten Abschnitt. Die
+Antworten, die im Word nur als Screenshots vorkommen, sind in der Ergebnisspalte
+inhaltlich zusammengefasst. „Keine Antwort überliefert“ bedeutet, dass im
+Dokument an dieser Stelle weder Antworttext noch Antwort-Screenshot vorhanden
+ist.
+
+| Datum und Uhrzeit | Quelle | Mein Prompt (Benutzer) | Ergebnis / Antwortüberlieferung |
+|---|---|---|---|
+| 06.11.2026 12:15 | Word-Archiv; KI-Werkzeug nicht ausgewiesen | „Use the given framework to lay the foundations of a top down arena survival game. In this first itteration you are to implement a map where you can walk arround using wasd (playercharacter is a colored square for now(for the player create a player char class that inherates form a class called entities(properties countain a hit point value and anything else you need to implement))) the map should be framed by walls you can not traverse. The screen is always centered on the character. Use the allready excisting classes as much as possible. You are only allowed to write in writehere.cs.“ | Die archivierte Antwort berichtet, dass Arena, `Entities`-Basisklasse und `PlayerCharacter`, WASD-/Pfeilsteuerung, Randwände und eine auf den Spieler zentrierte Kamera in `writehere.cs` umgesetzt wurden. Painter, Regeln und Spieler seien im Framework registriert; der Build sei ohne Warnungen und Fehler erfolgreich gewesen. |
+| 06.11.2026 12:24 | Word-Archiv; KI-Werkzeug nicht ausgewiesen | „add coments to your code“ | Keine Antwort überliefert. |
+| 06.11.2026 14:28 | Gemini laut Word-Abschnitt „Gemini chat“ | „when starting the game via the start new game button, I dont want the game to start emideatly. Instead I want a start manu screen to apear. For now the only option on it is to start the game(but still add a few buttons that do nothing but tell you that they arent implmented yet). You are only allowed to change or add files inside the Classes/Gruppe9 folder“ | Keine Antwort überliefert. |
+| 08.11.2026 12:24 | Gemini laut Word-Abschnitt „Gemini chat“ | „Right now when you start the survival game the player charecter is displayed as a blue cube. I want him to be displayed as the pngs int the assets folder. When starting the game the character looks like Standing_Front.png, when walking left it changes to Standing_Left, whe walking right it changes to Standing_Right.png, when walking up it changes to Standing_Back.png and when walking down it changes to Standing_Front.png again. You are only allowed to edit files in the folder Classes/Gruppe9, if you need to create new classes write them into the file newClasses.cs“ | Keine Antwort überliefert. |
+| 08.11.2026 12:48 | Gemini laut Word-Abschnitt „Gemini chat“ | „When walking diagonally I allways want the image to be either right or left also comment your code“ | Keine Antwort überliefert. |
+| 08.11.2026 16:48 | Gemini laut Word-Abschnitt „Gemini chat“ | „To make it easier to implement enemies later in the development process, I want the movement of the player character to be done by a method within the entity class. the handeling of inputs should be left as it is. When a button is pressed the playerCharacter should use its inherited move methode to move acordingly. All allready implemented features in movement should be carried to this new method. All methodes that will became outdated do to this change are to be removed. Comment your code. You are only allowed to changes files in the Classes/Gruppe9 folder. decument all changes in the chat.“ | Die Antwort liegt als Screenshot vor: Bewegung wurde in eine geerbte `Move`-Methode verlagert, diagonale Bewegung normalisiert und auf die Arena begrenzt; Eingabe-Polling blieb im Feld. Der veraltete `MovePlayer`-Pfad und ein alter Aufruf wurden entfernt. Die Antwort meldet einen erfolgreichen Build ohne Warnungen oder Fehler. |
+| 08.11.2026 16:52 | Gemini laut Word-Abschnitt „Gemini chat“ | „Move the facing method to entities. Eventually all entites will need a facing direction“ | Die Screenshot-Antwort berichtet, dass Blickrichtung und bewegungsbezogene Aktualisierung nach `Entities` verschoben wurden; `Move` aktualisiere nun die Blickrichtung. Spielerspezifische Facing-Logik in `PlayerCharacter` wurde entfernt. Build erfolgreich, 0 Warnungen/Fehler. |
+| 09.11.2026 12:29 | Gemini laut Word-Abschnitt „Gemini chat“ | „I want to changes the static imagaes of the character to animations. For that I layed a spritesheet(BoxingKnightSpriteSheet.png) and a jason file (BoxingKnightAnimation.json) in Assets/Character/BoxingKnight. They contain Animations and pictures for. Standing(idle) Forward, backwards, Left and right, and animations for walking Forward, backwards, Left and right.“ Folgeprompt: „Implement the animation. Remove all features that will be outdated due to this change. You are only allowed to change files in Classes/Gruppe9. If you nned to implement a new class put it in newClasses.cs. Comment your code. Document all changes“ (eigene Uhrzeit nicht ausgewiesen) | Die Antwort liegt als Screenshot vor: Sprite-Sheet und JSON-Metadaten wurden zum Zeichnen gecachter Frames und zum Abspielen der Idle-/Walk-Clips verwendet. Alte Richtungsbild-Logik wurde entfernt; der Build sei ohne Warnungen und Fehler erfolgreich gewesen. |
+| 09.11.2026 12:40 | Gemini laut Word-Abschnitt „Gemini chat“ | „edit the BoxingKnightAnimater into a general animater. I want it the be able to animate other entities later aswell“ | Die Screenshot-Antwort berichtet, dass der Boxing-Knight-Animator durch einen wiederverwendbaren `SpriteSheetAnimator` ersetzt wurde, der beliebige Sprite-Sheet-/JSON-Pfade und benannte Clips unterstützt. Der Painter behandelt die Boxing-Knight-spezifischen Assets separat. Build erfolgreich, 0 Warnungen/Fehler. |
+| 09.11.2026 12:51 (im Antwort-Screenshot steht 12:48 PM) | Gemini laut Word-Abschnitt „Gemini chat“ | „Implement a feature that lets you zoom in and out by "ü" and "ä" keys also add a limit to how much you can zoom in and out“ | Die Antwort liegt als Screenshot vor: Zoom per Ü/Ä wurde ergänzt, auf 0,5× bis 2,0× begrenzt und in 0,1-Schritten angepasst. Build erfolgreich, 0 Warnungen/Fehler. Zeitabweichung zwischen Word-Zeit und Screenshot ist beibehalten. |
+| 10.11.2026 17:22 | Gemini laut Word-Abschnitt „Gemini chat“ | „Wandle die Entities class in ein interface um. Nene es nach convention IEntities. Sorge dafür das diese änderung bei jedem aufruff bedacht wird.“ | Die Screenshot-Antwort berichtet, dass `Entities` durch `IEntities` ersetzt und alle Referenzen angepasst wurden; die Implementierung liege in `PlayerCharacter.cs`, `ArenaField.cs` verwende `IEntities` als Spielertyp. Build erfolgreich, 0 Warnungen/Fehler. |
+| 10.11.2026 17:53 | Gemini laut Word-Abschnitt „Gemini chat“ | „benene den ArenaPlayer in HumanPlayerG9, und den ArenaPainter in PainterG9 um. Sorge dafür dass die namensänderung in allen aufruffen übernommen wird“ | Die Antwort liegt als Screenshot vor: `ArenaPlayer`/`ArenaPainter` und ihre Registrierungen wurden in `HumanPlayerG9`/`PainterG9` umbenannt; der Build sei ohne Warnungen und Fehler erfolgreich gewesen. |
+| 10.11.2026 (direkt nach 17:53; Uhrzeit nicht ausgewiesen) | Gemini laut Word-Abschnitt „Gemini chat“ | „benene den HumanPlayerG9 in HumanPlayerSteering. Sorge dafür dass die namensänderung in allen aufruffen übernommen wird“ | Keine Antwort überliefert. |
+
+## Prompts aus dem Gemini-PDF (extern, außerhalb von VS Code)
+
+Die Datei `C# Arena Game Setup 06_11_2026.pdf` ist ein Gemini-Gesprächsexport.
+Das Datum 06.11.2026 stammt aus dem Dateinamen; die PDF weist keine einzelnen
+Uhrzeiten pro Prompt aus. Die PDF-Metadaten nennen 12:04 UTC als Exportzeit,
+nicht als Nachrichtenzeit. Deshalb werden hier keine Prompt-Uhrzeiten
+angenommen.
+
+| Datum / Uhrzeit | Quelle | Mein Prompt (Benutzer) | Ergebnis / Antwortüberlieferung |
+|---|---|---|---|
+| 06.11.2026; Uhrzeit nicht pro Prompt ausgewiesen | **Gemini (extern, außerhalb von VS Code)** | „analyes c# code“ | Die PDF-Antwort fasst den Code als objektorientierte Struktur mit Model/View/Controller-Aufteilung zusammen und nennt Framework-Autoregistrierung, zentrierte Kamera und Brush-Wiederverwendung als Stärken. |
+| 06.11.2026; Uhrzeit nicht pro Prompt ausgewiesen | **Gemini (extern, außerhalb von VS Code)** | „Ich möchte das movement zuerst smover machen. Der character reagiert nur mit dely auf inputs auserdem möchte ich das man auch diagonal laufen kann (also z.B. mit w und d gleichzeitrig getrückt). Wie setzte ich dsa um?“ | Die PDF-Antwort erklärt den OS-Tastaturwiederholungs-Delay und schlägt direktes Frame-Polling mit `Keyboard.IsKeyDown` in `UpdatePlayerPosition()` sowie Normalisierung diagonaler Bewegung vor. |
+| 06.11.2026; Uhrzeit nicht pro Prompt ausgewiesen | **Gemini (extern, außerhalb von VS Code)** | „jetzt habe ich das problem das sich der spieler beim input längsam anfängt zu bewegen und dann nach einer ungefähr einer Sekunde plötzlich schneller wird. Wieso? Wie mach ich die geschwindigkeit kontinuierlich“ | Die PDF-Antwort führt das verbleibende Verhalten auf Windows-Tastenwiederholung und Aufrufe in `GetMove()` zurück und empfiehlt, `TickGameCall()`, `GetMove()` und den Tastaturfokus zu prüfen. |
+| 06.11.2026; Uhrzeit nicht pro Prompt ausgewiesen | **Gemini (extern, außerhalb von VS Code)** | „Can I save this conversation into a pdf or something?“ | Im PDF ist auf diesen Prompt keine Antwort überliefert. |
+| 06.11.2026; Uhrzeit nicht pro Prompt ausgewiesen | **Gemini (extern, außerhalb von VS Code)** | „No I want you to save the entire conversation.“ | Im PDF ist auf diesen Prompt keine Antwort überliefert. |
 
 ## Prompts aus den lokalen Projekt-Sitzungen
 
