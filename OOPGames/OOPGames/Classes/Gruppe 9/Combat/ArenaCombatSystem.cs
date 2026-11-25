@@ -384,7 +384,7 @@ namespace OOPGames
             Entity source, Entity target, double distance,
             IReadOnlyList<Entity> entities, Rect? movementBounds)
         {
-            if (distance <= 0 || !target.CanBePushed)
+            if (distance <= 0 || target is MirrorImage || !target.CanBePushed)
             {
                 return;
             }
@@ -417,7 +417,9 @@ namespace OOPGames
                 bool overlaps = false;
                 foreach (Entity other in entities)
                 {
-                    if (ReferenceEquals(other, target) || !other.IsAlive)
+                    if (ReferenceEquals(other, target)
+                        || other is MirrorImage
+                        || !other.IsAlive)
                     {
                         continue;
                     }

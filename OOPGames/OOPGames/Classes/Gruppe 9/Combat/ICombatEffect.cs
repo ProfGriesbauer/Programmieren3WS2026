@@ -198,6 +198,18 @@ namespace OOPGames
         }
     }
 
+    public sealed class MirrorImageSummonEffect : ICombatEffect
+    {
+        public string Name { get { return "Spiegelbild"; } }
+        public string Description { get { return "Beschwört Spiegelbilder"; } }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Mixed; } }
+
+        // ArenaField creates the images when the ability is activated.
+        public void Apply(Entity source, Entity target)
+        {
+        }
+    }
+
     public sealed class SlowEffect : ICombatEffect
     {
         public SlowEffect(double speedMultiplier, double durationSeconds)

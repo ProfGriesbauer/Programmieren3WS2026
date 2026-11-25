@@ -42,6 +42,7 @@ namespace OOPGames
         }
 
         public bool HasSeenPlayer { get { return _hasSeenPlayer; } }
+        public Entity CurrentTarget { get; private set; }
 
         // Hitbox around the visible pixels of the enemy texture.
         public override Rect HitboxOffset
@@ -65,18 +66,18 @@ namespace OOPGames
             }
 
             Point currentPosition = new Point(PositionX, PositionY);
-            PlayerCharacter player = field.Player;
-            if (!IsAlive || !player.IsAlive || EffectiveSpeed == 0)
+            Entity target = GetCurrentTarget(field);
+            if (!IsAlive || EffectiveSpeed == 0)
             {
                 return currentPosition;
             }
 
-            double offsetX = player.PositionX - PositionX;
-            double offsetY = player.PositionY - PositionY;
-            double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-            if (distance <= CurrentSightRange)
+            if (target != null)
             {
-                double stoppingDistance = GetMinimumSeparation(player, offsetX, offsetY);
+                double offsetX = target.PositionX - PositionX;
+                double offsetY = target.PositionY - PositionY;
+                double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
+                double stoppingDistance = GetMinimumSeparation(target, offsetX, offsetY);
                 if (distance <= stoppingDistance)
                 {
                     return currentPosition;
@@ -107,18 +108,28 @@ namespace OOPGames
             {
                 throw new ArgumentNullException(nameof(player));
             }
+            return TryAttackTargetInRange(player, combatSystem);
+        }
+
+        public bool TryAttackTargetInRange(
+            Entity target, ArenaCombatSystem combatSystem)
+        {
+            if (target == null)
+            {
+                return false;
+            }
             if (combatSystem == null)
             {
                 throw new ArgumentNullException(nameof(combatSystem));
             }
 
-            double offsetX = player.PositionX - PositionX;
-            double offsetY = player.PositionY - PositionY;
-            // The attack reaches range units from the enemy to the player's hitbox.
+            double offsetX = target.PositionX - PositionX;
+            double offsetY = target.PositionY - PositionY;
+            // The attack reaches range units from the enemy to the target's hitbox.
             double range = EquippedWeapon.AttackPattern.Range;
-            if (!IsAlive || !player.IsAlive
+            if (!IsAlive || !target.IsAlive || target.Team != CombatTeam.Player
                 || AttackGeometry.DistanceToRect(
-                    new Point(PositionX, PositionY), player.Hitbox) > range)
+                    new Point(PositionX, PositionY), target.Hitbox) > range)
             {
                 return false;
             }
@@ -139,26 +150,24 @@ namespace OOPGames
             }
 
             _wanderRemainingSeconds -= ArenaField.GameTickDurationSeconds * speedScale;
-            PlayerCharacter player = field.Player;
-            if (!IsAlive || !player.IsAlive)
+            if (!IsAlive)
             {
                 Move(0, 0, field.MovementArea, speedScale);
                 return;
             }
 
-            double offsetX = player.PositionX - PositionX;
-            double offsetY = player.PositionY - PositionY;
-            System.Windows.Rect movementBounds = field.MovementArea;
-
-            double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-            if (distance > CurrentSightRange)
+            Entity target = GetCurrentTarget(field);
+            if (target == null)
             {
-                _hasSeenPlayer = false;
-                UpdateWanderBehavior(field, movementBounds, speedScale);
+                UpdateWanderBehavior(field, field.MovementArea, speedScale);
                 return;
             }
 
-            _hasSeenPlayer = true;
+            double offsetX = target.PositionX - PositionX;
+            double offsetY = target.PositionY - PositionY;
+            System.Windows.Rect movementBounds = field.MovementArea;
+
+            double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
             FacePlayer(offsetX, offsetY);
             if (EffectiveSpeed == 0)
             {
@@ -166,7 +175,7 @@ namespace OOPGames
                 return;
             }
 
-            double stoppingDistance = GetMinimumSeparation(player, offsetX, offsetY);
+            double stoppingDistance = GetMinimumSeparation(target, offsetX, offsetY);
             if (distance <= stoppingDistance)
             {
                 Move(0, 0, movementBounds, speedScale);
@@ -178,6 +187,50 @@ namespace OOPGames
                 offsetY / distance * travel / currentSpeed, movementBounds,
                 speedScale);
             FacePlayer(offsetX, offsetY);
+        }
+
+        private Entity GetCurrentTarget(ArenaField field)
+        {
+            Entity target = FindClosestVisibleTarget(field, CurrentSightRange);
+            if (target == null && _hasSeenPlayer)
+            {
+                target = FindClosestVisibleTarget(field, SightRange);
+            }
+
+            _hasSeenPlayer = target != null;
+            CurrentTarget = target;
+            return target;
+        }
+
+        private Entity FindClosestVisibleTarget(ArenaField field, double sightRange)
+        {
+            Entity closestTarget = null;
+            double closestDistanceSquared = sightRange * sightRange;
+            ConsiderTarget(field.Player, ref closestTarget, ref closestDistanceSquared);
+            foreach (MirrorImage mirrorImage in field.MirrorImages)
+            {
+                ConsiderTarget(
+                    mirrorImage, ref closestTarget, ref closestDistanceSquared);
+            }
+            return closestTarget;
+        }
+
+        private void ConsiderTarget(
+            Entity target, ref Entity closestTarget, ref double closestDistanceSquared)
+        {
+            if (!target.IsAlive)
+            {
+                return;
+            }
+
+            double offsetX = target.PositionX - PositionX;
+            double offsetY = target.PositionY - PositionY;
+            double distanceSquared = offsetX * offsetX + offsetY * offsetY;
+            if (distanceSquared <= closestDistanceSquared)
+            {
+                closestTarget = target;
+                closestDistanceSquared = distanceSquared;
+            }
         }
 
         private void UpdateWanderBehavior(
@@ -263,9 +316,9 @@ namespace OOPGames
         }
 
         // Distance between the centers at which the two hitboxes touch when the enemy walks
-        // straight towards the player.
+        // straight towards its target (the player or a mirror image).
         private double GetMinimumSeparation(
-            PlayerCharacter player, double offsetX, double offsetY)
+            Entity target, double offsetX, double offsetY)
         {
             double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
             if (distance == 0)
@@ -273,7 +326,7 @@ namespace OOPGames
                 return 0;
             }
             return AttackGeometry.GetContactDistance(
-                HitboxOffset, player.HitboxOffset, offsetX / distance, offsetY / distance);
+                HitboxOffset, target.HitboxOffset, offsetX / distance, offsetY / distance);
         }
     }
 }

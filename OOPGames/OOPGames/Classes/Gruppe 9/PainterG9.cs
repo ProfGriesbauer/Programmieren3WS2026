@@ -66,6 +66,9 @@ namespace OOPGames
         private AnimationProfile _selectedAnimationProfile = BoxingKnightProfile;
         private SpriteSheetAnimator _playerAnimator;
         private AnimationProfile _playerAnimatorProfile;
+        private readonly Dictionary<MirrorImage, SpriteSheetAnimator>
+            _mirrorImageAnimators = new Dictionary<MirrorImage, SpriteSheetAnimator>();
+        private AnimationProfile _mirrorImageAnimatorProfile;
         private SpriteSheetAnimator _enemyAnimator;
         private readonly ArenaAudio _audio = new ArenaAudio();
         private Canvas _menuClickCanvas;
@@ -93,6 +96,8 @@ namespace OOPGames
             _selectedAnimationProfile = GetAnimationProfile(profileName);
             _playerAnimator = null;
             _playerAnimatorProfile = null;
+            _mirrorImageAnimators.Clear();
+            _mirrorImageAnimatorProfile = null;
             _enemyAnimator = null;
             _menuPage = MenuPage.Main;
             _menuPageBeforeWeaponUpgrades = MenuPage.Main;
@@ -257,6 +262,8 @@ namespace OOPGames
             _hudRenderer.PaintStatusPlaceholder(
                 worldCanvas, field.Player, width / 2, height / 2);
 
+            PaintMirrorImages(worldCanvas, field, left, top);
+
             foreach (PursuerEnemy enemy in field.Enemies)
             {
                 if (!enemy.IsAlive)
@@ -366,6 +373,79 @@ namespace OOPGames
                     return enemy.IsMoving ? "WalkRight" : "idleLeft";
                 default:
                     return enemy.IsMoving ? "WalkForward" : "IdleFront";
+            }
+        }
+
+        private void PaintMirrorImages(
+            Canvas canvas, ArenaField field, double left, double top)
+        {
+            if (!ReferenceEquals(
+                _mirrorImageAnimatorProfile, _selectedAnimationProfile))
+            {
+                _mirrorImageAnimators.Clear();
+                _mirrorImageAnimatorProfile = _selectedAnimationProfile;
+            }
+
+            HashSet<MirrorImage> activeImages =
+                new HashSet<MirrorImage>(field.MirrorImages);
+            List<MirrorImage> removedImages = new List<MirrorImage>();
+            foreach (MirrorImage mirrorImage in _mirrorImageAnimators.Keys)
+            {
+                if (!activeImages.Contains(mirrorImage))
+                {
+                    removedImages.Add(mirrorImage);
+                }
+            }
+            foreach (MirrorImage mirrorImage in removedImages)
+            {
+                _mirrorImageAnimators.Remove(mirrorImage);
+            }
+
+            foreach (MirrorImage mirrorImage in field.MirrorImages)
+            {
+                if (!mirrorImage.IsAlive)
+                {
+                    continue;
+                }
+
+                if (!_mirrorImageAnimators.TryGetValue(
+                    mirrorImage, out SpriteSheetAnimator animator))
+                {
+                    animator = CreateAnimator(_selectedAnimationProfile);
+                    _mirrorImageAnimators.Add(mirrorImage, animator);
+                }
+
+                string animationName = GetPlayerAnimationName(
+                    mirrorImage.Facing, mirrorImage.IsMoving,
+                    false, mirrorImage.Facing);
+                if (animator.GetFrameCount(animationName) == 0)
+                {
+                    animationName = GetPlayerAnimationName(
+                        mirrorImage.Facing, false, false, mirrorImage.Facing);
+                }
+
+                BitmapSource sprite = animator.GetFrame(
+                    animationName, field.GameTimeScale);
+                double spriteHeight = mirrorImage.Size * 2 * PlayerSpriteScale;
+                double spriteWidth = spriteHeight
+                    * sprite.PixelWidth / sprite.PixelHeight;
+                Image image = new Image
+                {
+                    Source = sprite,
+                    Width = spriteWidth,
+                    Height = spriteHeight,
+                    Stretch = Stretch.Uniform,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(image,
+                    mirrorImage.PositionX - left - spriteWidth / 2);
+                Canvas.SetTop(image,
+                    mirrorImage.PositionY - top - spriteHeight / 2);
+                canvas.Children.Add(image);
+                AddDamageFlashOverlay(canvas, mirrorImage, image);
+                _hudRenderer.PaintStatusPlaceholder(
+                    canvas, mirrorImage, mirrorImage.PositionX - left,
+                    mirrorImage.PositionY - top);
             }
         }
 
@@ -1280,6 +1360,8 @@ namespace OOPGames
                 _selectedAnimationProfile = profile;
                 _playerAnimator = null;
                 _playerAnimatorProfile = null;
+                _mirrorImageAnimators.Clear();
+                _mirrorImageAnimatorProfile = null;
             }
             canvas.Tag = null;
         }

@@ -42,6 +42,9 @@ namespace OOPGames
         public const string PowerBlast = "power-blast";
         public const string HealingPulse = "healing-pulse";
         public const string SlowMotion = "slow-motion";
+        public const string MirrorImage = "mirror-image";
+        public const int MirrorImageMaximumRank = 4;
+        public const double MirrorImageBaseCooldownSeconds = 20;
 
         // Every ability has its own cooldown and, where sensible, duration upgrade line.
         public const int ModifierMaximumRank = 5;
@@ -78,7 +81,12 @@ namespace OOPGames
                         + "Höhere Ränge verlangsamen stärker.",
                     3, 2, 5,
                     "Verlängert die Zeitlupe um "
-                        + SlowMotionDurationPerRank.ToString("0.##") + " s je Rang.")
+                        + SlowMotionDurationPerRank.ToString("0.##") + " s je Rang."),
+                new PlayerAbilityDefinition(
+                    MirrorImage, "Spiegelbild",
+                    "Beschwört je nach Rang bis zu vier Spiegelbilder mit 1 HP, "
+                        + "die Gegner ablenken.",
+                    3, 2, MirrorImageMaximumRank)
             });
 
         public static IReadOnlyList<PlayerAbilityDefinition> Definitions
@@ -175,6 +183,15 @@ namespace OOPGames
                         hasBulletTime),
                     SlowMotionBaseCooldownSeconds * cooldownMultiplier,
                     WeaponTargetingMode.Self, "slow-motion");
+            }
+            if (id == MirrorImage)
+            {
+                return new Weapon(
+                    id, definition.Name, definition.Description,
+                    new SelfPulseAttackPattern(52, 0.28),
+                    new MirrorImageSummonEffect(),
+                    MirrorImageBaseCooldownSeconds * cooldownMultiplier,
+                    WeaponTargetingMode.Self, "mirror-image");
             }
 
             return new Weapon(

@@ -1,5 +1,5 @@
 { "frames": {
-   "BackgroundElemetnts 0.ase": {
+   "BackgroundElements 0.ase": {
     "frame": { "x": 0, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -7,7 +7,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 1.ase": {
+   "BackgroundElements 1.ase": {
     "frame": { "x": 256, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -15,7 +15,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 2.ase": {
+   "BackgroundElements 2.ase": {
     "frame": { "x": 512, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -23,7 +23,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 3.ase": {
+   "BackgroundElements 3.ase": {
     "frame": { "x": 768, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -31,7 +31,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 4.ase": {
+   "BackgroundElements 4.ase": {
     "frame": { "x": 1024, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -39,7 +39,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 5.ase": {
+   "BackgroundElements 5.ase": {
     "frame": { "x": 1280, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -47,7 +47,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 6.ase": {
+   "BackgroundElements 6.ase": {
     "frame": { "x": 1536, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -55,7 +55,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 7.ase": {
+   "BackgroundElements 7.ase": {
     "frame": { "x": 1792, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -63,7 +63,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 8.ase": {
+   "BackgroundElements 8.ase": {
     "frame": { "x": 2048, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -71,7 +71,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 9.ase": {
+   "BackgroundElements 9.ase": {
     "frame": { "x": 2304, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -79,7 +79,7 @@
     "sourceSize": { "w": 256, "h": 256 },
     "duration": 100
    },
-   "BackgroundElemetnts 10.ase": {
+   "BackgroundElements 10.ase": {
     "frame": { "x": 2560, "y": 0, "w": 256, "h": 256 },
     "rotated": false,
     "trimmed": false,
@@ -91,7 +91,7 @@
  "meta": {
   "app": "https://github.com/LibreSprite/LibreSprite/",
   "version": "1.3",
-  "image": "C:\\Users\\jfrey\\MyFiles\\sprite\\Background\\BackgroundElemetnts.png",
+  "image": "C:\\Users\\jfrey\\MyFiles\\sprite\\Background\\BackgroundElements.png",
   "format": "RGBA8888",
   "size": { "w": 2816, "h": 256 },
   "scale": "1",

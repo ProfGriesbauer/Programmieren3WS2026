@@ -19,6 +19,8 @@ namespace OOPGames
         private const double ZoomStep = 0.1;
         public const int MaximumEnemyCount = 15;
         public const double EnemySpawnIntervalSeconds = 7;
+        public const double MirrorImageMinimumSpawnDistance = 36;
+        public const double MirrorImageSpawnRadius = 70;
         // Game time simulated by one framework tick at normal speed. Slow motion keeps the
         // framework timer but simulates less game time per tick (GameTimeScale).
         public const double GameTickDurationSeconds = 0.04;
@@ -33,6 +35,7 @@ namespace OOPGames
         private const double EnemySpawnVisibilityMargin = 50;
         private const int EnemySpawnPositionAttemptLimit = 10000;
         private readonly List<PursuerEnemy> _enemies = new List<PursuerEnemy>();
+        private readonly List<MirrorImage> _mirrorImages = new List<MirrorImage>();
         private double _enemySpawnElapsedSeconds;
         private double _slowMotionRemainingSeconds;
         private double _slowMotionTimeScale = 1;
@@ -122,6 +125,7 @@ namespace OOPGames
         public bool IsPlayerInMotion { get; private set; }
         public bool IsPlayerSprinting { get { return IsPlayerInMotion && IsSprintEnabled; } }
         public IReadOnlyList<PursuerEnemy> Enemies { get { return _enemies; } }
+        public IReadOnlyList<MirrorImage> MirrorImages { get { return _mirrorImages; } }
         public double WorldWidth { get { return _map.Width; } }
         public double WorldHeight { get { return _map.Height; } }
         public BitmapSource MapImage { get { return _map.Image; } }
@@ -301,6 +305,7 @@ namespace OOPGames
             Player.EquippedWeapon = _selectedPlayerWeapon;
             Player.IsInvulnerable = IsGodMode;
             _enemies.Clear();
+            _mirrorImages.Clear();
             _enemySpawnElapsedSeconds = 0;
             _spinSwingsRaised = 0;
             EndSlowMotion();
@@ -333,6 +338,15 @@ namespace OOPGames
         private void OnEntityStatusApplied(Entity entity, string statusId)
         {
             EntityStatusApplied?.Invoke(entity, statusId);
+        }
+
+        private void AddMirrorImage(MirrorImage mirrorImage)
+        {
+            mirrorImage.Damaged += OnNonPlayerEntityDamaged;
+            mirrorImage.Damaged += OnEntityDamaged;
+            mirrorImage.Healed += OnEntityHealed;
+            mirrorImage.StatusApplied += OnEntityStatusApplied;
+            _mirrorImages.Add(mirrorImage);
         }
 
         private void OnPlayerDamaged(Entity player, int lostHitPoints)
@@ -419,6 +433,10 @@ namespace OOPGames
             NonPlayerEntityDamaged?.Invoke(entity, lostHitPoints);
             if (!entity.IsAlive)
             {
+                if (entity is MirrorImage mirrorImage)
+                {
+                    _mirrorImages.Remove(mirrorImage);
+                }
                 NonPlayerEntityDied?.Invoke(entity);
             }
         }
@@ -1078,6 +1096,7 @@ namespace OOPGames
             double playerScale = PlayerTimeScale;
             UpdateRespawnProtection(GameTickDurationSeconds * playerScale);
             UpdatePlayerPosition(playerScale);
+            UpdateMirrorImagePositions(worldScale);
             UpdateEnemyPositions(worldScale);
             UpdateCombat(
                 GameTickDurationSeconds * worldScale,
@@ -1212,7 +1231,7 @@ namespace OOPGames
                 {
                     RestoreEntityPositions(previousPositions, enemy);
                 }
-                enemy.TryAttackPlayerInRange(Player, _combatSystem);
+                enemy.TryAttackTargetInRange(enemy.CurrentTarget, _combatSystem);
             }
 
             if (Player.IsAlive)
@@ -1223,6 +1242,24 @@ namespace OOPGames
             {
                 IsWeaponWheelOpen = false;
                 IsGameStarted = false;
+            }
+        }
+
+        public void UpdateMirrorImagePositions(double speedScale = 1)
+        {
+            if (!IsGameStarted)
+            {
+                return;
+            }
+
+            foreach (MirrorImage mirrorImage in _mirrorImages)
+            {
+                if (!mirrorImage.IsAlive)
+                {
+                    continue;
+                }
+
+                mirrorImage.UpdateBehavior(this, speedScale);
             }
         }
 
@@ -1297,6 +1334,12 @@ namespace OOPGames
 
         private void OnEntityDefeated(Entity source, Entity target, Weapon weapon)
         {
+            if (target is MirrorImage mirrorImage)
+            {
+                _mirrorImages.Remove(mirrorImage);
+                return;
+            }
+
             if (target is PursuerEnemy enemy)
             {
                 _enemies.Remove(enemy);
@@ -1346,6 +1389,19 @@ namespace OOPGames
                 "Could not find a free enemy spawn position without overlapping another entity.");
         }
 
+        // Mirror images block no one, so their spawn positions only keep the base sizes of
+        // the entities apart (as when the ability was added), not the full texture hitboxes,
+        // which would not leave room for several images near the player.
+        private static bool AreSpawnCirclesTooClose(
+            double firstX, double firstY, double firstSize,
+            double secondX, double secondY, double secondSize)
+        {
+            double minimumDistance = (firstSize + secondSize) / 2;
+            double offsetX = firstX - secondX;
+            double offsetY = firstY - secondY;
+            return offsetX * offsetX + offsetY * offsetY < minimumDistance * minimumDistance;
+        }
+
         private static List<EntityPositionSnapshot> CaptureEntityPositions(
             IReadOnlyList<Entity> entities)
         {
@@ -1376,6 +1432,10 @@ namespace OOPGames
             Rect movementBounds, double movementX, double movementY,
             HashSet<Entity> resolving)
         {
+            if (entity is MirrorImage)
+            {
+                return true;
+            }
             if (!resolving.Add(entity))
             {
                 return false;
@@ -1385,7 +1445,9 @@ namespace OOPGames
             {
                 foreach (Entity other in entities)
                 {
-                    if (ReferenceEquals(entity, other) || !other.IsAlive
+                    if (ReferenceEquals(entity, other)
+                        || other is MirrorImage
+                        || !other.IsAlive
                         || !AttackGeometry.RectsOverlap(entity.Hitbox, other.Hitbox))
                     {
                         continue;
@@ -1471,15 +1533,110 @@ namespace OOPGames
 
         private IReadOnlyList<Entity> GetCombatEntities()
         {
-            List<Entity> entities = new List<Entity>(_enemies.Count + 1)
+            List<Entity> entities = new List<Entity>(
+                _enemies.Count + _mirrorImages.Count + 1)
             {
                 Player
             };
+            foreach (MirrorImage mirrorImage in _mirrorImages)
+            {
+                entities.Add(mirrorImage);
+            }
             foreach (PursuerEnemy enemy in _enemies)
             {
                 entities.Add(enemy);
             }
             return entities;
+        }
+
+        private bool TryGetMirrorImageSpawnPositions(
+            int count, out List<Point> spawnPositions)
+        {
+            spawnPositions = new List<Point>(count);
+            List<Entity> occupiedEntities = new List<Entity> { Player };
+
+            Rect bounds = MovementArea;
+            double radius = Player.Size / 2;
+            for (int i = 0; i < count; i++)
+            {
+                bool foundPosition = false;
+                for (int attempt = 0;
+                    attempt < EnemySpawnPositionAttemptLimit;
+                    attempt++)
+                {
+                    double angle = Random.Shared.NextDouble() * Math.PI * 2;
+                    double distance = MirrorImageMinimumSpawnDistance
+                        + Random.Shared.NextDouble()
+                            * (MirrorImageSpawnRadius
+                                - MirrorImageMinimumSpawnDistance);
+                    double x = Player.PositionX + Math.Cos(angle) * distance;
+                    double y = Player.PositionY + Math.Sin(angle) * distance;
+                    if (x - radius < bounds.Left || x + radius > bounds.Right
+                        || y - radius < bounds.Top || y + radius > bounds.Bottom)
+                    {
+                        continue;
+                    }
+
+                    bool overlaps = false;
+                    foreach (Entity occupied in occupiedEntities)
+                    {
+                        if (AreSpawnCirclesTooClose(
+                            x, y, Player.Size,
+                            occupied.PositionX, occupied.PositionY, occupied.Size))
+                        {
+                            overlaps = true;
+                            break;
+                        }
+                    }
+                    if (overlaps)
+                    {
+                        continue;
+                    }
+
+                    foreach (Point existing in spawnPositions)
+                    {
+                        if (AreSpawnCirclesTooClose(
+                            x, y, Player.Size, existing.X, existing.Y, Player.Size))
+                        {
+                            overlaps = true;
+                            break;
+                        }
+                    }
+                    if (overlaps)
+                    {
+                        continue;
+                    }
+
+                    spawnPositions.Add(new Point(x, y));
+                    foundPosition = true;
+                    break;
+                }
+
+                if (!foundPosition)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ReplaceMirrorImages(IReadOnlyList<Point> spawnPositions)
+        {
+            foreach (MirrorImage mirrorImage in new List<MirrorImage>(_mirrorImages))
+            {
+                if (mirrorImage.IsAlive)
+                {
+                    mirrorImage.CurrentHitPoints = 0;
+                }
+            }
+
+            _mirrorImages.Clear();
+            foreach (Point position in spawnPositions)
+            {
+                AddMirrorImage(new MirrorImage(
+                    position.X, position.Y, Player.MaxSpeed, Player.Size));
+            }
         }
 
         public double GetAttackCooldownRemaining(Entity entity)
@@ -1605,6 +1762,17 @@ namespace OOPGames
                 return false;
             }
 
+            List<Point> mirrorSpawnPositions = null;
+            if (ability.Effect is MirrorImageSummonEffect)
+            {
+                int rank = _progression.GetSkillRank(ability.Id);
+                if (!TryGetMirrorImageSpawnPositions(
+                    rank, out mirrorSpawnPositions))
+                {
+                    return false;
+                }
+            }
+
             bool started = _combatSystem.TryStartAttack(
                 Player, ability, AimDirectionX, AimDirectionY);
             if (started)
@@ -1617,6 +1785,10 @@ namespace OOPGames
                 if (ability.Effect is HealingEffect)
                 {
                     PlayerHealingPulse?.Invoke();
+                }
+                if (mirrorSpawnPositions != null)
+                {
+                    ReplaceMirrorImages(mirrorSpawnPositions);
                 }
                 if (ability.Effect is TimeSlowEffect timeSlow)
                 {
