@@ -14,8 +14,13 @@ namespace OOPGames
         public const string Fire = "bow-element-fire";
         public const string Freeze = "bow-element-freeze";
         public const string ElementPower = "bow-element-power";
+        public const string ChainLightningUpgrade = "bow-chain-lightning";
         public const string Range = "bow-range";
         public const string Knockback = "bow-knockback";
+        // Autoaim ranks that change the look: a scope from the first rank, rocket arrows at
+        // the highest rank (360-degree targeting).
+        public const int ScopeAutoAimRank = 1;
+        public const int RocketArrowAutoAimRank = 5;
 
         private static readonly IReadOnlyList<WeaponUpgradeDefinition> _upgrades =
             Array.AsReadOnly(new[]
@@ -42,12 +47,16 @@ namespace OOPGames
                     1, 2, ArrowDamage),
                 new WeaponUpgradeDefinition(
                     Fire, "Brandpfeile",
-                    "Verbrennt Gegner; Feuer kann auf nahe Gegner überspringen.",
+                    "Verbrennt Gegner; brennende Gegner stecken an, wen sie treffen.",
                     1, 2, ArrowDamage),
                 new WeaponUpgradeDefinition(
                     Freeze, "Frostpfeile",
                     "Friert getroffene Gegner kurzzeitig ein.",
                     1, 2, ArrowDamage),
+                new WeaponUpgradeDefinition(
+                    ChainLightningUpgrade, "Kettenblitz",
+                    "Der Blitz springt vom getroffenen Gegner auf weitere über: je Rang ein Gegner mehr und ein größerer Sprungradius.",
+                    5, 2, Lightning),
                 new WeaponUpgradeDefinition(
                     ElementPower, "Elementstärke",
                     "Verbessert Stärke und Dauer des gewählten Pfeileffekts.",
@@ -135,6 +144,8 @@ namespace OOPGames
             double range = 650 * GetRangeMultiplier(progression);
             int damage = 12
                 + progression.GetWeaponUpgradeRank(ArrowDamage) * 3;
+            double cooldown = BaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
+                progression.GetWeaponUpgradeRank(AttackCooldown));
             return new Weapon(
                 WeaponCatalog.Bow.Id, WeaponCatalog.Bow.Name,
                 "Bogen: schnelle Projektile mit ausbaubarem Autoaim und Elementen.",
@@ -142,11 +153,54 @@ namespace OOPGames
                     range, 600, 6,
                     GetAutoAimHalfAngleRadians(autoAimRank),
                     GetHomingTurnRateRadiansPerSecond(autoAimRank)),
-                CreateBowEffect(progression, damage),
-                BaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
-                    progression.GetWeaponUpgradeRank(AttackCooldown)),
+                CreateBowEffect(progression, damage), cooldown,
                 WeaponTargetingMode.Opponents, "bow-arrow",
-                knockbackDistance: GetKnockbackDistance(progression));
+                knockbackDistance: GetKnockbackDistance(progression),
+                appearance: GetAppearance(progression),
+                // Drawing the bow after equipping takes as long as reloading it.
+                equipReadySeconds: cooldown,
+                chainLightning: GetChainLightning(progression));
+        }
+
+        public static ChainLightning GetChainLightning(ArenaProgression progression)
+        {
+            return progression.SelectedBowElement == WeaponElement.Lightning
+                ? ChainLightning.ForRank(
+                    progression.GetWeaponUpgradeRank(ChainLightningUpgrade),
+                    progression.GetWeaponUpgradeRank(ElementPower))
+                : null;
+        }
+
+        public static WeaponAppearance GetAppearance(ArenaProgression progression)
+        {
+            if (progression == null)
+            {
+                throw new ArgumentNullException(nameof(progression));
+            }
+
+            int autoAimRank = progression.GetWeaponUpgradeRank(AutoAim);
+            string bow = autoAimRank >= ScopeAutoAimRank
+                ? "BowShootingScope"
+                : "BowShooting";
+            if (autoAimRank >= RocketArrowAutoAimRank)
+            {
+                return new WeaponAppearance(
+                    WeaponSpriteKind.Bow, 0, bow, null, "ArowAutoAim");
+            }
+
+            switch (progression.SelectedBowElement)
+            {
+                case WeaponElement.Poison:
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Bow, 0, bow, null, "ArowPoisen");
+                case WeaponElement.Fire:
+                    // Both fire frames alternate so the flame flickers in flight.
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Bow, 0, bow, null, "ArowFire", "ArowFireFlying");
+                default:
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Bow, 0, bow, null, "Arow");
+            }
         }
 
         private static double GetRangeMultiplier(ArenaProgression progression)

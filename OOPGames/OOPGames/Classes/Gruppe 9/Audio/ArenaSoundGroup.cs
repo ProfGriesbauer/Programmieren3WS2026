@@ -34,11 +34,12 @@ namespace OOPGames
 
         public int Count { get { return _variants.Count; } }
 
-        // Returns the played variant index, or -1 when nothing was played.
-        public int Play(double nowSeconds)
+        // Returns the played variant index, or -1 when nothing was played. A forced play
+        // ignores the minimum interval (e.g. the lethal hit, which must always be heard).
+        public int Play(double nowSeconds, bool force = false)
         {
             if (_variants.Count == 0
-                || nowSeconds - _lastPlaySeconds < _minimumIntervalSeconds)
+                || (!force && nowSeconds - _lastPlaySeconds < _minimumIntervalSeconds))
             {
                 return -1;
             }
