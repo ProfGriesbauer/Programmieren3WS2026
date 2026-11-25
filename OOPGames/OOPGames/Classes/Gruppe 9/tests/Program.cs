@@ -1350,6 +1350,17 @@ internal static class Program
             enemy.TakeDamage(4);
             new PoisonEffect(3, 5).Apply(field.Player, enemy);
             new FreezeEffect(2).Apply(null, enemy);
+            Assert(field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.MirrorImage)
+                && field.AttackWithEntityAbility(Array.IndexOf(
+                    field.Progression.EntityAbilities.ToArray(),
+                    PlayerAbilityCatalog.MirrorImage))
+                && field.MirrorImages.Count == 1,
+                "a mirror image is active when the run is saved");
+            MirrorImage image = field.MirrorImages[0];
+            double mirrorCooldown = field.GetAttackCooldownRemaining(
+                field.Player, field.Progression.GetEntityAbilityWeapon(Array.IndexOf(
+                    field.Progression.EntityAbilities.ToArray(),
+                    PlayerAbilityCatalog.MirrorImage)));
             Assert(field.SaveNow() && field.ActiveSaveSlot == 0,
                 "the first save of a run takes the first free slot");
 
@@ -1379,6 +1390,21 @@ internal static class Program
             Assert(loaded.IsGameStarted && loaded.ActiveSaveSlot == 0
                 && loaded.RunId == field.RunId,
                 "a loaded run continues at once in its slot");
+            MirrorImage loadedImage = loaded.MirrorImages.Single();
+            Assert(Math.Abs(loadedImage.PositionX - image.PositionX) < 1e-6
+                && Math.Abs(loadedImage.PositionY - image.PositionY) < 1e-6
+                && loadedImage.CurrentHitPoints == 1
+                && loadedImage.IsInvulnerable
+                && Math.Abs(loadedImage.SpawnInvulnerabilityRemainingSeconds
+                    - image.SpawnInvulnerabilityRemainingSeconds) < 1e-6,
+                "mirror images are restored with position and spawn protection");
+            int mirrorSlot = Array.IndexOf(
+                loaded.Progression.EntityAbilities.ToArray(), PlayerAbilityCatalog.MirrorImage);
+            Assert(mirrorCooldown > 0
+                && Math.Abs(loaded.GetAttackCooldownRemaining(loaded.Player,
+                    loaded.Progression.GetEntityAbilityWeapon(mirrorSlot)) - mirrorCooldown) < 1e-6
+                && !loaded.AttackWithEntityAbility(mirrorSlot),
+                "ability cooldowns survive loading, so Mirror Image cannot be reused at once");
 
             // Program start continues the run saved last.
             ArenaField second = CreateSavingField(folder);

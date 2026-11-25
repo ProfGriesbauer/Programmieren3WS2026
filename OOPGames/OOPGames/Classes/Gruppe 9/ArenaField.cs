@@ -817,6 +817,23 @@ namespace OOPGames
                     game.Enemies.Add(SaveEntity(enemy));
                 }
             }
+            foreach (MirrorImage mirrorImage in _mirrorImages)
+            {
+                if (mirrorImage.IsAlive)
+                {
+                    game.MirrorImages.Add(new ArenaMirrorImageSave
+                    {
+                        State = SaveEntity(mirrorImage),
+                        StationarySeconds = mirrorImage.SpawnStationaryRemainingSeconds,
+                        InvulnerableSeconds = mirrorImage.SpawnInvulnerabilityRemainingSeconds
+                    });
+                }
+            }
+            foreach (KeyValuePair<string, double> cooldown
+                in _combatSystem.GetCooldowns(Player))
+            {
+                game.PlayerCooldowns[cooldown.Key] = cooldown.Value;
+            }
             return game;
         }
 
@@ -873,6 +890,29 @@ namespace OOPGames
                     PursuerEnemy enemy = new PursuerEnemy(saved.X, saved.Y, Player.MaxSpeed);
                     AddEnemy(enemy);
                     RestoreEntity(enemy, saved);
+                }
+            }
+            if (game.MirrorImages != null)
+            {
+                foreach (ArenaMirrorImageSave saved in game.MirrorImages)
+                {
+                    if (saved?.State == null || saved.State.HitPoints <= 0)
+                    {
+                        continue;
+                    }
+                    MirrorImage mirrorImage = new MirrorImage(
+                        saved.State.X, saved.State.Y, Player.MaxSpeed, Player.Size);
+                    AddMirrorImage(mirrorImage);
+                    RestoreEntity(mirrorImage, saved.State);
+                    mirrorImage.RestoreSpawnTimers(
+                        saved.StationarySeconds, saved.InvulnerableSeconds);
+                }
+            }
+            if (game.PlayerCooldowns != null)
+            {
+                foreach (KeyValuePair<string, double> cooldown in game.PlayerCooldowns)
+                {
+                    _combatSystem.SetCooldown(Player, cooldown.Key, cooldown.Value);
                 }
             }
 

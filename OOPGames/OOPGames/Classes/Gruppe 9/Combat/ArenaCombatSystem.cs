@@ -128,6 +128,32 @@ namespace OOPGames
                 || source.WeaponEquippedSeconds >= weapon.EquipReadySeconds;
         }
 
+        // All running cooldowns of an entity by weapon id (for save games).
+        public IReadOnlyDictionary<string, double> GetCooldowns(Entity entity)
+        {
+            return _cooldownSeconds.TryGetValue(entity, out Dictionary<string, double> cooldowns)
+                ? new Dictionary<string, double>(cooldowns)
+                : new Dictionary<string, double>();
+        }
+
+        public void SetCooldown(Entity entity, string weaponId, double remainingSeconds)
+        {
+            if (entity == null)
+            {
+                throw new ArgumentNullException(nameof(entity));
+            }
+            if (string.IsNullOrEmpty(weaponId) || remainingSeconds <= CooldownTolerance)
+            {
+                return;
+            }
+            if (!_cooldownSeconds.TryGetValue(entity, out Dictionary<string, double> cooldowns))
+            {
+                cooldowns = new Dictionary<string, double>();
+                _cooldownSeconds.Add(entity, cooldowns);
+            }
+            cooldowns[weaponId] = remainingSeconds;
+        }
+
         public double GetCooldownRemaining(Entity entity)
         {
             return entity == null || entity.EquippedWeapon == null

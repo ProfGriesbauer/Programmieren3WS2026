@@ -28,6 +28,21 @@ namespace OOPGames
         public ArenaProgressionSave Progression { get; set; }
         public ArenaEntitySave Player { get; set; }
         public List<ArenaEntitySave> Enemies { get; set; } = new List<ArenaEntitySave>();
+        // Mirror images of the Mirror Image ability (added with that ability; older saves
+        // simply have none).
+        public List<ArenaMirrorImageSave> MirrorImages { get; set; } =
+            new List<ArenaMirrorImageSave>();
+        // Remaining cooldowns of the player's weapons and abilities by weapon id, so loading
+        // cannot reset e.g. the long Mirror Image cooldown.
+        public Dictionary<string, double> PlayerCooldowns { get; set; } =
+            new Dictionary<string, double>();
+    }
+
+    public sealed class ArenaMirrorImageSave
+    {
+        public ArenaEntitySave State { get; set; }
+        public double StationarySeconds { get; set; }
+        public double InvulnerableSeconds { get; set; }
     }
 
     public sealed class ArenaProgressionSave

@@ -25,6 +25,23 @@ namespace OOPGames
             ChooseWanderDirection();
         }
 
+        public double SpawnStationaryRemainingSeconds
+        {
+            get { return _spawnStationaryRemainingSeconds; }
+        }
+        public double SpawnInvulnerabilityRemainingSeconds
+        {
+            get { return _spawnInvulnerabilityRemainingSeconds; }
+        }
+
+        // Continues the spawn phase of a saved image (standing still, protected).
+        public void RestoreSpawnTimers(double stationarySeconds, double invulnerabilitySeconds)
+        {
+            _spawnStationaryRemainingSeconds = Math.Max(0, stationarySeconds);
+            _spawnInvulnerabilityRemainingSeconds = Math.Max(0, invulnerabilitySeconds);
+            IsInvulnerable = _spawnInvulnerabilityRemainingSeconds > 0;
+        }
+
         public override void UpdateBehavior(ArenaField field)
         {
             UpdateBehavior(field, 1);
