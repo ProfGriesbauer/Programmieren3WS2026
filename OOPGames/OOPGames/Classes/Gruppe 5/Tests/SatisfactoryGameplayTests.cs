@@ -282,6 +282,30 @@ public sealed class SatisfactoryGameplayTests
     }
 
     [Fact]
+    public void ManualCraftingProducesRequestedAmountOneAfterAnother()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        G5_Recipe recipe = G5_StarterRecipes.CreateManualCraftingRecipes()
+            .Single(candidate => candidate.Output == G5_Item.Eisenbarren);
+        int erzProStueck = recipe.Ingredients[G5_Item.Eisenerz];
+        Assert.True(field.TryAddInventar(G5_Item.Eisenerz, erzProStueck * 3));
+
+        Assert.False(field.TryStarteManuellesHandwerk(recipe, 4));
+        Assert.True(field.TryStarteManuellesHandwerk(recipe, 3));
+        Assert.Equal(3, field.OffeneHandwerkAnzahl);
+
+        for (int tick = 0; tick < G5_FabrikSpielfeld.ManuellesHandwerkDauerTicks * 3; tick++)
+        {
+            field.TickManuellesHandwerk();
+        }
+
+        Assert.Equal(3 * recipe.OutputAmount, field.Menge(G5_Item.Eisenbarren));
+        Assert.Equal(0, field.Menge(G5_Item.Eisenerz));
+        Assert.Equal(0, field.OffeneHandwerkAnzahl);
+        Assert.False(field.ManuellesHandwerkLaeuft);
+    }
+
+    [Fact]
     public void ManualCraftingRequiresIngredientsInBackpack()
     {
         G5_FabrikSpielfeld field = CreateField();
@@ -312,17 +336,26 @@ public sealed class SatisfactoryGameplayTests
             Assert.True(field.TryAddInventar(ingredient, ingredientCount));
             painter.PaintGameField(canvas, view);
             canvas.UpdateLayout();
-
-            int x = 740;
-            int y = 66 + 9 + 60 + row * 20 + 8;
-            Assert.Contains(VisualDescendants(canvas).OfType<TextBlock>()
-                .Where(text => text.Text == "Herstellen"), text =>
-                {
-                    Point position = text.TranslatePoint(new Point(0, 0), canvas);
-                    return new Rect(position, text.RenderSize).Contains(new Point(x, y));
-                });
             G5_FabrikHumanPlayer player = new G5_FabrikHumanPlayer();
             player.SetPlayerNumber(1);
+
+            // 1. Inventarzeile anklicken (kombiniertes Inventar: Zeilen ab y = 61, je 18 px).
+            double panelLeft = canvas.ActualWidth - 268 - 10;
+            int rowY = 66 + 9 + 61 + row * 18 + 8;
+            IPlayMove selectMove = player.GetMove(
+                new ClickSelection((int)(panelLeft + 60), rowY, (int)MouseButton.Left), view);
+            Assert.NotNull(selectMove);
+            Assert.Equal(G5_FabrikAktionstyp.InventarGegenstandWaehlen, ((G5_FabrikAktion)selectMove).Aktionstyp);
+            rules.DoMove(selectMove);
+            painter.PaintGameField(canvas, view);
+            canvas.UpdateLayout();
+
+            // 2. Knopf "HERSTELLEN ×1" im Detailbereich anklicken.
+            TextBlock craftLabel = Assert.Single(VisualDescendants(canvas).OfType<TextBlock>(),
+                text => text.Text == "HERSTELLEN ×1");
+            Point craftPosition = craftLabel.TranslatePoint(new Point(0, 0), canvas);
+            int x = (int)(craftPosition.X + 10);
+            int y = (int)(craftPosition.Y + 5);
             IPlayMove move = player.GetMove(new ClickSelection(x, y, (int)MouseButton.Left), view);
             Assert.NotNull(move);
             Assert.Equal(G5_FabrikAktionstyp.ManuellHerstellen, ((G5_FabrikAktion)move).Aktionstyp);
@@ -399,6 +432,53 @@ public sealed class SatisfactoryGameplayTests
     }
 
     [Fact]
+    public void ProductionBuildingOutputCanBeCollectedManually()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        G5_Recipe recipe = G5_StarterRecipes.CreateSmeltingRecipes(1, 0)
+            .Single(candidate => candidate.Output == G5_Item.Eisenbarren);
+        G5_Smelter smelter = new G5_Smelter(
+            new G5_GridPosition(1, 1),
+            new[] { recipe },
+            inputCapacity: 5,
+            outputCapacity: 5);
+        Assert.True(smelter.SelectRecipe(recipe.Name));
+        Assert.True(smelter.TryReceive(G5_Item.Eisenerz, 1));
+        field.AddGebaeude(smelter);
+        smelter.Tick();
+
+        Assert.Equal(1, smelter.OutputContents[G5_Item.Eisenbarren]);
+        Assert.True(field.TryCollectBuildingOutput(
+            smelter,
+            G5_Item.Eisenbarren,
+            1,
+            out int collected));
+
+        Assert.Equal(1, collected);
+        Assert.Equal(1, field.Menge(G5_Item.Eisenbarren));
+        Assert.Equal(0, smelter.OutputContents.GetValueOrDefault(G5_Item.Eisenbarren));
+    }
+
+    [Fact]
+    public void ConveyorLinePathConnectsEndpointsWithAnOrthogonalRoute()
+    {
+        IReadOnlyList<G5_GridPosition> route = SatisfactoryGameRules.CreateConveyorLinePath(
+            new G5_GridPosition(2, 3),
+            new G5_GridPosition(4, 5));
+
+        Assert.Equal(
+            new[]
+            {
+                new G5_GridPosition(2, 3),
+                new G5_GridPosition(3, 3),
+                new G5_GridPosition(4, 3),
+                new G5_GridPosition(4, 4),
+                new G5_GridPosition(4, 5)
+            },
+            route);
+    }
+
+    [Fact]
     public void FirstMinerUsesOnlyResourcesThePlayerCanMine()
     {
         IReadOnlyDictionary<G5_Item, int> minerCost =
@@ -467,22 +547,25 @@ public sealed class SatisfactoryGameplayTests
     }
 
     [Fact]
-    public void WorkshopDisplaysClickableManualRecipes()
+    public void CombinedInventoryShowsCraftButtonForSelectedItem()
     {
         RunOnSta(() =>
         {
+            G5_FabrikSpielfeld field = CreateField();
+            field.WaehleAbwurfGegenstand(G5_Item.Eisenbarren);
             SatisfactoryFieldView view = new SatisfactoryFieldView(
-                CreateField(), new SatisfactoryStartScreen(), new SatisfactoryGameMentor(), true);
-            view.ToggleHandwerk();
+                field, new SatisfactoryStartScreen(), new SatisfactoryGameMentor(), true);
             Canvas canvas = new Canvas { Width = 1000, Height = 800 };
             canvas.Measure(new Size(1000, 800));
             canvas.Arrange(new Rect(0, 0, 1000, 800));
 
             new G5_FabrikPainter().PaintGameField(canvas, view);
 
+            // Panel: links 1000 - 268 - 10 = 722, oben HUD 56 + 10 = 66;
+            // Herstellen-Knopf liegt bei Innenversatz 9 und y = 478 im Panelinhalt.
             Assert.True(view.TryGetMenuAktion(
-                800,
-                160,
+                780,
+                66 + 9 + 478 + 15,
                 out G5_FabrikAktionstyp type,
                 out _,
                 out string output));

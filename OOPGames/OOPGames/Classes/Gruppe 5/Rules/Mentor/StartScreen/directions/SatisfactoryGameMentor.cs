@@ -51,7 +51,7 @@ namespace OOPGames
             {
                 _step = TutorialStep.GatherStarterMaterials;
                 Explain("Handabbau funktioniert! Sammle 8 Eisenerz und 5 Holz für deinen ersten Förderer. " +
-                    "Danach kannst du weitere Zutaten im Inventar unter HANDWERK herstellen.");
+                    "Danach kannst du weitere Zutaten im Inventar herstellen: ⚒-Gegenstand anklicken, Anzahl eingeben, HERSTELLEN.");
                 return;
             }
 
@@ -66,7 +66,7 @@ namespace OOPGames
             {
                 _step = TutorialStep.BuildProduction;
                 Explain(buildingName + " gebaut! Er baut sein Vorkommen automatisch ab. " +
-                    "Als Nächstes kannst du im HANDWERK Eisenerz zu Barren und danach zu Platten verarbeiten.");
+                    "Als Nächstes kannst du im Inventar Eisenerz zu Barren und danach zu Platten verarbeiten.");
                 return;
             }
 
@@ -91,7 +91,7 @@ namespace OOPGames
         internal void ObserveManualCraftCompleted(G5_Recipe recipe)
         {
             Explain(recipe.OutputAmount + " " + G5_FabrikBezeichnungen.Gegenstand(recipe.Output) +
-                " hergestellt. Die Reihenfolge im HANDWERK führt von Rohstoffen über Barren " +
+                " hergestellt. Die ⚒-Gegenstände im Inventar führen von Rohstoffen über Barren " +
                 "zu Bauteilen und Beton.");
         }
 

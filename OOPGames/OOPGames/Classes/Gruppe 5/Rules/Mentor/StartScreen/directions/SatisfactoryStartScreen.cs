@@ -300,7 +300,7 @@ namespace OOPGames
             DrawStep(canvas, left + 30, stepsTop + 70, "02", "Gebäude kaufen",
                 "Ziehe Gebäude auf die Karte oder baue am markierten Feld. Der erste Förderer braucht Erz und Holz.");
             DrawStep(canvas, left + 30, stepsTop + 140, "03", "Produktion einstellen",
-                "HANDWERK zeigt Rezepte. Gebäudedetails bieten Rezepte und Upgrades.");
+                "Im Inventar ⚒-Teile wählen und herstellen. Gebäudedetails bieten Rezepte und Upgrades.");
             DrawStep(canvas, left + 30, stepsTop + 210, "04", "Verkaufen",
                 "Verkaufe im Gebäudemenü oder mit Entf. Du erhältst 50 % der Kosten zurück.");
             AddText(canvas, "Endziel: Rakete mit Uran starten. Statistik: F2. Mentor überspringen: T.",
@@ -542,7 +542,6 @@ namespace OOPGames
         private G5_Bauwerkzeug? _pendingToolSelection;
         private (G5_GridPosition Start, G5_GridPosition Ende)? _pendingConveyorLine;
         private bool _inventarGeoeffnet = true;
-        private bool _handwerkGeoeffnet;
 
         internal SatisfactoryFieldView(
             G5_FabrikSpielfeld field,
@@ -564,7 +563,9 @@ namespace OOPGames
         internal G5_FabrikSpielfeld Spielfeld => _field;
         internal bool GebaeuderegisterGeoeffnet => _field.GebaeuderegisterGeoeffnet;
         internal bool InventarGeoeffnet => _inventarGeoeffnet;
-        internal bool HandwerkGeoeffnet => _handwerkGeoeffnet;
+        internal G5_Recipe LaufendesHandwerk => _field.LaufendesHandwerk;
+        internal int OffeneHandwerkAnzahl => _field.OffeneHandwerkAnzahl;
+        internal int VerbleibendeHandwerkTicks => _field.VerbleibendeHandwerkTicks;
         internal IG5_GebaeudeInfo AusgewaehltesGebaeude =>
             ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
         internal IReadOnlyDictionary<G5_Item, int> SpielerInventar =>
@@ -582,11 +583,6 @@ namespace OOPGames
         internal void ToggleInventar()
         {
             _inventarGeoeffnet = !_inventarGeoeffnet;
-        }
-
-        internal void ToggleHandwerk()
-        {
-            _handwerkGeoeffnet = !_handwerkGeoeffnet;
         }
 
         internal void SetInventarBereich(Rect bereich)

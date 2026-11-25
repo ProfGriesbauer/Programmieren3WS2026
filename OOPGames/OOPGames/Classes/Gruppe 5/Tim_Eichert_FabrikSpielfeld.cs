@@ -40,6 +40,8 @@ namespace OOPGames
         private G5_Recipe _laufendesHandwerk;
         private int _verbleibendeHandwerkTicks;
         private int _reservierteHandwerkKapazitaet;
+        // Anzahl der Produkte, die nach dem laufenden Handwerk noch hergestellt werden sollen.
+        private int _ausstehendeHandwerkAnzahl;
         private int _raketenstartTicks;
 
         internal G5_FabrikSpielfeld(G5_WeltSpielfeld welt, int spielerX, int spielerY)
@@ -601,20 +603,80 @@ namespace OOPGames
                 kostenpunkt.Value >= 0 && Gesamtmenge(kostenpunkt.Key) >= kostenpunkt.Value);
         }
 
+        internal const int MaxHandwerkAnzahl = 999;
+
         internal bool ManuellesHandwerkLaeuft => _laufendesHandwerk != null;
+        internal G5_Recipe LaufendesHandwerk => _laufendesHandwerk;
+        internal int VerbleibendeHandwerkTicks => _verbleibendeHandwerkTicks;
+
+        // Laufendes Produkt plus alle noch wartenden Produkte.
+        internal int OffeneHandwerkAnzahl =>
+            (ManuellesHandwerkLaeuft ? 1 : 0) + _ausstehendeHandwerkAnzahl;
 
         internal bool TryStarteManuellesHandwerk(G5_Recipe recipe)
+        {
+            return TryStarteManuellesHandwerk(recipe, 1);
+        }
+
+        // Startet die Herstellung von "anzahl" Produkten nacheinander. Es wird vorab geprüft,
+        // ob Zutaten und Rucksackplatz für alle Produkte reichen; verbraucht werden die
+        // Zutaten jedoch erst, wenn das jeweilige Produkt an der Reihe ist.
+        internal bool TryStarteManuellesHandwerk(G5_Recipe recipe, int anzahl)
         {
             if (recipe == null)
             {
                 throw new ArgumentNullException(nameof(recipe));
             }
 
-            if (ManuellesHandwerkLaeuft)
+            if (anzahl <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(anzahl));
+            }
+
+            if (ManuellesHandwerkLaeuft || MaxHerstellbar(recipe) < anzahl)
             {
                 return false;
             }
 
+            if (!TryStarteEinzelnesHandwerk(recipe))
+            {
+                throw new InvalidOperationException("Handwerkszutaten haben sich während der Herstellung geändert.");
+            }
+
+            _ausstehendeHandwerkAnzahl = anzahl - 1;
+            return true;
+        }
+
+        // Wie viele Produkte dieses Rezepts aktuell mit dem Rucksackinhalt hergestellt werden können.
+        internal int MaxHerstellbar(G5_Recipe recipe)
+        {
+            if (recipe == null)
+            {
+                throw new ArgumentNullException(nameof(recipe));
+            }
+
+            int maximum = MaxHandwerkAnzahl;
+            foreach (KeyValuePair<G5_Item, int> ingredient in recipe.Ingredients)
+            {
+                if (ingredient.Value > 0)
+                {
+                    maximum = Math.Min(maximum, Menge(ingredient.Key) / ingredient.Value);
+                }
+            }
+
+            // Erzeugt ein Rezept mehr Teile als es verbraucht, begrenzt der freie Rucksackplatz.
+            int nettoZuwachs = recipe.OutputAmount - recipe.Ingredients.Values.Sum();
+            if (nettoZuwachs > 0)
+            {
+                int frei = SpielerInventarKapazitaetMax - InventarBelegt - _reservierteHandwerkKapazitaet;
+                maximum = Math.Min(maximum, frei / nettoZuwachs);
+            }
+
+            return Math.Max(0, maximum);
+        }
+
+        private bool TryStarteEinzelnesHandwerk(G5_Recipe recipe)
+        {
             int ingredientAmount = recipe.Ingredients.Values.Sum();
             if (recipe.Ingredients.Any(ingredient => Menge(ingredient.Key) < ingredient.Value) ||
                 InventarBelegt - ingredientAmount + recipe.OutputAmount > SpielerInventarKapazitaetMax)
@@ -624,7 +686,7 @@ namespace OOPGames
 
             if (!TryVerbraucheRessourcen(recipe.Ingredients))
             {
-                throw new InvalidOperationException("Handwerkszutaten haben sich während der Herstellung geändert.");
+                return false;
             }
 
             _laufendesHandwerk = recipe;
@@ -658,6 +720,18 @@ namespace OOPGames
             _laufendesHandwerk = null;
             _verbleibendeHandwerkTicks = 0;
             ErfasseProduktion(abgeschlossenesRezept.Output, abgeschlossenesRezept.OutputAmount);
+
+            // Nächstes Produkt der gewünschten Anzahl starten. Fehlen inzwischen Zutaten
+            // (z. B. weil etwas abgelegt wurde), wird der Rest abgebrochen.
+            if (_ausstehendeHandwerkAnzahl > 0)
+            {
+                _ausstehendeHandwerkAnzahl--;
+                if (!TryStarteEinzelnesHandwerk(abgeschlossenesRezept))
+                {
+                    _ausstehendeHandwerkAnzahl = 0;
+                }
+            }
+
             return abgeschlossenesRezept;
         }
 
@@ -668,9 +742,39 @@ namespace OOPGames
                 throw new ArgumentNullException(nameof(miner));
             }
 
-            if (!_simulation.Buildings.Contains(miner))
+            return TryCollectBuildingOutput(miner, miner.Resource, requestedAmount, out amount);
+        }
+
+        internal bool TryCollectBuildingOutput(
+            G5_Building building,
+            G5_Item item,
+            int requestedAmount,
+            out int amount)
+        {
+            if (building == null)
             {
-                throw new InvalidOperationException("Der Förderer gehört nicht zu diesem Spielfeld.");
+                throw new ArgumentNullException(nameof(building));
+            }
+
+            if (!_simulation.Buildings.Contains(building))
+            {
+                throw new InvalidOperationException("Das Gebäude gehört nicht zu diesem Spielfeld.");
+            }
+
+            IReadOnlyDictionary<G5_Item, int> outputContents;
+            if (building is G5_Miner miner)
+            {
+                outputContents = miner.OutputContents;
+            }
+            else if (building is G5_ProductionBuilding production)
+            {
+                outputContents = production.OutputContents;
+            }
+            else
+            {
+                throw new ArgumentException(
+                    "Ausgaben können nur aus Förderern und Produktionsgebäuden abgeholt werden.",
+                    nameof(building));
             }
 
             if (requestedAmount <= 0)
@@ -679,19 +783,20 @@ namespace OOPGames
                 return false;
             }
 
-            int available = Math.Min(miner.CountOf(miner.Resource), requestedAmount);
+            outputContents.TryGetValue(item, out int available);
+            available = Math.Min(available, requestedAmount);
             amount = Math.Min(available, FreieAufnahmekapazitaet());
             if (amount <= 0)
             {
                 return false;
             }
 
-            if (!miner.TryExtract(miner.Resource, amount))
+            if (!building.TryExtract(item, amount))
             {
-                throw new InvalidOperationException("Die Fördererausgabe konnte nicht abgeholt werden.");
+                throw new InvalidOperationException("Die Gebäudeausgabe konnte nicht abgeholt werden.");
             }
 
-            AddInventar(miner.Resource, amount);
+            AddInventar(item, amount);
             return true;
         }
 
