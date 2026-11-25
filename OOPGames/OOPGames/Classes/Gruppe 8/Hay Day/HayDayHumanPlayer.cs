@@ -3,6 +3,9 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
+    /// <summary>
+    /// Übersetzt Maus- und Tastatureingaben in die spielinternen Hay-Day-Züge.
+    /// </summary>
     public sealed class HayDayHumanPlayer : IHumanGamePlayer
     {
         private int _playerNumber;
@@ -46,8 +49,13 @@ namespace OOPGames
 
                 int menuHit = painter.MenuHitTest(click.XClickPos, click.YClickPos, field);
                 bool menuClick = menuHit >= 0 || menuHit == HayDayField.ShopMenuOption;
-                PointOnFarm position = painter.FarmPosition(click.XClickPos, click.YClickPos, field);
                 int button = click.ChangedButton == 2 ? 0 : click.ChangedButton;
+                FarmBuilding clickedBuilding = button == 1
+                    ? painter.BuildingAt(click.XClickPos, click.YClickPos, field)
+                    : null;
+                PointOnFarm position = clickedBuilding == null
+                    ? painter.FarmPosition(click.XClickPos, click.YClickPos, field)
+                    : field.BuildingPosition(clickedBuilding);
                 return new HayDayMove(_playerNumber, HayDayMoveKind.Click, position.Row,
                     position.Column, button, Key.None, menuClick,
                     menuHit == HayDayField.ShopMenuOption
@@ -71,7 +79,7 @@ namespace OOPGames
                 || key == Key.OemMinus || key == Key.B || key == Key.D1 || key == Key.D2
                 || key == Key.D3 || key == Key.D4 || key == Key.D5 || key == Key.NumPad1
                 || key == Key.NumPad2 || key == Key.NumPad3 || key == Key.NumPad4
-                || key == Key.NumPad5;
+                || key == Key.NumPad5 || key == Key.Escape;
         }
     }
 }

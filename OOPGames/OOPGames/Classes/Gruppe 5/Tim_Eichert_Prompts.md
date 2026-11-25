@@ -341,3 +341,163 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > pushe das spiel mit den gelösten problemen
 
 - **Ergebnisvermerk:** Die drei Buildkorrekturen samt Promptprotokoll wurden auf den aktuellen Remote-Stand gepusht. Nicht zum Spiel gehörende generierte Dateien blieben außerhalb des Commits.
+
+### 2026-11-25, 09:40 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> kannst du alle bauteile und gebäude alle konsequent deutsch bennen
+
+- **Ergebnisvermerk:** Sichtbare Gebäude-, Werkzeug- und Gegenstandsnamen wurden zentral vereinheitlicht und in Baumenü, Gebäudeinformationen, Statusmeldungen, Tutorial und Anleitung übernommen. Interne Klassen- und Enum-Namen blieben aus Kompatibilitätsgründen unverändert.
+
+### 2026-11-25, 09:48 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> bitte ändere, das man zum einen, die sachen nicht automatisch ins inventar kriegt wenn man einen förderer platziert hat, sondern das man das abholen muss. Außerdem sollte es eine möglichkeit geben manuell was herzustellen. Also aus erz barren craften im inventar. Außerdem sollen die gebäude nicht nur erze kosten sondern eisenplatten stangen und beton zum beispiel.
+
+- **Ergebnisvermerk:** Fördererausgaben müssen nun manuell abgeholt werden; manuelles Herstellen von Barren, Platten, Stangen und Beton wurde ergänzt. Gebäudekosten enthalten verarbeitete Materialien. Alle 7 gezielten Gameplay-Tests bestanden.
+
+### 2026-11-25, 09:58 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> füge den letzten prompt in die prompt datei hinzu
+
+- **Ergebnisvermerk:** Der vorherige Wunsch zu manueller Ausgabeabholung, Handwerk und verarbeiteten Gebäudekosten wurde im Promptprotokoll dokumentiert.
+
+### 2026-11-25, 10:05 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> füge hinzu, dass man eingeben kann, wie viele bauteile man raus nehmen kann. Außerdem vergrößere das Inventar und dass man sachen aus dem invenar raustun kann und das ddie dann an der stelle liegen bleiben für 2 min. Außerdem braucht es ein knopf um das ganze wieder aufzunehmen. Das inventar soll 50 plätze haben
+
+- **Ergebnisvermerk:** Die Rucksackkapazität beträgt nun 50 Gegenstände. Abhol- und Ablegemengen lassen sich per Zahlentasten eingeben; abgelegte Gegenstände bleiben zwei Minuten am Spielerstandort liegen und können dort über **Aufnehmen** zurückgeholt werden.
+
+### 2026-11-25, 10:19 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> warum funktioniert der build nicht, kannst du das fixen
+
+- **Ergebnisvermerk:** Die laufende `OOPGames.exe` sperrte die Dateien im normalen Debug-Ausgabeordner. Der isolierte Build war erfolgreich mit 0 Warnungen und 0 Fehlern; die laufende Anwendung blieb auf Wunsch des Nutzers geöffnet.
+
+### 2026-11-25, 10:32 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> wofür ist das lager handwerk und wenn man manuell was herstellt soll er immer nur eins herstellen und nicht danach immer weiter machen. Außerdem soll das manuelle herstellen pro item auch eine gewisse zeit dauern. Man könnte auch wieder 2sekunden machen
+
+- **Ergebnisvermerk:** Die Lagerbestände werden von den Lagergebäuden bereitgestellt und können für Baukosten sowie automatische Maschinenversorgung genutzt werden. Manuelles Handwerk startet nun genau ein Produkt, dauert etwa zwei Sekunden und wiederholt sich nicht automatisch. Alle 11 Gruppe-5-Tests bestanden.
+
+### 2026-11-25, 10:47 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> pushe den code
+
+- **Ergebnisvermerk:** Der Gruppe-5-Code wurde als Commit `354b23e` nach `origin/master` gepusht. Alle 11 Gruppe-5-Tests bestanden; generierte und temporäre Dateien blieben uncommittet.
+
+### 2026-11-25, 11:00 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Füge hinzu, dass man einen reiter für inventar und einen für herstellen hat und das man beim herstellen auch sieht was man dafür braucht. Außerdem ändere das förderband system so, dasas man durch ziehen des förderband vom startpunkt zum endpunkt das förderband baut und dass man sieht wie viele resourcen benötigt werden, wenn dies nicht funktioniert. außerdem sollte es möglich sein aus den anderen gebäuden wie der schmelze die bauteilen rauszunehmen
+
+- **Ergebnisvermerk:** Inventar und manuelles Handwerk sind getrennte Reiter; im Handwerksreiter werden Zutaten und Rucksackbestände angezeigt. Förderbandlinien lassen sich zwischen passenden Gebäuden ziehen, werden ohne Teilbau auf Ressourcen und Hindernisse geprüft und zeigen Kosten beziehungsweise Bestände in der Statusmeldung. Ausgaben aus Produktionsgebäuden bleiben ohne Förderbandverbindung im Gebäude und können manuell abgeholt werden.
+
+### 2026-11-25, 11:04 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> füge alle letzten prompts wieder hinzu. es fehlen noch welche von vorher
+
+- **Ergebnisvermerk:** Die fehlenden jüngsten Prompts zu Promptprotokoll, Build, einmaligem Handwerk und Push wurden chronologisch ergänzt.
+
+### 2026-11-25, 11:29 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> wir sollen in programmieren 3 ein spiel erstellen. Wir sind in gruppe 5 und machen etwas ähnliches wie satisfactory/factorio. Aus diesem grund darfst du nur datein in unserem ordnersturktur ändern. Die ganzen prompts müssen dokumentiert werden. Mache das bitte automatisch in der datei tim eichert prompt. Mache einfach genauso weiter woe zuvor und schreibe das jeweilige modell dazu.
+>
+> (Anhang: Projektanforderungen_OOPGames_Kurzfassung.pdf)
+
+- **Ergebnisvermerk:** Wechsel von GitHub Copilot zu Claude Code. Ab jetzt wird jeder Prompt automatisch im bisherigen Format mit Datum, Uhrzeit, Wortlaut, Werkzeug/Modell und Ergebnisvermerk in dieser Datei protokolliert. Änderungen erfolgen nur in `Classes/Gruppe 5/` und `Interfaces/Gruppe 5/` (Ausnahme: Registrierungsblock in `MainWindow.xaml.cs`).
+
+### 2026-11-25, 11:49 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> füge das inventar und de herstellen reiter wieder zu einem zusammen, sodass man sieht um welches teil es sich handelt, dass man sieht was man braucht um das herzustellen und dass man ein knopf hat zum herstellen und dass man ne anzahl eingeben kann, wie viel man herstellen möchte
+
+- **Ergebnisvermerk:** Die Reiter „Inventar“ und „Herstellen“ wurden zu einer Ansicht zusammengeführt. Herstellbare Gegenstände sind in der Liste mit ⚒ markiert. Unter der Liste zeigt ein Detailbereich zum ausgewählten Gegenstand den Namen, den Rucksackbestand, die Zutaten pro Stück mit ✓/✗ und die maximal mögliche Anzahl. Dazu gibt es ein Anzahlfeld (Zahlentasten) und die Knöpfe **Herstellen ×N** (auch Taste `H`), **Ablegen** und **Aufnehmen**. Das Spielfeld stellt jetzt N Stück nacheinander her (je 2 s, mit Fortschrittsanzeige). Die Aktion `InventarReiterWaehlen` wurde entfernt und die Anleitung angepasst. Ein neuer Test für die Mengenherstellung kam hinzu. Build: 0 Warnungen, 0 Fehler; alle 14 Gruppe-5-Tests bestanden.
+
+### 2026-11-25, 15:59 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> pushe die änderungen
+
+- **Ergebnisvermerk:** Nur Gruppe-5-Dateien wurden committet. Beim `git pull` gab es Merge-Konflikte mit parallelen Team-Änderungen (Raketen-Endphase, Statistik, Mentor, Dateien nach `Rules/Mentor/StartScreen/directions/` verschoben, eigene Werkbank-/Handwerk-Ansicht).
+- **Rückfrage im Ablauf:** Wie soll die Werkbank des Teams mit dem kombinierten Panel zusammengeführt werden? Antwort: „Dein Panel behalten“. Das kombinierte Inventar ersetzt Werkbank-Umschalter und Zeilen-Knöpfe. Alle übrigen Team-Änderungen wurden übernommen.
+- **Weitere Anpassungen:** Die Team-Tests zum Herstellen wurden auf den neuen Ablauf umgestellt (Zeile wählen, dann **HERSTELLEN ×1**). Die Mentor- und Startbildschirm-Texte verweisen nicht mehr auf „HANDWERK“.
+- **Prüfung und Push:** Build 0 Warnungen, 0 Fehler; 48 von 49 Tests bestanden. Der eine fehlschlagende Test `ManualRecipesAreOrderedFromRawResourcesToComponents` stammt aus dem Team-Stand: Die Rakete kostet Rotoren, die nicht von Hand herstellbar sind. Er wurde nicht verändert. Danach wurde auf `origin/master` gepusht. Generierte `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.
+
+### 2026-11-25, 16:30 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> ich habe das problem, dass manchmal wenn ich aus dem förderer was rausnehme, dass die anzahl im inventar weniger wird ohne dass die teile irgendwo hin gehen. Füge außerdem eine minimap hinzu und eine option wie ich nach rohstoffen suchen kann und dass die dann gehoghlited werden und die richtung in der minimap angezeigt wird. dieminimap sollte auch über einen key anzeigbar und ausblendbar sein
+
+- **Ergebnisvermerk – Fehler:** `TransferMaterials` in den Rules hat Produktionsgebäude und Generatoren jeden Tick automatisch aus dem Rucksack versorgt. Abgeholtes Erz verschwand so sofort wieder in einer Schmelze mit passendem Rezept. Jetzt werden Maschinen nur noch aus Lagergebäuden bzw. über Förderbänder versorgt. Ein Regressionstest wurde ergänzt.
+- **Ergebnisvermerk – Minimap:** Neue Klasse `G5_FabrikMinimap` (`Tim_Eichert_FabrikMinimap.cs`), unten links bzw. rechts neben dem offenen Baumenü. Sie zeigt Gelände und Rohstoffe als Bitmap, Gebäude, Spieler und den sichtbaren Kartenausschnitt. Ein- und ausblenden mit `M` oder per Klick; ausgeblendet bleibt ein Knopf „▣ KARTE (M)“.
+- **Ergebnisvermerk – Rohstoffsuche:** Rohstoff-Knöpfe unter der Minimap oder Taste `R` (wechselt reihum). Treffer werden auf Karte und Minimap gelb hervorgehoben. Ein Pfeil auf der Minimap und ein Pfeil an der Spielfigur zeigen zum nächsten Vorkommen, dazu Entfernung und Himmelsrichtung.
+- **Technik:** Neue Aktionen `MinimapUmschalten` und `RohstoffSucheWaehlen`; der Zustand liegt im Spielfeld; Anleitung und HUD-Hilfe wurden ergänzt.
+- **Prüfung:** Build 0 Warnungen, 0 Fehler; 51 von 52 Tests bestanden. Der eine Fehlschlag ist weiterhin der Rotor-/Raketen-Test aus dem Team-Stand.
+
+### 2026-11-25, 16:53 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> wenn ich ein gebäude nicht bauen kann, dann soll angezeigt werden was fehlt. Teste dies und mache detlich auf der minimap wo meine gebäude sind. Förderbänder sollen nicht angezeigt werden und über felder mit förderbändern soll man drüber laufen können.
+
+- **Ergebnisvermerk – Bauen:** Ein fehlgeschlagener Bau nennt jetzt alle Gründe auf einmal. Bei Material steht genau, was fehlt, z. B. „Lager kann nicht gebaut werden: es fehlen 3 Eisenplatte (hast 0/3), 2 Beton (hast 2/4) …“. Beim Platz wird zwischen „außerhalb der Karte“, „Hindernis“, „steht bereits <Gebäude>“, „Förderer braucht Vorkommen“, „Vorkommen erschöpft“ und „auf Vorkommen nur Förderer“ unterschieden.
+- **Ergebnisvermerk – Baumenü und Verbessern:** Das Baumenü zeigt bei nicht bezahlbaren Gebäuden rot „Fehlt: …“; die vollen Kosten stehen im Tooltip. Auch die Meldung beim Verbessern nennt nur noch die fehlenden Posten. Die gemeinsame Hilfsfunktion dafür ist `G5_FabrikKosten.Fehlend` / `FormatFehlend`.
+- **Ergebnisvermerk – Minimap und Förderbänder:** Auf der Minimap sind Gebäude jetzt orange Quadrate (mind. 7 px) mit weißem Rand. Förderbänder werden dort nicht angezeigt. Eine Legende „Gebäude (Anzahl) · Du · Sicht“ wurde ergänzt. Über Förderbänder kann man laufen, andere Gebäude blockieren weiterhin.
+- **Tests und Prüfung:** Vier neue Tests decken fehlende Materialien, Platzprobleme samt erfolgreichem Bau, das Laufen über Förderbänder und die Minimap-Markierungen ab. Build 0 Warnungen, 0 Fehler; 55 von 56 Tests bestanden. Der eine Fehlschlag ist weiterhin der Rotor-/Raketen-Test aus dem Team-Stand.
+
+### 2026-11-25, 17:02 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> wie verbind eich den kohleförderer mit dem kohlekraftwerk und wie funktioniert der strom
+
+- **Ergebnisvermerk:** Reine Erklärung aus dem Code, keine Codeänderung. Förderbänder führen nur zu Produktionsgebäuden oder Lagern, nicht direkt ins Kohlekraftwerk. Der Weg ist Kohleförderer → Förderband → Lager; das Kraftwerk nimmt sich die Kohle selbst aus dem Lager (Puffer bis 5 Kohle).
+- **Stromnetz:** Strommasten mit Reichweite 8 (Manhattan-Abstand) verbinden sich untereinander. Kraftwerk und Verbraucher müssen in Reichweite eines Masts desselben Netzes stehen. Strom brauchen nur Konstruktor und Montagewerk (1 pro Tick); 1 Kohle liefert 30 Energie, ein Kraftwerk max. 20 pro Tick.
+- **Auffälligkeiten:** Verbraucher ziehen Strom auch im Leerlauf. Seit der letzten Änderung wird das Kraftwerk nicht mehr aus dem Rucksack befüllt.
+
+### 2026-11-25, 17:08 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> pushe den code
+
+- **Ergebnisvermerk:** Committet wurden nur die Gruppe-5-Dateien: Rucksack-Bug, Minimap mit Rohstoffsuche, Baumeldungen, begehbare Förderbänder, Tests, Anleitung und Promptprotokoll. `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.
+- **Merge:** Beim `git pull` gab es einen Konflikt im Baumenü des Painters. Das Team hatte eine neue Kostenanzeige `ErzeugeKostenanzeige` gebaut. Zusammengeführt wurde sie mit dem roten „Fehlt: …“-Text. Weil das Team die Lagerkosten gesenkt hatte, wurde der Test für fehlende Materialien auf die aktuellen Baupreise umgestellt statt fester Zahlen.
+- **Prüfung und Push:** Nach dem ersten Merge schlugen zwei Kamera-Tests fehl, weil das Team `StandardZoom` geändert hatte. Ein weiterer Team-Commit („Fix default map zoom boundaries“) kam vor dem Push dazu und wurde nachgezogen. Danach Build 0 Warnungen, 0 Fehler und alle 58 Gruppe-5-Tests bestanden, inklusive Rotor-Test. Danach wurde auf `origin/master` gepusht.

@@ -76,7 +76,7 @@ namespace OOPGames
             return shadows;
         }
 
-        private static GeometryModel3D CreateShadow(Rect3D bounds, double groundHeight)
+        private static GeometryModel3D CreateShadow(Rect3D bounds, double groundHeight) // creates a flat shadow shape for the given bounding box, projected along the sun direction onto the ground height
         {
             double shadowY = groundHeight + (groundHeight > 0 ? RoofShadowLift : GroundShadowLift);
             double stepX = SunDirection.X / -SunDirection.Y;

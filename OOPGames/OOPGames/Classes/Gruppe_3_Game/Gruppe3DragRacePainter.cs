@@ -27,10 +27,6 @@ namespace OOPGames
         private double _selectionGap = 15;
         private double _selectionLeft = 20;
         private double _selectionTop = 70;
-        private int _lastPlayerOneCar = -1;
-        private int _lastPlayerTwoCar = -1;
-        private DateTime _selectionFeedbackUntil;
-        private string _selectionFeedbackText;
 
         public Gruppe3DragRacePainter()
         {
@@ -88,7 +84,6 @@ namespace OOPGames
             canvas.Children.Clear();
             canvas.Background = new SolidColorBrush(Color.FromRgb(25, 28, 38));
             double width = canvas.ActualWidth > 10 ? canvas.ActualWidth : 800;
-            UpdateSelectionFeedback(field);
             if (!field.CarSelectionComplete)
             {
                 PaintCarSelection(canvas, field, width);
@@ -182,11 +177,13 @@ namespace OOPGames
                 (3 * _selectionCardWidth + 2 * _selectionGap)) / 2;
             _selectionTop = Math.Max(55, (height - _selectionCardHeight) / 2);
 
-            UpdateSelectionFeedback(field);
+            bool showSelectionFeedback =
+                !string.IsNullOrEmpty(field.SelectionFeedbackText) &&
+                DateTime.UtcNow < field.SelectionFeedbackUntil;
             TextBlock title = new TextBlock
             {
-                Text = DateTime.UtcNow < _selectionFeedbackUntil
-                    ? _selectionFeedbackText
+                Text = showSelectionFeedback
+                    ? field.SelectionFeedbackText
                     : field.CountdownText,
                 Foreground = Brushes.White,
                 FontSize = 30 * scale,
@@ -666,37 +663,6 @@ namespace OOPGames
                 IsHitTestVisible = false
             };
             canvas.Children.Add(polygon);
-        }
-
-        private void UpdateSelectionFeedback(IGruppe3DragRaceField field)
-        {
-            if (field.PlayerOneCar != _lastPlayerOneCar)
-            {
-                if (field.PlayerOneCar >= 0)
-                {
-                    _selectionFeedbackText =
-                        "PLAYER 1: AUTO " + (field.PlayerOneCar + 1) +
-                        " GEWAEHLT!";
-                    _selectionFeedbackUntil =
-                        DateTime.UtcNow.AddSeconds(1.2);
-                }
-
-                _lastPlayerOneCar = field.PlayerOneCar;
-            }
-
-            if (field.PlayerTwoCar != _lastPlayerTwoCar)
-            {
-                if (field.PlayerTwoCar >= 0)
-                {
-                    _selectionFeedbackText =
-                        "PLAYER 2: AUTO " + (field.PlayerTwoCar + 1) +
-                        " GEWAEHLT!";
-                    _selectionFeedbackUntil =
-                        DateTime.UtcNow.AddSeconds(1.2);
-                }
-
-                _lastPlayerTwoCar = field.PlayerTwoCar;
-            }
         }
 
         private static bool IsSelected(
