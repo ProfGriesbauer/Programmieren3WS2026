@@ -180,3 +180,47 @@ pushe das
 ```
 
 Ergebnis: Gruppe-8-Anpassung zur Verwendung von `IConnectFourPainter` mit 50-Pixel-Zellen und das aktualisierte Prompt-Protokoll gepusht.
+
+## 2026-11-25
+
+### Prompt 23
+
+```text
+schreibe ab sofort die prompts in die Hannes Villing Prompts datei im gleichen stil wie die prompts bisher drin sind. Schreibe mir das Programm der Gruppe 8 so um, dass die Interface Klassen auch im Interface Ordner der Gruppe 8 defniert sind und dann im Programm verwendet werden. Lass dabei alle anderen Ordner unverwendet, es geht nur darum, den Interface Ordner zu benutzen und darin die Klassen zu definieren
+```
+
+Ergebnis: Gruppe-8-eigene Vier-Gewinnt-Interfaces im Ordner
+`Interfaces/Gruppe 8` ergänzt und von Feld, Zug, Rules, Painter sowie beiden
+Spielern implementiert. Die gemeinsamen Framework-Interfaces bleiben als
+Basisschnittstellen erhalten; Interfaces anderer Gruppenordner werden nicht
+verwendet.
+
+### Prompt 24
+
+```text
+jetzt zerlege die HayDay Game Klasse in ihre Bestandteile, sodass die vom Interface geforderten Klassen einzeln zu sehen sind. Schreibe sie ganz normal in den gleichen Ordner nur eben als kleinere Programme. Somit wird das ganze übersichtlicher
+```
+
+Ergebnis: Die Interface-Komponenten und unterstützenden Hay-Day-Typen wurden
+in eigene Dateien im selben `Hay Day`-Ordner aufgeteilt. Die umfangreiche
+`HayDayField`-Implementierung liegt zusätzlich in thematisch getrennten
+Partial-Dateien für Menüs, Eingabe, Tiere, Wirtschaft und Speicherung vor.
+
+### Prompt 25
+
+```text
+kompiliere mir das und öffne dann das kompilierte
+```
+
+Ergebnis: OOPGames wurde erfolgreich mit 0 Warnungen und 0 Fehlern gebaut und
+die kompilierte Windows-Anwendung wurde gestartet.
+
+### Prompt 26
+
+```text
+pushe das
+```
+
+Ergebnis: Die Gruppe-8-Änderungen wurden in Commit `d553e67` nach
+`origin/master` gepusht. Die bereits vorhandenen generierten HouseExample-
+`obj`-Änderungen wurden nicht mit aufgenommen.
