@@ -140,7 +140,7 @@ namespace OOPGames
                        G1C_Renderer.WindowBottom - G1C_Renderer.WindowTop, BackgroundColor);
             DrawHeader(r);
             DrawGame(r);
-            DrawMessage(r);
+            if (ShowMessage) DrawMessage(r);   // Änderung durch: Patrick Lupierz – 25.11.2026 – Spiele können die Meldungsleiste ausblenden
             foreach (G1C_Button button in _buttons)
             {
                 DrawButton(r, button);
@@ -148,6 +148,9 @@ namespace OOPGames
         }
 
         protected virtual Color BackgroundColor { get { return G1C_UiColors.Felt; } }
+
+        /// <summary>Änderung durch: Patrick Lupierz – 25.11.2026 – false blendet die Meldungsleiste unten aus.</summary>
+        protected virtual bool ShowMessage { get { return true; } }
 
         protected abstract void DrawGame(G1C_Renderer r);
 
