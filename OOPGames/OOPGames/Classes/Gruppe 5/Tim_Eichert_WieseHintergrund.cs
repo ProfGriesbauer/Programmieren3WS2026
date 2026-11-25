@@ -43,11 +43,18 @@ namespace OOPGames
         private static readonly Brush FelsSchatten = Gefroren(Color.FromArgb(145, 10, 13, 11));
         private static readonly Brush FelsHighlight = Gefroren(Color.FromArgb(80, 245, 239, 218));
         private static readonly Brush BrockenHighlight = Gefroren(Color.FromArgb(85, 255, 255, 255));
+        private static readonly Brush QuarzHell = Gefroren(Color.FromRgb(0xF5, 0xF2, 0xE9));
+        private static readonly Brush QuarzMittel = Gefroren(Color.FromRgb(0xD5, 0xCE, 0xBF));
+        private static readonly Brush QuarzSchatten = Gefroren(Color.FromRgb(0xA7, 0x9B, 0x8B));
+        private static readonly Brush UranLeuchten = Gefroren(new RadialGradientBrush(
+            Color.FromArgb(145, 0xC6, 0xFF, 0x2C),
+            Color.FromArgb(0, 0xA7, 0xF5, 0x20)));
 
         private static readonly Pen BueschelHell = GefrorenerStift(Color.FromArgb(140, 160, 190, 90), RenderKachelGroesse / 22);
         private static readonly Pen BueschelDunkel = GefrorenerStift(Color.FromArgb(115, 30, 50, 25), RenderKachelGroesse / 22);
         private static readonly Pen BrockenRand = GefrorenerStift(Color.FromArgb(89, 0, 0, 0), RenderKachelGroesse / 40);
         private static readonly Pen FelsKontur = GefrorenerStift(Color.FromArgb(135, 32, 35, 32), RenderKachelGroesse / 42);
+        private static readonly Pen QuarzKontur = GefrorenerStift(Color.FromRgb(0x8C, 0x80, 0x73), RenderKachelGroesse / 45);
 
         private static readonly Brush[] EisenFarben =
         {
@@ -75,6 +82,20 @@ namespace OOPGames
             Gefroren(Color.FromRgb(0xC9, 0xC2, 0xB0)),
             Gefroren(Color.FromRgb(0xA8, 0xA1, 0x90)),
             Gefroren(Color.FromRgb(0xDD, 0xD6, 0xC4))
+        };
+
+        private static readonly Brush[] SchwefelFarben =
+        {
+            Gefroren(Color.FromRgb(0x9C, 0x75, 0x16)),
+            Gefroren(Color.FromRgb(0xBB, 0x8D, 0x1D)),
+            Gefroren(Color.FromRgb(0xD0, 0xA3, 0x2B))
+        };
+
+        private static readonly Brush[] UranFarben =
+        {
+            Gefroren(Color.FromRgb(0xA8, 0xF2, 0x28)),
+            Gefroren(Color.FromRgb(0xD8, 0xFF, 0x39)),
+            Gefroren(Color.FromRgb(0x70, 0xC9, 0x1C))
         };
 
         private readonly Dictionary<(G5_Rohstofftyp, int, int), ImageSource> _vorkommenBilder =
@@ -323,7 +344,19 @@ namespace OOPGames
                 dc.PushClip(new RectangleGeometry(new Rect(0, 0, s, s)));
                 dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, s, s));
                 dc.DrawEllipse(ErdeBrush, null, new Point(s / 2, s / 2), s * 0.48, s * 0.44);
-                ZeichneBrocken(dc, 0, 0, s, ErzFarben(typ), x * 7 + y, 5);
+                if (typ == G5_Rohstofftyp.Quarz)
+                {
+                    ZeichneQuarz(dc, s, x, y);
+                }
+                else
+                {
+                    if (typ == G5_Rohstofftyp.Uran)
+                    {
+                        dc.DrawEllipse(UranLeuchten, null, new Point(s / 2, s / 2), s * 0.46, s * 0.42);
+                    }
+
+                    ZeichneBrocken(dc, 0, 0, s, ErzFarben(typ), x * 7 + y, 5);
+                }
                 dc.Pop();
             }
 
@@ -331,6 +364,48 @@ namespace OOPGames
             bild.Freeze();
             _vorkommenBilder[schluessel] = bild;
             return bild;
+        }
+
+        private static void ZeichneQuarz(DrawingContext dc, double s, int x, int y)
+        {
+            double versatz = (Zufall(x, y, 41) - 0.5) * s * 0.06;
+            ZeichneKristall(dc, s * 0.20 + versatz, s * 0.38, s * 0.24, s * 0.42);
+            ZeichneKristall(dc, s * 0.58 + versatz, s * 0.34, s * 0.24, s * 0.45);
+            ZeichneKristall(dc, s * 0.36 + versatz, s * 0.12, s * 0.29, s * 0.70);
+            ZeichneKristall(dc, s * 0.11 + versatz, s * 0.57, s * 0.21, s * 0.25);
+            ZeichneKristall(dc, s * 0.69 + versatz, s * 0.55, s * 0.19, s * 0.26);
+        }
+
+        private static void ZeichneKristall(DrawingContext dc, double x, double y, double breite, double hoehe)
+        {
+            Point spitze = new Point(x + breite * 0.55, y);
+            Point linksOben = new Point(x + breite * 0.10, y + hoehe * 0.24);
+            Point rechtsOben = new Point(x + breite * 0.94, y + hoehe * 0.24);
+            Point linksUnten = new Point(x, y + hoehe * 0.82);
+            Point rechtsUnten = new Point(x + breite, y + hoehe * 0.82);
+            Point mitteUnten = new Point(x + breite * 0.52, y + hoehe);
+            Point mitteOben = new Point(x + breite * 0.48, y + hoehe * 0.30);
+
+            dc.DrawGeometry(QuarzMittel, QuarzKontur,
+                Polygon(spitze, rechtsOben, rechtsUnten, mitteUnten, linksUnten, linksOben));
+            dc.DrawGeometry(QuarzHell, null, Polygon(spitze, linksOben, linksUnten, mitteUnten, mitteOben));
+            dc.DrawGeometry(QuarzSchatten, null, Polygon(mitteOben, rechtsOben, rechtsUnten, mitteUnten));
+        }
+
+        private static Geometry Polygon(params Point[] punkte)
+        {
+            StreamGeometry geometrie = new StreamGeometry();
+            using (StreamGeometryContext kontext = geometrie.Open())
+            {
+                kontext.BeginFigure(punkte[0], true, true);
+                for (int i = 1; i < punkte.Length; i++)
+                {
+                    kontext.LineTo(punkte[i], true, false);
+                }
+            }
+
+            geometrie.Freeze();
+            return geometrie;
         }
 
         /// <summary>
@@ -372,6 +447,10 @@ namespace OOPGames
                     return KupferFarben;
                 case G5_Rohstofftyp.Kohle:
                     return KohleFarben;
+                case G5_Rohstofftyp.Schwefel:
+                    return SchwefelFarben;
+                case G5_Rohstofftyp.Uran:
+                    return UranFarben;
                 default:
                     return SonstigeFarben;
             }

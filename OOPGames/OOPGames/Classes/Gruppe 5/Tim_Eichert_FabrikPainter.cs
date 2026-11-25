@@ -50,6 +50,8 @@ namespace OOPGames
         private static readonly ImageSource SpielerBild = ErzeugeSpielerBild();
         private static readonly IReadOnlyList<G5_Recipe> Handwerksrezepte =
             G5_StarterRecipes.CreateManualCraftingRecipes();
+        private static readonly Dictionary<(string Text, FontWeight Gewicht), double> KostenTextBreiten =
+            new Dictionary<(string, FontWeight), double>();
 
         private static readonly Brush SuchMarkierungBrush = CreateBrush(255, 255, 240, 90);
         private static readonly Brush SuchMarkierungFuellung = CreateBrush(60, 255, 240, 90);
@@ -100,15 +102,14 @@ namespace OOPGames
             PaintWeltField(canvas, welt);
             if (currentField is SatisfactoryFieldView mentorField)
             {
-                if (mentorField.Mentor.IsActive &&
-                    mentorField.Spielfeld.Spielphase == G5_Spielphase.Fabrik &&
-                    !mentorField.Spielfeld.StatistikGeoeffnet)
+                if (mentorField.Mentor.IsActive)
                 {
                     mentorField.Mentor.Paint(
                         mentorField.MentorOverlay,
                         canvas.ActualWidth,
                         canvas.ActualHeight,
-                        mentorField);
+                        mentorField,
+                        mentorField.Spielfeld.StatistikGeoeffnet);
                     if (!canvas.Children.Contains(mentorField.MentorOverlay))
                     {
                         canvas.Children.Add(mentorField.MentorOverlay);
@@ -1384,22 +1385,21 @@ namespace OOPGames
                         FontSize = 11,
                         FontWeight = FontWeights.Bold
                     });
-                    // Bezahlbar: Kosten in Grün. Sonst direkt anzeigen, was noch fehlt.
-                    rowContent.Children.Add(new TextBlock
-                    {
-                        Text = affordable
+                    // Bezahlbar: Kosten in Grün. Sonst direkt anzeigen, was noch fehlt (rot).
+                    Canvas kostenanzeige = ErzeugeKostenanzeige(
+                        affordable
                             ? FormatCost(cost)
                             : "Fehlt: " + string.Join(", ", G5_FabrikKosten
                                 .Fehlend(cost, fieldView.HubMenge)
                                 .Select(item => item.Value + " " + G5_FabrikBezeichnungen.Gegenstand(item.Key))),
-                        ToolTip = "Kosten: " + FormatCost(cost),
-                        Foreground = affordable
+                        affordable
                             ? new SolidColorBrush(Color.FromRgb(161, 220, 137))
                             : new SolidColorBrush(Color.FromRgb(255, 140, 120)),
-                        FontFamily = new FontFamily("Segoe UI"),
-                        FontSize = 9,
-                        TextTrimming = TextTrimming.CharacterEllipsis
-                    });
+                        FontWeights.Normal,
+                        width - 26,
+                        false);
+                    kostenanzeige.ToolTip = "Kosten: " + FormatCost(cost);
+                    rowContent.Children.Add(kostenanzeige);
                     Border row = new Border
                     {
                         Height = 33,
@@ -1580,6 +1580,8 @@ namespace OOPGames
                     FormatCost(gebaeude.UpgradeKosten);
                 double upgradeTop = height - 78;
                 Border upgrade = CreateMenuButton(upgradeLabel, HoverAccentBrush, width - 34);
+                upgrade.Child = ErzeugeKostenanzeige(
+                    upgradeLabel, Brushes.White, FontWeights.Bold, width - 46, true);
                 Canvas.SetLeft(upgrade, 0);
                 Canvas.SetTop(upgrade, upgradeTop);
                 content.Children.Add(upgrade);
@@ -1815,6 +1817,65 @@ namespace OOPGames
                 },
                 IsHitTestVisible = false
             };
+        }
+
+        private static Canvas ErzeugeKostenanzeige(
+            string text, Brush farbe, FontWeight gewicht, double breite, bool zentriert)
+        {
+            TextBlock block = new TextBlock
+            {
+                Text = text,
+                Foreground = farbe,
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 9,
+                FontWeight = gewicht,
+                TextWrapping = TextWrapping.NoWrap,
+                IsHitTestVisible = false
+            };
+            var schluessel = (text, gewicht);
+            if (!KostenTextBreiten.TryGetValue(schluessel, out double textBreite))
+            {
+                block.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                textBreite = block.DesiredSize.Width;
+                KostenTextBreiten.Add(schluessel, textBreite);
+            }
+
+            Canvas ausschnitt = new Canvas
+            {
+                Width = breite,
+                Height = 14,
+                ClipToBounds = true,
+                IsHitTestVisible = false
+            };
+            double versatz = zentriert ? Math.Max(0, (breite - textBreite) / 2) : 0;
+            if (textBreite > breite)
+            {
+                const double geschwindigkeit = 30;
+                const double pause = 1;
+                double strecke = textBreite - breite + 1;
+                double laufzeit = strecke / geschwindigkeit;
+                double phase = Environment.TickCount64 / 1000.0 % (2 * (pause + laufzeit));
+                if (phase < pause)
+                {
+                    versatz = 0;
+                }
+                else if (phase < pause + laufzeit)
+                {
+                    versatz = -(phase - pause) * geschwindigkeit;
+                }
+                else if (phase < 2 * pause + laufzeit)
+                {
+                    versatz = -strecke;
+                }
+                else
+                {
+                    versatz = -strecke + (phase - 2 * pause - laufzeit) * geschwindigkeit;
+                }
+            }
+
+            Canvas.SetLeft(block, versatz);
+            ausschnitt.Children.Add(block);
+            return ausschnitt;
         }
 
         private static string FormatCost(IReadOnlyDictionary<G5_Item, int> cost)

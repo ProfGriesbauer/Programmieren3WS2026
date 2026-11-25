@@ -498,4 +498,6 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 
 > pushe den code
 
-- **Ergebnisvermerk:** Committet wurden nur die Gruppe-5-Dateien: Rucksack-Bug, Minimap mit Rohstoffsuche, Baumeldungen, begehbare Förderbänder, Tests, Anleitung und Promptprotokoll. Danach wurde mit dem Remote-Stand abgeglichen, gebaut, getestet und auf `origin/master` gepusht. `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.
+- **Ergebnisvermerk:** Committet wurden nur die Gruppe-5-Dateien: Rucksack-Bug, Minimap mit Rohstoffsuche, Baumeldungen, begehbare Förderbänder, Tests, Anleitung und Promptprotokoll. `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.
+- **Merge:** Beim `git pull` gab es einen Konflikt im Baumenü des Painters. Das Team hatte eine neue Kostenanzeige `ErzeugeKostenanzeige` gebaut. Zusammengeführt wurde sie mit dem roten „Fehlt: …“-Text. Weil das Team die Lagerkosten gesenkt hatte, wurde der Test für fehlende Materialien auf die aktuellen Baupreise umgestellt statt fester Zahlen.
+- **Prüfung und Push:** Build 0 Warnungen, 0 Fehler; 56 von 58 Tests bestanden. Der Rotor-Test läuft nach der Team-Änderung wieder. Fehlschlagend sind `StartingCameraUsesLargerTiles` und `ScreenAndGridConversionRejectCoordinatesOutsideMap`. Das Team hat `StandardZoom` von 1,2 auf 1,5 erhöht, die Tests erwarten noch den alten Wert; sie wurden nicht verändert. Danach wurde auf `origin/master` gepusht.

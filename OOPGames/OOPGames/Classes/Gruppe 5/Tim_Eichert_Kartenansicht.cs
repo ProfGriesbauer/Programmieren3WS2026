@@ -9,7 +9,7 @@ namespace OOPGames
         private const double KachelGroesse = 32.0;
         private const double MinZoom = 0.25;
         private const double MaxZoom = 4.0;
-        internal const double StandardZoom = 1.2;
+        internal const double StandardZoom = 1.5;
 
         private double _zoom = StandardZoom;
         private double _verschiebungX;

@@ -491,7 +491,7 @@ public sealed class SatisfactoryGameplayTests
     }
 
     [Fact]
-    public void ManualRecipesAreOrderedFromRawResourcesToComponents()
+    public void CraftingAndBuildingRecipesAreAvailableFromRawResources()
     {
         IReadOnlyList<G5_Recipe> recipes = G5_StarterRecipes.CreateManualCraftingRecipes();
         G5_Item[] outputs = recipes.Select(recipe => recipe.Output).ToArray();
@@ -521,11 +521,23 @@ public sealed class SatisfactoryGameplayTests
             available.Add(recipe.Output);
         }
 
+        IEnumerable<G5_Recipe> productionRecipes =
+            G5_StarterRecipes.CreateSmeltingRecipes(1, 0)
+                .Concat(G5_StarterRecipes.CreateConstructionRecipes(1, 0))
+                .Concat(G5_StarterRecipes.CreateAssemblyRecipes(1, 0));
+        foreach (G5_Recipe recipe in productionRecipes)
+        {
+            Assert.All(recipe.Ingredients.Keys, ingredient => Assert.Contains(ingredient, available));
+            available.Add(recipe.Output);
+        }
+
         foreach (G5_Bauwerkzeug tool in Enum.GetValues(typeof(G5_Bauwerkzeug)).Cast<G5_Bauwerkzeug>())
         {
             IReadOnlyDictionary<G5_Item, int> cost = G5_FabrikKosten.Baupreis(tool);
             Assert.All(cost.Keys, ingredient => Assert.Contains(ingredient, available));
         }
+
+        Assert.Contains(G5_Item.Rotor, available);
     }
 
     [Fact]
@@ -543,6 +555,73 @@ public sealed class SatisfactoryGameplayTests
 
             mentor.ObserveHandMining(G5_Item.Eisenerz);
             Assert.Contains("8 Eisenerz", mentor.Message);
+            Assert.Contains("Eisenerz", mentor.Hint);
+            string instruction = mentor.Message;
+
+            mentor.ObserveHandMining(G5_Item.Holz);
+            Assert.Equal(instruction, mentor.Message);
+            Assert.Contains("Holz", mentor.Hint);
+        });
+    }
+
+    [Fact]
+    public void MentorKeepsGuidingThroughTheFullFactoryMilestonePath()
+    {
+        SatisfactoryGameMentor mentor = new SatisfactoryGameMentor();
+        mentor.Begin();
+        mentor.ObservePlayerMoved();
+        mentor.ObserveHandMining(G5_Item.Eisenerz);
+        mentor.ObserveBuildingPlaced(
+            G5_Bauwerkzeug.Foerderer, "Förderer", "Fördert Eisenerz.", G5_Item.Eisenerz);
+        mentor.ObserveBuildingPlaced(G5_Bauwerkzeug.Schmelze, "Schmelze", "Schmilzt Erz.");
+
+        Assert.True(mentor.IsActive);
+        Assert.Equal("SCHRITT 5/12", mentor.Progress);
+        Assert.Contains("Förderbandlinie", mentor.Message);
+
+        mentor.ObserveConveyorLinePlaced();
+        Assert.Contains("Kohlevorkommen", mentor.Message);
+        mentor.ObserveBuildingPlaced(
+            G5_Bauwerkzeug.Foerderer, "Förderer", "Fördert Kohle.", G5_Item.Kohle);
+        Assert.Contains("Kohlekraftwerk", mentor.Message);
+        mentor.ObserveBuildingPlaced(
+            G5_Bauwerkzeug.Verbrennungsgenerator, "Kohlekraftwerk", "Erzeugt Strom.");
+        Assert.Contains("Strommast", mentor.Message);
+        mentor.ObserveBuildingPlaced(G5_Bauwerkzeug.Strommast, "Strommast", "Leitet Strom.");
+        Assert.Contains("Konstruktor", mentor.Message);
+        mentor.ObserveBuildingPlaced(G5_Bauwerkzeug.Konstruktor, "Konstruktor", "Stellt Teile her.");
+        Assert.Contains("Assembler", mentor.Message);
+        mentor.ObserveBuildingPlaced(G5_Bauwerkzeug.Assembler, "Assembler", "Montiert Teile.");
+        Assert.Contains("Lager", mentor.Message);
+        mentor.ObserveBuildingPlaced(G5_Bauwerkzeug.Lager, "Lager", "Lagert Teile.");
+        Assert.Contains("Rakete", mentor.Message);
+        mentor.ObserveBuildingPlaced(G5_Bauwerkzeug.Rakete, "Rakete", "Spielziel erreicht.");
+
+        Assert.True(mentor.IsActive);
+        Assert.Equal("TUTORIAL ABGESCHLOSSEN", mentor.Progress);
+        Assert.Contains("Rakete gebaut", mentor.Hint);
+    }
+
+    [Fact]
+    public void MentorRemainsVisibleWhileStatisticsAreOpen()
+    {
+        RunOnSta(() =>
+        {
+            G5_FabrikSpielfeld field = CreateField();
+            field.ToggleStatistik();
+            SatisfactoryGameMentor mentor = new SatisfactoryGameMentor();
+            mentor.Begin();
+            SatisfactoryFieldView view = new SatisfactoryFieldView(
+                field, new SatisfactoryStartScreen(), mentor, true);
+            Canvas canvas = new Canvas { Width = 800, Height = 600 };
+            canvas.Measure(new Size(800, 600));
+            canvas.Arrange(new Rect(0, 0, 800, 600));
+
+            new G5_FabrikPainter().PaintGameField(canvas, view);
+
+            Assert.Contains(view.MentorOverlay, canvas.Children.OfType<Canvas>());
+            Assert.Contains(view.MentorOverlay.Children.OfType<TextBlock>(),
+                block => block.Text.Contains("SCHRITT 1/12"));
         });
     }
 
@@ -875,7 +954,10 @@ public sealed class SatisfactoryGameplayTests
             SatisfactoryFieldView view = (SatisfactoryFieldView)rules.CurrentField;
             G5_FabrikSpielfeld field = view.Spielfeld;
             G5_GridPosition frei = FindFreeTile(view);
-            Assert.True(field.TryAddInventar(G5_Item.Beton, 2));
+            IReadOnlyDictionary<G5_Item, int> kosten = G5_FabrikKosten.Baupreis(G5_Bauwerkzeug.Lager);
+            // Vom ersten Posten ist genau einer zu wenig da, von allen anderen nichts.
+            KeyValuePair<G5_Item, int> teilweise = kosten.First();
+            Assert.True(field.TryAddInventar(teilweise.Key, teilweise.Value - 1));
 
             view.QueuePendingBuild(G5_Bauwerkzeug.Lager, frei);
             rules.TickGameCall();
@@ -883,10 +965,13 @@ public sealed class SatisfactoryGameplayTests
             string meldung = ((IG5_FabrikSpielInfo)field).StatusMeldung;
             Assert.Empty(field.InterneGebaeude);
             Assert.Contains("Lager kann nicht gebaut werden", meldung);
-            Assert.Contains("3 Eisenplatte (hast 0/3)", meldung);
-            Assert.Contains("2 Eisenstange (hast 0/2)", meldung);
-            Assert.Contains("2 Beton (hast 2/4)", meldung);
-            Assert.Contains("6 Holz (hast 0/6)", meldung);
+            Assert.Contains("1 " + G5_FabrikBezeichnungen.Gegenstand(teilweise.Key) +
+                " (hast " + (teilweise.Value - 1) + "/" + teilweise.Value + ")", meldung);
+            foreach (KeyValuePair<G5_Item, int> posten in kosten.Skip(1))
+            {
+                Assert.Contains(posten.Value + " " + G5_FabrikBezeichnungen.Gegenstand(posten.Key) +
+                    " (hast 0/" + posten.Value + ")", meldung);
+            }
         });
     }
 

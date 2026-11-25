@@ -483,7 +483,14 @@ namespace OOPGames
             _field.ErfasseGebaeudebau();
             RefreshConveyorConnections();
             _field.SetStatusMeldung(building.Name + " gebaut. Kosten: " + FormatCost(cost) + ".");
-            _mentor.ObserveBuildingPlaced(tool, building.Name, BuildingExplanation(tool));
+            G5_Item? minedResource = building is G5_Miner builtMiner
+                ? builtMiner.Resource
+                : (G5_Item?)null;
+            _mentor.ObserveBuildingPlaced(
+                tool,
+                building.Name,
+                BuildingExplanation(tool),
+                minedResource);
         }
 
         private void PlaceConveyorLine(G5_GridPosition start, G5_GridPosition end)
@@ -558,6 +565,7 @@ namespace OOPGames
             {
                 RefreshConveyorConnections();
                 _field.SetStatusMeldung("Die Förderbandlinie besteht bereits; Verbindungen aktualisiert.");
+                _mentor.ObserveConveyorLinePlaced();
                 return;
             }
 
@@ -600,10 +608,16 @@ namespace OOPGames
                     "Förderbandkosten haben sich während des Linienbaus geändert.");
             }
 
+            foreach (G5_Conveyor _ in placedBelts)
+            {
+                _field.ErfasseGebaeudebau();
+            }
+
             RefreshConveyorConnections();
             _field.SetStatusMeldung(
                 newBeltPositions.Count + " Förderbandsegmente gebaut. Kosten: " +
                 FormatCost(cost) + ".");
+            _mentor.ObserveConveyorLinePlaced();
         }
 
         internal static IReadOnlyList<G5_GridPosition> CreateConveyorLinePath(
@@ -1469,6 +1483,8 @@ namespace OOPGames
                     return "Strommasten verbinden Kraftwerke mit Maschinen in ihrer Reichweite von acht Feldern.";
                 case G5_Bauwerkzeug.Lager:
                     return "Ein Lager vergrößert den gemeinsamen Rohstoffvorrat, aus dem Produktionsgebäude ihre Zutaten beziehen.";
+                case G5_Bauwerkzeug.Rakete:
+                    return "Die Rakete ist das Spielziel: Baue sie aus 40 Eisenplatten, 30 Beton und 20 Rotoren, tanke 50 Uran und starte sie.";
                 default:
                     return "Öffne die Gebäudedetails, um verfügbare Rezepte und Einstellungen anzusehen.";
             }
