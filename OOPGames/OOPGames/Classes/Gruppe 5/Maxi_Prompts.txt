@@ -161,3 +161,4 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-25 11:51] Pull push commit
 [2026-11-25 12:02] Bitte überarbeite die aktuellen Probleme die im Terminal stehen. Der Mentor bleibt aktuell beim erten Schritt hängen, bitte überarbeite das. Außerdem sollten die Rezepte eine logische Ordnung haben da man aktuell Rohstoffe anfangs benötigt die man noch garnicht herstellen kann
 [2026-11-25 12:13] pull push und commit
+[2026-11-25 17:01:32] Dann überarbeite das Programm so dass die 2 tests bestanden werden, bzw. der Bug nicht mehr auftritt. Danach wieder pull push und commit
