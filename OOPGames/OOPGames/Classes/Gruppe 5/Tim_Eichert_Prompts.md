@@ -341,3 +341,30 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > pushe das spiel mit den gelösten problemen
 
 - **Ergebnisvermerk:** Die drei Buildkorrekturen samt Promptprotokoll wurden auf den aktuellen Remote-Stand gepusht. Nicht zum Spiel gehörende generierte Dateien blieben außerhalb des Commits.
+
+### 2026-11-25, 09:40 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> kannst du alle bauteile und gebäude alle konsequent deutsch bennen
+
+- **Ergebnisvermerk:** Sichtbare Gebäude-, Werkzeug- und Gegenstandsnamen wurden zentral vereinheitlicht und in Baumenü, Gebäudeinformationen, Statusmeldungen, Tutorial und Anleitung übernommen. Interne Klassen- und Enum-Namen blieben aus Kompatibilitätsgründen unverändert.
+
+### 2026-11-25, 09:48 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> bitte ändere, das man zum einen, die sachen nicht automatisch ins inventar kriegt wenn man einen förderer platziert hat, sondern das man das abholen muss. Außerdem sollte es eine möglichkeit geben manuell was herzustellen. Also aus erz barren craften im inventar. Außerdem sollen die gebäude nicht nur erze kosten sondern eisenplatten stangen und beton zum beispiel.
+
+- **Ergebnisvermerk:** Fördererausgaben müssen nun manuell abgeholt werden; manuelles Herstellen von Barren, Platten, Stangen und Beton wurde ergänzt. Gebäudekosten enthalten verarbeitete Materialien. Alle 7 gezielten Gameplay-Tests bestanden.
+
+### 2026-11-25, 10:05 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> füge hinzu, dass man eingeben kann, wie viele bauteile man raus nehmen kann. Außerdem vergrößere das Inventar und dass man sachen aus dem invenar raustun kann und das ddie dann an der stelle liegen bleiben für 2 min. Außerdem braucht es ein knopf um das ganze wieder aufzunehmen. Das inventar soll 50 plätze haben
+
+- **Ergebnisvermerk:** Die Rucksackkapazität beträgt nun 50 Gegenstände. Abhol- und Ablegemengen lassen sich per Zahlentasten eingeben; abgelegte Gegenstände bleiben zwei Minuten am Spielerstandort liegen und können dort über **Aufnehmen** zurückgeholt werden.

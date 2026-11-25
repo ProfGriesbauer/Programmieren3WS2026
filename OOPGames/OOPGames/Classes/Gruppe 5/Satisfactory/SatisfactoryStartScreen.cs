@@ -193,7 +193,7 @@ namespace OOPGames
             DrawStep(canvas, left + 28, top + 350, "02", "Gebäude bauen",
                 "Wähle ein Gebäude im Baumenü. Es entsteht am gelb markierten Feld.");
             DrawStep(canvas, left + 28, top + 420, "03", "Fabrik verwalten",
-                "Klicke Gebäude für Rezepte und Upgrades. Entf verkauft mit Rückerstattung.");
+                "Klicke Gebäude für Rezepte und Verbesserungen. Entf verkauft mit Rückerstattung.");
         }
 
         private void DrawControlPanel(
@@ -288,7 +288,7 @@ namespace OOPGames
             DrawStep(canvas, left + 30, stepsTop + 70, "02", "Gebäude kaufen",
                 "Wähle ein Gebäude und ziehe es auf eine freie Kachel.");
             DrawStep(canvas, left + 30, stepsTop + 140, "03", "Produktion einstellen",
-                "Klicke ein Gebäude für Details, freigeschaltete Rezepte und Upgrades.");
+                "Klicke ein Gebäude für Details, freigeschaltete Rezepte und Verbesserungen.");
             DrawStep(canvas, left + 30, stepsTop + 210, "04", "Verkaufen und rückgängig machen",
                 "Entf verkauft für 50 % der Kosten. Strg+Z nimmt bis zu 20 Aktionen zurück.");
             AddText(canvas, "Förderbänder entstehen durch Ziehen einer Linie; E baut nur das markierte Feld ab.",
@@ -548,6 +548,8 @@ namespace OOPGames
             ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
         internal IReadOnlyDictionary<G5_Item, int> SpielerInventar =>
             ((IG5_FabrikSpielInfo)_field).SpielerInventar;
+        internal G5_Item? AusgewaehlterAbwurfGegenstand => _field.AusgewaehlterAbwurfGegenstand;
+        internal string MengeEingabe => _field.MengeEingabe;
         internal int HubMenge(G5_Item item) =>
             ((IG5_FabrikSpielInfo)_field).HubMenge(item);
 
@@ -906,6 +908,9 @@ namespace OOPGames
 
         int IG5_FabrikSpielInfo.SpielerInventarBelegt =>
             ((IG5_FabrikSpielInfo)_field).SpielerInventarBelegt;
+
+        IReadOnlyList<G5_AbgelegterGegenstandInfo> IG5_FabrikSpielInfo.AbgelegteGegenstaende =>
+            ((IG5_FabrikSpielInfo)_field).AbgelegteGegenstaende;
 
         bool IG5_FabrikSpielInfo.BaumenueGeoeffnet =>
             ((IG5_FabrikSpielInfo)_field).BaumenueGeoeffnet;

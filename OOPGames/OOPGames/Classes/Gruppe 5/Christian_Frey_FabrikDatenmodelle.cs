@@ -24,10 +24,19 @@ namespace OOPGames
         Kupferbarren,
         Eisenplatte,
         Eisenstange,
+        Beton,
         Kupferdraht,
         Schraube,
         Rotor
     }
+
+    public readonly record struct G5_AbgelegterGegenstandInfo(
+        G5_Item Gegenstand,
+        int Anzahl,
+        int X,
+        int Y,
+        DateTimeOffset Ablaufzeit);
+
     public enum G5_BuildingStatus
     {
         Idle,

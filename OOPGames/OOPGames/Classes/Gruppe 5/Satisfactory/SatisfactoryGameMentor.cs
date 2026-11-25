@@ -171,7 +171,7 @@ namespace OOPGames
             if (_step == TutorialStep.SelectAssemblerTool && tool == G5_Bauwerkzeug.Assembler)
             {
                 _step = TutorialStep.PlaceAssembler;
-                Message = "Assembler gewählt. Platziere ihn auf dem markierten Feld.";
+                Message = "Montagewerk gewählt. Platziere es auf dem markierten Feld.";
                 message = Message;
                 return true;
             }
@@ -187,7 +187,7 @@ namespace OOPGames
             if (_step == TutorialStep.SelectGeneratorTool && tool == G5_Bauwerkzeug.Verbrennungsgenerator)
             {
                 _step = TutorialStep.PlaceGenerator;
-                Message = "Generator gewählt. Platziere ihn auf dem markierten Feld.";
+                Message = "Kohlekraftwerk gewählt. Platziere es auf dem markierten Feld.";
                 message = Message;
                 return true;
             }
@@ -195,7 +195,7 @@ namespace OOPGames
             if (_step == TutorialStep.SelectPowerPoleTool && tool == G5_Bauwerkzeug.Strommast)
             {
                 _step = TutorialStep.PlacePowerPole;
-                Message = "Platziere den Strommast zwischen Generator und Maschinen.";
+                Message = "Platziere den Strommast zwischen Kohlekraftwerk und Maschinen.";
                 message = Message;
                 return true;
             }
@@ -336,13 +336,13 @@ namespace OOPGames
                 tool == G5_Bauwerkzeug.Konstruktor)
             {
                 _step = TutorialStep.SelectAssemblerTool;
-                Message = "Konstruktor fertigt Bauteile aus Barren. Jetzt lernst du den Assembler kennen.";
+                Message = "Konstruktor fertigt Bauteile aus Barren. Jetzt lernst du das Montagewerk kennen.";
             }
             else if (_step == TutorialStep.PlaceAssembler &&
                 tool == G5_Bauwerkzeug.Assembler)
             {
                 _step = TutorialStep.SelectCoalMinerTool;
-                Message = "Assembler kombiniert mehrere Bauteile. Beide Maschinen brauchen Strom; dafür bauen wir Kohle ab.";
+                Message = "Das Montagewerk kombiniert mehrere Bauteile. Beide Maschinen brauchen Strom; dafür bauen wir Kohle ab.";
             }
             else if (_step == TutorialStep.PlaceCoalMiner &&
                 tool == G5_Bauwerkzeug.Foerderer &&
@@ -355,13 +355,13 @@ namespace OOPGames
                 tool == G5_Bauwerkzeug.Verbrennungsgenerator)
             {
                 _step = TutorialStep.SelectPowerPoleTool;
-                Message = "Der Generator verbrennt Kohle aus dem Lager und erzeugt Strom. Wähle P für einen Strommast.";
+                Message = "Das Kohlekraftwerk nutzt Kohle aus dem Lager und erzeugt Strom. Wähle P für einen Strommast.";
             }
             else if (_step == TutorialStep.PlacePowerPole &&
                 tool == G5_Bauwerkzeug.Strommast)
             {
                 _step = TutorialStep.WaitForPower;
-                Message = "Der Mast verbindet Generator und Maschinen in Reichweite. Warte, bis beide versorgt sind.";
+                Message = "Der Mast verbindet Kohlekraftwerk und Maschinen in Reichweite. Warte, bis beide versorgt sind.";
             }
             else if (_step == TutorialStep.PlaceStorage &&
                 tool == G5_Bauwerkzeug.Lager)
@@ -446,7 +446,7 @@ namespace OOPGames
             }
 
             _step = TutorialStep.InspectHub;
-            Message = "Prima! Erz wird über die Förderbänder transportiert. Klicke jetzt auf das markierte Hub.";
+            Message = "Prima! Erz wird über die Förderbänder transportiert. Klicke jetzt auf das markierte Lager.";
             return true;
         }
 
@@ -458,7 +458,7 @@ namespace OOPGames
             }
 
             _step = TutorialStep.SelectGeneratorTool;
-            Message = "Kohle ist im Lager. Drücke G, um den Generator zu bauen.";
+            Message = "Kohle ist im Lager. Drücke G, um das Kohlekraftwerk zu bauen.";
             return true;
         }
 
@@ -470,7 +470,7 @@ namespace OOPGames
             }
 
             _step = TutorialStep.SelectStorageTool;
-            Message = "Strom fließt! Konstruktor und Assembler sind angebunden. Drücke L für ein Lager.";
+            Message = "Strom fließt! Konstruktor und Montagewerk sind angebunden. Drücke L für ein Lager.";
             return true;
         }
 
@@ -483,7 +483,7 @@ namespace OOPGames
             }
 
             _step = TutorialStep.SelectConstructorTool;
-            Message = "Hub geöffnet! Als Nächstes: C wählen und den Konstruktor platzieren.";
+            Message = "Lager geöffnet! Als Nächstes: C wählen und den Konstruktor platzieren.";
             return true;
         }
 
@@ -502,19 +502,19 @@ namespace OOPGames
                 case TutorialStep.SelectConveyorTool: return "Drücke B, um ein Förderband auszuwählen.";
                 case TutorialStep.PlaceConveyor: return "Setze das Förderband auf das markierte Feld.";
                 case TutorialStep.WaitForTransport: return "Beobachte den Erztransport zur Schmelze.";
-                case TutorialStep.InspectHub: return "Klicke auf das markierte Hub.";
+                case TutorialStep.InspectHub: return "Klicke auf das markierte Lager.";
                 case TutorialStep.SelectConstructorTool: return "Drücke C für den Konstruktor.";
                 case TutorialStep.PlaceConstructor: return "Platziere den Konstruktor auf dem markierten Feld.";
-                case TutorialStep.SelectAssemblerTool: return "Drücke A für den Assembler.";
-                case TutorialStep.PlaceAssembler: return "Platziere den Assembler auf dem markierten Feld.";
+                case TutorialStep.SelectAssemblerTool: return "Drücke A für das Montagewerk.";
+                case TutorialStep.PlaceAssembler: return "Platziere das Montagewerk auf dem markierten Feld.";
                 case TutorialStep.SelectCoalMinerTool: return "Drücke F für einen Förderer auf Kohle.";
                 case TutorialStep.PlaceCoalMiner: return "Platziere den Förderer auf dem markierten Kohlevorkommen.";
                 case TutorialStep.WaitForCoal: return "Warte, bis der Förderer Kohle ins Lager geliefert hat.";
-                case TutorialStep.SelectGeneratorTool: return "Drücke G für den Generator.";
-                case TutorialStep.PlaceGenerator: return "Platziere den Generator auf dem markierten Feld.";
+                case TutorialStep.SelectGeneratorTool: return "Drücke G für das Kohlekraftwerk.";
+                case TutorialStep.PlaceGenerator: return "Platziere das Kohlekraftwerk auf dem markierten Feld.";
                 case TutorialStep.SelectPowerPoleTool: return "Drücke P für den Strommast.";
                 case TutorialStep.PlacePowerPole: return "Setze den Strommast auf das markierte Feld.";
-                case TutorialStep.WaitForPower: return "Warte, bis Generator und Maschinen verbunden sind.";
+                case TutorialStep.WaitForPower: return "Warte, bis Kohlekraftwerk und Maschinen verbunden sind.";
                 case TutorialStep.SelectStorageTool: return "Drücke L für ein zusätzliches Lager.";
                 case TutorialStep.PlaceStorage: return "Platziere das Lager auf dem markierten Feld.";
                 default: return "Folge dem markierten Lernschritt oder drücke T, um das Tutorial zu überspringen.";
@@ -791,16 +791,16 @@ namespace OOPGames
                 case TutorialStep.SelectConveyorTool: return "Wähle ein Förderband";
                 case TutorialStep.PlaceConveyor: return "Förderband " + (_conveyorIndex + 1) + " von 3 platzieren";
                 case TutorialStep.WaitForTransport: return "Rohstoffe auf dem Band";
-                case TutorialStep.InspectHub: return "Sieh dir das Hub an";
+                case TutorialStep.InspectHub: return "Sieh dir das Lager an";
                 case TutorialStep.SelectConstructorTool: return "Baue einen Konstruktor";
                 case TutorialStep.PlaceConstructor: return "Konstruktor platzieren";
-                case TutorialStep.SelectAssemblerTool: return "Baue einen Assembler";
-                case TutorialStep.PlaceAssembler: return "Assembler platzieren";
-                case TutorialStep.SelectCoalMinerTool: return "Kohle für den Generator";
+                case TutorialStep.SelectAssemblerTool: return "Baue ein Montagewerk";
+                case TutorialStep.PlaceAssembler: return "Montagewerk platzieren";
+                case TutorialStep.SelectCoalMinerTool: return "Kohle für das Kohlekraftwerk";
                 case TutorialStep.PlaceCoalMiner: return "Förderer auf Kohle setzen";
                 case TutorialStep.WaitForCoal: return "Kohle wird gesammelt";
-                case TutorialStep.SelectGeneratorTool: return "Wähle den Generator";
-                case TutorialStep.PlaceGenerator: return "Generator platzieren";
+                case TutorialStep.SelectGeneratorTool: return "Wähle das Kohlekraftwerk";
+                case TutorialStep.PlaceGenerator: return "Kohlekraftwerk platzieren";
                 case TutorialStep.SelectPowerPoleTool: return "Stromnetz verbinden";
                 case TutorialStep.PlacePowerPole: return "Strommast platzieren";
                 case TutorialStep.WaitForPower: return "Stromnetz prüfen";

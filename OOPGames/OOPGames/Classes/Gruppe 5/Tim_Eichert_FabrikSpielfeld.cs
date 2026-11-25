@@ -7,19 +7,29 @@ namespace OOPGames
 {
     internal sealed class G5_FabrikSpielfeld : IG5_FabrikSpielInfo, IG5_KartenansichtSteuerung
     {
-        internal const int SpielerInventarKapazitaetMax = 30;
+        internal const int SpielerInventarKapazitaetMax = 50;
         internal const int HandabbauCooldownTicks = 50;
+        internal const int ManuellesHandwerkDauerTicks = 50;
+        internal static readonly TimeSpan AbwurfLebensdauer = TimeSpan.FromMinutes(2);
 
         private readonly G5_WeltSpielfeld _welt;
         private readonly G5_FactorySimulation _simulation;
         private readonly Dictionary<G5_Item, int> _spielerInventar = new Dictionary<G5_Item, int>();
+        private readonly List<AbgelegterGegenstand> _abgelegteGegenstaende =
+            new List<AbgelegterGegenstand>();
         private G5_Bauwerkzeug _aktuellesWerkzeug;
         private G5_GridPosition _spielerPosition;
         private G5_SpielerBlickrichtung _spielerBlickrichtung;
         private G5_GridPosition? _ausgewaehltesGebaeude;
+        private G5_Item? _ausgewaehlterAbwurfGegenstand;
+        private string _mengeEingabe = "1";
+        private bool _mengeEingabeWurdeGeaendert;
         private string _statusMeldung;
         private bool _baumenueGeoeffnet = true;
         private int _handabbauCooldownTicks;
+        private G5_Recipe _laufendesHandwerk;
+        private int _verbleibendeHandwerkTicks;
+        private int _reservierteHandwerkKapazitaet;
 
         internal G5_FabrikSpielfeld(G5_WeltSpielfeld welt, int spielerX, int spielerY)
         {
@@ -87,12 +97,33 @@ namespace OOPGames
         G5_SpielerBlickrichtung IG5_FabrikSpielInfo.SpielerBlickrichtung => _spielerBlickrichtung;
         IReadOnlyDictionary<G5_Item, int> IG5_FabrikSpielInfo.SpielerInventar =>
             new ReadOnlyDictionary<G5_Item, int>(_spielerInventar);
+        IReadOnlyList<G5_AbgelegterGegenstandInfo> IG5_FabrikSpielInfo.AbgelegteGegenstaende =>
+            AbgelegteGegenstaende;
         int IG5_FabrikSpielInfo.SpielerInventarKapazitaet => SpielerInventarKapazitaetMax;
         int IG5_FabrikSpielInfo.SpielerInventarBelegt => InventarBelegt;
         bool IG5_FabrikSpielInfo.BaumenueGeoeffnet => _baumenueGeoeffnet;
         string IG5_FabrikSpielInfo.StatusMeldung => _statusMeldung;
 
         internal G5_GridPosition SpielerPosition => _spielerPosition;
+        internal G5_Item? AusgewaehlterAbwurfGegenstand => _ausgewaehlterAbwurfGegenstand;
+        internal string MengeEingabe => _mengeEingabe;
+
+        internal IReadOnlyList<G5_AbgelegterGegenstandInfo> AbgelegteGegenstaende
+        {
+            get
+            {
+                DateTimeOffset jetzt = DateTimeOffset.UtcNow;
+                return _abgelegteGegenstaende
+                    .Where(gegenstand => gegenstand.Ablaufzeit > jetzt)
+                    .Select(gegenstand => new G5_AbgelegterGegenstandInfo(
+                        gegenstand.Gegenstand,
+                        gegenstand.Anzahl,
+                        gegenstand.Position.X,
+                        gegenstand.Position.Y,
+                        gegenstand.Ablaufzeit))
+                    .ToArray();
+            }
+        }
 
         internal G5_GridPosition ZielKachel
         {
@@ -194,6 +225,9 @@ namespace OOPGames
             _ausgewaehltesGebaeude = building == null
                 ? (G5_GridPosition?)null
                 : building.Position;
+            _ausgewaehlterAbwurfGegenstand = null;
+            _mengeEingabe = "1";
+            _mengeEingabeWurdeGeaendert = false;
             return building != null;
         }
 
@@ -224,9 +258,140 @@ namespace OOPGames
         internal int InventarBelegt => _spielerInventar.Values.Sum();
         internal int VerbleibendeHandabbauCooldownTicks => _handabbauCooldownTicks;
 
+        internal void WaehleAbwurfGegenstand(G5_Item gegenstand)
+        {
+            _ausgewaehlterAbwurfGegenstand = gegenstand;
+            _mengeEingabe = "1";
+            _mengeEingabeWurdeGeaendert = false;
+        }
+
+        internal void AendereMengeEingabe(string eingabe)
+        {
+            if (eingabe == "\b")
+            {
+                if (_mengeEingabe.Length > 0)
+                {
+                    _mengeEingabe = _mengeEingabe.Substring(
+                        0, _mengeEingabe.Length - 1);
+                }
+
+                _mengeEingabeWurdeGeaendert = true;
+                return;
+            }
+
+            if (eingabe == null || eingabe.Length != 1 || !char.IsDigit(eingabe[0]))
+            {
+                throw new ArgumentException("Die Eingabe muss eine einzelne Ziffer oder Rücktaste sein.", nameof(eingabe));
+            }
+
+            if (_mengeEingabe.Length >= 3)
+            {
+                return;
+            }
+
+            _mengeEingabe = _mengeEingabeWurdeGeaendert
+                ? _mengeEingabe + eingabe
+                : eingabe;
+            _mengeEingabeWurdeGeaendert = true;
+        }
+
+        internal void BestaetigeMengeEingabe()
+        {
+            _mengeEingabeWurdeGeaendert = false;
+        }
+
+        internal int AnzahlAbgelegterGegenstaende(G5_GridPosition position, DateTimeOffset jetzt)
+        {
+            EntferneAbgelaufeneGegenstaende(jetzt);
+            return _abgelegteGegenstaende
+                .Where(gegenstand => gegenstand.Position == position)
+                .Sum(gegenstand => gegenstand.Anzahl);
+        }
+
+        internal bool TryAblegen(G5_Item gegenstand, int anzahl, DateTimeOffset jetzt)
+        {
+            if (anzahl <= 0 || Menge(gegenstand) < anzahl)
+            {
+                return false;
+            }
+
+            int verbleibend = Menge(gegenstand) - anzahl;
+            if (verbleibend == 0)
+            {
+                _spielerInventar.Remove(gegenstand);
+            }
+            else
+            {
+                _spielerInventar[gegenstand] = verbleibend;
+            }
+
+            _abgelegteGegenstaende.Add(new AbgelegterGegenstand(
+                gegenstand,
+                anzahl,
+                _spielerPosition,
+                jetzt + AbwurfLebensdauer));
+            return true;
+        }
+
+        internal int NimmAbgelegteGegenstaendeAuf(G5_GridPosition position, DateTimeOffset jetzt)
+        {
+            EntferneAbgelaufeneGegenstaende(jetzt);
+            int freieKapazitaet = SpielerInventarKapazitaetMax -
+                InventarBelegt -
+                _reservierteHandwerkKapazitaet;
+            int aufgenommen = 0;
+
+            foreach (AbgelegterGegenstand abgelegt in _abgelegteGegenstaende
+                .Where(gegenstand => gegenstand.Position == position)
+                .ToArray())
+            {
+                if (freieKapazitaet == 0)
+                {
+                    break;
+                }
+
+                int anzahl = Math.Min(abgelegt.Anzahl, freieKapazitaet);
+                _spielerInventar[abgelegt.Gegenstand] =
+                    checked(Menge(abgelegt.Gegenstand) + anzahl);
+                abgelegt.Anzahl -= anzahl;
+                freieKapazitaet -= anzahl;
+                aufgenommen += anzahl;
+            }
+
+            _abgelegteGegenstaende.RemoveAll(gegenstand => gegenstand.Anzahl == 0);
+            return aufgenommen;
+        }
+
+        internal void EntferneAbgelaufeneGegenstaende(DateTimeOffset jetzt)
+        {
+            _abgelegteGegenstaende.RemoveAll(gegenstand => gegenstand.Ablaufzeit <= jetzt);
+        }
+
+        private sealed class AbgelegterGegenstand
+        {
+            internal AbgelegterGegenstand(
+                G5_Item gegenstand,
+                int anzahl,
+                G5_GridPosition position,
+                DateTimeOffset ablaufzeit)
+            {
+                Gegenstand = gegenstand;
+                Anzahl = anzahl;
+                Position = position;
+                Ablaufzeit = ablaufzeit;
+            }
+
+            internal G5_Item Gegenstand { get; }
+            internal int Anzahl { get; set; }
+            internal G5_GridPosition Position { get; }
+            internal DateTimeOffset Ablaufzeit { get; }
+        }
+
         internal int FreieAufnahmekapazitaet(G5_Storage ausgeschlossenesLager = null)
         {
-            int freieRucksackKapazitaet = SpielerInventarKapazitaetMax - InventarBelegt;
+            int freieRucksackKapazitaet = SpielerInventarKapazitaetMax -
+                InventarBelegt -
+                _reservierteHandwerkKapazitaet;
             int freieLagerKapazitaet = _simulation.Buildings
                 .OfType<G5_Storage>()
                 .Where(storage => !ReferenceEquals(storage, ausgeschlossenesLager))
@@ -305,6 +470,99 @@ namespace OOPGames
         {
             return kosten != null && kosten.All(kostenpunkt =>
                 kostenpunkt.Value >= 0 && Gesamtmenge(kostenpunkt.Key) >= kostenpunkt.Value);
+        }
+
+        internal bool ManuellesHandwerkLaeuft => _laufendesHandwerk != null;
+
+        internal bool TryStarteManuellesHandwerk(G5_Recipe recipe)
+        {
+            if (recipe == null)
+            {
+                throw new ArgumentNullException(nameof(recipe));
+            }
+
+            if (ManuellesHandwerkLaeuft)
+            {
+                return false;
+            }
+
+            int ingredientAmount = recipe.Ingredients.Values.Sum();
+            if (recipe.Ingredients.Any(ingredient => Menge(ingredient.Key) < ingredient.Value) ||
+                InventarBelegt - ingredientAmount + recipe.OutputAmount > SpielerInventarKapazitaetMax)
+            {
+                return false;
+            }
+
+            if (!TryVerbraucheRessourcen(recipe.Ingredients))
+            {
+                throw new InvalidOperationException("Handwerkszutaten haben sich während der Herstellung geändert.");
+            }
+
+            _laufendesHandwerk = recipe;
+            _verbleibendeHandwerkTicks = ManuellesHandwerkDauerTicks;
+            _reservierteHandwerkKapazitaet = recipe.OutputAmount;
+            return true;
+        }
+
+        internal G5_Recipe TickManuellesHandwerk()
+        {
+            if (_laufendesHandwerk == null)
+            {
+                return null;
+            }
+
+            _verbleibendeHandwerkTicks--;
+            if (_verbleibendeHandwerkTicks > 0)
+            {
+                return null;
+            }
+
+            G5_Recipe abgeschlossenesRezept = _laufendesHandwerk;
+            _reservierteHandwerkKapazitaet -= abgeschlossenesRezept.OutputAmount;
+            if (!TryAddInventar(abgeschlossenesRezept.Output, abgeschlossenesRezept.OutputAmount))
+            {
+                _reservierteHandwerkKapazitaet += abgeschlossenesRezept.OutputAmount;
+                throw new InvalidOperationException(
+                    "Das hergestellte Produkt konnte trotz reserviertem Rucksackplatz nicht abgelegt werden.");
+            }
+
+            _laufendesHandwerk = null;
+            _verbleibendeHandwerkTicks = 0;
+            return abgeschlossenesRezept;
+        }
+
+        internal bool TryCollectMinerOutput(G5_Miner miner, int requestedAmount, out int amount)
+        {
+            if (miner == null)
+            {
+                throw new ArgumentNullException(nameof(miner));
+            }
+
+            if (!_simulation.Buildings.Contains(miner))
+            {
+                throw new InvalidOperationException("Der Förderer gehört nicht zu diesem Spielfeld.");
+            }
+
+            if (requestedAmount <= 0)
+            {
+                amount = 0;
+                return false;
+            }
+
+            int available = Math.Min(miner.CountOf(miner.Resource), requestedAmount);
+            amount = Math.Min(available, FreieAufnahmekapazitaet());
+            if (amount <= 0)
+            {
+                return false;
+            }
+
+            if (!miner.TryExtract(miner.Resource, amount))
+            {
+                throw new InvalidOperationException("Die Fördererausgabe konnte nicht abgeholt werden.");
+            }
+
+            AddInventar(miner.Resource, amount);
+            return true;
         }
 
         internal bool TryVerbraucheRessourcen(IReadOnlyDictionary<G5_Item, int> kosten)
@@ -453,7 +711,8 @@ namespace OOPGames
             {
                 if (_gebaeude is G5_Miner miner)
                 {
-                    return "Fördert " + miner.Resource + " aus dem Vorkommen.";
+                    return "Fördert " + G5_FabrikBezeichnungen.Gegenstand(miner.Resource) +
+                        " aus dem Vorkommen.";
                 }
 
                 if (_gebaeude is G5_ProductionBuilding production)
@@ -507,6 +766,24 @@ namespace OOPGames
                 ? G5_FabrikKosten.UpgradePreis(_gebaeude.Level)
                 : new ReadOnlyDictionary<G5_Item, int>(new Dictionary<G5_Item, int>());
 
+        IReadOnlyDictionary<G5_Item, int> IG5_GebaeudeInfo.AusgabeInhalt
+        {
+            get
+            {
+                if (_gebaeude is G5_Miner miner)
+                {
+                    return miner.OutputContents;
+                }
+
+                if (_gebaeude is G5_ProductionBuilding production)
+                {
+                    return production.OutputContents;
+                }
+
+                return new ReadOnlyDictionary<G5_Item, int>(new Dictionary<G5_Item, int>());
+            }
+        }
+
         bool IG5_GebaeudeInfo.KannVerbessertWerden =>
             _gebaeude.Level < G5_FabrikKosten.MaxUpgradeLevel &&
             !(_gebaeude is G5_PowerPole);
@@ -519,14 +796,14 @@ namespace OOPGames
         private static readonly IReadOnlyDictionary<G5_Bauwerkzeug, IReadOnlyDictionary<G5_Item, int>> Baupreise =
             new Dictionary<G5_Bauwerkzeug, IReadOnlyDictionary<G5_Item, int>>
             {
-                [G5_Bauwerkzeug.Foerderer] = Kosten((G5_Item.Eisenerz, 8), (G5_Item.Holz, 5)),
-                [G5_Bauwerkzeug.Schmelze] = Kosten((G5_Item.Eisenerz, 10), (G5_Item.Holz, 4)),
-                [G5_Bauwerkzeug.Foerderband] = Kosten((G5_Item.Eisenerz, 2), (G5_Item.Holz, 1)),
-                [G5_Bauwerkzeug.Konstruktor] = Kosten((G5_Item.Eisenerz, 12), (G5_Item.Kupfererz, 4), (G5_Item.Holz, 6)),
-                [G5_Bauwerkzeug.Assembler] = Kosten((G5_Item.Eisenerz, 18), (G5_Item.Kupfererz, 12), (G5_Item.Holz, 8)),
-                [G5_Bauwerkzeug.Verbrennungsgenerator] = Kosten((G5_Item.Eisenerz, 12), (G5_Item.Kohle, 4), (G5_Item.Holz, 6)),
-                [G5_Bauwerkzeug.Strommast] = Kosten((G5_Item.Eisenerz, 3), (G5_Item.Holz, 2)),
-                [G5_Bauwerkzeug.Lager] = Kosten((G5_Item.Eisenerz, 8), (G5_Item.Holz, 6))
+                [G5_Bauwerkzeug.Foerderer] = Kosten((G5_Item.Eisenerz, 8), (G5_Item.Eisenplatte, 2), (G5_Item.Holz, 5)),
+                [G5_Bauwerkzeug.Schmelze] = Kosten((G5_Item.Eisenbarren, 5), (G5_Item.Eisenplatte, 3), (G5_Item.Beton, 3), (G5_Item.Holz, 4)),
+                [G5_Bauwerkzeug.Foerderband] = Kosten((G5_Item.Eisenbarren, 2), (G5_Item.Eisenplatte, 1), (G5_Item.Beton, 1)),
+                [G5_Bauwerkzeug.Konstruktor] = Kosten((G5_Item.Eisenbarren, 6), (G5_Item.Eisenplatte, 3), (G5_Item.Eisenstange, 2), (G5_Item.Beton, 3)),
+                [G5_Bauwerkzeug.Assembler] = Kosten((G5_Item.Eisenbarren, 10), (G5_Item.Eisenplatte, 6), (G5_Item.Eisenstange, 4), (G5_Item.Beton, 6)),
+                [G5_Bauwerkzeug.Verbrennungsgenerator] = Kosten((G5_Item.Eisenbarren, 6), (G5_Item.Eisenplatte, 3), (G5_Item.Beton, 2), (G5_Item.Kohle, 4), (G5_Item.Holz, 4)),
+                [G5_Bauwerkzeug.Strommast] = Kosten((G5_Item.Eisenplatte, 1), (G5_Item.Eisenstange, 1), (G5_Item.Beton, 1), (G5_Item.Holz, 2)),
+                [G5_Bauwerkzeug.Lager] = Kosten((G5_Item.Eisenplatte, 3), (G5_Item.Eisenstange, 2), (G5_Item.Beton, 4), (G5_Item.Holz, 6))
             };
 
         internal static IReadOnlyDictionary<G5_Item, int> Baupreis(G5_Bauwerkzeug werkzeug)

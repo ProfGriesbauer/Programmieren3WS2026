@@ -22,9 +22,9 @@ public sealed class SatisfactoryGameplayTests
     {
         G5_FabrikSpielfeld field = CreateField();
 
-        Assert.True(field.TryAddInventar(G5_Item.Holz, G5_FabrikSpielfeld.SpielerInventarKapazitaetMax));
+        Assert.True(field.TryAddInventar(G5_Item.Holz, 50));
         Assert.False(field.TryAddInventar(G5_Item.Eisenerz, 1));
-        Assert.Equal(G5_FabrikSpielfeld.SpielerInventarKapazitaetMax, field.InventarBelegt);
+        Assert.Equal(50, field.InventarBelegt);
 
         G5_Storage warehouse = new G5_Storage(new G5_GridPosition(1, 1), capacity: 2);
         field.AddGebaeude(warehouse);
@@ -36,6 +36,55 @@ public sealed class SatisfactoryGameplayTests
         Assert.True(field.TryAddInventar(G5_Item.Eisenerz, 2));
         Assert.Equal(2, warehouse.CountOf(G5_Item.Eisenerz));
         Assert.Equal(G5_FabrikSpielfeld.SpielerInventarKapazitaetMax, field.InventarBelegt);
+    }
+
+    [Fact]
+    public void DroppedItemsCanBePickedUpAtTheirDropLocation()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        G5_GridPosition playerPosition = field.SpielerPosition;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Assert.True(field.TryAddInventar(G5_Item.Eisenplatte, 8));
+
+        Assert.True(field.TryAblegen(G5_Item.Eisenplatte, 5, now));
+        Assert.Equal(3, field.Menge(G5_Item.Eisenplatte));
+        Assert.Equal(5, field.AnzahlAbgelegterGegenstaende(playerPosition, now));
+
+        Assert.Equal(5, field.NimmAbgelegteGegenstaendeAuf(playerPosition, now.AddSeconds(119)));
+        Assert.Equal(8, field.Menge(G5_Item.Eisenplatte));
+        Assert.Equal(0, field.AnzahlAbgelegterGegenstaende(playerPosition, now.AddSeconds(119)));
+    }
+
+    [Fact]
+    public void DroppedItemsExpireAfterTwoMinutes()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        G5_GridPosition playerPosition = field.SpielerPosition;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Assert.True(field.TryAddInventar(G5_Item.Kupferdraht, 3));
+        Assert.True(field.TryAblegen(G5_Item.Kupferdraht, 3, now));
+
+        Assert.Equal(0, field.NimmAbgelegteGegenstaendeAuf(
+            playerPosition,
+            now + G5_FabrikSpielfeld.AbwurfLebensdauer));
+        Assert.Equal(0, field.AnzahlAbgelegterGegenstaende(
+            playerPosition,
+            now + G5_FabrikSpielfeld.AbwurfLebensdauer));
+        Assert.Equal(0, field.Menge(G5_Item.Kupferdraht));
+    }
+
+    [Fact]
+    public void DropQuantityCanBeEnteredWithMultipleDigits()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        field.WaehleAbwurfGegenstand(G5_Item.Eisenerz);
+
+        field.AendereMengeEingabe("2");
+        field.AendereMengeEingabe("5");
+
+        Assert.Equal("25", field.MengeEingabe);
+        field.AendereMengeEingabe("\b");
+        Assert.Equal("2", field.MengeEingabe);
     }
 
     [Fact]
@@ -54,6 +103,107 @@ public sealed class SatisfactoryGameplayTests
         Assert.False(field.TryStartHandabbau());
         field.TickHandabbauCooldown();
         Assert.True(field.TryStartHandabbau());
+    }
+
+    [Fact]
+    public void ManualCraftingProducesOnlyOneItemAfterTwoSecondsAndDoesNotRepeat()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        G5_Recipe recipe = G5_StarterRecipes.CreateManualCraftingRecipes()
+            .Single(candidate => candidate.Output == G5_Item.Eisenbarren);
+        Assert.True(field.TryAddInventar(G5_Item.Holz, 48));
+        Assert.True(field.TryAddInventar(G5_Item.Eisenerz, 2));
+
+        Assert.True(field.TryStarteManuellesHandwerk(recipe));
+        Assert.False(field.TryStarteManuellesHandwerk(recipe));
+        Assert.False(field.TryAddInventar(G5_Item.Kupfererz, 1));
+        Assert.Equal(1, field.Menge(G5_Item.Eisenerz));
+        Assert.Equal(0, field.Menge(G5_Item.Eisenbarren));
+
+        for (int tick = 0; tick < G5_FabrikSpielfeld.ManuellesHandwerkDauerTicks - 1; tick++)
+        {
+            Assert.Null(field.TickManuellesHandwerk());
+        }
+
+        Assert.Equal(0, field.Menge(G5_Item.Eisenbarren));
+        Assert.Same(recipe, field.TickManuellesHandwerk());
+        Assert.Equal(1, field.Menge(G5_Item.Eisenbarren));
+        Assert.Equal(50, field.InventarBelegt);
+        Assert.Null(field.TickManuellesHandwerk());
+        Assert.Equal(1, field.Menge(G5_Item.Eisenbarren));
+    }
+
+    [Fact]
+    public void ManualCraftingRequiresIngredientsInBackpack()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        G5_Recipe recipe = G5_StarterRecipes.CreateManualCraftingRecipes()
+            .Single(candidate => candidate.Output == G5_Item.Beton);
+        Assert.True(field.TryAddInventar(G5_Item.Kalkstein, 1));
+
+        Assert.False(field.TryStarteManuellesHandwerk(recipe));
+
+        Assert.Equal(1, field.Menge(G5_Item.Kalkstein));
+        Assert.Equal(0, field.Menge(G5_Item.Beton));
+    }
+
+    [Fact]
+    public void MinerOutputMustBeCollectedIntoTheInventory()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        G5_Miner miner = new G5_Miner(
+            new G5_GridPosition(1, 1),
+            new G5_ResourceDeposit(G5_Item.Eisenerz, 5),
+            outputCapacity: 5,
+            cycleTicks: 1,
+            amountPerCycle: 1,
+            powerDemandPerTick: 0);
+        field.AddGebaeude(miner);
+        miner.Tick();
+
+        Assert.Equal(0, field.Menge(G5_Item.Eisenerz));
+        Assert.Equal(1, miner.CountOf(G5_Item.Eisenerz));
+        Assert.True(field.TryCollectMinerOutput(miner, 1, out int collected));
+
+        Assert.Equal(1, collected);
+        Assert.Equal(1, field.Menge(G5_Item.Eisenerz));
+        Assert.Equal(0, miner.CountOf(G5_Item.Eisenerz));
+    }
+
+    [Fact]
+    public void MinerOutputPickupUsesTheRequestedQuantity()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        G5_Miner miner = new G5_Miner(
+            new G5_GridPosition(1, 1),
+            new G5_ResourceDeposit(G5_Item.Eisenerz, 5),
+            outputCapacity: 5,
+            cycleTicks: 1,
+            amountPerCycle: 1,
+            powerDemandPerTick: 0);
+        field.AddGebaeude(miner);
+        miner.Tick();
+        miner.Tick();
+        miner.Tick();
+
+        Assert.True(field.TryCollectMinerOutput(miner, 2, out int collected));
+
+        Assert.Equal(2, collected);
+        Assert.Equal(2, field.Menge(G5_Item.Eisenerz));
+        Assert.Equal(1, miner.CountOf(G5_Item.Eisenerz));
+    }
+
+    [Fact]
+    public void BuildingCostsIncludeProcessedMaterialsAndConcrete()
+    {
+        IReadOnlyDictionary<G5_Item, int> minerCost =
+            G5_FabrikKosten.Baupreis(G5_Bauwerkzeug.Foerderer);
+        IReadOnlyDictionary<G5_Item, int> smelterCost =
+            G5_FabrikKosten.Baupreis(G5_Bauwerkzeug.Schmelze);
+
+        Assert.True(minerCost.ContainsKey(G5_Item.Eisenplatte));
+        Assert.True(smelterCost.ContainsKey(G5_Item.Eisenbarren));
+        Assert.True(smelterCost.ContainsKey(G5_Item.Beton));
     }
 
     private static G5_FabrikSpielfeld CreateField()

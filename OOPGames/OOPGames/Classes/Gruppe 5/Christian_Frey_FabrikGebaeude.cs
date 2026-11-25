@@ -295,7 +295,7 @@ namespace OOPGames
             }
         }
 
-        public override string Name => "Miner";
+        public override string Name => "Förderer";
         public G5_Item Resource => _deposit.Item;
         public long? RemainingDeposit => _deposit.RemainingAmount;
         public IReadOnlyDictionary<G5_Item, int> OutputContents => _output.Contents;
@@ -575,7 +575,7 @@ namespace OOPGames
             int inputCapacity,
             int outputCapacity,
             int powerPriority = 0)
-            : base(position, "Assembler", G5_RecipeType.Assembly, recipes, inputCapacity, outputCapacity, powerPriority)
+            : base(position, "Montagewerk", G5_RecipeType.Assembly, recipes, inputCapacity, outputCapacity, powerPriority)
         {
         }
     }

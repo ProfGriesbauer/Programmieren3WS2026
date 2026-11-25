@@ -35,8 +35,8 @@ namespace OOPGames
             new GebaeuderegisterEintrag("Schmelze", G5_Bauwerkzeug.Schmelze),
             new GebaeuderegisterEintrag("Förderband", G5_Bauwerkzeug.Foerderband),
             new GebaeuderegisterEintrag("Konstruktor", G5_Bauwerkzeug.Konstruktor),
-            new GebaeuderegisterEintrag("Assembler", G5_Bauwerkzeug.Assembler),
-            new GebaeuderegisterEintrag("Generator", G5_Bauwerkzeug.Verbrennungsgenerator),
+            new GebaeuderegisterEintrag("Montagewerk", G5_Bauwerkzeug.Assembler),
+            new GebaeuderegisterEintrag("Kohlekraftwerk", G5_Bauwerkzeug.Verbrennungsgenerator),
             new GebaeuderegisterEintrag("Strommast", G5_Bauwerkzeug.Strommast),
             new GebaeuderegisterEintrag("Lager", G5_Bauwerkzeug.Lager)
         };
@@ -51,6 +51,8 @@ namespace OOPGames
         private static readonly Brush SpielerKleidungBrush = CreateBrush(255, 231, 110, 40);
         private static readonly Brush SpielerHelmBrush = CreateBrush(255, 255, 207, 63);
         private static readonly Brush SpielerKonturBrush = CreateBrush(255, 35, 38, 34);
+        private static readonly IReadOnlyList<G5_Recipe> Handwerksrezepte =
+            G5_StarterRecipes.CreateManualCraftingRecipes();
 
         private readonly G5_WieseHintergrund _wieseHintergrund = new G5_WieseHintergrund();
         private IG5_WeltSpielfeld _hintergrundWelt;
@@ -152,6 +154,7 @@ namespace OOPGames
             _hoverWelt = currentField;
             _hoverGebaeude = fabrikInfo.Gebaeude;
             ZeichneVorkommen(_dynamischeEbene, currentField);
+            ZeichneAbgelegteGegenstaende(_dynamischeEbene, currentField, fabrikInfo);
 
             for (int index = 0; index < _hoverGebaeude.Count; index++)
             {
@@ -464,8 +467,8 @@ namespace OOPGames
             if (_hoverWelt is SatisfactoryFieldView inventoryField &&
                 inventoryField.AusgewaehltesGebaeude == null)
             {
-                double panelWidth = inventoryField.InventarGeoeffnet ? 190 : 34;
-                double panelHeight = inventoryField.InventarGeoeffnet ? 270 : 34;
+                double panelWidth = inventoryField.InventarGeoeffnet ? 268 : 34;
+                double panelHeight = inventoryField.InventarGeoeffnet ? 525 : 34;
                 double left = _zielCanvas.ActualWidth - panelWidth - 10;
                 double top = HudHoehe + 10;
                 if (position.X >= left && position.X <= left + panelWidth &&
@@ -474,6 +477,15 @@ namespace OOPGames
                     if (position.Y <= top + 34)
                     {
                         inventoryField.ToggleInventar();
+                    }
+                    else if (inventoryField.TryGetMenuAktion(
+                        (int)position.X,
+                        (int)position.Y,
+                        out _,
+                        out _,
+                        out _))
+                    {
+                        return;
                     }
 
                     e.Handled = true;
@@ -559,7 +571,7 @@ namespace OOPGames
             if (gebaeude != null && !string.IsNullOrWhiteSpace(gebaeude.Name))
             {
                 string name = GebaeudeName(gebaeude.Typ);
-                string detail = StatusText(gebaeude.Status) + " · MK " + Math.Max(1, gebaeude.Level);
+                string detail = StatusText(gebaeude.Status) + " · Stufe " + Math.Max(1, gebaeude.Level);
                 string key = "Gebaeude|" + name + "|" + detail;
                 if (_hoverKarte == null || !string.Equals(_hoverName, key, StringComparison.Ordinal))
                 {
@@ -883,7 +895,7 @@ namespace OOPGames
 
                 TextBlock levelText = new TextBlock
                 {
-                    Text = "MK" + Math.Max(1, gebaeude.Level),
+                    Text = "St. " + Math.Max(1, gebaeude.Level),
                     Foreground = Brushes.White,
                     FontWeight = FontWeights.Bold,
                     FontSize = 6,
@@ -946,36 +958,8 @@ namespace OOPGames
             canvas.Children.Add(box);
         }
 
-        private static string GebaeudeName(G5_FabrikGebaeudeTyp typ)
-        {
-            switch (typ)
-            {
-                case G5_FabrikGebaeudeTyp.Hub:
-                    return "Hub";
-                case G5_FabrikGebaeudeTyp.Foerderer:
-                    return "Förderer";
-                case G5_FabrikGebaeudeTyp.Schmelze:
-                    return "Schmelze";
-                case G5_FabrikGebaeudeTyp.Konstruktor:
-                    return "Konstruktor";
-                case G5_FabrikGebaeudeTyp.Assembler:
-                    return "Assembler";
-                case G5_FabrikGebaeudeTyp.Verbrennungsgenerator:
-                    return "Verbrennungsgenerator";
-                case G5_FabrikGebaeudeTyp.Strommast:
-                    return "Strommast";
-                case G5_FabrikGebaeudeTyp.Lager:
-                    return "Lager";
-                case G5_FabrikGebaeudeTyp.Laufband:
-                    return "Förderband";
-                case G5_FabrikGebaeudeTyp.Splitter:
-                    return "Splitter";
-                case G5_FabrikGebaeudeTyp.Merger:
-                    return "Merger";
-                default:
-                    throw new InvalidOperationException("Unbekannter Gebäudetyp in der Bezeichnung.");
-            }
-        }
+        private static string GebaeudeName(G5_FabrikGebaeudeTyp typ) =>
+            G5_FabrikBezeichnungen.Gebaeude(typ);
 
         private static string StatusText(G5_BuildingStatus status)
         {
@@ -1083,6 +1067,58 @@ namespace OOPGames
                 IsHitTestVisible = false
             };
             canvas.Children.Add(blick);
+        }
+
+        private static void ZeichneAbgelegteGegenstaende(
+            Canvas canvas,
+            IG5_WeltSpielfeld welt,
+            IG5_FabrikSpielInfo info)
+        {
+            DateTimeOffset jetzt = DateTimeOffset.UtcNow;
+            foreach (G5_AbgelegterGegenstandInfo abgelegt in info.AbgelegteGegenstaende)
+            {
+                if (abgelegt.Ablaufzeit <= jetzt ||
+                    !welt.TryRasterZuBildschirm(abgelegt.X, abgelegt.Y, out Point position) ||
+                    !TryGetKachelGroesse(welt, abgelegt.X, abgelegt.Y, out double breite, out double hoehe))
+                {
+                    continue;
+                }
+
+                double taschenBreite = Math.Max(12, breite * 0.42);
+                double taschenHoehe = Math.Max(9, hoehe * 0.3);
+                Rectangle tasche = new Rectangle
+                {
+                    Width = taschenBreite,
+                    Height = taschenHoehe,
+                    Fill = new SolidColorBrush(Color.FromRgb(184, 132, 57)),
+                    Stroke = Brushes.White,
+                    StrokeThickness = 1,
+                    RadiusX = 2,
+                    RadiusY = 2,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(tasche, position.X + (breite - taschenBreite) / 2);
+                Canvas.SetTop(tasche, position.Y + hoehe * 0.22);
+                canvas.Children.Add(tasche);
+
+                TextBlock beschriftung = new TextBlock
+                {
+                    Text = abgelegt.Anzahl + " " +
+                        G5_FabrikBezeichnungen.Gegenstand(abgelegt.Gegenstand) +
+                        " · " + Math.Ceiling((abgelegt.Ablaufzeit - jetzt).TotalSeconds) + " s",
+                    Width = Math.Max(60, breite * 2),
+                    FontSize = 8,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.White,
+                    Background = new SolidColorBrush(Color.FromArgb(220, 34, 39, 31)),
+                    Padding = new Thickness(3, 1, 3, 1),
+                    TextAlignment = TextAlignment.Center,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(beschriftung, position.X + breite / 2 - beschriftung.Width / 2);
+                Canvas.SetTop(beschriftung, position.Y + hoehe * 0.55);
+                canvas.Children.Add(beschriftung);
+            }
         }
 
         private void ZeichneHud(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)
@@ -1280,7 +1316,7 @@ namespace OOPGames
                 Height = height - 16,
                 IsHitTestVisible = false
             };
-            AddMenuText(content, gebaeude.Name + "  ·  MK " + gebaeude.Level, 0, 0, width - 46, 22,
+            AddMenuText(content, gebaeude.Name + "  ·  Stufe " + gebaeude.Level, 0, 0, width - 46, 22,
                 HoverAccentBrush, 13, FontWeights.Bold);
             AddMenuText(content, "×", 232, 0, 20, 20, Brushes.White, 16, FontWeights.Bold, TextAlignment.Center);
             fieldView.RegisterMenuAktion(
@@ -1297,11 +1333,42 @@ namespace OOPGames
                 new SolidColorBrush(Color.FromRgb(205, 215, 211)),
                 9);
 
+            if (gebaeude.Typ == G5_FabrikGebaeudeTyp.Foerderer)
+            {
+                KeyValuePair<G5_Item, int> output = gebaeude.AusgabeInhalt
+                    .FirstOrDefault(item => item.Value > 0);
+                string outputText = output.Value > 0
+                    ? "ABHOLEN · " + fieldView.MengeEingabe + " / " + output.Value + " " +
+                        G5_FabrikBezeichnungen.Gegenstand(output.Key)
+                    : "NOCH NICHTS ZUM ABHOLEN";
+                Border collectButton = CreateMenuButton(outputText, HoverAccentBrush, width - 34);
+                Canvas.SetLeft(collectButton, 0);
+                Canvas.SetTop(collectButton, 101);
+                content.Children.Add(collectButton);
+                AddMenuText(
+                    content,
+                    "Abholmenge: " + fieldView.MengeEingabe +
+                        " · Zahlentasten, Rücktaste löscht",
+                    0,
+                    134,
+                    width - 34,
+                    16,
+                    new SolidColorBrush(Color.FromRgb(190, 205, 198)),
+                    8);
+                if (output.Value > 0)
+                {
+                    fieldView.RegisterMenuAktion(
+                        new Rect(left + 8, top + 8 + 101, width - 34, 30),
+                        G5_FabrikAktionstyp.GegenstandAbholen,
+                        wert: fieldView.MengeEingabe);
+                }
+            }
+
             if (gebaeude.VerfuegbareRezepte.Count > 0)
             {
                 AddMenuText(
                     content,
-                    gebaeude.Level >= 2 ? "REZEPTE" : "REZEPT (UPGRADE SCHALTET MEHR FREI)",
+                    gebaeude.Level >= 2 ? "REZEPTE" : "REZEPTE AB STUFE 2",
                     0,
                     101,
                     width - 34,
@@ -1342,7 +1409,7 @@ namespace OOPGames
 
             if (gebaeude.KannVerbessertWerden)
             {
-                string upgradeLabel = "UPGRADE (MK " + (gebaeude.Level + 1) + ")  ·  " +
+                string upgradeLabel = "VERBESSERN (Stufe " + (gebaeude.Level + 1) + ")  ·  " +
                     FormatCost(gebaeude.UpgradeKosten);
                 double upgradeTop = height - 78;
                 Border upgrade = CreateMenuButton(upgradeLabel, HoverAccentBrush, width - 34);
@@ -1428,10 +1495,7 @@ namespace OOPGames
         private static string FormatCost(IReadOnlyDictionary<G5_Item, int> cost)
         {
             return string.Join(" · ", cost.Select(item =>
-                item.Value + " " + (item.Key == G5_Item.Eisenerz ? "Eisenerz" :
-                    item.Key == G5_Item.Kupfererz ? "Kupfererz" :
-                    item.Key == G5_Item.Holz ? "Holz" :
-                    item.Key == G5_Item.Kohle ? "Kohle" : item.Key.ToString())));
+                item.Value + " " + G5_FabrikBezeichnungen.Gegenstand(item.Key)));
         }
 
         private void ZeichneInventar(Canvas canvas, double viewportBreite, IG5_FabrikSpielInfo info)
@@ -1441,7 +1505,7 @@ namespace OOPGames
             double width = isOpen ? 268 : 34;
             double left = viewportBreite - width - 10;
             double top = HudHoehe + 10;
-            double height = isOpen ? 480 : 34;
+            double height = isOpen ? 525 : 34;
             if (fieldView != null)
             {
                 fieldView.SetInventarBereich(new Rect(left, top, width, height));
@@ -1466,11 +1530,17 @@ namespace OOPGames
                 IsHitTestVisible = false
             };
 
-            StackPanel content = new StackPanel();
+            Canvas content = new Canvas
+            {
+                Width = width - 16,
+                Height = height - 16,
+                IsHitTestVisible = false
+            };
             Border toggle = new Border
             {
                 Padding = new Thickness(0),
-                Margin = new Thickness(0, 0, 0, isOpen ? 5 : 0),
+                Width = width - 24,
+                Height = 18,
                 Child = new TextBlock
                 {
                     Text = isOpen ? "‹ INVENTAR" : "›",
@@ -1481,6 +1551,8 @@ namespace OOPGames
                 }
             };
             content.Children.Add(toggle);
+            Canvas.SetLeft(toggle, 0);
+            Canvas.SetTop(toggle, 0);
 
             if (isOpen)
             {
@@ -1501,52 +1573,170 @@ namespace OOPGames
                     G5_Item.Kupferbarren,
                     G5_Item.Eisenplatte,
                     G5_Item.Eisenstange,
+                    G5_Item.Beton,
                     G5_Item.Kupferdraht,
                     G5_Item.Schraube,
                     G5_Item.Rotor
                 };
 
-                content.Children.Add(new TextBlock
-                {
-                    Text = "Rucksack: " + info.SpielerInventarBelegt + "/" +
-                        info.SpielerInventarKapazitaet,
-                    Foreground = Brushes.White,
-                    FontSize = 11,
-                    FontWeight = FontWeights.SemiBold,
-                    Margin = new Thickness(0, 0, 0, 4)
-                });
+                AddMenuText(content,
+                    "Rucksack: " + info.SpielerInventarBelegt + "/" + info.SpielerInventarKapazitaet,
+                    0, 20, width - 24, 16, Brushes.White, 11, FontWeights.SemiBold);
 
-                Grid headings = new Grid { Margin = new Thickness(4, 0, 4, 2) };
+                Grid headings = new Grid { Width = width - 32, Height = 16 };
                 headings.ColumnDefinitions.Add(new ColumnDefinition());
                 headings.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62) });
                 headings.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44) });
+                headings.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(46) });
                 AddInventoryCell(headings, "Gegenstand", 0, true);
                 AddInventoryCell(headings, "Rucksack", 1, true);
                 AddInventoryCell(headings, "Lager", 2, true);
+                AddInventoryCell(headings, "Handwerk", 3, true);
+                Canvas.SetLeft(headings, 4);
+                Canvas.SetTop(headings, 40);
                 content.Children.Add(headings);
 
-                foreach (G5_Item item in items)
+                for (int itemIndex = 0; itemIndex < items.Length; itemIndex++)
                 {
+                    G5_Item item = items[itemIndex];
                     int backpackAmount = info.SpielerInventar.TryGetValue(item, out int heldAmount)
                         ? heldAmount
                         : 0;
                     int storageAmount = info.HubMenge(item) - backpackAmount;
-                    Grid rowContent = new Grid();
+                    double rowWidth = width - 22;
+                    Grid rowContent = new Grid { Width = rowWidth, Height = 17 };
                     rowContent.ColumnDefinitions.Add(new ColumnDefinition());
                     rowContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62) });
                     rowContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44) });
+                    rowContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(46) });
                     AddInventoryCell(rowContent, ItemAnzeigename(item), 0);
                     AddInventoryCell(rowContent, backpackAmount.ToString(), 1);
                     AddInventoryCell(rowContent, storageAmount.ToString(), 2);
+                    G5_Recipe recipe = Handwerksrezepte.FirstOrDefault(candidate => candidate.Output == item);
+                    if (recipe != null)
+                    {
+                        Border craftButton = new Border
+                        {
+                            Width = 42,
+                            Height = 15,
+                            Margin = new Thickness(2, 1, 2, 1),
+                            Background = new SolidColorBrush(Color.FromArgb(190, 72, 106, 64)),
+                            CornerRadius = new CornerRadius(3),
+                            ToolTip = recipe.Name + " · " + FormatCost(recipe.Ingredients) +
+                                " · Dauer: 2 Sekunden",
+                            Child = new TextBlock
+                            {
+                                Text = "Herstellen",
+                                Foreground = Brushes.White,
+                                FontSize = 9,
+                                FontWeight = FontWeights.Bold,
+                                TextAlignment = TextAlignment.Center,
+                                VerticalAlignment = VerticalAlignment.Center
+                            }
+                        };
+                        Grid.SetColumn(craftButton, 3);
+                        rowContent.Children.Add(craftButton);
+                    }
+
+                    bool itemSelected = fieldView != null &&
+                        fieldView.AusgewaehlterAbwurfGegenstand == item;
                     Border row = new Border
                     {
-                        Margin = new Thickness(0, 1, 0, 1),
-                        Padding = new Thickness(4, 2, 4, 2),
-                        Background = new SolidColorBrush(Color.FromArgb(125, 42, 58, 52)),
+                        Width = width - 16,
+                        Height = 19,
+                        Padding = new Thickness(3, 1, 3, 1),
+                        Background = itemSelected
+                            ? new SolidColorBrush(Color.FromArgb(220, 77, 112, 72))
+                            : new SolidColorBrush(Color.FromArgb(125, 42, 58, 52)),
                         CornerRadius = new CornerRadius(5),
                         Child = rowContent
                     };
+                    double rowTop = 60 + itemIndex * 20;
+                    Canvas.SetTop(row, rowTop);
                     content.Children.Add(row);
+                    if (fieldView != null)
+                    {
+                        fieldView.RegisterMenuAktion(
+                            new Rect(
+                                left + 8 + 3,
+                                top + 8 + rowTop + 1,
+                                rowWidth - 52,
+                                17),
+                            G5_FabrikAktionstyp.InventarGegenstandWaehlen,
+                            wert: item.ToString());
+                    }
+
+                    if (recipe != null && fieldView != null)
+                    {
+                        fieldView.RegisterMenuAktion(
+                            new Rect(
+                                left + 8 + 3 + rowWidth - 46,
+                                top + 8 + rowTop + 1,
+                                46,
+                                17),
+                            G5_FabrikAktionstyp.ManuellHerstellen,
+                            wert: item.ToString());
+                    }
+                }
+
+                G5_Item? selectedItem = fieldView?.AusgewaehlterAbwurfGegenstand;
+                AddMenuText(
+                    content,
+                    selectedItem.HasValue
+                        ? "Ablegen: " + ItemAnzeigename(selectedItem.Value) +
+                            " · Menge " + fieldView.MengeEingabe
+                        : "Gegenstand zum Ablegen auswählen",
+                    0,
+                    444,
+                    width - 24,
+                    16,
+                    Brushes.White,
+                    10,
+                    FontWeights.SemiBold);
+
+                Border dropButton = CreateMenuButton(
+                    "ABLEGEN",
+                    HoverAccentBrush,
+                    96);
+                Canvas.SetLeft(dropButton, 0);
+                Canvas.SetTop(dropButton, 462);
+                content.Children.Add(dropButton);
+
+                G5_GridPosition playerPosition = info.SpielerPosition;
+                int aufnehmbareMenge = info.AbgelegteGegenstaende
+                    .Where(gegenstand =>
+                        gegenstand.X == playerPosition.X &&
+                        gegenstand.Y == playerPosition.Y &&
+                        gegenstand.Ablaufzeit > DateTimeOffset.UtcNow)
+                    .Sum(gegenstand => gegenstand.Anzahl);
+                Border pickupButton = CreateMenuButton(
+                    aufnehmbareMenge > 0
+                        ? "AUFNEHMEN (" + aufnehmbareMenge + ")"
+                        : "AUFNEHMEN",
+                    new SolidColorBrush(Color.FromRgb(111, 190, 226)),
+                    136);
+                Canvas.SetLeft(pickupButton, 102);
+                Canvas.SetTop(pickupButton, 462);
+                content.Children.Add(pickupButton);
+
+                AddMenuText(
+                    content,
+                    "Zahlentasten: Anzahl · Rücktaste: löschen · Enter: ablegen",
+                    0,
+                    493,
+                    width - 24,
+                    14,
+                    new SolidColorBrush(Color.FromRgb(190, 205, 198)),
+                    8);
+
+                if (fieldView != null)
+                {
+                    fieldView.RegisterMenuAktion(
+                        new Rect(left + 8, top + 8 + 462, 96, 30),
+                        G5_FabrikAktionstyp.InventarGegenstandAblegen);
+                    fieldView.RegisterMenuAktion(
+                        new Rect(left + 8 + 102, top + 8 + 462, 136, 30),
+                        G5_FabrikAktionstyp.BodenGegenstaendeAufnehmen);
                 }
             }
 
@@ -1572,31 +1762,8 @@ namespace OOPGames
             row.Children.Add(cell);
         }
 
-        private static string ItemAnzeigename(G5_Item item)
-        {
-            switch (item)
-            {
-                case G5_Item.Eisenerz: return "Eisenerz";
-                case G5_Item.Kupfererz: return "Kupfererz";
-                case G5_Item.Holz: return "Holz";
-                case G5_Item.Kohle: return "Kohle";
-                case G5_Item.Kalkstein: return "Kalkstein";
-                case G5_Item.Quarz: return "Quarz";
-                case G5_Item.Schwefel: return "Schwefel";
-                case G5_Item.Uran: return "Uran";
-                case G5_Item.Wasser: return "Wasser";
-                case G5_Item.Gas: return "Gas";
-                case G5_Item.Oel: return "Öl";
-                case G5_Item.Eisenbarren: return "Eisenbarren";
-                case G5_Item.Kupferbarren: return "Kupferbarren";
-                case G5_Item.Eisenplatte: return "Eisenplatte";
-                case G5_Item.Eisenstange: return "Eisenstange";
-                case G5_Item.Kupferdraht: return "Kupferdraht";
-                case G5_Item.Schraube: return "Schraube";
-                case G5_Item.Rotor: return "Rotor";
-                default: return item.ToString();
-            }
-        }
+        private static string ItemAnzeigename(G5_Item item) =>
+            G5_FabrikBezeichnungen.Gegenstand(item);
 
         private static void ZeichneHudZeile(Canvas canvas, double viewportBreite, string text, double y)
         {

@@ -34,6 +34,36 @@ namespace OOPGames
 
             if (selection is IKeySelection keySelection)
             {
+                if (field is SatisfactoryFieldView inventarAnsicht)
+                {
+                    bool inventarGegenstandAusgewaehlt =
+                        inventarAnsicht.InventarGeoeffnet &&
+                        inventarAnsicht.AusgewaehlterAbwurfGegenstand.HasValue;
+                    bool foerdererAusgewaehlt =
+                        inventarAnsicht.AusgewaehltesGebaeude?.Typ == G5_FabrikGebaeudeTyp.Foerderer;
+                    if (inventarGegenstandAusgewaehlt || foerdererAusgewaehlt)
+                    {
+                        if (TryGetDigit(keySelection.Key, out char digit))
+                        {
+                            return G5_FabrikAktion.AbwurfMengeEingeben(_playerNumber, digit.ToString());
+                        }
+
+                        if (keySelection.Key == Key.Back)
+                        {
+                            return G5_FabrikAktion.AbwurfMengeEingeben(_playerNumber, "\b");
+                        }
+
+                        if (keySelection.Key == Key.Enter)
+                        {
+                            return inventarGegenstandAusgewaehlt
+                                ? G5_FabrikAktion.InventarGegenstandAblegen(_playerNumber)
+                                : G5_FabrikAktion.GegenstandAbholen(
+                                    _playerNumber,
+                                    inventarAnsicht.MengeEingabe);
+                        }
+                    }
+                }
+
                 switch (keySelection.Key)
                 {
                     case Key.W:
@@ -92,6 +122,16 @@ namespace OOPGames
                         return G5_FabrikAktion.GebaeudeUpgraden(_playerNumber);
                     case G5_FabrikAktionstyp.GebaeudeVerkaufen:
                         return G5_FabrikAktion.GebaeudeVerkaufen(_playerNumber);
+                    case G5_FabrikAktionstyp.GegenstandAbholen:
+                        return G5_FabrikAktion.GegenstandAbholen(_playerNumber, wert);
+                    case G5_FabrikAktionstyp.ManuellHerstellen:
+                        return G5_FabrikAktion.ManuellHerstellen(_playerNumber, wert);
+                    case G5_FabrikAktionstyp.InventarGegenstandWaehlen:
+                        return G5_FabrikAktion.InventarGegenstandWaehlen(_playerNumber, wert);
+                    case G5_FabrikAktionstyp.InventarGegenstandAblegen:
+                        return G5_FabrikAktion.InventarGegenstandAblegen(_playerNumber);
+                    case G5_FabrikAktionstyp.BodenGegenstaendeAufnehmen:
+                        return G5_FabrikAktion.BodenGegenstaendeAufnehmen(_playerNumber);
                     case G5_FabrikAktionstyp.GebaeudeAnsehen:
                         return G5_FabrikAktion.GebaeudeAnsehen(_playerNumber, -1, -1);
                 }
@@ -108,6 +148,36 @@ namespace OOPGames
             }
 
             return null;
+        }
+
+        private static bool TryGetDigit(Key key, out char digit)
+        {
+            switch (key)
+            {
+                case Key.D0:
+                case Key.NumPad0: digit = '0'; return true;
+                case Key.D1:
+                case Key.NumPad1: digit = '1'; return true;
+                case Key.D2:
+                case Key.NumPad2: digit = '2'; return true;
+                case Key.D3:
+                case Key.NumPad3: digit = '3'; return true;
+                case Key.D4:
+                case Key.NumPad4: digit = '4'; return true;
+                case Key.D5:
+                case Key.NumPad5: digit = '5'; return true;
+                case Key.D6:
+                case Key.NumPad6: digit = '6'; return true;
+                case Key.D7:
+                case Key.NumPad7: digit = '7'; return true;
+                case Key.D8:
+                case Key.NumPad8: digit = '8'; return true;
+                case Key.D9:
+                case Key.NumPad9: digit = '9'; return true;
+                default:
+                    digit = default;
+                    return false;
+            }
         }
     }
 
@@ -169,6 +239,64 @@ namespace OOPGames
         internal static G5_FabrikAktion GebaeudeVerkaufen(int playerNumber)
         {
             return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.GebaeudeVerkaufen, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion GegenstandAbholen(int playerNumber, string anzahl)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.GegenstandAbholen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1,
+                anzahl);
+        }
+
+        internal static G5_FabrikAktion ManuellHerstellen(int playerNumber, string itemName)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.ManuellHerstellen, G5_Bauwerkzeug.Keines, -1, -1, itemName);
+        }
+
+        internal static G5_FabrikAktion InventarGegenstandWaehlen(int playerNumber, string itemName)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.InventarGegenstandWaehlen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1,
+                itemName);
+        }
+
+        internal static G5_FabrikAktion AbwurfMengeEingeben(int playerNumber, string eingabe)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.AbwurfMengeEingeben,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1,
+                eingabe);
+        }
+
+        internal static G5_FabrikAktion InventarGegenstandAblegen(int playerNumber)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.InventarGegenstandAblegen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1);
+        }
+
+        internal static G5_FabrikAktion BodenGegenstaendeAufnehmen(int playerNumber)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.BodenGegenstaendeAufnehmen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1);
         }
 
         internal static G5_FabrikAktion BaumenueUmschalten(int playerNumber)

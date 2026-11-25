@@ -33,7 +33,7 @@ namespace OOPGames
             ClearField();
         }
 
-        public string Name => "G5 Satisfactory Rules";
+        public string Name => "G5 Fabrikregeln";
         public IGameField CurrentField => _fieldView;
         public bool MovesPossible => _field != null;
 
@@ -93,6 +93,24 @@ namespace OOPGames
                     break;
                 case G5_FabrikAktionstyp.GebaeudeVerkaufen:
                     SellSelectedBuilding();
+                    break;
+                case G5_FabrikAktionstyp.GegenstandAbholen:
+                    CollectSelectedMinerOutput(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.ManuellHerstellen:
+                    CraftManually(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.InventarGegenstandWaehlen:
+                    SelectInventoryItemForDrop(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.AbwurfMengeEingeben:
+                    _field.AendereMengeEingabe(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.InventarGegenstandAblegen:
+                    DropSelectedInventoryItem();
+                    break;
+                case G5_FabrikAktionstyp.BodenGegenstaendeAufnehmen:
+                    PickUpGroundItems();
                     break;
                 case G5_FabrikAktionstyp.BaumenueUmschalten:
                 case G5_FabrikAktionstyp.GebaeuderegisterUmschalten:
@@ -164,6 +182,16 @@ namespace OOPGames
             }
 
             _field.TickHandabbauCooldown();
+            _field.EntferneAbgelaufeneGegenstaende(DateTimeOffset.UtcNow);
+
+            G5_Recipe abgeschlossenesHandwerk = _field.TickManuellesHandwerk();
+            if (abgeschlossenesHandwerk != null)
+            {
+                _field.SetStatusMeldung(
+                    abgeschlossenesHandwerk.OutputAmount + " " +
+                    G5_FabrikBezeichnungen.Gegenstand(abgeschlossenesHandwerk.Output) +
+                    " hergestellt.");
+            }
 
             List<G5_Miner> miners = _field.InterneGebaeude.OfType<G5_Miner>().ToList();
             Dictionary<G5_Miner, long?> depositsBeforeTick = miners.ToDictionary(
@@ -230,7 +258,8 @@ namespace OOPGames
             }
 
             _field.AddInventar(deposit.Item, extracted);
-            _field.SetStatusMeldung("+" + extracted + " " + ItemName(deposit.Item) + " gesammelt.");
+            _field.SetStatusMeldung("+" + extracted + " " +
+                G5_FabrikBezeichnungen.Gegenstand(deposit.Item) + " gesammelt.");
         }
 
         private void SelectBuilding(int x, int y)
@@ -262,7 +291,8 @@ namespace OOPGames
             }
 
             _field.SetWerkzeug(tool);
-            _field.SetStatusMeldung(tool + " ausgewählt. Ziehe es auf die markierte Kachel oder drücke Bauen.");
+            _field.SetStatusMeldung(G5_FabrikBezeichnungen.Werkzeug(tool) +
+                " ausgewählt. Ziehe es auf die markierte Kachel oder drücke Bauen.");
         }
 
         private void PlaceBuilding(G5_Bauwerkzeug tool, G5_GridPosition? buildPosition = null)
@@ -425,7 +455,7 @@ namespace OOPGames
             IReadOnlyDictionary<G5_Item, int> cost = G5_FabrikKosten.UpgradePreis(building.Level);
             if (!_field.HatRessourcen(cost))
             {
-                _field.SetStatusMeldung("Für das Upgrade fehlen: " + FormatCost(cost) + ".");
+                _field.SetStatusMeldung("Für die Verbesserung fehlen: " + FormatCost(cost) + ".");
                 return;
             }
 
@@ -461,13 +491,14 @@ namespace OOPGames
             }
             else
             {
-                _field.SetStatusMeldung("Für dieses Gebäude gibt es kein Upgrade.");
+                _field.SetStatusMeldung("Für dieses Gebäude gibt es keine Verbesserung.");
                 return;
             }
 
             if (!_field.TryVerbraucheRessourcen(cost))
             {
-                throw new InvalidOperationException("Upgrade-Kosten haben sich während der Verbesserung geändert.");
+                throw new InvalidOperationException(
+                    "Die Kosten haben sich während der Gebäude-Verbesserung geändert.");
             }
 
             building.Upgrade(upgrade);
@@ -478,7 +509,7 @@ namespace OOPGames
             }
 
             AddCost(investment, cost);
-            _field.SetStatusMeldung(building.Name + " auf Level " + building.Level + " verbessert.");
+            _field.SetStatusMeldung(building.Name + " auf Stufe " + building.Level + " verbessert.");
         }
 
         private void SellSelectedBuilding()
@@ -524,7 +555,141 @@ namespace OOPGames
             }
 
             RefreshConveyorConnections();
-            _field.SetStatusMeldung("Gebäude verkauft: 50 % der Bau- und Upgrade-Rohstoffe wurden erstattet.");
+            _field.SetStatusMeldung("Gebäude verkauft: 50 % der Bau- und Verbesserungskosten wurden erstattet.");
+        }
+
+        private void CollectSelectedMinerOutput(string amountText)
+        {
+            if (!(_field.AusgewaehltesInternesGebaeude is G5_Miner miner))
+            {
+                _field.SetStatusMeldung("Wähle einen Förderer aus, um seine Ausgabe abzuholen.");
+                return;
+            }
+
+            if (miner.CountOf(miner.Resource) <= 0)
+            {
+                _field.SetStatusMeldung("Der Förderer hat noch nichts zum Abholen.");
+                return;
+            }
+
+            if (!int.TryParse(amountText, out int requestedAmount) || requestedAmount <= 0)
+            {
+                _field.SetStatusMeldung("Gib eine Anzahl größer als null ein.");
+                return;
+            }
+
+            if (!_field.TryCollectMinerOutput(miner, requestedAmount, out int amount))
+            {
+                _field.SetStatusMeldung("Rucksack und Lager sind voll. Schaffe Platz zum Abholen.");
+                return;
+            }
+
+            _field.SetStatusMeldung(amount + " " + G5_FabrikBezeichnungen.Gegenstand(miner.Resource) +
+                " vom Förderer abgeholt.");
+            _field.BestaetigeMengeEingabe();
+        }
+
+        private void CraftManually(string itemName)
+        {
+            if (_field.ManuellesHandwerkLaeuft)
+            {
+                _field.SetStatusMeldung("Eine manuelle Herstellung läuft bereits. Warte, bis sie fertig ist.");
+                return;
+            }
+
+            if (!Enum.TryParse(itemName, out G5_Item output))
+            {
+                _field.SetStatusMeldung("Dieses Produkt kann nicht manuell hergestellt werden.");
+                return;
+            }
+
+            G5_Recipe recipe = G5_StarterRecipes.CreateManualCraftingRecipes()
+                .FirstOrDefault(candidate => candidate.Output == output);
+            if (recipe == null)
+            {
+                _field.SetStatusMeldung("Dieses Produkt kann nicht manuell hergestellt werden.");
+                return;
+            }
+
+            if (!_field.TryStarteManuellesHandwerk(recipe))
+            {
+                _field.SetStatusMeldung(
+                    "Für " + recipe.Name + " fehlen Zutaten im Rucksack oder freier Platz.");
+                return;
+            }
+
+            _field.SetStatusMeldung(
+                recipe.Name + " gestartet. Die Herstellung dauert zwei Sekunden.");
+        }
+
+        private void SelectInventoryItemForDrop(string itemName)
+        {
+            if (!Enum.TryParse(itemName, out G5_Item item) ||
+                !Enum.IsDefined(typeof(G5_Item), item))
+            {
+                _field.SetStatusMeldung("Dieser Gegenstand kann nicht abgelegt werden.");
+                return;
+            }
+
+            if (_field.Menge(item) == 0)
+            {
+                _field.SetStatusMeldung("Von diesem Gegenstand hast du nichts im Rucksack.");
+                return;
+            }
+
+            _field.WaehleAbwurfGegenstand(item);
+            _field.SetStatusMeldung(
+                G5_FabrikBezeichnungen.Gegenstand(item) +
+                " ausgewählt. Gib die gewünschte Anzahl mit den Zahlentasten ein.");
+        }
+
+        private void DropSelectedInventoryItem()
+        {
+            if (!_field.AusgewaehlterAbwurfGegenstand.HasValue)
+            {
+                _field.SetStatusMeldung("Wähle zuerst einen Gegenstand im Rucksack aus.");
+                return;
+            }
+
+            if (!int.TryParse(_field.MengeEingabe, out int anzahl) || anzahl <= 0)
+            {
+                _field.SetStatusMeldung("Gib eine Anzahl größer als null ein.");
+                return;
+            }
+
+            G5_Item item = _field.AusgewaehlterAbwurfGegenstand.Value;
+            if (!_field.TryAblegen(item, anzahl, DateTimeOffset.UtcNow))
+            {
+                _field.SetStatusMeldung(
+                    "Du hast nicht so viele " + G5_FabrikBezeichnungen.Gegenstand(item) +
+                    " im Rucksack.");
+                return;
+            }
+
+            _field.BestaetigeMengeEingabe();
+            _field.SetStatusMeldung(
+                anzahl + " " + G5_FabrikBezeichnungen.Gegenstand(item) +
+                " abgelegt. Sie bleiben zwei Minuten liegen.");
+        }
+
+        private void PickUpGroundItems()
+        {
+            G5_GridPosition spielerposition = _field.SpielerPosition;
+            int aufgenommen = _field.NimmAbgelegteGegenstaendeAuf(
+                spielerposition,
+                DateTimeOffset.UtcNow);
+            if (aufgenommen == 0)
+            {
+                _field.SetStatusMeldung("Hier liegen keine Gegenstände zum Aufnehmen.");
+                return;
+            }
+
+            int uebrig = _field.AnzahlAbgelegterGegenstaende(
+                spielerposition,
+                DateTimeOffset.UtcNow);
+            _field.SetStatusMeldung(uebrig == 0
+                ? aufgenommen + " Gegenstände aufgenommen."
+                : aufgenommen + " Gegenstände aufgenommen. Der Rest bleibt liegen, bis Platz frei ist.");
         }
 
         private bool IsBuildableArea(int x, int y, int width, int height, G5_Building ignoredBuilding)
@@ -758,14 +923,6 @@ namespace OOPGames
 
         private void TransferMaterials()
         {
-            foreach (G5_Miner miner in _field.InterneGebaeude.OfType<G5_Miner>())
-            {
-                if (!_beltConnectedSources.Contains(miner))
-                {
-                    TransferOutputs(miner);
-                }
-            }
-
             foreach (G5_ProductionBuilding production in _field.InterneGebaeude.OfType<G5_ProductionBuilding>())
             {
                 G5_Recipe recipe = production.SelectedRecipe;
@@ -982,21 +1139,8 @@ namespace OOPGames
 
         private static string FormatCost(IReadOnlyDictionary<G5_Item, int> cost)
         {
-            return string.Join(", ", cost.Select(item => item.Value + " " + ItemName(item.Key)));
-        }
-
-        private static string ItemName(G5_Item item)
-        {
-            switch (item)
-            {
-                case G5_Item.Eisenerz: return "Eisenerz";
-                case G5_Item.Kupfererz: return "Kupfererz";
-                case G5_Item.Kohle: return "Kohle";
-                case G5_Item.Holz: return "Holz";
-                case G5_Item.Eisenbarren: return "Eisenbarren";
-                case G5_Item.Kupferbarren: return "Kupferbarren";
-                default: return item.ToString();
-            }
+            return string.Join(", ", cost.Select(item =>
+                item.Value + " " + G5_FabrikBezeichnungen.Gegenstand(item.Key)));
         }
     }
 }
