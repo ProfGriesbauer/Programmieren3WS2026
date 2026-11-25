@@ -655,7 +655,7 @@ namespace OOPGames
             }
 
             start = _pendingConveyorLine.Value.Start;
-            end = _pendingConveyorLine.Value.End;
+            end = _pendingConveyorLine.Value.Ende;
             _pendingConveyorLine = null;
             return true;
         }
