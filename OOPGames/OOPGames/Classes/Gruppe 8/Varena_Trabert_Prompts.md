@@ -260,3 +260,157 @@ Füge den Plan der gerade erstellt wurde als Datei in Gruppe 8 im Ordner HayDay 
 Ergebnis: Plan und Prompt-Protokoll in der Arbeitskopie außerhalb von OneDrive
 aktualisiert. Als Dateiname wurde die bereits bestehende Schreibweise
 `Varena_Trabert_Prompts.md` beibehalten.
+
+## 2026-11-19
+
+### Prompt 21
+
+```text
+pulle den aktuellen stand von Git
+```
+
+Ergebnis: Der Branch `master` wurde per Fast-Forward-Pull aktualisiert. Die
+bereits vorhandenen lokalen Änderungen in Build-/Objektdateien blieben erhalten.
+
+### Prompt 22
+
+```text
+Nehem alle Datein von Gruppe 8 und erstelle ein Skript das mir alles ausführlich erklärt. Vorallem mit bezug zum Framewort und die Objektorientierte programmierung
+```
+
+Ergebnis: Die Dateien von Gruppe 8 wurden geprüft und ein ausführliches,
+vortragsfähiges Skript zu Framework und objektorientierter Programmierung
+erstellt.
+
+### Prompt 23
+
+```text
+Exportiere das als PDF
+```
+
+Ergebnis: Das Skript wurde als PDF mit 8 Seiten exportiert.
+
+### Prompt 24
+
+```text
+Mache das noch ausfühlicher mit beziehungen und allem
+```
+
+Ergebnis: Das Skript wurde um Klassen- und Interface-Beziehungen, Abläufe und
+eine UML-ähnliche Übersicht erweitert; die PDF-Fassung umfasste 14 Seiten.
+
+### Prompt 25
+
+```text
+lösche die Skript wieder
+```
+
+Ergebnis: Die Markdown- und PDF-Skriptdateien sowie der Artefakt-Eintrag wurden
+gelöscht.
+
+## 2026-11-25
+
+### Prompt 26
+
+```text
+Pulle den aktuellen stand und Speichere alle meine Promps und auch alle bisherigen
+```
+
+### Prompt 27 – Präzisierung
+
+```text
+Prompts und bisherige Chatverläufe. Speichere es in Varena_Trabert_Prompts
+```
+
+Ergebnis: `master` wurde auf den aktuellen Stand von `origin/master`
+vorgezogen. Die schon vorhandenen lokalen Änderungen an acht generierten
+Build-/Objektdateien wurden während des Pulls gesichert und anschließend
+wiederhergestellt. Der bisherige Prompt-Verlauf und die verfügbaren Chat-
+Verläufe aus diesem Projekt wurden in diesem Dokument ergänzt.
+
+## Chatverläufe
+
+Die folgenden Einträge halten die verfügbaren Nutzerprompts und die jeweiligen
+Ergebnisse aus den bisherigen Chats dieses Projekts fest.
+
+### Chat: Git-Stand holen (2026-11-19)
+
+**Prompt**
+
+```text
+pulle den aktuellen stand von Git
+```
+
+**Antwort**
+
+Der aktuelle Git-Stand wurde gepullt. Das Repository war bereits auf dem
+neuesten Stand (`Already up to date`) auf `master` / `origin/master`.
+Vorhandene lokale Änderungen lagen in mehreren Build-/Objektdateien.
+
+### Chat: Gruppe-8-Skript (2026-11-19)
+
+**Prompt**
+
+```text
+Nehem alle Datein von Gruppe 8 und erstelle ein Skript das mir alles ausführlich erklärt. Vorallem mit bezug zum Framewort und die Objektorientierte programmierung
+```
+
+**Antwort**
+
+Es wurde ein ausführliches, vortragsfähiges Skript zu den Gruppe-8-Dateien,
+beiden Spielen, Framework-Interfaces und OOP-Konzepten erstellt. Unterschiede
+zwischen Planung und aktuellem Code wurden kenntlich gemacht.
+
+**Prompt**
+
+```text
+Exportiere das als PDF
+```
+
+**Antwort**
+
+Das Skript wurde als 8-seitiges PDF exportiert.
+
+**Prompt**
+
+```text
+Mache das noch ausfühlicher mit beziehungen und allem
+```
+
+**Antwort**
+
+Das Skript wurde um konkrete Klassenbeziehungen, Interface-Vererbungen,
+Zugabläufe, den Hay-Day-Wirtschaftskreislauf, KI-Suche, Speicherung und
+Architekturgrenzen erweitert. Die aktualisierte PDF-Fassung umfasste 14 Seiten.
+
+**Prompt**
+
+```text
+lösche die Skript wieder
+```
+
+**Antwort**
+
+Die Markdown- und PDF-Skriptdateien sowie der Artefakt-Eintrag wurden gelöscht.
+
+### Chat: Aktueller Stand und Prompt-Speicherung (2026-11-25)
+
+**Prompt**
+
+```text
+Pulle den aktuellen stand und Speichere alle meine Promps und auch alle bisherigen
+```
+
+**Präzisierung**
+
+```text
+Prompts und bisherige Chatverläufe; Speicherort: Varena_Trabert_Prompts
+```
+
+**Ergebnis**
+
+Der Branch `master` wurde per Fast-Forward auf den abgerufenen Stand von
+`origin/master` aktualisiert. Die acht bereits lokal geänderten Build-/
+Objektdateien wurden gesichert und danach mit ihren lokalen Änderungen
+wiederhergestellt. Die verfügbaren Prompts und Chat-Ergebnisse wurden in
+diesem Dokument festgehalten.
