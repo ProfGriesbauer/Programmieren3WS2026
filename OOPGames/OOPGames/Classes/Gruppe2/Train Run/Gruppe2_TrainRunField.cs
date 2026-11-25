@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
-    public sealed class Gruppe2_TrainRunField : IGruppe2_TrainRunField
+    public sealed class Gruppe2_TrainRunField : IGruppe2_TrainRunField  // the game field for the Train Run game, containing the current state of the game
     {
         internal const int GuardIntroFollowDurationTicks = 25;
         internal const int GuardIntroFallBehindDurationTicks = 75;
@@ -16,7 +16,7 @@ namespace OOPGames
 
         public int Lane { get; internal set; }
         public Gruppe2_TrainRunLevel Level { get; internal set; }
-        public double JumpHeight
+        public double JumpHeight    // height while jumping, as a fraction of the jump height: starts at 0, rises in an arc to 1 and sinks back to 0
         {
             get
             {
@@ -29,7 +29,7 @@ namespace OOPGames
                 return Math.Sin(Math.PI * progress);
             }
         }
-        public double DropHeight
+        public double DropHeight    // height while dropping off a train roof, as a fraction of the roof height: starts at 1, rises slightly (small arc) and ends at 0 on the track
         {
             get
             {
@@ -44,7 +44,7 @@ namespace OOPGames
                 return 1 + Hop * progress - (1 + Hop) * progress * progress;
             }
         }
-        public double JetpackHeight
+        public double JetpackHeight    // height while using the jetpack, as a fraction of the jetpack height: starts at 0, rises to 1 and sinks back to 0
         {
             get
             {
@@ -85,17 +85,17 @@ namespace OOPGames
         internal int GuardIntroTicks { get; set; }
         public int MessageTicks { get; internal set; }
 
-        public bool CanBePaintedBy(IPaintGame painter)
+        public bool CanBePaintedBy(IPaintGame painter)  // check if the game field can be painted by the given painter
         {
             return painter is Gruppe2_TrainRunPainter;
         }
 
-        internal bool HasUpgrade(Gruppe2_TrainRunUpgradeKind upgrade)
+        internal bool HasUpgrade(Gruppe2_TrainRunUpgradeKind upgrade)   // check if the given upgrade is currently active
         {
             return _activeUpgrades.ContainsKey(upgrade);
         }
 
-        internal void Reset()
+        internal void Reset()   // reset the game field to its initial state
         {
             _obstacles.Clear();
             _rewards.Clear();

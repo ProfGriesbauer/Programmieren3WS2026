@@ -77,7 +77,7 @@ namespace OOPGames
             return model;
         }
 
-        private sealed class RetainedScene
+        private sealed class RetainedScene  // the 3D scene that is created once and only moved from frame to frame
         {
             private readonly PerspectiveCamera _camera = new PerspectiveCamera(
                 new Point3D(0, 2.2, CameraWorldZ), new Vector3D(0, -0.10, -1), new Vector3D(0, 1, 0), 55);
@@ -87,7 +87,7 @@ namespace OOPGames
                 new TranslateTransform3D(), new TranslateTransform3D(), new TranslateTransform3D()
             };
 
-            public RetainedScene()
+            public RetainedScene()  // creates the 3D scene with camera, lights, ground, tracks, sleepers and city, and keeps it in a viewport
             {
                 Viewport = new Viewport3D
                 {
@@ -139,7 +139,7 @@ namespace OOPGames
             public int FirstDynamicIndex { get; }
 
             /// <summary>Moves camera, sleepers and city to the current state; nothing is rebuilt.</summary>
-            public void Update(double width, double height, IGruppe2_TrainRunField field, Gruppe2_TrainRunLaneChange laneChange)
+            public void Update(double width, double height, IGruppe2_TrainRunField field, Gruppe2_TrainRunLaneChange laneChange)    // updates the camera, sleepers and city to the current state of the game field, without rebuilding any models
             {
                 Viewport.Width = width;
                 Viewport.Height = height;
