@@ -156,9 +156,11 @@ namespace OOPGames
                 return;
             }
 
-            if (_fieldView.TryConsumePendingBuild(out G5_Bauwerkzeug droppedTool))
+            if (_fieldView.TryConsumePendingBuild(
+                out G5_Bauwerkzeug droppedTool,
+                out G5_GridPosition dropPosition))
             {
-                PlaceBuilding(droppedTool);
+                PlaceBuilding(droppedTool, dropPosition);
             }
 
             _field.TickHandabbauCooldown();
@@ -263,7 +265,7 @@ namespace OOPGames
             _field.SetStatusMeldung(tool + " ausgewählt. Ziehe es auf die markierte Kachel oder drücke Bauen.");
         }
 
-        private void PlaceBuilding(G5_Bauwerkzeug tool)
+        private void PlaceBuilding(G5_Bauwerkzeug tool, G5_GridPosition? buildPosition = null)
         {
             if (tool == G5_Bauwerkzeug.Keines ||
                 tool == G5_Bauwerkzeug.GebaeudeVerschieben ||
@@ -280,7 +282,7 @@ namespace OOPGames
                 return;
             }
 
-            G5_GridPosition target = _field.ZielKachel;
+            G5_GridPosition target = buildPosition ?? _field.ZielKachel;
             if (!IsBuildableArea(target.X, target.Y, BuildingWidth, BuildingHeight, null))
             {
                 _field.SetStatusMeldung("Das markierte Feld ist nicht frei oder bebaubar.");
