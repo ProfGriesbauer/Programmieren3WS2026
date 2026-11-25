@@ -20,6 +20,8 @@ namespace OOPGames
         public G5_PowerGrid PowerGrid { get; }
         public IReadOnlyList<G5_Building> Buildings => _buildings.AsReadOnly();
         public long TickNumber { get; private set; }
+        internal event Action<G5_Item, int> RohstoffGefoerdert;
+        internal event Action<G5_Item, int> ProduktHergestellt;
 
         public void AddBuilding(G5_Building building)
         {
@@ -113,11 +115,21 @@ namespace OOPGames
             {
                 if (building is G5_Miner miner)
                 {
+                    int vorher = miner.CountOf(miner.Resource);
                     miner.Tick();
+                    int gefoerdert = miner.CountOf(miner.Resource) - vorher;
+                    if (gefoerdert > 0)
+                    {
+                        RohstoffGefoerdert?.Invoke(miner.Resource, gefoerdert);
+                    }
                 }
                 else if (building is G5_ProductionBuilding productionBuilding)
                 {
-                    productionBuilding.Tick();
+                    if (productionBuilding.Tick())
+                    {
+                        G5_Recipe recipe = productionBuilding.SelectedRecipe;
+                        ProduktHergestellt?.Invoke(recipe.Output, recipe.OutputAmount);
+                    }
                 }
             }
 
@@ -161,15 +173,15 @@ namespace OOPGames
                 new G5_Recipe("Kupfererz zu Kupferbarren verarbeiten", G5_RecipeType.Smelting,
                     new[] { new KeyValuePair<G5_Item, int>(G5_Item.Kupfererz, 1) },
                     G5_Item.Kupferbarren, 1, 1, 0),
+                new G5_Recipe("Beton herstellen", G5_RecipeType.Construction,
+                    new[] { new KeyValuePair<G5_Item, int>(G5_Item.Kalkstein, 2) },
+                    G5_Item.Beton, 1, 1, 0),
                 new G5_Recipe("Eisenplatte herstellen", G5_RecipeType.Construction,
                     new[] { new KeyValuePair<G5_Item, int>(G5_Item.Eisenbarren, 1) },
                     G5_Item.Eisenplatte, 1, 1, 0),
                 new G5_Recipe("Eisenstange herstellen", G5_RecipeType.Construction,
                     new[] { new KeyValuePair<G5_Item, int>(G5_Item.Eisenbarren, 1) },
-                    G5_Item.Eisenstange, 1, 1, 0),
-                new G5_Recipe("Beton herstellen", G5_RecipeType.Construction,
-                    new[] { new KeyValuePair<G5_Item, int>(G5_Item.Kalkstein, 2) },
-                    G5_Item.Beton, 1, 1, 0)
+                    G5_Item.Eisenstange, 1, 1, 0)
             };
         }
 

@@ -5,6 +5,9 @@ using System.Linq;
 
 namespace OOPGames
 {
+    /// <summary>
+    /// Gemeinsamer Hofzustand. Die Spiellogik ist nach Aufgaben in weitere Partial-Dateien aufgeteilt.
+    /// </summary>
     public sealed partial class HayDayField : IGameField
     {
         private const int CurrentSaveVersion = 1;
@@ -77,6 +80,9 @@ namespace OOPGames
         private int _marketDay = int.MinValue;
         private int _orderSequence;
         private bool _pendingBuildingPlacement;
+        // Diese Referenzen halten ein Objekt nur während des Verschiebevorgangs fest.
+        private FarmPlot _movingPlot;
+        private FarmBuilding _movingBuilding;
 
         private HayDayField()
         {
@@ -112,6 +118,18 @@ namespace OOPGames
         public List<MarketOffer> MarketOffers { get; private set; }
         public MarketOrder Order { get; private set; }
         public string StatusMessage { get; private set; }
+        public string MovingItemName
+        {
+            get
+            {
+                if (_movingBuilding != null)
+                {
+                    return _movingBuilding.Name;
+                }
+
+                return _movingPlot == null ? null : "Acker";
+            }
+        }
         public DateTime LastSavedAt { get; private set; }
         public bool IsDirty { get; internal set; }
         public int SelectedBuildingRow { get; private set; } = -1;

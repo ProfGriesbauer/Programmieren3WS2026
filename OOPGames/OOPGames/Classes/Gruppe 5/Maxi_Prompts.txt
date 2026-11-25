@@ -148,3 +148,16 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-23 20:59:31] pull push und commit
 
 [2026-11-23 16:34:46] Bitte programmiere jede Satisfactory-Datei objektorientiert und mit den vorhandenen klassen die Tim Eichert in den "plans" definiert hat, sodass am Ende die gleiche Funktion mit so wenig wie möglichen Zeilen Code umgesetzt wirdwie jetzt gerade. Außerdem schreibe zu jedem Teil des Codes was dieser in etwa macht(mithilfe von Kommentaren), damit man wenn man den Code in einer Präsentation vorstellt weiß was überall passiert. Ergänze das bitte bei allen Dateien von Gruppe 5 die etwas mit dem Programm zu tun haben.
+
+[2026-11-25 10:13:47] Erstelle eine Test-Datei, ähnlich zur Gruppe9, aber mit eigenem Namen, die im Ordner Gruppe5 gespeicert ist. Diese soll unser Programm auf Bugs überprüfen, also bspw. man kann aus der Map rauslaufen etc. Auch diese Datei soll das Framework selbst nicht ändern und objektorientiert aufgebaut sein. Die Bugs sollen am Ende in irgendeiner Form ausgegeben werden
+
+[2026-11-25 10:40:08] Der Build war nicht erfolgreich, an was liegt das? Fixe den Fehler
+
+[2026-11-25 11:03:10] Es kommt immer noch die Fehlermeldung dass der Build fehlschlägt, bitte fixe das
+
+[2026-11-25 11:09:44] Falls der Ordner Rules/Mentor/StartScreen/directions genau die gleichen Dateien bzw. neuere Versionen enthält, dann lösche bitte den überflüddigen Ordner
+[2026-11-25 11:14] Dann aktualisiere bitte die Dateien im Ordner Rules/Mentor etc so, dass sie zu den aktuellen Fabriklogiken passen. der Mentor soll auch wieder im Spiel verfügbar sein und die neuen Gebäude bzw. Äderungen bezüglich Rezeote beinhalten und vorstellen. Auch den Spieler, mit dem man selbst abbauen kann
+[2026-11-25 11:45] Löse die Probleme aus dem Terminal so dass der Build wieder erfolgreich ist und ich auch die neusten Änderungen der anderen Teilnehmer habe
+[2026-11-25 11:51] Pull push commit
+[2026-11-25 12:02] Bitte überarbeite die aktuellen Probleme die im Terminal stehen. Der Mentor bleibt aktuell beim erten Schritt hängen, bitte überarbeite das. Außerdem sollten die Rezepte eine logische Ordnung haben da man aktuell Rohstoffe anfangs benötigt die man noch garnicht herstellen kann
+[2026-11-25 12:13] pull push und commit

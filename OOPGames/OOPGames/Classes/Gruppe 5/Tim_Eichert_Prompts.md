@@ -450,4 +450,7 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 
 > pushe die änderungen
 
-- **Ergebnisvermerk:** Nur die Gruppe-5-Dateien wurden committet (Inventar-/Herstellen-Zusammenführung, Herstellen mit Anzahl, Anleitung, Test, Promptprotokoll), mit dem Remote-Stand abgeglichen, gebaut und auf `origin/master` gepusht. Generierte `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.
+- **Ergebnisvermerk:** Nur Gruppe-5-Dateien wurden committet. Beim `git pull` gab es Merge-Konflikte mit parallelen Team-Änderungen (Raketen-Endphase, Statistik, Mentor, Dateien nach `Rules/Mentor/StartScreen/directions/` verschoben, eigene Werkbank-/Handwerk-Ansicht).
+- **Rückfrage im Ablauf:** Wie soll die Werkbank des Teams mit dem kombinierten Panel zusammengeführt werden? Antwort: „Dein Panel behalten“. Das kombinierte Inventar ersetzt Werkbank-Umschalter und Zeilen-Knöpfe. Alle übrigen Team-Änderungen wurden übernommen.
+- **Weitere Anpassungen:** Die Team-Tests zum Herstellen wurden auf den neuen Ablauf umgestellt (Zeile wählen, dann **HERSTELLEN ×1**). Die Mentor- und Startbildschirm-Texte verweisen nicht mehr auf „HANDWERK“.
+- **Prüfung und Push:** Build 0 Warnungen, 0 Fehler; 48 von 49 Tests bestanden. Der eine fehlschlagende Test `ManualRecipesAreOrderedFromRawResourcesToComponents` stammt aus dem Team-Stand: Die Rakete kostet Rotoren, die nicht von Hand herstellbar sind. Er wurde nicht verändert. Danach wurde auf `origin/master` gepusht. Generierte `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.

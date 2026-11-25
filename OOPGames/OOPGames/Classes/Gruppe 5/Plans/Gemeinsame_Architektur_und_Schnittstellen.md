@@ -14,7 +14,7 @@ Der einzige aktive Regelbaustein für das Fabrikspiel ist `SatisfactoryGameRules
 | Fabrik-Feldprojektion | Tim – `Tim_Eichert_FabrikSpielfeld.cs` | Aggregiert Welt und Simulation; veröffentlicht Anzeigezustand read-only |
 | Tastatur-/Maussteuerung | Tim – `Tim_Eichert_FabrikPlayer.cs` | Erzeugt `IG5_FabrikAktion`; enthält keine Kopie des Welt- oder Gebäudemodells |
 | Darstellung | Tim – `Tim_Eichert_FabrikPainter.cs`, `Tim_Eichert_FabrikGebaeudeZeichner.cs` | Liest Welt und Fabrik ausschließlich über die Gruppe-5-Leseinterfaces; zeichnet die zehn nativen WPF-Gebäudedesigns |
-| Spielregeln und Startkarte | Maxi – `Satisfactory/SatisfactoryGameRules.cs` | Einziges Regelwerk; initialisiert die Karte, validiert Bauaktionen und koordiniert Transfer und Simulation |
+| Spielregeln und Startkarte | Maxi – `Rules/Mentor/StartScreen/directions/SatisfactoryGameRules.cs` | Einziges Regelwerk; initialisiert die Karte, validiert Bauaktionen und koordiniert Transfer und Simulation |
 | Gegenstände, Positionen, Rezepte und Upgrades | Chris – `Christian_Frey_FabrikDatenmodelle.cs` | Gemeinsame Definition von `G5_Item`, `G5_GridPosition`, `G5_Recipe` und zugehörigen Fabrikdaten |
 | Gebäude und Rohstoffvorkommen | Chris – `Christian_Frey_FabrikGebaeude.cs` | Gemeinsame Gebäudebasis sowie Miner, Schmelze, Konstruktor, Lager und Ressourcenmodell |
 | Transport, Strom und Itemtransfer | Chris – `Christian_Frey_FabrikTransportEnergie.cs` | Gemeinsame Förderband-/Stromkomponenten und atomarer Transfer zwischen Item-Endpunkten |
@@ -61,7 +61,7 @@ Für neue Teambeiträge gilt: erst den passenden gemeinsamen Vertrag verwenden; 
 
 | Dateien / Klassen | Status im aktuellen Fabrikspiel |
 |---|---|
-| `Satisfactory/SatisfactoryGameRules.cs` – `SatisfactoryGameRules` | **Aktiv.** Einziges Fabrik-Regelwerk; bei Start registriert, erzeugt die Karte und Startschmelzen, platziert Miner/Schmelzen und tickt/koordiniert Transfer. |
+| `Rules/Mentor/StartScreen/directions/SatisfactoryGameRules.cs` – `SatisfactoryGameRules` | **Aktiv.** Einziges Fabrik-Regelwerk; bei Start registriert, erzeugt die Karte und Startschmelzen, platziert Miner/Schmelzen und tickt/koordiniert Transfer. |
 | `Tim_Eichert_FabrikPlayer.cs` – `G5_FabrikHumanPlayer`, `G5_FabrikAktion` | **Aktiv.** Der Player ist registriert und liefert die Aktionen, die das Regelwerk verarbeitet. |
 | `Tim_Eichert_FabrikPainter.cs` – `G5_FabrikPainter` | **Aktiv.** Registrierter Painter; zeichnet Welt-, Gebäude- und Hub-Anzeige. |
 | `Tim_Eichert_FabrikSpielfeld.cs` – `G5_FabrikSpielfeld`, `G5_GebaeudeInfo` | **Aktiv.** Hält Welt, Hub und Simulation zusammen und stellt die read-only Anzeige bereit. |
@@ -76,7 +76,7 @@ Für neue Teambeiträge gilt: erst den passenden gemeinsamen Vertrag verwenden; 
 | `IG5_KartenansichtSteuerung` | **Derzeit ohne Eingabe-Aufrufer.** Welt und Fabrikfeld implementieren/weiterleiten den Vertrag; es gibt aber noch kein angeschlossenes Maus-Rad-/Drag-Steuerelement. |
 | `IG5_WeltPainter` | **Aktiver Basiskontrakt.** `IG5_FabrikPainter` erweitert ihn; eine zusätzliche, separate Welt-Painterklasse ist nicht vorhanden und nicht nötig für das Fabrikspiel. |
 | Vier-gewinnt-Dateien in `Classes/Gruppe 5` und `Interfaces/gruppe 5` | **Aktiv als separates Vier-gewinnt-Spiel**, nicht als Teil des Fabrikspiels. |
-| `Plans/*.md`, `Satisfactory/Anleitung.md`, Promptdateien und HTML-Designvorschau | **Dokumentation/Entwurf**, kein Laufzeitcode. |
+| `Plans/*.md`, `Rules/Mentor/StartScreen/directions/Anleitung.md`, Promptdateien und HTML-Designvorschau | **Dokumentation/Entwurf**, kein Laufzeitcode. |
 
 Die frühere Klasse `G5_FabrikRules` ist im aktuellen lokalen Arbeitsstand entfernt; `SatisfactoryGameRules` ersetzt sie. Der Löschschritt ist noch nicht committed/gepusht. Der Vier-gewinnt-Code bleibt ein anderes, separat registriertes Gruppe-5-Spiel und ist kein doppeltes Fabrikmodell.
 

@@ -3,6 +3,7 @@ using System.Linq;
 
 namespace OOPGames
 {
+    // Kümmert sich um Futterrezepte, Stallaktionen und zeitabhängige Tierprodukte.
     public sealed partial class HayDayField
     {
         private void ProduceFeed(int recipe)
@@ -335,6 +336,7 @@ namespace OOPGames
                 return;
             }
 
+            // Die Produktion endet mit der Fütterungszeit; danach wartet das Produkt auf Abholung.
             int feedActiveSeconds = Math.Min(elapsed, feedProgressSeconds);
             feedProgressSeconds -= feedActiveSeconds;
             if (feedProgressSeconds == 0 && feedActiveSeconds > 0)

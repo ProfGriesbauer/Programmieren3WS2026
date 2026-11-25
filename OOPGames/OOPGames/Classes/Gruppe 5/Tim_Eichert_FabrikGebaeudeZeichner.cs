@@ -96,7 +96,8 @@ namespace OOPGames
             double width,
             double height,
             G5_ConveyorDirection? conveyorInput = null,
-            G5_ConveyorDirection? conveyorOutput = null)
+            G5_ConveyorDirection? conveyorOutput = null,
+            bool kachelFuellen = false)
         {
             Canvas container = new Canvas
             {
@@ -105,12 +106,18 @@ namespace OOPGames
                 ClipToBounds = typ != G5_FabrikGebaeudeTyp.Laufband,
                 IsHitTestVisible = false
             };
+            Rect ausschnitt = kachelFuellen
+                ? GebaeudeAusschnitt(typ, level)
+                : new Rect(0, 0, ZeichenBreite, ZeichenHoehe);
+            double scaleX = width / ausschnitt.Width;
+            double scaleY = height / ausschnitt.Height;
             Canvas zeichnung = new Canvas
             {
                 Width = ZeichenBreite,
                 Height = ZeichenHoehe,
                 IsHitTestVisible = false,
-                RenderTransform = new ScaleTransform(width / ZeichenBreite, height / ZeichenHoehe),
+                RenderTransform = new MatrixTransform(
+                    scaleX, 0, 0, scaleY, -ausschnitt.X * scaleX, -ausschnitt.Y * scaleY),
                 RenderTransformOrigin = new Point(0, 0)
             };
             container.Children.Add(zeichnung);
@@ -152,6 +159,9 @@ namespace OOPGames
                 case G5_FabrikGebaeudeTyp.Merger:
                     ZeichneWeiche(zeichnung, istSplitter: false, level);
                     break;
+                case G5_FabrikGebaeudeTyp.Rakete:
+                    ZeichneRakete(zeichnung);
+                    break;
                 default:
                     throw new InvalidOperationException("Unbekannter Gebäudetyp in der Darstellung.");
             }
@@ -159,12 +169,61 @@ namespace OOPGames
             if (typ != G5_FabrikGebaeudeTyp.Strommast &&
                 typ != G5_FabrikGebaeudeTyp.Laufband &&
                 typ != G5_FabrikGebaeudeTyp.Splitter &&
-                typ != G5_FabrikGebaeudeTyp.Merger)
+                typ != G5_FabrikGebaeudeTyp.Merger &&
+                typ != G5_FabrikGebaeudeTyp.Konstruktor &&
+                typ != G5_FabrikGebaeudeTyp.Rakete)
             {
                 ZeichneAusbaustufenAkzent(zeichnung, level);
             }
 
             return container;
+        }
+
+        private static Rect GebaeudeAusschnitt(G5_FabrikGebaeudeTyp typ, int level)
+        {
+            // Die Zeichnungen enthalten unterschiedlich breite transparente Ränder.
+            switch (typ)
+            {
+                case G5_FabrikGebaeudeTyp.Hub:
+                case G5_FabrikGebaeudeTyp.Lager:
+                    return new Rect(18, 22, 130, 110);
+                case G5_FabrikGebaeudeTyp.Foerderer:
+                    return new Rect(26, 30, 108, 99);
+                case G5_FabrikGebaeudeTyp.Schmelze:
+                    return new Rect(18, 20, 126, 104);
+                case G5_FabrikGebaeudeTyp.Konstruktor:
+                    return new Rect(26, 49, 114, 82);
+                case G5_FabrikGebaeudeTyp.Assembler:
+                    return new Rect(26, 17, 134, 114);
+                case G5_FabrikGebaeudeTyp.Verbrennungsgenerator:
+                    return new Rect(22, 5, 132, 125);
+                case G5_FabrikGebaeudeTyp.Strommast:
+                    return level >= 2
+                        ? new Rect(28, 8, 106, 120)
+                        : new Rect(28, 18, 106, 110);
+                case G5_FabrikGebaeudeTyp.Rakete:
+                    return new Rect(24, 4, 112, 118);
+                default:
+                    return new Rect(0, 0, ZeichenBreite, ZeichenHoehe);
+            }
+        }
+
+        private static void ZeichneRakete(Canvas canvas)
+        {
+            Brush rot = Brush(202, 61, 43);
+            Brush weiss = Gradient(245, 245, 226, 151, 185, 183);
+            EllipseShape(canvas, 30, 101, 100, 19, Schatten);
+            PathShape(canvas, "M53 68C37 72 27 89 26 110l27-14z", rot, Dunkel, 3);
+            PathShape(canvas, "M107 68c16 4 26 21 27 42l-27-14z", rot, Dunkel, 3);
+            PathShape(canvas, "M80 6C61 18 52 41 52 69v29c17 10 39 10 56 0V69C108 41 99 18 80 6z",
+                weiss, Dunkel, 3);
+            PathShape(canvas, "M80 6C70 13 63 22 59 34h42C97 22 90 13 80 6z",
+                rot, Dunkel, 2);
+            EllipseShape(canvas, 65, 43, 30, 30, Messing, Dunkel, 2);
+            EllipseShape(canvas, 70, 48, 20, 20, Gradient(91, 214, 235, 21, 100, 157), Dunkel, 1);
+            EllipseShape(canvas, 73, 50, 5, 5, Brush(218, 249, 250));
+            PathShape(canvas, "M58 91c15 8 29 8 44 0M64 102v8h32v-8",
+                null, Dunkel, 3);
         }
 
         private static void ZeichneMiner(Canvas canvas)

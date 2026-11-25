@@ -6,6 +6,7 @@ using System.Text.Json;
 
 namespace OOPGames
 {
+    // Wandelt den Hofzustand in speicherbare Daten um und prüft geladene Spielstände.
     public sealed partial class HayDayField
     {
         public static HayDayField CreateNewField()
@@ -65,6 +66,7 @@ namespace OOPGames
 
         public void Save()
         {
+            // Der Spielstand wird als lesbares JSON im lokalen Anwendungsordner abgelegt.
             Directory.CreateDirectory(Path.GetDirectoryName(SavePath));
             LastSavedAt = DateTime.UtcNow;
             File.WriteAllText(SavePath, JsonSerializer.Serialize(ToSaveData(),
@@ -174,6 +176,7 @@ namespace OOPGames
                 _marketDay = data.MarketDay
             };
 
+            // Nur bekannte Inventargegenstände werden übernommen und an die Lagerkapazität angepasst.
             foreach (string item in InventoryItems)
             {
                 int amount;

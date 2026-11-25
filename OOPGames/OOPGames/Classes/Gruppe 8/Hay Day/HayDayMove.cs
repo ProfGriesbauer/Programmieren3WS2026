@@ -2,6 +2,9 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
+    /// <summary>
+    /// Enthält eine Eingabe samt Spieler, Rasterposition und optionaler Menüauswahl.
+    /// </summary>
     public sealed class HayDayMove : IPlayMove
     {
         public HayDayMove(int playerNumber, HayDayMoveKind moveKind, int row, int column,

@@ -4,6 +4,7 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
+    // Verarbeitet Klicks und Tasten; ein aktiver Verschiebevorgang hat Vorrang vor normalen Aktionen.
     public sealed partial class HayDayField
     {
         private void ApplyClick(int row, int column, int button)
@@ -13,6 +14,28 @@ namespace OOPGames
                 CloseOpenMenu();
             }
 
+            bool rightClick = button == 1;
+            bool isMoving = _movingPlot != null || _movingBuilding != null;
+            if (isMoving)
+            {
+                if (rightClick)
+                {
+                    CancelItemMove();
+                    SetStatus("Verschieben abgebrochen.");
+                    return;
+                }
+
+                if (!IsInside(row, column))
+                {
+                    SetStatus("Wähle einen freien Platz innerhalb des Hofs.");
+                    return;
+                }
+
+                MoveSelectedItem(row, column);
+                return;
+            }
+
+            // Rechtsklick auf ein Feld oder Gebäude startet erst die Auswahl, nicht die Bewegung.
             if (!IsInside(row, column))
             {
                 return;
@@ -20,7 +43,18 @@ namespace OOPGames
 
             FarmPlot plot = Plots.FirstOrDefault(value => value.Row == row && value.Column == column);
             FarmBuilding building = Buildings.FirstOrDefault(value => value.Row == row && value.Column == column);
-            bool rightClick = button == 1;
+            if (rightClick && plot != null)
+            {
+                BeginMoving(plot);
+                return;
+            }
+
+            if (rightClick && building != null)
+            {
+                BeginMoving(building);
+                return;
+            }
+
             if (plot != null)
             {
                 if (plot.Crop == null)
@@ -46,16 +80,9 @@ namespace OOPGames
 
             if (building != null)
             {
-                if (!rightClick)
-                {
-                    SelectedBuildingRow = building.Row;
-                    SelectedBuildingColumn = building.Column;
-                    SetStatus(building.Name + " geöffnet.");
-                }
-                else
-                {
-                    InteractWithBuilding(building, true);
-                }
+                SelectedBuildingRow = building.Row;
+                SelectedBuildingColumn = building.Column;
+                SetStatus(building.Name + " geöffnet.");
                 return;
             }
 
@@ -71,14 +98,71 @@ namespace OOPGames
             }
             else
             {
-                SetStatus("B wählt ein Gebäude; Rechtsklick baut es auf einem freien Feld.");
+                SetStatus("B wählt ein Gebäude; Rechtsklick auf ein Objekt startet das Verschieben.");
             }
+        }
+
+        private void BeginMoving(FarmPlot plot)
+        {
+            _pendingBuildingPlacement = false;
+            _movingPlot = plot;
+            _movingBuilding = null;
+            SetStatus("Acker ausgewählt. Linksklick auf einen freien Platz; Rechtsklick oder Esc bricht ab.");
+        }
+
+        private void BeginMoving(FarmBuilding building)
+        {
+            _pendingBuildingPlacement = false;
+            _movingPlot = null;
+            _movingBuilding = building;
+            SetStatus(building.Name + " ausgewählt. Linksklick auf einen freien Platz; " +
+                "Rechtsklick oder Esc bricht ab.");
+        }
+
+        private void MoveSelectedItem(int row, int column)
+        {
+            // Bei einem ungültigen Ziel bleibt die Auswahl aktiv, damit ein anderes Feld gewählt wird.
+            if (!IsAvailableLocation(row, column, _movingPlot, _movingBuilding))
+            {
+                SetStatus("Dort ist kein freier Platz. Wähle ein freies Feld ohne Straße.");
+                return;
+            }
+
+            if (_movingPlot != null)
+            {
+                _movingPlot.MoveTo(row, column);
+                _movingPlot = null;
+                SetStatus("Acker verschoben.");
+            }
+            else if (_movingBuilding != null)
+            {
+                string buildingName = _movingBuilding.Name;
+                _movingBuilding.MoveTo(row, column);
+                _movingBuilding = null;
+                SetStatus(buildingName + " verschoben.");
+            }
+        }
+
+        private bool CancelItemMove()
+        {
+            bool wasMoving = _movingPlot != null || _movingBuilding != null;
+            _movingPlot = null;
+            _movingBuilding = null;
+            return wasMoving;
         }
 
         private void ApplyKey(Key key)
         {
+            // Escape beendet ausschließlich die Objektbewegung; andere Tastaturaktionen bleiben unverändert.
             switch (key)
             {
+                case Key.Escape:
+                    if (!CancelItemMove())
+                    {
+                        return;
+                    }
+                    SetStatus("Verschieben abgebrochen.");
+                    break;
                 case Key.Left:
                     CameraColumn = Math.Max(0, CameraColumn - 2);
                     SetStatus("Kamera bewegt.");
@@ -138,86 +222,6 @@ namespace OOPGames
             }
 
             IsDirty = true;
-        }
-
-        private void InteractWithBuilding(FarmBuilding building, bool rightClick)
-        {
-            switch (building.Kind)
-            {
-                case "Mill":
-                    ProduceFeed(0);
-                    break;
-                case "Coop":
-                    if (rightClick)
-                    {
-                        CollectAnimalProduct(Eggs, "Eier");
-                    }
-                    else
-                    {
-                        FeedAnimal("Coop");
-                    }
-                    break;
-                case "Market":
-                    if (rightClick)
-                    {
-                        FulfillOrder();
-                    }
-                    else
-                    {
-                        Sell(SelectedCrop, 1);
-                    }
-                    break;
-                case "Van":
-                    if (rightClick)
-                    {
-                        FulfillOrder();
-                    }
-                    else
-                    {
-                        SetStatus(Order == null ? "Lieferwagen ist bereit." : Order.Description);
-                    }
-                    break;
-                case "Barn":
-                    SetStatus("Scheune: " + Inventory[Eggs] + " Eier, " + Inventory[Feed] +
-                        " Futter. Kapazität " + BarnCapacity + ".");
-                    break;
-                case "CowBarn":
-                    if (rightClick)
-                        SetStatus("Kühe: " + CowCount + ". Futter: " + Inventory[CowFeed]
-                            + ". Bereit: " + MilkReady + " Milch.");
-                    else
-                        FeedAnimal("CowBarn");
-                    break;
-                case "PigBarn":
-                    if (rightClick)
-                        SetStatus("Schweine: " + PigCount + ". Futter: " + Inventory[PigFeed]
-                            + ". Bereit: " + PorkReady + " Fleisch.");
-                    else
-                        FeedAnimal("PigBarn");
-                    break;
-                case "SheepBarn":
-                    if (rightClick)
-                        SetStatus("Schafe: " + SheepCount + ". Futter: " + Inventory[SheepFeed]
-                            + ". Bereit: " + WoolReady + " Wolle.");
-                    else
-                        FeedAnimal("SheepBarn");
-                    break;
-                case "GoatBarn":
-                    if (rightClick)
-                        SetStatus("Ziegen: " + GoatCount + ". Futter: " + Inventory[GoatFeed]
-                            + ". Bereit: " + GoatMilkReady + " Ziegenmilch.");
-                    else
-                        FeedAnimal("GoatBarn");
-                    break;
-                case "Silo":
-                    SetStatus("Silo: " + Inventory[Wheat] + " Weizen, " + Inventory[Corn] +
-                        " Mais, " + Inventory[Carrots] + " Karotten und " + Inventory[Soybeans] +
-                        " Soja. Kapazität " + SiloCapacity + ". Tasten 1-4 wählen Saatgut.");
-                    break;
-                default:
-                    SetStatus("Willkommen auf deinem Hof!");
-                    break;
-            }
         }
     }
 }

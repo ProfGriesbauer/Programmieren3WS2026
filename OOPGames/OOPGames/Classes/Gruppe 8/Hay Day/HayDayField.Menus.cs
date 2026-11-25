@@ -3,6 +3,7 @@ using System.Linq;
 
 namespace OOPGames
 {
+    // Verteilt Spielzüge an Menüs und stellt deren Texte und Aktionen für den Painter bereit.
     public sealed partial class HayDayField
     {
         public void Apply(HayDayMove move)
@@ -12,6 +13,7 @@ namespace OOPGames
                 return;
             }
 
+            // Menü-Klicks werden vor normalen Hof-Klicks ausgewertet, damit Optionen nicht den Hof treffen.
             if (move.MoveKind == HayDayMoveKind.Key)
             {
                 ApplyKey(move.Key);
@@ -229,6 +231,7 @@ namespace OOPGames
                 SelectedBuildingIndex = option;
                 string kind = ShopKinds[option];
                 CloseOpenMenu();
+                // Erst der nachfolgende Rechtsklick kauft und platziert das gewählte Objekt.
                 _pendingBuildingPlacement = true;
                 SetStatus(BuildingLabel(kind) + " ausgewählt. Rechtsklick auf einen freien Platz zum " +
                     "Kaufen und Platzieren (" + BuildingCost(kind) + " Münzen).");

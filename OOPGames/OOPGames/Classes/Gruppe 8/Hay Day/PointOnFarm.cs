@@ -1,5 +1,8 @@
 namespace OOPGames
 {
+    /// <summary>
+    /// Ein Rasterpunkt auf dem Hof mit Zeilen- und Spaltenkoordinate.
+    /// </summary>
     public sealed class PointOnFarm
     {
         public PointOnFarm(int row, int column)
