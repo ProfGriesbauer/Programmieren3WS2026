@@ -181,3 +181,11 @@
 ## Prompt 45
 
 > Geht es den durchsichtigen teil des textes weiß zu machen
+
+## Prompt 46
+
+> Kannst du mir das Spiel besser struktorieren, so dass nicht alles in den Rules drin steht und sinnvoll aufgeteilt ist
+
+## Prompt 47
+
+> Der Agent ist gerade mitten in der Anfrage abgestürtzt, kannst du weiter machen? Der Agent hat die Rules Datei schon aufgeteil und war gerade dabei die Rules Datei auszumissten, also alle ausgelagerten sachen zu löschen
