@@ -14,6 +14,7 @@ namespace OOPGames
         public const string Fire = "bow-element-fire";
         public const string Freeze = "bow-element-freeze";
         public const string ElementPower = "bow-element-power";
+        public const string ChainLightningUpgrade = "bow-chain-lightning";
         public const string Range = "bow-range";
         public const string Knockback = "bow-knockback";
         // Autoaim ranks that change the look: a scope from the first rank, rocket arrows at
@@ -46,12 +47,16 @@ namespace OOPGames
                     1, 2, ArrowDamage),
                 new WeaponUpgradeDefinition(
                     Fire, "Brandpfeile",
-                    "Verbrennt Gegner; Feuer kann auf nahe Gegner überspringen.",
+                    "Verbrennt Gegner; brennende Gegner stecken an, wen sie treffen.",
                     1, 2, ArrowDamage),
                 new WeaponUpgradeDefinition(
                     Freeze, "Frostpfeile",
                     "Friert getroffene Gegner kurzzeitig ein.",
                     1, 2, ArrowDamage),
+                new WeaponUpgradeDefinition(
+                    ChainLightningUpgrade, "Kettenblitz",
+                    "Der Blitz springt vom getroffenen Gegner auf weitere über: je Rang ein Gegner mehr und ein größerer Sprungradius.",
+                    5, 2, Lightning),
                 new WeaponUpgradeDefinition(
                     ElementPower, "Elementstärke",
                     "Verbessert Stärke und Dauer des gewählten Pfeileffekts.",
@@ -153,7 +158,17 @@ namespace OOPGames
                 knockbackDistance: GetKnockbackDistance(progression),
                 appearance: GetAppearance(progression),
                 // Drawing the bow after equipping takes as long as reloading it.
-                equipReadySeconds: cooldown);
+                equipReadySeconds: cooldown,
+                chainLightning: GetChainLightning(progression));
+        }
+
+        public static ChainLightning GetChainLightning(ArenaProgression progression)
+        {
+            return progression.SelectedBowElement == WeaponElement.Lightning
+                ? ChainLightning.ForRank(
+                    progression.GetWeaponUpgradeRank(ChainLightningUpgrade),
+                    progression.GetWeaponUpgradeRank(ElementPower))
+                : null;
         }
 
         public static WeaponAppearance GetAppearance(ArenaProgression progression)

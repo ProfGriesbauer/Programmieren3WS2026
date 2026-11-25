@@ -56,6 +56,9 @@ namespace OOPGames
         // Clips a flying projectile cycles through; empty for weapons without projectile sprites.
         public IReadOnlyList<string> ProjectileAnimations { get; }
         public bool HasProjectileSprite { get { return ProjectileAnimations.Count > 0; } }
+        // Clip shown after a shot until the weapon is ready again (the staff without its
+        // head); null keeps the held clip.
+        public string EmptyAnimation { get; init; }
         // Distance in front of the hand where projectiles of this weapon start; null keeps
         // the default (body radius plus projectile radius). Bows shoot from the arrow tip.
         public double? ProjectileLaunchDistance

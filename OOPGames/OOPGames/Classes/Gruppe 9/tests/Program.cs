@@ -41,6 +41,17 @@ internal static class Program
             TestBlackSteelWeaknessAndLeach();
             TestWeaponSpriteAppearances();
             TestPlayerKeepsStrikeFacing();
+            TestEnemyHitsPushPlayer();
+            TestShockAndHealSoundEvents();
+            TestChainLightning();
+            TestSkillPointQuestionPreference();
+            TestSaveGamesRoundTrip();
+            TestDeathRespawnAndHighScores();
+            TestFootstepEvents();
+            TestTextureHitboxes();
+            TestFireTrailsAndStrikeTraces();
+            TestStaffSpritesAndHealEvents();
+            TestParticlesFollowEvents();
             TestMultiplePlayerAbilities();
             TestArenaSkillTreeDependencies();
             TestArenaSkillTreeStartNode();
@@ -420,7 +431,8 @@ internal static class Program
             // Leach builds on the Blacksteel element, so it stays open like ElementPower.
             if (!SwordUpgradeCatalog.IsElement(upgrade.Id)
                 && upgrade.Id != SwordUpgradeCatalog.ElementPower
-                && upgrade.Id != SwordUpgradeCatalog.Leach)
+                && upgrade.Id != SwordUpgradeCatalog.Leach
+                && upgrade.Id != SwordUpgradeCatalog.ChainLightningUpgrade)
             {
                 weaponsMaxed &= progression.GetWeaponUpgradeRank(upgrade.Id)
                     == upgrade.MaximumRank;
@@ -428,8 +440,10 @@ internal static class Program
         }
         foreach (WeaponUpgradeDefinition upgrade in BowUpgradeCatalog.Upgrades)
         {
+            // Kettenblitz builds on the lightning element, so it stays open as well.
             if (!BowUpgradeCatalog.IsElement(upgrade.Id)
-                && upgrade.Id != BowUpgradeCatalog.ElementPower)
+                && upgrade.Id != BowUpgradeCatalog.ElementPower
+                && upgrade.Id != BowUpgradeCatalog.ChainLightningUpgrade)
             {
                 weaponsMaxed &= progression.GetWeaponUpgradeRank(upgrade.Id)
                     == upgrade.MaximumRank;
@@ -438,7 +452,8 @@ internal static class Program
         foreach (WeaponUpgradeDefinition upgrade in MagicWandUpgradeCatalog.Upgrades)
         {
             if (!MagicWandUpgradeCatalog.IsElement(upgrade.Id)
-                && upgrade.Id != MagicWandUpgradeCatalog.ElementPower)
+                && upgrade.Id != MagicWandUpgradeCatalog.ElementPower
+                && upgrade.Id != MagicWandUpgradeCatalog.ChainLightningUpgrade)
             {
                 weaponsMaxed &= progression.GetWeaponUpgradeRank(upgrade.Id)
                     == upgrade.MaximumRank;
@@ -682,14 +697,30 @@ internal static class Program
         Assert(firstEnemy.ActiveDamageOverTimeEffects.Any(
             effect => effect.Id == "burning"),
             "fire applies a damage-over-time status");
-        Assert(nearbyEnemy.ActiveDamageOverTimeEffects.Any(
+        combat.Update(1, entities);
+        Assert(!nearbyEnemy.ActiveDamageOverTimeEffects.Any(
             effect => effect.Id == "burning"),
-            "burning spreads to nearby entities");
+            "fire no longer jumps to entities that are merely nearby");
 
         int startingHealth = firstEnemy.CurrentHitPoints;
-        combat.Update(1, entities);
+        combat.Update(0.5, entities);
         Assert(firstEnemy.CurrentHitPoints < startingHealth,
             "damage-over-time effects deal damage during combat updates");
+
+        // A burning entity sets what it hits on fire.
+        TestEntity burningAttacker = new TestEntity(100, 300, 100, 10, CombatTeam.Enemies)
+        {
+            EquippedWeapon = WeaponCatalog.EnemyClaws
+        };
+        TestEntity hitPlayer = new TestEntity(140, 300, 100, 10, CombatTeam.Player);
+        new BurningEffect(4, 3, 0).Apply(null, burningAttacker);
+        ArenaCombatSystem hitCombat = new ArenaCombatSystem();
+        Assert(hitCombat.TryStartAttack(burningAttacker, 1, 0), "the burning enemy attacks");
+        hitCombat.Update(0.04, new List<Entity> { burningAttacker, hitPlayer });
+        Assert(hitPlayer.ActiveDamageOverTimeEffects.Any(effect => effect.Id == "burning")
+            && hitPlayer.ActiveDamageOverTimeEffects.First(effect => effect.Id == "burning")
+                .RemainingSeconds >= ArenaCombatSystem.IgnitionBurnSeconds - 0.1,
+            "a hit from a burning entity sets the target on fire");
     }
 
     private static void TestProgressionAndMagicWandUpgrades()
@@ -1071,25 +1102,562 @@ internal static class Program
         Assert(field.Player.Facing == PlayerFacing.Left,
             "after the strike walking turns the player again");
 
-        Assert(PlayerCharacter.IsRightHandBehindBody(PlayerFacing.Back)
-            && PlayerCharacter.IsRightHandBehindBody(PlayerFacing.Right)
-            && !PlayerCharacter.IsRightHandBehindBody(PlayerFacing.Front)
-            && !PlayerCharacter.IsRightHandBehindBody(PlayerFacing.Left),
+        Assert(field.Player.IsRightHandBehindBody(PlayerFacing.Back)
+            && field.Player.IsRightHandBehindBody(PlayerFacing.Right)
+            && !field.Player.IsRightHandBehindBody(PlayerFacing.Front)
+            && !field.Player.IsRightHandBehindBody(PlayerFacing.Left),
             "the right hand is behind the body seen from behind or from the right");
         Assert(field.Player.GetRightHandOffset(PlayerFacing.Front).X < 0
             && field.Player.GetRightHandOffset(PlayerFacing.Back).X > 0,
             "seen from the front the right hand is on the left of the screen");
 
+        // Kurt (a cactus) holds weapons at the tip of his raised right arm, above his center.
+        field.Player.AnimationProfileName = "Kurt";
+        Assert(field.Player.GetRightHandOffset(PlayerFacing.Front).X < 0
+            && field.Player.GetRightHandOffset(PlayerFacing.Front).Y < 0
+            && field.Player.GetRightHandOffset(PlayerFacing.Back).X > 0
+            && field.Player.GetRightHandOffset(PlayerFacing.Left).Y < 0,
+            "Kurt holds weapons in his raised right arm");
+        // Kurt's right arm is the lower one: drawn on the trunk seen from the right, hidden
+        // seen from the left, and at the same height in every view, so it never jumps arms.
+        Assert(!field.Player.IsRightHandBehindBody(PlayerFacing.Right)
+            && field.Player.IsRightHandBehindBody(PlayerFacing.Left)
+            && new[] { PlayerFacing.Front, PlayerFacing.Back, PlayerFacing.Left, PlayerFacing.Right }
+                .All(facing => Math.Abs(field.Player.GetRightHandOffset(facing).Y
+                    - field.Player.GetRightHandOffset(PlayerFacing.Front).Y) < 2),
+            "Kurt keeps the weapon in his right arm when he turns");
+        field.Player.AnimationProfileName = "BoxingKnight";
+
         field.SelectPlayerWeapon(WeaponCatalog.Bow);
         field.Player.UpdateStatusEffects(field.Player.EquippedWeapon.EquipReadySeconds);
+        // Aim at a point (the mouse cursor) 120 units below the player.
+        field.SetAimTarget(0, 120);
+        Vector shot = field.GetProjectileAimDirection(field.Player.EquippedWeapon);
         field.AttackWithPlayer(0, 1);
         AttackVisualState arrow = field.ActiveAttackVisuals.Last(
             visual => visual.VisualKind == AttackVisualKind.Projectile);
         Vector hand = field.Player.GetRightHandOffset(PlayerFacing.Front);
-        Assert(Math.Abs(arrow.ProjectileX - (field.Player.PositionX + hand.X)) < 1e-6
-            && Math.Abs(arrow.ProjectileY - (field.Player.PositionY + hand.Y
-                + WeaponAppearance.BowArrowTipDistance)) < 1e-6,
+        Point launch = new Point(field.Player.PositionX, field.Player.PositionY) + hand
+            + shot * WeaponAppearance.BowArrowTipDistance;
+        Assert(Math.Abs(arrow.ProjectileX - launch.X) < 1e-6
+            && Math.Abs(arrow.ProjectileY - launch.Y) < 1e-6,
             "arrows are launched at the tip of the arrow nocked on the bow in the right hand");
+        Point aimed = new Point(field.Player.PositionX, field.Player.PositionY + 120);
+        Assert(AttackGeometry.DistanceToSegment(aimed,
+                new Point(arrow.ProjectileX, arrow.ProjectileY),
+                new Point(arrow.ProjectileX + arrow.DirectionX * 500,
+                    arrow.ProjectileY + arrow.DirectionY * 500)) < 1e-6,
+            "an arrow from the hand flies through the aimed point");
+    }
+
+    private static void TestTextureHitboxes()
+    {
+        // BoxingKnight: visible pixels x 38..90, y 13..121 of the 128-pixel frame, drawn
+        // 4 * Size = 136 units tall.
+        PlayerCharacter knight = new PlayerCharacter(500, 500);
+        double unitsPerPixel = knight.Size * 4 / 128;
+        Rect knightBox = knight.HitboxOffset;
+        Assert(Math.Abs(knightBox.Width - 52 * unitsPerPixel) < 1e-6
+            && Math.Abs(knightBox.Height - 108 * unitsPerPixel) < 1e-6
+            && Math.Abs(knightBox.Left - (38 - 64) * unitsPerPixel) < 1e-6,
+            "the knight's hitbox is the rectangle around its visible texture");
+
+        PlayerCharacter kurt = new PlayerCharacter(500, 500) { AnimationProfileName = "Kurt" };
+        Assert(kurt.HitboxOffset.Height > knightBox.Height
+            && Math.Abs(kurt.HitboxOffset.Height - 128 * unitsPerPixel) < 1e-6,
+            "Kurt's taller texture gives a taller hitbox");
+
+        PursuerEnemy enemy = new PursuerEnemy(700, 500, PlayerCharacter.BaseMaxSpeed);
+        double enemyUnitsPerPixel = enemy.Size * 2 / 128;
+        Assert(Math.Abs(enemy.HitboxOffset.Width - 32 * enemyUnitsPerPixel) < 1e-6
+            && Math.Abs(enemy.HitboxOffset.Height - 32 * enemyUnitsPerPixel) < 1e-6,
+            "the enemy's hitbox is the rectangle around its idle texture");
+
+        // An enemy walking towards the player stops where the rectangles touch.
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        List<PursuerEnemy> enemies = field.Enemies.ToList();
+        for (int i = 1; i < enemies.Count; i++)
+        {
+            enemies[i].TakeDamage(enemies[i].MaxHitPoints);
+        }
+        PursuerEnemy walker = enemies[0];
+        walker.PositionX = field.Player.PositionX;
+        walker.PositionY = field.Player.PositionY + 150;
+        for (int i = 0; i < 40; i++)
+        {
+            field.UpdateEnemyPositions();
+        }
+        Assert(!AttackGeometry.RectsOverlap(walker.Hitbox, field.Player.Hitbox)
+            && walker.Hitbox.Top - field.Player.Hitbox.Bottom < 1,
+            "an approaching enemy stops at the edge of the player's texture");
+        Assert(walker.TryAttackPlayerInRange(field.Player, new ArenaCombatSystem()),
+            "an enemy touching the tall player from below can attack");
+    }
+
+    private static void TestFootstepEvents()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        int steps = 0;
+        field.PlayerFootstep += () => steps++;
+
+        field.UpdatePlayerMotion(true, 1, 0);
+        for (int i = 0; i < 20; i++)
+        {
+            field.AdvanceFootsteps(0.05);
+        }
+        Assert(steps == 3,
+            "walking for one second plays a step at once and then every 0.4 s");
+
+        field.UpdatePlayerMotion(false, 0, 0);
+        field.AdvanceFootsteps(0.05);
+        field.UpdatePlayerMotion(true, 0, 1);
+        field.AdvanceFootsteps(0.05);
+        Assert(steps == 4, "a new walk starts with a step right away");
+
+        field.ToggleSprint();
+        for (int i = 0; i < 20; i++)
+        {
+            field.AdvanceFootsteps(0.05);
+        }
+        Assert(steps == 4, "sprinting plays no footsteps");
+    }
+
+    // Uses the combat system directly: ArenaField.Tick reads the real keyboard, so a key
+    // pressed while the tests run must not move the player.
+    private static void TestShockAndHealSoundEvents()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        List<string> statuses = new List<string>();
+        int playerHeals = 0;
+        field.EntityStatusApplied += (entity, id) => statuses.Add(id);
+        field.PlayerHealingPulse += () => playerHeals++;
+
+        new StunEffect(0.5).Apply(null, field.Enemies[0]);
+        new StunEffect(0.5).Apply(null, field.Player);
+        new FreezeEffect(0.5).Apply(null, field.Player);
+        Assert(statuses.SequenceEqual(new[] { "stun", "stun", "freeze" }),
+            "stuns (electric shocks) of enemies and the player are reported");
+
+        field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.HealingPulse);
+        int healSlot = Array.IndexOf(
+            field.Progression.EntityAbilities.ToArray(), PlayerAbilityCatalog.HealingPulse);
+        Assert(field.Player.CurrentHitPoints == field.Player.MaxHitPoints
+            && field.AttackWithEntityAbility(healSlot) && playerHeals == 1,
+            "every healing pulse is reported for its sound, also at full health");
+
+        int blasts = 0;
+        field.PlayerPowerBlast += () => blasts++;
+        field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast);
+        int blastSlot = Array.IndexOf(
+            field.Progression.EntityAbilities.ToArray(), PlayerAbilityCatalog.PowerBlast);
+        Assert(field.AttackWithEntityAbility(blastSlot) && blasts == 1,
+            "releasing a Power Blast is reported for its sound");
+    }
+
+    private static void TestChainLightning()
+    {
+        ArenaProgression progression = new ArenaProgression();
+        progression.SetGodMode(true);
+        Assert(!progression.TryUpgradeBow(
+                BowUpgradeCatalog.ChainLightningUpgrade, UpgradeCurrency.Universal),
+            "Kettenblitz needs the lightning element");
+        Assert(progression.TryUpgradeBow(BowUpgradeCatalog.ArrowDamage, UpgradeCurrency.Universal)
+            && progression.TryUpgradeBow(BowUpgradeCatalog.Lightning, UpgradeCurrency.Universal)
+            && BowUpgradeCatalog.CreateBow(progression).ChainLightning == null,
+            "lightning arrows without the upgrade do not jump");
+        Assert(progression.TryUpgradeBow(
+                BowUpgradeCatalog.ChainLightningUpgrade, UpgradeCurrency.Universal),
+            "Kettenblitz can be bought on top of lightning");
+        ChainLightning first = BowUpgradeCatalog.CreateBow(progression).ChainLightning;
+        progression.TryUpgradeBow(BowUpgradeCatalog.ChainLightningUpgrade, UpgradeCurrency.Universal);
+        ChainLightning second = BowUpgradeCatalog.CreateBow(progression).ChainLightning;
+        Assert(first.MaximumJumps == 1 && second.MaximumJumps == 2
+            && second.JumpRadius > first.JumpRadius,
+            "each rank lets the bolt jump to one more enemy over a larger radius");
+
+        // A hit stuns the target; the bolt jumps to the two nearest enemies in reach.
+        Weapon bolt = new Weapon(
+            "chain-test", "Chain", string.Empty,
+            new MeleeConeAttackPattern(60, Math.PI / 4, 0.1),
+            new CompositeCombatEffect(new DamageEffect(1), new StunEffect(0.5)), 1,
+            WeaponTargetingMode.Opponents, "chain-test",
+            chainLightning: second);
+        TestEntity caster = new TestEntity(100, 100, 100, 10, CombatTeam.Player);
+        TestEntity target = new TestEntity(150, 100, 100, 0, CombatTeam.Enemies);
+        TestEntity near = new TestEntity(150 + 20 + second.JumpRadius - 5, 100, 100, 0,
+            CombatTeam.Enemies);
+        TestEntity further = new TestEntity(near.PositionX + 40, 100, 100, 0, CombatTeam.Enemies);
+        TestEntity outOfReach = new TestEntity(further.PositionX + 20 + second.JumpRadius + 20,
+            100, 100, 0, CombatTeam.Enemies);
+        TestEntity ally = new TestEntity(150, 130, 100, 0, CombatTeam.Player);
+        ArenaCombatSystem combat = new ArenaCombatSystem();
+        List<Tuple<Entity, Entity>> jumps = new List<Tuple<Entity, Entity>>();
+        combat.LightningChained += (from, to) => jumps.Add(Tuple.Create(from, to));
+        Assert(combat.TryStartAttack(caster, bolt, 1, 0), "the lightning attack starts");
+        combat.Update(0.04, new List<Entity> { caster, target, near, further, outOfReach, ally });
+        Func<Entity, bool> stunned = entity =>
+            entity.ActiveStatusEffects.Any(status => status.Id == "stun");
+        Assert(stunned(target) && stunned(near) && stunned(further)
+            && !stunned(outOfReach) && !stunned(ally),
+            "the bolt jumps from enemy to enemy, never to allies or beyond its radius");
+        Assert(jumps.Count == 2 && ReferenceEquals(jumps[0].Item1, target)
+            && ReferenceEquals(jumps[0].Item2, near) && ReferenceEquals(jumps[1].Item2, further),
+            "each jump starts from the last struck enemy");
+    }
+
+    private static string CreateTemporaryFolder()
+    {
+        string folder = Path.Combine(Path.GetTempPath(),
+            "arena-saves-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        return folder;
+    }
+
+    private static ArenaField CreateSavingField(string folder)
+    {
+        return new ArenaField
+        {
+            SaveGames = new ArenaSaveGameRepository(folder),
+            Scoreboard = ArenaScoreboard.Load(Path.Combine(folder, "highscores.json"))
+        };
+    }
+
+    private static void TestSaveGamesRoundTrip()
+    {
+        string folder = CreateTemporaryFolder();
+        try
+        {
+            ArenaField field = CreateSavingField(folder);
+            field.StartNewGame();
+            field.SelectPlayerWeapon(WeaponCatalog.Bow);
+            field.Progression.TryUpgradeBow(BowUpgradeCatalog.ArrowDamage, UpgradeCurrency.Universal);
+            field.Progression.TryUpgradeSkill(PlayerAbilityCatalog.PowerBlast);
+            field.Progression.AwardKill(WeaponCatalog.Bow);
+            field.Player.AnimationProfileName = "Kurt";
+            field.Player.PositionX = 400;
+            field.Player.PositionY = 300;
+            field.Player.TakeDamage(17);
+            PursuerEnemy enemy = field.Enemies[0];
+            enemy.PositionX = 900;
+            enemy.PositionY = 700;
+            enemy.TakeDamage(4);
+            new PoisonEffect(3, 5).Apply(field.Player, enemy);
+            new FreezeEffect(2).Apply(null, enemy);
+            Assert(field.SaveNow() && field.ActiveSaveSlot == 0,
+                "the first save of a run takes the first free slot");
+
+            ArenaField loaded = CreateSavingField(folder);
+            Assert(loaded.LoadSlot(0), "a saved slot can be loaded");
+            Assert(loaded.SelectedPlayerWeapon.Id == WeaponCatalog.Bow.Id
+                && loaded.Progression.GetWeaponUpgradeRank(BowUpgradeCatalog.ArrowDamage) == 1
+                && loaded.Progression.GetSkillRank(PlayerAbilityCatalog.PowerBlast) == 1
+                && loaded.Progression.UniversalPoints == field.Progression.UniversalPoints
+                && loaded.Progression.GetWeaponPoints(WeaponCatalog.Bow.Id)
+                    == field.Progression.GetWeaponPoints(WeaponCatalog.Bow.Id)
+                && loaded.Progression.TotalKills == 1
+                && loaded.Progression.EntityAbilities[0] == PlayerAbilityCatalog.PowerBlast,
+                "the run progress is restored");
+            Assert(loaded.Player.AnimationProfileName == "Kurt"
+                && Math.Abs(loaded.Player.PositionX - 400) < 1e-6
+                && Math.Abs(loaded.Player.PositionY - 300) < 1e-6
+                && loaded.Player.CurrentHitPoints == field.Player.CurrentHitPoints,
+                "the player is restored with character, position and hit points");
+            PursuerEnemy loadedEnemy = loaded.Enemies.Single();
+            Assert(Math.Abs(loadedEnemy.PositionX - 900) < 1e-6
+                && loadedEnemy.CurrentHitPoints == enemy.CurrentHitPoints
+                && loadedEnemy.ActiveDamageOverTimeEffects.Any(effect => effect.Id == "poison"
+                    && ReferenceEquals(effect.Source, loaded.Player))
+                && loadedEnemy.ActiveStatusEffects.Any(status => status.Id == "freeze"),
+                "enemies are restored with hit points and statuses");
+            Assert(loaded.IsGameStarted && loaded.ActiveSaveSlot == 0
+                && loaded.RunId == field.RunId,
+                "a loaded run continues at once in its slot");
+
+            // Program start continues the run saved last.
+            ArenaField second = CreateSavingField(folder);
+            second.StartNewGameInSlot(3);
+            ArenaField restarted = CreateSavingField(folder);
+            restarted.ContinueLatestOrStartNew();
+            Assert(restarted.ActiveSaveSlot == 3 && restarted.RunId == second.RunId,
+                "the program start continues the most recently saved run");
+
+            // Full slots: a new run is not saved until a slot is deleted.
+            for (int slot = 0; slot < ArenaSaveGameRepository.SlotCount; slot++)
+            {
+                if (!new ArenaSaveGameRepository(folder).IsUsed(slot))
+                {
+                    CreateSavingField(folder).StartNewGameInSlot(slot);
+                }
+            }
+            ArenaField overflow = CreateSavingField(folder);
+            overflow.StartNewGame();
+            Assert(!overflow.SaveNow() && overflow.IsRunUnsaved,
+                "with all slots taken the new run is not saved over another one");
+            overflow.DeleteSaveSlot(2);
+            Assert(overflow.SaveNow() && overflow.ActiveSaveSlot == 2,
+                "after deleting a save the run takes the freed slot");
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
+
+    private static void TestDeathRespawnAndHighScores()
+    {
+        string folder = CreateTemporaryFolder();
+        try
+        {
+            ArenaField field = CreateSavingField(folder);
+            field.StartNewGame();
+            for (int kill = 0; kill < 7; kill++)
+            {
+                field.Progression.AwardKill(WeaponCatalog.Sword);
+            }
+            int skillPoints = field.Progression.UniversalPoints;
+            int weaponPoints = field.Progression.GetWeaponPoints(WeaponCatalog.Sword.Id);
+            field.Player.TakeDamage(field.Player.MaxHitPoints);
+            Assert(field.IsGameOver && field.Deaths == 1
+                && new ArenaSaveGameRepository(folder).Load(field.ActiveSaveSlot.Value)
+                    .Player.HitPoints == 0,
+                "a death is counted and saved at once");
+
+            field.Player.PositionX = 100;
+            PursuerEnemy nearMiddle = field.Enemies[0];
+            nearMiddle.PositionX = field.WorldWidth / 2 + 40;
+            nearMiddle.PositionY = field.WorldHeight / 2;
+            Assert(field.Respawn(), "a dead player can respawn");
+            Assert(field.Player.IsAlive
+                && field.Player.CurrentHitPoints == field.Player.MaxHitPoints
+                && Math.Abs(field.Player.PositionX - field.WorldWidth / 2) < 1e-6
+                && field.IsGameStarted,
+                "the player respawns in the middle with full hit points");
+            Assert(field.Progression.UniversalPoints
+                    == Math.Max(0, skillPoints - ArenaField.DeathSkillPointPenalty)
+                && field.Progression.GetWeaponPoints(WeaponCatalog.Sword.Id)
+                    == Math.Max(0, weaponPoints - ArenaField.DeathWeaponPointPenalty),
+                "dying costs skill points and weapon points of the equipped weapon");
+            double nearDistance = Math.Sqrt(
+                Math.Pow(nearMiddle.PositionX - field.Player.PositionX, 2)
+                + Math.Pow(nearMiddle.PositionY - field.Player.PositionY, 2));
+            Assert(nearDistance >= ArenaField.RespawnClearRadius,
+                "enemies near the middle are moved away from the respawned player");
+            int hitPoints = field.Player.CurrentHitPoints;
+            field.Player.TakeDamage(10);
+            Assert(field.HasRespawnProtection && field.Player.CurrentHitPoints == hitPoints,
+                "the respawned player is protected for a moment");
+            for (int tick = 0; tick < 60 && field.HasRespawnProtection; tick++)
+            {
+                field.Tick();
+            }
+            field.Player.TakeDamage(10);
+            Assert(!field.HasRespawnProtection && field.Player.CurrentHitPoints < hitPoints,
+                "the protection ends after a moment");
+
+            // Penalty never below zero (each death after the protection has ended).
+            for (int death = 0; death < 2; death++)
+            {
+                field.Player.TakeDamage(field.Player.MaxHitPoints);
+                field.Respawn();
+                for (int tick = 0; tick < 60 && field.HasRespawnProtection; tick++)
+                {
+                    field.Tick();
+                }
+            }
+            Assert(field.Progression.GetWeaponPoints(WeaponCatalog.Sword.Id) == 0
+                && field.Deaths == 3,
+                "points do not drop below zero");
+
+            // High scores: kills minus a penalty per death, best first, live for the run.
+            ArenaScoreboard board = ArenaScoreboard.Load(Path.Combine(folder, "board.json"));
+            board.Record("a", "Slot 1", 20, 0, DateTime.Now);
+            board.Record("b", "Slot 2", 30, 3, DateTime.Now);
+            board.Record("c", "Slot 3", 12, 0, DateTime.Now);
+            Assert(board.Entries.Select(entry => entry.RunId).SequenceEqual(new[] { "a", "b", "c" })
+                && board.Entries[1].Score == 30 - 3 * ArenaScoreboard.DeathPenalty,
+                "deaths lower the score and the list is sorted by score");
+            Assert(board.Record("c", "Slot 3", 40, 0, DateTime.Now) == 1,
+                "a run climbs the list while its score grows");
+            for (int run = 0; run < 15; run++)
+            {
+                board.Record("x" + run, "Slot", run, 0, DateTime.Now);
+            }
+            Assert(board.Entries.Count == ArenaScoreboard.MaximumEntries
+                && ArenaScoreboard.Load(Path.Combine(folder, "board.json")).Entries.Count
+                    == ArenaScoreboard.MaximumEntries,
+                "the list keeps the best ten runs and is saved");
+
+            ArenaScoreEntry fieldEntry = field.Scoreboard.Entries.Single(
+                entry => entry.RunId == field.RunId);
+            Assert(fieldEntry.Deaths == 3 && fieldEntry.Score == field.TotalScore,
+                "the running run is entered live into the high score list");
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
+    }
+
+    private static void TestSkillPointQuestionPreference()
+    {
+        string path = Path.Combine(Path.GetTempPath(),
+            "arena-preferences-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            ArenaPreferences preferences = ArenaPreferences.Load(path);
+            Assert(preferences.AskBeforeSkillPointPayment,
+                "the skill point question is asked by default");
+            preferences.AskBeforeSkillPointPayment = false;
+            Assert(!ArenaPreferences.Load(path).AskBeforeSkillPointPayment,
+                "\"Nicht erneut fragen\" is remembered after a restart");
+            File.WriteAllText(path, "{ broken");
+            Assert(ArenaPreferences.Load(path).AskBeforeSkillPointPayment,
+                "a broken preferences file falls back to asking");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static void TestEnemyHitsPushPlayer()
+    {
+        foreach (bool invulnerable in new[] { false, true })
+        {
+            PlayerCharacter player = new PlayerCharacter(500, 500)
+            {
+                IsInvulnerable = invulnerable
+            };
+            TestEntity attacker = new TestEntity(540, 500, 30, 10, CombatTeam.Enemies)
+            {
+                EquippedWeapon = WeaponCatalog.EnemyClaws
+            };
+            ArenaCombatSystem combat = new ArenaCombatSystem();
+            Assert(combat.TryStartAttack(attacker, -1, 0), "the enemy attack starts");
+            combat.Update(ArenaField.GameTickDurationSeconds,
+                new List<Entity> { player, attacker });
+            Assert(500 - player.PositionX
+                    >= WeaponCatalog.EnemyClawKnockbackDistance - 1e-6,
+                invulnerable
+                    ? "enemy hits push the player even in godmode"
+                    : "enemy hits push the player back noticeably");
+        }
+    }
+
+    private static void TestFireTrailsAndStrikeTraces()
+    {
+        // A burning entity that moves drops fire at its feet; others touching it catch fire,
+        // the entity itself is not set on fire again by its own trail.
+        TestEntity burning = new TestEntity(100, 100, 100, 10, CombatTeam.Enemies);
+        TestEntity bystander = new TestEntity(300, 300, 100, 10, CombatTeam.Enemies);
+        new BurningEffect(4, 3, 0).Apply(null, burning);
+        ArenaCombatSystem combat = new ArenaCombatSystem();
+        List<Entity> entities = new List<Entity> { burning, bystander };
+        for (int i = 0; i < 6; i++)
+        {
+            burning.PositionX += 10;
+            combat.Update(0.05, entities);
+        }
+        Assert(combat.GroundEffects.Count(effect => effect.Visual == "FireTrail") >= 2,
+            "a moving burning entity leaves a fire trail");
+        ArenaGroundEffect patch = combat.GroundEffects.First(
+            effect => effect.Visual == "FireTrail");
+        Assert(patch.Effect == null, "the fire trail only shows the fire");
+        bystander.PositionX = patch.CenterX;
+        bystander.PositionY = patch.CenterY - bystander.Hitbox.Height / 2;
+        combat.Update(0.01, entities);
+        Assert(!bystander.ActiveDamageOverTimeEffects.Any(effect => effect.Id == "burning"),
+            "walking through a fire trail does not set an entity on fire");
+        for (int i = 0; i < 40; i++)
+        {
+            combat.Update(0.05, new List<Entity>());
+        }
+        Assert(combat.GroundEffects.Count == 0, "fire trails burn out after a while");
+
+        // The staff strike leaves traces of its element along its path that pass it on.
+        ArenaProgression progression = new ArenaProgression();
+        Assert(progression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.ProjectileDamage, UpgradeCurrency.Universal)
+            && progression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.Poison, UpgradeCurrency.Universal)
+            && progression.TryUpgradeMagicWand(
+                MagicWandUpgradeCatalog.Strike, UpgradeCurrency.Universal),
+            "the poison staff strike can be unlocked");
+        Weapon strike = MagicWandUpgradeCatalog.CreateStrikeWeapon(progression);
+        Assert(strike.HasTrail && strike.TrailVisual == "PoisenBubbels"
+            && strike.TrailEffect is PoisonEffect,
+            "the poison strike leaves poison traces");
+        TestEntity caster = new TestEntity(100, 100, 100, 10, CombatTeam.Player);
+        TestEntity victim = new TestEntity(500, 500, 100, 10, CombatTeam.Enemies);
+        ArenaCombatSystem strikeCombat = new ArenaCombatSystem();
+        Assert(strikeCombat.TryStartAttack(caster, strike, 1, 0), "the strike starts");
+        int expectedTraces = (int)Math.Ceiling(
+            strike.AttackPattern.Range / ArenaCombatSystem.StrikeTraceSpacing);
+        strikeCombat.Update(0.05, new List<Entity> { caster, victim });
+        int earlyTraces = strikeCombat.GroundEffects.Count;
+        for (int i = 0; i < 10; i++)
+        {
+            strikeCombat.Update(0.05, new List<Entity> { caster, victim });
+        }
+        Assert(earlyTraces > 0 && earlyTraces < expectedTraces
+            && strikeCombat.GroundEffects.Count == expectedTraces,
+            "strike traces appear progressively along the whole strike");
+        ArenaGroundEffect trace = strikeCombat.GroundEffects.Last();
+        victim.PositionX = trace.CenterX;
+        victim.PositionY = trace.CenterY;
+        strikeCombat.Update(0.01, new List<Entity> { caster, victim });
+        Assert(victim.ActiveDamageOverTimeEffects.Any(effect => effect.Id == "poison")
+            && !caster.ActiveDamageOverTimeEffects.Any(),
+            "strike traces poison opponents but not the caster");
+    }
+
+    private static void TestStaffSpritesAndHealEvents()
+    {
+        ArenaProgression progression = new ArenaProgression();
+        WeaponAppearance plain = MagicWandUpgradeCatalog.CreateMagicWand(progression).Appearance;
+        Assert(plain.EmptyAnimation == MagicWandUpgradeCatalog.EmptyStaffAnimation
+            && plain.ProjectileAnimations.SequenceEqual(new[] { "ProjetilPlain" }),
+            "the staff shoots its head and is empty until recharged");
+        progression.TryUpgradeMagicWand(
+            MagicWandUpgradeCatalog.ProjectileDamage, UpgradeCurrency.Universal);
+        progression.TryUpgradeMagicWand(MagicWandUpgradeCatalog.Freeze, UpgradeCurrency.Universal);
+        Assert(MagicWandUpgradeCatalog.CreateMagicWand(progression).Appearance
+                .ProjectileAnimations.SequenceEqual(new[] { "ProjetilIce" }),
+            "the ice staff shoots ice projectiles");
+
+        TestEntity thief = new TestEntity(100, 100, 100, 10, CombatTeam.Player);
+        TestEntity victim = new TestEntity(150, 100, 100, 10, CombatTeam.Enemies);
+        thief.TakeDamage(50);
+        Entity healedFrom = null;
+        int healed = 0;
+        thief.Healed += (entity, amount, from) => { healed = amount; healedFrom = from; };
+        new LifeStealEffect(new DamageEffect(20), 0.5).Apply(thief, victim);
+        Assert(healed == 10 && ReferenceEquals(healedFrom, victim),
+            "stolen life reports the entity it was stolen from");
+        new HealingEffect(5).Apply(null, thief);
+        Assert(healed == 5 && healedFrom == null, "ordinary healing has no origin");
+    }
+
+    private static void TestParticlesFollowEvents()
+    {
+        ArenaField field = new ArenaField();
+        field.StartNewGame();
+        ArenaParticleRenderer particles = new ArenaParticleRenderer(new ArenaWeaponRenderer());
+        particles.Attach(field);
+        field.Player.TakeDamage(10);
+        Assert(particles.ParticleCount >= 5, "a hurt entity sprays blood");
+        for (int i = 0; i < 80; i++)
+        {
+            particles.Advance(field, 0.05);
+        }
+        Assert(particles.ParticleCount == 0, "blood stains vanish after a short time");
+
+        new PoisonEffect(2, 2).Apply(null, field.Player);
+        particles.Advance(field, 0.5);
+        Assert(particles.ParticleCount > 0, "poisoned entities give off poison bubbles");
     }
 
     private static void TestMultiplePlayerAbilities()
@@ -1114,9 +1682,15 @@ internal static class Program
             && combat.TryStartAttack(player, heal, 0, 0),
             "different player abilities can activate independently");
         combat.Update(0.04, new List<Entity> { player, enemy });
+        Assert(enemy.CurrentHitPoints == 50 && player.CurrentHitPoints == 80,
+            "healing is instant while the Power Blast wave has not yet reached the enemy");
+        for (int i = 0; i < 8; i++)
+        {
+            combat.Update(0.04, new List<Entity> { player, enemy });
+        }
         Assert(enemy.CurrentHitPoints == 30
             && player.CurrentHitPoints == 80,
-            "Power Blast damages nearby enemies while healing restores player health");
+            "the Power Blast wave runs outwards and damages the enemy once when it arrives");
     }
 
     private static void TestKeyBindingPersistenceAndConflicts()
@@ -1389,7 +1963,12 @@ internal static class Program
             painter.PaintGameField(canvas, field);
             Assert(FindMenuButton(canvas, "Spiel fortsetzen") != null,
                 "pausing again after leaving a submenu returns to the pause menu");
-            FindMenuButton(canvas, "Waffen verbessern").RaiseEvent(
+            Assert(FindMenuButtonIn(canvas, "Waffen verbessern") == null,
+                "the pause menu has no separate weapon-upgrade button any more");
+            FindMenuButton(canvas, "Ausrüstung").RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            painter.PaintGameField(canvas, field);
+            FindMenuButton(canvas, WeaponCatalog.Sword.Name + " — Waffenbaum").RaiseEvent(
                 new RoutedEventArgs(Button.ClickEvent));
             painter.PaintGameField(canvas, field);
             field.Progression.AwardKill(WeaponCatalog.Sword);
@@ -1399,12 +1978,9 @@ internal static class Program
                 new RoutedEventArgs(Button.ClickEvent));
             Assert(field.Progression.GetWeaponUpgradeRank(
                 SwordUpgradeCatalog.StrikeDamage) == 1,
-                "weapon-upgrade menu purchases the selected sword upgrade");
+                "weapon tree from the equipment selection purchases the sword upgrade");
 
             FindMenuButton(canvas, "Back").RaiseEvent(
-                new RoutedEventArgs(Button.ClickEvent));
-            painter.PaintGameField(canvas, field);
-            FindMenuButton(canvas, "Ausrüstung").RaiseEvent(
                 new RoutedEventArgs(Button.ClickEvent));
             painter.PaintGameField(canvas, field);
             Button wandUpgradeButton = FindMenuButton(
@@ -2095,8 +2671,8 @@ internal static class Program
         field.ToggleGodMode();
         field.Player.TakeDamage(1);
         Assert(!field.IsGodMode && field.Player.DamageFlashIntensity > 0,
-            "leaving god mode restores damage and displays a white damage flash");
-        field.Player.UpdateStatusEffects(0.18);
+            "leaving god mode restores damage and lets the player light up white");
+        field.Player.UpdateStatusEffects(0.35);
         Assert(field.Player.DamageFlashIntensity == 0,
             "the damage flash ends after a short interval");
     }
@@ -2112,14 +2688,17 @@ internal static class Program
         pusher.PositionY = 600;
         pushableField.SpawnEnemy();
         PursuerEnemy pushable = pushableField.Enemies[1];
-        pushable.PositionX = 540;
+        // A small gap between the hitboxes, closed by the pusher's next step.
+        double pushableStartX = 500 + pusher.Hitbox.Width + 3;
+        pushable.PositionX = pushableStartX;
         pushable.PositionY = 600;
         pushable.CanBePushed = true;
 
         pushableField.UpdateEnemyPositions();
 
-        Assert(pushable.PositionX > 551
-            && pushable.PositionX - pusher.PositionX >= pusher.Size,
+        Assert(pusher.PositionX > 500
+            && pushable.PositionX > pushableStartX
+            && pushable.Hitbox.Left >= pusher.Hitbox.Right - 1e-6,
             "moving entities push marked entities out of their way");
 
         ArenaField fixedField = new ArenaField();
@@ -2131,14 +2710,15 @@ internal static class Program
         blockedMover.PositionY = 600;
         fixedField.SpawnEnemy();
         PursuerEnemy fixedEntity = fixedField.Enemies[1];
-        fixedEntity.PositionX = 540;
+        double fixedStartX = 500 + blockedMover.Hitbox.Width + 3;
+        fixedEntity.PositionX = fixedStartX;
         fixedEntity.PositionY = 600;
         fixedEntity.CanBePushed = false;
 
         fixedField.UpdateEnemyPositions();
 
         Assert(Math.Abs(blockedMover.PositionX - 500) < 0.001
-            && fixedEntity.PositionX > 540,
+            && fixedEntity.PositionX > fixedStartX,
             "unmarked entities remain solid and block other entity movement");
     }
 
@@ -2356,7 +2936,8 @@ internal static class Program
             "playerDamage_*.wav", "player_death*.wav", "nonPlayerEntityDamage_*.wav",
             "entity_death_*.wav", "sword_swing_*.wav", "paySkill*.wav",
             "playerLowHealth*.wav", "sprint_loop_*.wav", "sprint_turn_neeow_*.wav",
-            "sprint_stop_brake*.wav", "ui_menu_click*.wav"
+            "sprint_stop_brake*.wav", "ui_menu_click*.wav", "playerFootstep_*.wav",
+            "electricDamage_*.wav", "playerHeal*.wav", "powerBlast*.wav"
         };
         foreach (string pattern in patterns)
         {
@@ -2423,6 +3004,8 @@ internal static class Program
 
         Assert(group.Play(100) >= 0 && group.Play(100.05) == -1 && group.Play(100.2) >= 0,
             "hits within the minimum interval are merged into one sound");
+        Assert(group.Play(100.21, true) >= 0,
+            "a forced sound (lethal hit) is never merged into an earlier one");
         Assert(new ArenaSoundGroup(new IArenaSoundEffect[0], 0).Play(0) == -1,
             "a missing sound folder leaves the event silent");
     }

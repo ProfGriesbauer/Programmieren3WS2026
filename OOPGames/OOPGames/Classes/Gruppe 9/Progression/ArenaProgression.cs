@@ -153,6 +153,88 @@ namespace OOPGames
             IsGodMode = enabled;
         }
 
+        // Dying costs skill points and weapon points of the equipped weapon; points never
+        // drop below zero and bought upgrades stay.
+        public void ApplyDeathPenalty(string weaponId, int skillPoints, int weaponPoints)
+        {
+            _universalPoints = Math.Max(0, _universalPoints - skillPoints);
+            if (weaponId != null)
+            {
+                _weaponPoints[weaponId] =
+                    Math.Max(0, GetStoredWeaponPoints(weaponId) - weaponPoints);
+            }
+        }
+
+        public ArenaProgressionSave Export()
+        {
+            return new ArenaProgressionSave
+            {
+                UniversalPoints = _universalPoints,
+                TotalKills = TotalKills,
+                IsGodMode = IsGodMode,
+                WeaponPoints = new Dictionary<string, int>(_weaponPoints),
+                SkillRanks = new Dictionary<string, int>(_skillRanks),
+                WeaponUpgradeRanks = new Dictionary<string, int>(_weaponUpgradeRanks),
+                ForcedForkChoices = new Dictionary<string, string>(_forcedForkChoices),
+                EntityAbilities = (string[])_entityAbilities.Clone(),
+                WeaponAbilities = _weaponAbilities.ToDictionary(
+                    pair => pair.Key, pair => (string[])pair.Value.Clone())
+            };
+        }
+
+        public void Import(ArenaProgressionSave state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            Reset();
+            _universalPoints = state.UniversalPoints;
+            TotalKills = state.TotalKills;
+            IsGodMode = state.IsGodMode;
+            CopyInto(state.WeaponPoints, _weaponPoints);
+            CopyInto(state.SkillRanks, _skillRanks);
+            CopyInto(state.WeaponUpgradeRanks, _weaponUpgradeRanks);
+            if (state.ForcedForkChoices != null)
+            {
+                foreach (KeyValuePair<string, string> pair in state.ForcedForkChoices)
+                {
+                    _forcedForkChoices[pair.Key] = pair.Value;
+                }
+            }
+            if (state.EntityAbilities != null)
+            {
+                Array.Copy(state.EntityAbilities, _entityAbilities,
+                    Math.Min(state.EntityAbilities.Length, _entityAbilities.Length));
+            }
+            if (state.WeaponAbilities != null)
+            {
+                foreach (KeyValuePair<string, string[]> pair in state.WeaponAbilities)
+                {
+                    string[] slots = new string[AbilitySlotCount];
+                    if (pair.Value != null)
+                    {
+                        Array.Copy(pair.Value, slots, Math.Min(pair.Value.Length, slots.Length));
+                    }
+                    _weaponAbilities[pair.Key] = slots;
+                }
+            }
+        }
+
+        private static void CopyInto(
+            Dictionary<string, int> source, Dictionary<string, int> target)
+        {
+            if (source == null)
+            {
+                return;
+            }
+            foreach (KeyValuePair<string, int> pair in source)
+            {
+                target[pair.Key] = pair.Value;
+            }
+        }
+
         public void AwardKill(Weapon weapon)
         {
             if (weapon == null)

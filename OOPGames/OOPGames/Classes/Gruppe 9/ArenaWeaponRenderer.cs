@@ -51,6 +51,9 @@ namespace OOPGames
         // stray pixel above the arrow that must not appear on the bow.
         private static readonly SpriteLayout NockedArrowLayout =
             new SpriteLayout(new Int32Rect(74, 44, 24, 10), 89, 50.5, 0, 0);
+        // Magic projectiles (the staff's head) are round: drawn centered and unrotated.
+        private static readonly SpriteLayout OrbLayout =
+            new SpriteLayout(new Int32Rect(46, 40, 20, 18), 57, 48.5, 0, 0);
         private static readonly SpriteLayout FlyingArrowLayout =
             new SpriteLayout(new Int32Rect(74, 44, 24, 10), 94, 50.5, 0, 0);
         // String position of the four draw frames relative to the fully drawn string (x = 80),
@@ -79,7 +82,7 @@ namespace OOPGames
             // The weapon lies in the right hand: when that hand is on the far side of the body
             // (seen from behind or from the right), the body covers the weapon.
             PlayerFacing facing = GetShownFacing(field, entity);
-            if (PlayerCharacter.IsRightHandBehindBody(facing) != behindEntity)
+            if (IsHandBehindBody(entity, facing) != behindEntity)
             {
                 return;
             }
@@ -130,15 +133,18 @@ namespace OOPGames
                 IReadOnlyList<string> animations = visual.Appearance.ProjectileAnimations;
                 int index = (int)(visual.Progress * visual.Range / ProjectileFrameDistance)
                     % animations.Count;
-                BitmapSource frame = GetCroppedFrame(animations[index], 0, FlyingArrowLayout);
+                bool isOrb = visual.Appearance.Kind == WeaponSpriteKind.Staff;
+                SpriteLayout layout = isOrb ? OrbLayout : FlyingArrowLayout;
+                BitmapSource frame = GetCroppedFrame(animations[index], 0, layout);
                 if (frame == null)
                 {
                     continue;
                 }
 
-                AddSprite(canvas, frame, FlyingArrowLayout, 0,
+                AddSprite(canvas, frame, layout, 0,
                     visual.ProjectileX - left, visual.ProjectileY - top,
-                    BowUnitsPerPixel, visual.DirectionX, visual.DirectionY);
+                    BowUnitsPerPixel,
+                    isOrb ? 1 : visual.DirectionX, isOrb ? 0 : visual.DirectionY);
             }
         }
 
@@ -187,16 +193,23 @@ namespace OOPGames
 
             if (appearance.Kind == WeaponSpriteKind.Staff)
             {
-                // A cast staff briefly points at the target and shows its attack frame.
+                // The shot head leaves the staff empty until the cooldown has recharged it;
+                // right after the cast the staff briefly points at the target.
                 double remaining = field.GetAttackCooldownRemaining(entity, weapon);
                 double elapsed = weapon.CooldownSeconds - remaining;
+                string animation = remaining > 0 && appearance.EmptyAnimation != null
+                    ? appearance.EmptyAnimation
+                    : appearance.HeldAnimation;
                 if (remaining > 0 && elapsed < StaffCastPoseSeconds)
                 {
                     return WeaponPose.FromHand(
-                        appearance, appearance.AttackAnimation, hand, aimX, aimY,
-                        appearance.Reach,
+                        appearance, animation, hand, aimX, aimY, appearance.Reach,
                         StaffThrustDistance * Math.Sin(elapsed / StaffCastPoseSeconds * Math.PI));
                 }
+
+                WeaponPose staff = WeaponPose.Held(appearance, facing, hand, unitsPerFramePixel);
+                staff.Animation = animation;
+                return staff;
             }
 
             return WeaponPose.Held(appearance, facing, hand, unitsPerFramePixel);
@@ -249,6 +262,19 @@ namespace OOPGames
             return pose;
         }
 
+        private static bool IsHandBehindBody(Entity entity, PlayerFacing facing)
+        {
+            return entity is PlayerCharacter player
+                ? player.IsRightHandBehindBody(facing)
+                : facing == PlayerFacing.Back;
+        }
+
+        // Frame of a magic projectile sprite, e.g. for lightning traces of the staff strike.
+        internal BitmapSource GetOrbFrame(string animation)
+        {
+            return GetCroppedFrame(animation, 0, OrbLayout);
+        }
+
         // Right hand of players; other entities hold weapons at their center.
         private static Vector GetHandOffset(Entity entity, PlayerFacing facing)
         {
@@ -286,8 +312,10 @@ namespace OOPGames
         {
             if (ReferenceEquals(entity, field.Player))
             {
-                directionX = field.AimDirectionX;
-                directionY = field.AimDirectionY;
+                // Same direction the projectile will fly in, so the bow points at the cursor.
+                Vector aim = field.GetProjectileAimDirection(entity.EquippedWeapon);
+                directionX = aim.X;
+                directionY = aim.Y;
                 return;
             }
 
@@ -456,7 +484,7 @@ namespace OOPGames
             private const double SideStaffTiltRadians = Math.PI * 8 / 180;
 
             public WeaponAppearance Appearance { get; private set; }
-            public string Animation { get; private set; }
+            public string Animation { get; set; }
             public int FrameIndex { get; private set; }
             public double DirectionX { get; private set; }
             public double DirectionY { get; private set; }

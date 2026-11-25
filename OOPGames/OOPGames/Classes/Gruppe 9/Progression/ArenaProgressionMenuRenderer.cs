@@ -5,11 +5,20 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace OOPGames
 {
     internal sealed class ArenaProgressionMenuRenderer
     {
+        // Scroll positions per menu page (and per scroll area on it) while the game runs, so a
+        // purchase, which rebuilds the page, does not jump back to the top and a page reopens
+        // where it was left.
+        private readonly Dictionary<string, double> _scrollOffsets =
+            new Dictionary<string, double>(StringComparer.Ordinal);
+
+        // Menu click sound for windows outside the game canvas (skill point question).
+        public Action PlayMenuClick { get; set; }
         private static readonly Brush TextBrush =
             new SolidColorBrush(Color.FromRgb(225, 233, 241));
         private const double ButtonHeight = 36;
@@ -117,12 +126,14 @@ namespace OOPGames
                 Foreground = TextBrush,
                 Margin = new Thickness(0, 8, 0, 0)
             });
-            return new ScrollViewer
+            ScrollViewer page = new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Content = content
             };
+            RememberScrollPositions(page, "skills");
+            return page;
         }
 
         private UIElement CreateSkillTreePreview(
@@ -292,6 +303,16 @@ namespace OOPGames
                         + "können nach Bestätigung aus Skillpunkten bezahlt werden.")
                     + " LMB: Grundangriff, RMB: Waffenfähigkeit 1. "
                     + "Elemente wirken auf die Waffenangriffe.");
+            if (!field.IsGodMode && !ArenaPreferences.Default.AskBeforeSkillPointPayment)
+            {
+                AddText(content, "Fehlende Waffenpunkte werden ohne Rückfrage mit Skillpunkten bezahlt.");
+                AddButton(content, "Rückfrage vor Skillpunkt-Zahlung wieder einschalten", true,
+                    () =>
+                    {
+                        ArenaPreferences.Default.AskBeforeSkillPointPayment = true;
+                        refresh();
+                    });
+            }
 
             TreeView tree = new TreeView
             {
@@ -345,7 +366,7 @@ namespace OOPGames
                     AddText(node, "Ein anderer Elementzweig ist bereits gewählt.");
                 }
 
-                AddPurchaseButton(node, field, upgrade,
+                AddPurchaseButton(PlayMenuClick, node, field, upgrade,
                     canPurchase, cost, weaponPointsToSpend,
                     skillPointsToSpend, rank >= maximumRank, refresh);
 
@@ -369,7 +390,9 @@ namespace OOPGames
                 GetUnlockedWeaponAbilities(progression, weaponId),
                 (slot, ability) => progression.TryAssignWeaponAbility(
                     weaponId, slot, ability), "Waffenfähigkeit", refresh);
-            return CreateScrollablePage(content);
+            ScrollViewer page = CreateScrollablePage(content);
+            RememberScrollPositions(page, "weapon:" + weaponId);
+            return page;
         }
 
         public UIElement CreateKeyBindings(
@@ -629,7 +652,7 @@ namespace OOPGames
         }
 
         private static void AddPurchaseButton(
-            ItemsControl content, ArenaField field,
+            Action playMenuClick, ItemsControl content, ArenaField field,
             WeaponUpgradeDefinition upgrade, bool enabled, int cost,
             int weaponPointsToSpend, int skillPointsToSpend,
             bool isMaxed, Action refresh)
@@ -644,9 +667,11 @@ namespace OOPGames
                 enabled, () =>
                 {
                     // Every purchase that uses skill points needs an explicit confirmation,
-                    // also when the weapon has no weapon points left at all.
+                    // also when the weapon has no weapon points left at all, unless the
+                    // player chose "Nicht erneut fragen".
                     if (skillPointsToSpend > 0
-                        && MessageBox.Show(
+                        && ArenaPreferences.Default.AskBeforeSkillPointPayment
+                        && !SkillPointPaymentDialog.Confirm(
                             (weaponPointsToSpend == 0
                                 ? "Du hast keine Waffenpunkte für "
                                     + field.SelectedPlayerWeapon.Name + ". "
@@ -659,9 +684,7 @@ namespace OOPGames
                                         + (weaponPointsToSpend == 1 ? "" : "en")
                                     : string.Empty)
                                 + " bezahlen?",
-                            "Mit Skillpunkten bezahlen?",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Question) != MessageBoxResult.Yes)
+                            ArenaPreferences.Default, playMenuClick))
                     {
                         return;
                     }
@@ -697,6 +720,44 @@ namespace OOPGames
             });
             AddText(content, summary);
             return content;
+        }
+
+        // Restores the remembered offsets of every scroll area on the page once it is laid
+        // out, then keeps them up to date while the player scrolls.
+        private void RememberScrollPositions(FrameworkElement page, string pageKey)
+        {
+            page.Loaded += (sender, e) => page.Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded, new Action(() =>
+                {
+                    int index = 0;
+                    foreach (ScrollViewer viewer in FindScrollViewers(page))
+                    {
+                        string key = pageKey + "#" + index++;
+                        if (_scrollOffsets.TryGetValue(key, out double offset))
+                        {
+                            viewer.ScrollToVerticalOffset(offset);
+                        }
+                        viewer.ScrollChanged += (o, args) =>
+                            _scrollOffsets[key] = viewer.VerticalOffset;
+                    }
+                }));
+        }
+
+        private static IEnumerable<ScrollViewer> FindScrollViewers(DependencyObject element)
+        {
+            if (element is ScrollViewer viewer)
+            {
+                yield return viewer;
+            }
+            int count = VisualTreeHelper.GetChildrenCount(element);
+            for (int i = 0; i < count; i++)
+            {
+                foreach (ScrollViewer child in FindScrollViewers(
+                    VisualTreeHelper.GetChild(element, i)))
+                {
+                    yield return child;
+                }
+            }
         }
 
         private static ScrollViewer CreateScrollablePage(StackPanel content)

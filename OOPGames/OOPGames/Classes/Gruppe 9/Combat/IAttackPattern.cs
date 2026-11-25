@@ -32,7 +32,8 @@ namespace OOPGames
         public CombatEffectKind EffectKind { get; }
         public string AnimationPlaceholder { get; }
         public double Range { get; }
-        public double Radius { get; }
+        // Current radius of bursts: power blast and pulses grow outwards over their duration.
+        public double Radius { get; internal set; }
         public double CenterX { get; internal set; }
         public double CenterY { get; internal set; }
         public double DirectionX { get; internal set; }

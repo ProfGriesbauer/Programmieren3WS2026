@@ -131,7 +131,8 @@ namespace OOPGames
             int lostHitPoints = hitPointsBefore - target.CurrentHitPoints;
             if (source != null && lostHitPoints > 0)
             {
-                source.Heal(Math.Max(1, (int)Math.Round(lostHitPoints * StealFraction)));
+                source.Heal(
+                    Math.Max(1, (int)Math.Round(lostHitPoints * StealFraction)), target);
             }
         }
     }
@@ -429,7 +430,6 @@ namespace OOPGames
     public sealed class ActiveDamageOverTimeEffect
     {
         private double _damageRemainder;
-        private double _spreadRemainingSeconds;
 
         internal ActiveDamageOverTimeEffect(
             string id, string name, double damagePerSecond,
@@ -443,7 +443,6 @@ namespace OOPGames
             SpreadRadius = spreadRadius;
             Source = source;
             SourceWeapon = sourceWeapon;
-            _spreadRemainingSeconds = 0;
         }
 
         public string Id { get; }
@@ -463,23 +462,6 @@ namespace OOPGames
             int damage = (int)_damageRemainder;
             _damageRemainder -= damage;
             return damage;
-        }
-
-        internal bool AdvanceSpreadClock(double deltaSeconds)
-        {
-            if (SpreadRadius <= 0 || IsExpired)
-            {
-                return false;
-            }
-
-            _spreadRemainingSeconds -= deltaSeconds;
-            if (_spreadRemainingSeconds > 0)
-            {
-                return false;
-            }
-
-            _spreadRemainingSeconds += 0.8;
-            return true;
         }
     }
 }

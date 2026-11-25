@@ -2,7 +2,11 @@ namespace OOPGames
 {
     public sealed class ArenaRules : IGameRules2
     {
-        private readonly ArenaField _field = new ArenaField();
+        private readonly ArenaField _field = new ArenaField
+        {
+            SaveGames = new ArenaSaveGameRepository(ArenaSaveGameRepository.DefaultFolder),
+            Scoreboard = ArenaScoreboard.Load(ArenaScoreboard.DefaultFilePath)
+        };
 
         public string Name { get { return "Arena Survival"; } }
         public IGameField CurrentField { get { return _field; } }
@@ -13,9 +17,11 @@ namespace OOPGames
             // Arena movement is continuous and handled by the active player steering.
         }
 
+        // Program start continues the run saved last (automatic saving keeps it current);
+        // a new run is started from the save game menu.
         public void ClearField()
         {
-            _field.StartNewGame();
+            _field.ContinueLatestOrStartNew();
         }
 
         public int CheckIfPLayerWon()
@@ -28,7 +34,8 @@ namespace OOPGames
             PainterG9 painter = OOPGamesManager.Singleton.ActivePainter as PainterG9;
             if (painter != null)
             {
-                painter.ResetAnimationProfile();
+                // A continued save keeps its character.
+                painter.ResetAnimationProfile(_field.Player.AnimationProfileName);
             }
         }
 

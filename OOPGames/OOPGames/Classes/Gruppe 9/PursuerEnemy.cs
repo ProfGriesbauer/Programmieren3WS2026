@@ -11,6 +11,8 @@ namespace OOPGames
         public const double SightRange = 200;
         public const double SightRangeAfterDetectionBonus = 50;
         public const double HitboxSize = 34;
+        // The painter draws the 128-pixel enemy frame 2 * Size tall.
+        private const double FrameHeightInSizes = 2;
         private const double WanderSpeedMultiplier = 0.5;
         private const double MinimumWanderDurationSeconds = 1.5;
         private const double WanderDurationVarianceSeconds = 2.5;
@@ -41,6 +43,20 @@ namespace OOPGames
 
         public bool HasSeenPlayer { get { return _hasSeenPlayer; } }
 
+        // Hitbox around the visible pixels of the enemy texture.
+        public override Rect HitboxOffset
+        {
+            get { return GetHitboxOffsetForSize(Size); }
+        }
+
+        // Hitbox of an enemy of the given size before it exists, e.g. for spawn checks.
+        public static Rect GetHitboxOffsetForSize(double size)
+        {
+            return EntityHitboxCatalog.GetHitboxOffset(
+                    EntityHitboxCatalog.Enemy, size * FrameHeightInSizes)
+                ?? new Rect(-size / 2, -size / 2, size, size);
+        }
+
         public Point GetPlannedDestination(ArenaField field)
         {
             if (field == null)
@@ -60,7 +76,7 @@ namespace OOPGames
             double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
             if (distance <= CurrentSightRange)
             {
-                double stoppingDistance = GetMinimumSeparation(player);
+                double stoppingDistance = GetMinimumSeparation(player, offsetX, offsetY);
                 if (distance <= stoppingDistance)
                 {
                     return currentPosition;
@@ -98,10 +114,11 @@ namespace OOPGames
 
             double offsetX = player.PositionX - PositionX;
             double offsetY = player.PositionY - PositionY;
+            // The attack reaches range units from the enemy to the player's hitbox.
             double range = EquippedWeapon.AttackPattern.Range;
-            double attackRangeSquared = range * range;
             if (!IsAlive || !player.IsAlive
-                || offsetX * offsetX + offsetY * offsetY > attackRangeSquared)
+                || AttackGeometry.DistanceToRect(
+                    new Point(PositionX, PositionY), player.Hitbox) > range)
             {
                 return false;
             }
@@ -149,7 +166,7 @@ namespace OOPGames
                 return;
             }
 
-            double stoppingDistance = GetMinimumSeparation(player);
+            double stoppingDistance = GetMinimumSeparation(player, offsetX, offsetY);
             if (distance <= stoppingDistance)
             {
                 Move(0, 0, movementBounds, speedScale);
@@ -196,11 +213,11 @@ namespace OOPGames
             ArenaField field,
             Point start, double directionX, double directionY, double distance)
         {
-            double radius = Size / 2;
-            double minimumX = ArenaField.WallThickness + radius;
-            double maximumX = field.WorldWidth - ArenaField.WallThickness - radius;
-            double minimumY = ArenaField.WallThickness + radius;
-            double maximumY = field.WorldHeight - ArenaField.WallThickness - radius;
+            Rect hitbox = HitboxOffset;
+            double minimumX = ArenaField.WallThickness - hitbox.Left;
+            double maximumX = field.WorldWidth - ArenaField.WallThickness - hitbox.Right;
+            double minimumY = ArenaField.WallThickness - hitbox.Top;
+            double maximumY = field.WorldHeight - ArenaField.WallThickness - hitbox.Bottom;
             double destinationX = start.X + directionX * distance;
             double destinationY = start.Y + directionY * distance;
             return new Point(
@@ -245,9 +262,18 @@ namespace OOPGames
                 : (offsetY < 0 ? PlayerFacing.Back : PlayerFacing.Front);
         }
 
-        private double GetMinimumSeparation(PlayerCharacter player)
+        // Distance between the centers at which the two hitboxes touch when the enemy walks
+        // straight towards the player.
+        private double GetMinimumSeparation(
+            PlayerCharacter player, double offsetX, double offsetY)
         {
-            return (Size + player.Size) / 2;
+            double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
+            if (distance == 0)
+            {
+                return 0;
+            }
+            return AttackGeometry.GetContactDistance(
+                HitboxOffset, player.HitboxOffset, offsetX / distance, offsetY / distance);
         }
     }
 }

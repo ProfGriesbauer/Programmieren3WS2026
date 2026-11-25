@@ -15,6 +15,7 @@ namespace OOPGames
         public const string BlackSteel = "sword-element-black-steel";
         public const string Leach = "sword-black-steel-leach";
         public const string ElementPower = "sword-element-power";
+        public const string ChainLightningUpgrade = "sword-chain-lightning";
         public const string Range = "sword-range";
         public const string Knockback = "sword-knockback";
         public const string AttackCooldown = "sword-attack-cooldown";
@@ -68,7 +69,7 @@ namespace OOPGames
                     1, 2, StrikeDamage),
                 new WeaponUpgradeDefinition(
                     Fire, "Flammenklinge",
-                    "Verbrennt Gegner; Feuer kann auf nahe Gegner überspringen.",
+                    "Verbrennt Gegner; brennende Gegner stecken an, wen sie treffen.",
                     1, 2, StrikeDamage),
                 new WeaponUpgradeDefinition(
                     Freeze, "Frostklinge",
@@ -82,6 +83,10 @@ namespace OOPGames
                     Leach, "Blutsauger",
                     "Die Schwarzstahlklinge stiehlt Lebensenergie: Ein Teil des Schadens heilt den Spieler.",
                     1, 3, BlackSteel),
+                new WeaponUpgradeDefinition(
+                    ChainLightningUpgrade, "Kettenblitz",
+                    "Der Blitz springt vom getroffenen Gegner auf weitere über: je Rang ein Gegner mehr und ein größerer Sprungradius.",
+                    5, 2, Lightning),
                 new WeaponUpgradeDefinition(
                     ElementPower, "Elementstärke",
                     "Verbessert Stärke und Dauer des gewählten Klingeneffekts.",
@@ -179,7 +184,8 @@ namespace OOPGames
                 swingSeconds,
                 WeaponTargetingMode.Opponents, "sweeping-slash",
                 knockbackDistance: GetKnockbackDistance(progression),
-                appearance: GetAppearance(progression));
+                appearance: GetAppearance(progression),
+                chainLightning: GetChainLightning(progression));
         }
 
         public static Weapon CreateSpinWeapon(ArenaProgression progression)
@@ -209,7 +215,8 @@ namespace OOPGames
                 SpinBaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
                     progression.GetWeaponUpgradeRank(SpinCooldown)),
                 WeaponTargetingMode.Opponents, "sword-spin", rotations,
-                GetKnockbackDistance(progression), GetAppearance(progression));
+                GetKnockbackDistance(progression), GetAppearance(progression),
+                chainLightning: GetChainLightning(progression));
         }
 
         // Blade sprite of the chosen element; Lightning and Freeze have no own sprite yet.
@@ -248,6 +255,15 @@ namespace OOPGames
                 throw new ArgumentNullException(nameof(progression));
             }
             return SpinRotations + progression.GetWeaponUpgradeRank(SpinDuration);
+        }
+
+        public static ChainLightning GetChainLightning(ArenaProgression progression)
+        {
+            return progression.SelectedSwordElement == WeaponElement.Lightning
+                ? ChainLightning.ForRank(
+                    progression.GetWeaponUpgradeRank(ChainLightningUpgrade),
+                    progression.GetWeaponUpgradeRank(ElementPower))
+                : null;
         }
 
         public static double GetSlashRange(ArenaProgression progression)

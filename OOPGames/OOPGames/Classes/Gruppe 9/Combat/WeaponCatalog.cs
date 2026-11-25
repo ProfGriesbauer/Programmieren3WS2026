@@ -9,7 +9,11 @@ namespace OOPGames
             new ProjectileAttackPattern(520, 540, 7),
             new DamageEffect(10), 0.55,
             WeaponTargetingMode.Opponents, "magic-projectile",
-            appearance: new WeaponAppearance(WeaponSpriteKind.Staff, 150, "WizardStaff"));
+            appearance: new WeaponAppearance(
+                WeaponSpriteKind.Staff, 150, "WizardStaff", null, "ProjetilPlain")
+            {
+                EmptyAnimation = "WizardStaffEmpty"
+            });
 
         public static readonly Weapon Bow = new Weapon(
             "bow", "Bogen",
@@ -33,9 +37,13 @@ namespace OOPGames
 
         public static readonly Weapon EnemyClaws = new Weapon(
             "enemy-claws", "Gegnerklauen",
-            "Gegner-Nahkampfangriff: 10 Schaden, Reichweite 60.",
+            "Gegner-Nahkampfangriff: 10 Schaden, Reichweite 60, leichter Rückstoß.",
             new MeleeConeAttackPattern(60, Math.PI / 4, 0.2),
             new DamageEffect(10), 1.0,
-            WeaponTargetingMode.Opponents, "enemy-claw-swipe");
+            WeaponTargetingMode.Opponents, "enemy-claw-swipe",
+            knockbackDistance: EnemyClawKnockbackDistance);
+
+        // Enemies push the player back noticeably on each hit, so attacks can be felt.
+        public const double EnemyClawKnockbackDistance = 16;
     }
 }

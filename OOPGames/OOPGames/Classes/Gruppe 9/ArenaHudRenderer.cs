@@ -118,8 +118,25 @@ namespace OOPGames
         public void PaintStatusPlaceholder(
             Canvas canvas, Entity entity, double centerX, double centerY)
         {
+            // Freezing is shown by ice crystals around the entity (ArenaParticleRenderer), so
+            // it gets no ring; the other movement statuses (slow, stun) keep theirs.
+            bool hasRingStatus = false;
+            bool isStunned = false;
+            foreach (ActiveStatusEffect effect in entity.ActiveStatusEffects)
+            {
+                if (effect.Id == "freeze")
+                {
+                    continue;
+                }
+                hasRingStatus = true;
+                if (effect.SpeedMultiplier == 0)
+                {
+                    isStunned = true;
+                }
+            }
+
             // Weakness (Blacksteel) has its own ring even without a movement status.
-            if (entity.ActiveStatusEffects.Count == 0)
+            if (!hasRingStatus)
             {
                 if (entity.IsWeakened)
                 {
@@ -128,16 +145,8 @@ namespace OOPGames
                 return;
             }
 
-            bool isFrozen = false;
             bool isBurning = false;
             bool isPoisoned = false;
-            foreach (ActiveStatusEffect effect in entity.ActiveStatusEffects)
-            {
-                if (effect.SpeedMultiplier == 0)
-                {
-                    isFrozen = true;
-                }
-            }
             foreach (ActiveDamageOverTimeEffect effect
                 in entity.ActiveDamageOverTimeEffects)
             {
@@ -152,11 +161,11 @@ namespace OOPGames
             }
 
             AddStatusRing(canvas, entity, centerX, centerY,
-                isFrozen ? Brushes.LightCyan
+                isStunned ? Brushes.LightCyan
                     : isBurning ? Brushes.OrangeRed
                     : isPoisoned ? Brushes.GreenYellow
                     : entity.IsWeakened ? Brushes.DarkViolet : Brushes.Plum,
-                isFrozen);
+                isStunned);
         }
 
         private static void AddStatusRing(

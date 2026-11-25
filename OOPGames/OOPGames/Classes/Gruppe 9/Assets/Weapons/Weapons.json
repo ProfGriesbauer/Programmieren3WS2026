@@ -198,6 +198,54 @@
     "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "sourceSize": { "w": 128, "h": 128 },
     "duration": 100
+   },
+   "Weapons 25.ase": {
+    "frame": { "x": 3200, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 100
+   },
+   "Weapons 26.ase": {
+    "frame": { "x": 3328, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 100
+   },
+   "Weapons 27.ase": {
+    "frame": { "x": 3456, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 100
+   },
+   "Weapons 28.ase": {
+    "frame": { "x": 3584, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 100
+   },
+   "Weapons 29.ase": {
+    "frame": { "x": 3712, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 100
+   },
+   "Weapons 30.ase": {
+    "frame": { "x": 3840, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 100
    }
  },
  "meta": {
@@ -205,28 +253,34 @@
   "version": "1.3",
   "image": "C:\\Users\\tillm\\Downloads\\Weapons.png",
   "format": "RGBA8888",
-  "size": { "w": 3200, "h": 128 },
+  "size": { "w": 3968, "h": 128 },
   "scale": "1",
   "frameTags": [
    { "name": "WizardStaff", "from": 0, "to": 0, "direction": "forward" },
-   { "name": "WizardStafElektic", "from": 1, "to": 1, "direction": "forward" },
-   { "name": "WizardStaffIce", "from": 2, "to": 2, "direction": "forward" },
-   { "name": "WizardStaffFire", "from": 3, "to": 3, "direction": "forward" },
-   { "name": "WizardStaffFrog", "from": 4, "to": 4, "direction": "forward" },
-   { "name": "WizardStaffFrogAttac", "from": 5, "to": 5, "direction": "forward" },
-   { "name": "Sword", "from": 6, "to": 6, "direction": "forward" },
-   { "name": "SwordPoisen", "from": 7, "to": 7, "direction": "forward" },
-   { "name": "SwordFire", "from": 8, "to": 8, "direction": "forward" },
-   { "name": "SwordFireAttack", "from": 9, "to": 9, "direction": "forward" },
-   { "name": "SwordBlackSteel", "from": 10, "to": 10, "direction": "forward" },
-   { "name": "SwordBlackSteelLeach", "from": 11, "to": 11, "direction": "forward" },
-   { "name": "BowShooting", "from": 12, "to": 15, "direction": "forward" },
-   { "name": "BowShootingScope", "from": 16, "to": 19, "direction": "forward" },
-   { "name": "Arow", "from": 20, "to": 20, "direction": "forward" },
-   { "name": "ArowAutoAim", "from": 21, "to": 21, "direction": "forward" },
-   { "name": "ArowPoisen", "from": 22, "to": 22, "direction": "forward" },
-   { "name": "ArowFire", "from": 23, "to": 23, "direction": "forward" },
-   { "name": "ArowFireFlying", "from": 24, "to": 24, "direction": "forward" }
+   { "name": "WizardStaffEmpty", "from": 1, "to": 1, "direction": "forward" },
+   { "name": "WizardStafElektic", "from": 2, "to": 2, "direction": "forward" },
+   { "name": "WizardStaffIce", "from": 3, "to": 3, "direction": "forward" },
+   { "name": "WizardStaffFire", "from": 4, "to": 4, "direction": "forward" },
+   { "name": "WizardStaffFrog", "from": 5, "to": 5, "direction": "forward" },
+   { "name": "WizardStaffFrogAttac", "from": 6, "to": 6, "direction": "forward" },
+   { "name": "Sword", "from": 7, "to": 7, "direction": "forward" },
+   { "name": "SwordPoisen", "from": 8, "to": 8, "direction": "forward" },
+   { "name": "SwordFire", "from": 9, "to": 9, "direction": "forward" },
+   { "name": "SwordFireAttack", "from": 10, "to": 10, "direction": "forward" },
+   { "name": "SwordBlackSteel", "from": 11, "to": 11, "direction": "forward" },
+   { "name": "SwordBlackSteelLeach", "from": 12, "to": 12, "direction": "forward" },
+   { "name": "BowShooting", "from": 13, "to": 16, "direction": "forward" },
+   { "name": "BowShootingScope", "from": 17, "to": 20, "direction": "forward" },
+   { "name": "Arow", "from": 21, "to": 21, "direction": "forward" },
+   { "name": "ArowAutoAim", "from": 22, "to": 22, "direction": "forward" },
+   { "name": "ArowPoisen", "from": 23, "to": 23, "direction": "forward" },
+   { "name": "ArowFire", "from": 24, "to": 24, "direction": "forward" },
+   { "name": "ArowFireFlying", "from": 25, "to": 25, "direction": "forward" },
+   { "name": "ProjetilIce", "from": 26, "to": 26, "direction": "forward" },
+   { "name": "ProjetilFire", "from": 27, "to": 27, "direction": "forward" },
+   { "name": "ProjetilPoisen", "from": 28, "to": 28, "direction": "forward" },
+   { "name": "ProjetilLighning", "from": 29, "to": 29, "direction": "forward" },
+   { "name": "ProjetilPlain", "from": 30, "to": 30, "direction": "forward" }
   ],
   "layers": [
    { "name": "Layer 1", "opacity": 255, "blendMode": "normal" },

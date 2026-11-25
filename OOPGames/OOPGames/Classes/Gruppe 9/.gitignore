@@ -1,0 +1,8 @@
+# Arena Survival: local player data never belongs in the repository.
+# The game stores it under %LocalAppData%\OOPGames\ArenaSurvival; these rules keep copies
+# out of Git in case they end up in the project folder.
+slot*.json
+slot*.json.tmp
+highscores.json
+preferences.json
+keybindings.json

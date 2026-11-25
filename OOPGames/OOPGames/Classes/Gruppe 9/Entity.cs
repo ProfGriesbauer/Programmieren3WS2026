@@ -102,13 +102,34 @@ namespace OOPGames
         public double PositionY { get; set; }
         public PlayerFacing Facing { get; set; } = PlayerFacing.Front;
         public bool IsMoving { get; private set; }
+        // Base size of the entity; the painter scales its sprite from it. Collisions and hits
+        // use Hitbox, which matches the texture for players and enemies.
         public double Size { get; }
+        // Hitbox relative to the position in world units; by default a square of Size.
+        public virtual Rect HitboxOffset
+        {
+            get { return new Rect(-Size / 2, -Size / 2, Size, Size); }
+        }
+        public Rect Hitbox { get { return GetHitboxAt(PositionX, PositionY); } }
+
+        public Rect GetHitboxAt(double positionX, double positionY)
+        {
+            Rect offset = HitboxOffset;
+            return new Rect(
+                positionX + offset.X, positionY + offset.Y, offset.Width, offset.Height);
+        }
         public Brush Color { get; }
         public bool IsAlive { get; private set; } = true;
         public bool CanBePushed { get; set; }
         public bool IsInvulnerable { get; set; }
         // Raised with the hit points actually lost, so presentation code (sounds) can react.
         public event Action<Entity, int> Damaged;
+        // Raised with the hit points actually restored; from is the entity the life was stolen
+        // from (Leach), null for ordinary healing.
+        public event Action<Entity, int, Entity> Healed;
+        // Raised with the status id ("stun", "freeze", "slow", ...) whenever a movement status
+        // is applied or renewed, so presentation code can react (e.g. electric shock sound).
+        public event Action<Entity, string> StatusApplied;
         public double DamageFlashIntensity
         {
             get
@@ -151,6 +172,8 @@ namespace OOPGames
             get { return currentSpeed * GetStatusSpeedMultiplier(); }
         }
         public bool IsWeakened { get { return _weaknessRemainingSeconds > 0; } }
+        public double WeaknessDamageMultiplier { get { return _weaknessDamageMultiplier; } }
+        public double WeaknessRemainingSeconds { get { return _weaknessRemainingSeconds; } }
         // Factor for the damage this entity deals; below 1 while it is weakened.
         public double OutgoingDamageMultiplier
         {
@@ -221,11 +244,12 @@ namespace OOPGames
                 else Facing = PlayerFacing.Front;
             }
 
-            double radius = Size / 2;
-            double minimumX = movementBounds.Left + radius;
-            double maximumX = movementBounds.Right - radius;
-            double minimumY = movementBounds.Top + radius;
-            double maximumY = movementBounds.Bottom - radius;
+            // The whole hitbox stays inside the movement bounds.
+            Rect hitbox = HitboxOffset;
+            double minimumX = movementBounds.Left - hitbox.Left;
+            double maximumX = movementBounds.Right - hitbox.Right;
+            double minimumY = movementBounds.Top - hitbox.Top;
+            double maximumY = movementBounds.Bottom - hitbox.Bottom;
             double nextX = minimumX > maximumX
                 ? movementBounds.Left + movementBounds.Width / 2
                 : Math.Max(minimumX, Math.Min(maximumX, PositionX + directionX * speed));
@@ -250,6 +274,30 @@ namespace OOPGames
             PositionX = positionX;
             PositionY = positionY;
             IsMoving = IsAlive && isMoving;
+        }
+
+        // Brings a defeated entity back with full hit points and no statuses (respawn).
+        public void Revive()
+        {
+            _activeStatusEffects.Clear();
+            _damageOverTimeEffects.Clear();
+            _weaknessRemainingSeconds = 0;
+            _damageFlashRemainingSeconds = 0;
+            IsAlive = true;
+            _currentHitPoints = _maxHitPoints;
+            IsMoving = false;
+        }
+
+        // Restores saved hit points; 0 leaves the entity defeated.
+        public void RestoreHitPoints(int hitPoints)
+        {
+            if (hitPoints <= 0)
+            {
+                CurrentHitPoints = 0;
+                return;
+            }
+            IsAlive = true;
+            _currentHitPoints = Math.Min(hitPoints, _maxHitPoints);
         }
 
         public void CheckAndKill()
@@ -288,6 +336,11 @@ namespace OOPGames
 
         public int Heal(int amount)
         {
+            return Heal(amount, null);
+        }
+
+        public int Heal(int amount, Entity from)
+        {
             if (amount < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(amount));
@@ -300,7 +353,12 @@ namespace OOPGames
             int previousHitPoints = CurrentHitPoints;
             CurrentHitPoints = (int)Math.Min(
                 MaxHitPoints, (long)CurrentHitPoints + amount);
-            return CurrentHitPoints - previousHitPoints;
+            int healed = CurrentHitPoints - previousHitPoints;
+            if (healed > 0)
+            {
+                Healed?.Invoke(this, healed, from);
+            }
+            return healed;
         }
 
         public void ApplyMovementStatus(
@@ -327,6 +385,7 @@ namespace OOPGames
                 return;
             }
 
+            StatusApplied?.Invoke(this, id);
             for (int i = 0; i < _activeStatusEffects.Count; i++)
             {
                 ActiveStatusEffect activeEffect = _activeStatusEffects[i];
@@ -507,6 +566,6 @@ namespace OOPGames
             return multiplier;
         }
 
-        private const double DamageFlashDurationSeconds = 0.18;
+        private const double DamageFlashDurationSeconds = 0.35;
     }
 }
