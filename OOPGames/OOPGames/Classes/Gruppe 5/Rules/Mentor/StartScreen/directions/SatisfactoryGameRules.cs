@@ -60,7 +60,15 @@ namespace OOPGames
                     _minerCycleTicks = settings.MinerCycleTicks;
                     _smelterCycleTicks = settings.SmelterCycleTicks;
                     _gameStarted = true;
-                    _mentor.Skip();
+                    if (settings.TutorialEnabled)
+                    {
+                        _mentor.Begin();
+                    }
+                    else
+                    {
+                        _mentor.Reset();
+                    }
+
                     ClearField();
                     _field.SetStatusMeldung("WASD: bewegen | E: abbauen | Gebäude über das Baumenü platzieren.");
                 }
@@ -222,6 +230,7 @@ namespace OOPGames
                     abgeschlossenesHandwerk.OutputAmount + " " +
                     G5_FabrikBezeichnungen.Gegenstand(abgeschlossenesHandwerk.Output) +
                     " hergestellt.");
+                _mentor.ObserveManualCraftCompleted(abgeschlossenesHandwerk);
             }
 
             List<G5_Miner> miners = _field.InterneGebaeude.OfType<G5_Miner>().ToList();
@@ -239,6 +248,7 @@ namespace OOPGames
             if (_field.MoveSpieler(dx, dy))
             {
                 _field.SetStatusMeldung("Du schaust auf das markierte Feld. E baut dort Rohstoffe ab.");
+                _mentor.ObservePlayerMoved();
             }
             else
             {
@@ -252,18 +262,21 @@ namespace OOPGames
             if (!_deposits.TryGetValue(target, out G5_ResourceDeposit deposit))
             {
                 _field.SetStatusMeldung("Vor dir gibt es keinen abbaubaren Rohstoff.");
+                _mentor.Explain("Auf dem anvisierten Feld liegt kein Vorkommen. Laufe mit WASD neben Erz oder Holz und richte den Blick darauf.");
                 return;
             }
 
             if (deposit.RemainingAmount == 0)
             {
                 _field.SetStatusMeldung("Dieses Vorkommen ist erschöpft.");
+                _mentor.Explain("Dieses Vorkommen ist erschöpft. Suche mit WASD ein anderes Rohstofffeld.");
                 return;
             }
 
             if (!_field.KannEinlagern(1))
             {
                 _field.SetStatusMeldung("Rucksack und Lager sind voll. Baue ein Lager oder schaffe Platz.");
+                _mentor.Explain("Dein Rucksack ist voll. Lege Gegenstände ab oder baue ein Lager, bevor du weiter abbaust.");
                 return;
             }
 
@@ -292,6 +305,7 @@ namespace OOPGames
             _field.ErfasseAbbau(deposit.Item, extracted);
             _field.SetStatusMeldung("+" + extracted + " " +
                 G5_FabrikBezeichnungen.Gegenstand(deposit.Item) + " gesammelt.");
+            _mentor.ObserveHandMining(deposit.Item);
         }
 
         private void SelectBuilding(int x, int y)
@@ -325,6 +339,7 @@ namespace OOPGames
             _field.SetWerkzeug(tool);
             _field.SetStatusMeldung(G5_FabrikBezeichnungen.Werkzeug(tool) +
                 " ausgewählt. Ziehe es auf die Karte oder drücke Bauen für die Zielkachel.");
+            _mentor.Explain(BuildingExplanation(tool));
         }
 
         private void PlaceBuilding(G5_Bauwerkzeug tool, G5_GridPosition? buildPosition = null)
@@ -459,6 +474,7 @@ namespace OOPGames
             _field.ErfasseGebaeudebau();
             RefreshConveyorConnections();
             _field.SetStatusMeldung(building.Name + " gebaut. Kosten: " + FormatCost(cost) + ".");
+            _mentor.ObserveBuildingPlaced(tool, building.Name, BuildingExplanation(tool));
         }
 
         private void SelectRecipe(string recipeName)
@@ -484,6 +500,7 @@ namespace OOPGames
 
             RefreshConveyorConnections();
             _field.SetStatusMeldung("Rezept geändert: " + recipeName + ".");
+            _mentor.Explain(RecipeExplanation(recipeName));
         }
 
         private void UpgradeSelectedBuilding()
@@ -665,11 +682,15 @@ namespace OOPGames
             {
                 _field.SetStatusMeldung(
                     "Für " + recipe.Name + " fehlen Zutaten im Rucksack oder freier Platz.");
+                _mentor.Explain("Für " + recipe.Name + " fehlen Zutaten: " +
+                    FormatCost(recipe.Ingredients) +
+                    ". Baue die Rohstoffe mit E ab und arbeite die Handwerksliste von oben nach unten ab.");
                 return;
             }
 
             _field.SetStatusMeldung(
                 recipe.Name + " gestartet. Die Herstellung dauert zwei Sekunden.");
+            _mentor.ObserveManualCraftStarted(recipe);
         }
 
         private void SelectInventoryItemForDrop(string itemName)
@@ -1172,6 +1193,58 @@ namespace OOPGames
                 (overlapsY &&
                     (first.Position.X + first.Width == second.Position.X ||
                      second.Position.X + second.Width == first.Position.X));
+        }
+
+        private static string BuildingExplanation(G5_Bauwerkzeug tool)
+        {
+            switch (tool)
+            {
+                case G5_Bauwerkzeug.Foerderer:
+                    return "Der erste Förderer kostet 8 Eisenerz und 5 Holz. Er baut das Vorkommen darunter automatisch ab und liefert ins Lager oder Förderband.";
+                case G5_Bauwerkzeug.Schmelze:
+                    return "Die Schmelze verarbeitet Eisenerz zu Eisenbarren oder Kupfererz zu Kupferbarren. Wähle das passende Rezept in den Gebäudedetails.";
+                case G5_Bauwerkzeug.Foerderband:
+                    return "Verbinde Förderer und passendes Produktionsgebäude mit einer durchgehenden Linie. Rohstoffe laufen über jedes Segment zum Ziel.";
+                case G5_Bauwerkzeug.Konstruktor:
+                    return "Der Konstruktor fertigt Eisenplatten, Eisenstangen, Kupferdraht oder Schrauben aus dem gemeinsamen Lager. Er benötigt Strom.";
+                case G5_Bauwerkzeug.Assembler:
+                    return "Der Assembler kombiniert eine Eisenstange und eine Schraube zu einem Rotor. Er benötigt Strom.";
+                case G5_Bauwerkzeug.Verbrennungsgenerator:
+                    return "Das Kohlekraftwerk verbrennt Kohle aus dem gemeinsamen Lager und erzeugt Strom.";
+                case G5_Bauwerkzeug.Strommast:
+                    return "Strommasten verbinden Kraftwerke mit Maschinen in ihrer Reichweite von acht Feldern.";
+                case G5_Bauwerkzeug.Lager:
+                    return "Ein Lager vergrößert den gemeinsamen Rohstoffvorrat, aus dem Produktionsgebäude ihre Zutaten beziehen.";
+                default:
+                    return "Öffne die Gebäudedetails, um verfügbare Rezepte und Einstellungen anzusehen.";
+            }
+        }
+
+        private static string RecipeExplanation(string recipeName)
+        {
+            switch (recipeName)
+            {
+                case "Eisenerz schmelzen":
+                case "Eisenerz zu Eisenbarren verarbeiten":
+                    return "Dieses Rezept verarbeitet Eisenerz zu Eisenbarren.";
+                case "Kupfererz schmelzen":
+                case "Kupfererz zu Kupferbarren verarbeiten":
+                    return "Dieses Rezept verarbeitet Kupfererz zu Kupferbarren.";
+                case "Eisenplatte herstellen":
+                    return "Eine Eisenplatte entsteht aus einem Eisenbarren.";
+                case "Eisenstange herstellen":
+                    return "Eine Eisenstange entsteht aus einem Eisenbarren.";
+                case "Kupferdraht herstellen":
+                    return "Kupferdraht entsteht aus einem Kupferbarren.";
+                case "Schrauben herstellen":
+                    return "Aus einer Eisenstange entstehen vier Schrauben.";
+                case "Beton herstellen":
+                    return "Für Beton werden zwei Kalkstein benötigt.";
+                case "Rotor herstellen":
+                    return "Ein Rotor benötigt eine Eisenstange und eine Schraube.";
+                default:
+                    return "Das gewählte Rezept verarbeitet seine Zutaten zu einem Produkt und legt es im gemeinsamen Lager ab.";
+            }
         }
 
         private static IReadOnlyDictionary<G5_Item, int> SingleItemCost(G5_Item item)

@@ -7,8 +7,9 @@ Wähle im Framework die Regeln **„G5 Fabrikregeln“**, den Painter
 Das Framework wechselt nach jeder Eingabe zwischen den beiden Spielerplätzen;
 beide steuern dieselbe Spielfigur.
 Du startest auf einer großen Weltkarte ohne Gebäude und ohne Rohstoffe im
-Inventar. Die Einstellungen bestimmen den Vorrat der Vorkommen und das
-Produktionstempo.
+Inventar. Die Einstellungen bestimmen den Vorrat der Vorkommen, das
+Produktionstempo und ob der Mentor aktiv ist. Der Mentor erklärt Steuerung,
+Handabbau, Gebäude und Rezepte passend zu den Aktionen im Spiel.
 
 ## Steuerung
 
@@ -23,10 +24,11 @@ Produktionstempo.
 | Gebäude verkaufen | Gebäudemenü oder `Entf` |
 | Gebäudemenü schließen | `Esc` |
 | Inventar ein- oder ausklappen | Überschrift im rechten Inventarbereich anklicken |
-| Gegenstand manuell herstellen | Im Inventar bei **Handwerk** auf **Herstellen** klicken; ein Produkt dauert zwei Sekunden |
+| Gegenstand manuell herstellen | Im Inventar auf **Herstellen** oder unter **Handwerk** auf ein Rezept klicken; ein Produkt dauert zwei Sekunden |
 | Gegenstand ablegen | Inventarzeile anklicken, Anzahl eingeben und **Ablegen** klicken |
 | Abgelegte Gegenstände aufnehmen | Auf den Ablageort gehen und **Aufnehmen** klicken |
 | Statistik öffnen oder schließen | `F2`, **Statistik** oder das `×` im Statistikfenster |
+| Mentor überspringen | `T` |
 
 Die gelbe Umrandung zeigt das Feld vor dem Spieler. Rohstoffe sammelst du,
 indem du dich neben ein Vorkommen stellst, darauf schaust und `E` drückst.
@@ -39,6 +41,8 @@ Mengen im Rucksack und in den Lagern getrennt. Die Spalte **Lager** zeigt den
 Bestand in deinen Lagergebäuden; dieser zählt für Baukosten und automatische
 Maschinenversorgung. Für manuelles Handwerk müssen die Zutaten im Rucksack sein.
 Die Spalte **Handwerk** bietet für herstellbare Gegenstände eine Schaltfläche.
+Über **HANDWERK** öffnest du zusätzlich eine nach Rohstoffen, Grundstoffen und
+Bauteilen geordnete Rezeptübersicht mit den benötigten Zutaten.
 Ein Klick startet genau ein Produkt; nach zwei Sekunden ist es fertig. Während
 eine Herstellung läuft, startet kein weiteres Produkt automatisch.
 Wähle ein Gebäude im Baumenü aus
@@ -53,7 +57,7 @@ den Lagern bezahlt. Im Inventar kannst du aus Erzen Barren, aus Eisenbarren
 Platten und Stangen sowie aus Kalkstein Beton herstellen. Zutaten für das
 Handwerk müssen im Rucksack liegen:
 
-- Förderer: 8 Eisenerz, 2 Eisenplatten, 5 Holz
+- Förderer: 8 Eisenerz, 5 Holz
 - Schmelze: 5 Eisenbarren, 3 Eisenplatten, 3 Beton, 4 Holz
 - Förderband: 2 Eisenbarren, 1 Eisenplatte, 1 Beton
 - Konstruktor: 6 Eisenbarren, 3 Eisenplatten, 2 Eisenstangen, 3 Beton

@@ -82,6 +82,8 @@ namespace OOPGames
                         return G5_FabrikAktion.BaumenueUmschalten(_playerNumber);
                     case Key.F2:
                         return G5_FabrikAktion.StatistikUmschalten(_playerNumber);
+                    case Key.T:
+                        return G5_FabrikAktion.TutorialUeberspringen(_playerNumber);
                     case Key.Escape:
                         return G5_FabrikAktion.GebaeudeAnsehen(_playerNumber, -1, -1);
                     default:

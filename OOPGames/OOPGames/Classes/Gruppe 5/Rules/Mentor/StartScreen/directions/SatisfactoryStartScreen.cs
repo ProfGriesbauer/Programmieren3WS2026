@@ -15,6 +15,7 @@ namespace OOPGames
         internal int ResourceAmount { get; set; }
         internal int MinerCycleTicks { get; set; }
         internal int SmelterCycleTicks { get; set; }
+        internal bool TutorialEnabled { get; set; }
     }
 
     internal sealed class SatisfactoryStartScreen
@@ -33,7 +34,8 @@ namespace OOPGames
             Guide,
             Home,
             ChangeResource,
-            ChangeSpeed
+            ChangeSpeed,
+            ToggleTutorial
         }
 
         private sealed class HitTarget
@@ -50,6 +52,7 @@ namespace OOPGames
         private Page _page = Page.Home;
         private int _resourceChoice = 1;
         private int _speedChoice = 1;
+        private bool _tutorialEnabled = true;
 
         internal SatisfactoryStartScreenSettings SelectedSettings
         {
@@ -59,7 +62,8 @@ namespace OOPGames
                 {
                     ResourceAmount = _resourceChoice == 0 ? 150 : _resourceChoice == 2 ? 600 : 300,
                     MinerCycleTicks = _speedChoice == 0 ? 55 : _speedChoice == 2 ? 22 : 35,
-                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55
+                    SmelterCycleTicks = _speedChoice == 0 ? 80 : _speedChoice == 2 ? 32 : 55,
+                    TutorialEnabled = _tutorialEnabled
                 };
             }
         }
@@ -133,6 +137,9 @@ namespace OOPGames
                     case Action.ChangeSpeed:
                         _speedChoice = (_speedChoice + 1) % 3;
                         break;
+                    case Action.ToggleTutorial:
+                        _tutorialEnabled = !_tutorialEnabled;
+                        break;
                 }
 
                 return false;
@@ -184,16 +191,16 @@ namespace OOPGames
             AddText(canvas, "Sammeln.\nBauen. Automatisieren.", Brushes.White,
                 left + 26, top + 70, width - 52, 100, 35, FontWeights.Bold);
             AddText(canvas,
-                "Du startest ohne Gebäude. Laufe mit WASD, sammle Holz und Erze mit E und baue deine Fabrik Schritt für Schritt.",
+                "Du startest ohne Gebäude. Laufe mit WASD, baue Rohstoffe mit E ab und entwickle deine Fabrik Schritt für Schritt.",
                 MutedBrush, left + 28, top + 185, width - 206, 68, 13);
             DrawFactoryArt(canvas, left + width - 166, top + 170);
 
             DrawStep(canvas, left + 28, top + 280, "01", "Rohstoffe sammeln",
-                "Stelle dich neben einen Baum oder ein Erz und drücke E.");
+                "Schaue auf ein Rohstofffeld und drücke E, um selbst abzubauen.");
             DrawStep(canvas, left + 28, top + 350, "02", "Gebäude bauen",
-                "Ziehe ein Gebäude auf die Karte oder baue am gelb markierten Feld.");
+                "Ziehe Gebäude auf freie Felder, Förderer auf Vorkommen.");
             DrawStep(canvas, left + 28, top + 420, "03", "Fabrik verwalten",
-                "Klicke Gebäude für Rezepte und Upgrades. Entf verkauft mit Rückerstattung.");
+                "Verbinde Förderer und Schmelze mit Förderbändern; wähle passende Rezepte.");
         }
 
         private void DrawControlPanel(
@@ -241,7 +248,7 @@ namespace OOPGames
             AddText(canvas, "AKTUELLE EINSTELLUNGEN", AccentBrush,
                 left + 42, top + height - 103, width - 84, 15, 9, FontWeights.Bold);
             AddText(canvas,
-                ResourceLabel() + "  ·  " + SpeedLabel(),
+                ResourceLabel() + "  ·  " + SpeedLabel() + "  ·  Mentor " + TutorialLabel(),
                 Brushes.White, left + 42, top + height - 80, width - 84, 22, 13,
                 FontWeights.SemiBold);
             AddText(canvas, "Du beginnst ohne Gebäude und baust dein erstes Werk aus selbst gesammelten Rohstoffen.",
@@ -266,8 +273,13 @@ namespace OOPGames
             DrawOptionButton(canvas, left + 28, top + 260, width - 56, 54,
                 SpeedLabel(), "Förderer- und Schmelzzyklen", Action.ChangeSpeed);
 
-            AddText(canvas, "Du startest ohne Gebäude. Ressourcen sammelst du direkt in der Welt.",
-                MutedBrush, left + 30, top + Math.Max(318, height - 150), width - 60, 40, 11);
+            AddText(canvas, "TUTORIAL", AccentBrush,
+                left + 30, top + 322, width - 60, 18, 10, FontWeights.Bold);
+            DrawOptionButton(canvas, left + 28, top + 344, width - 56, 54,
+                TutorialLabel(), "Mentorhinweise während des Spiels", Action.ToggleTutorial);
+
+            AddText(canvas, "WASD bewegen · E baut Rohstoffe ab · Mentorhinweise: " + TutorialLabel(),
+                MutedBrush, left + 30, top + Math.Max(404, height - 150), width - 60, 40, 11);
 
             DrawButton(canvas, left + 28, top + height - 96, width - 56, 54,
                 "SPIEL STARTEN", "Einstellungen übernehmen",
@@ -279,19 +291,19 @@ namespace OOPGames
             DrawBackButton(canvas, left + 28, top + 26);
             AddText(canvas, "Anleitung", Brushes.White,
                 left + 28, top + 72, width - 56, 36, 24, FontWeights.Bold);
-            AddText(canvas, "Bewege dich frei und baue deine Fabrik aus gesammelten Rohstoffen:",
+            AddText(canvas, "Baue Rohstoffe selbst ab und automatisiere ihre Verarbeitung:",
                 MutedBrush, left + 30, top + 113, width - 60, 22, 12);
 
             double stepsTop = top + Math.Max(136, (height - 330) / 2);
             DrawStep(canvas, left + 30, stepsTop, "01", "Laufen und abbauen",
-                "WASD bewegt dich. Schaue ein Feld an und drücke E, um Holz oder Erz abzubauen.");
+                "WASD bewegt dich. Laufe neben ein Vorkommen, richte den Blick darauf und drücke E.");
             DrawStep(canvas, left + 30, stepsTop + 70, "02", "Gebäude kaufen",
-                "Ziehe ein Gebäude auf die Karte oder baue auf dem markierten Feld.");
+                "Ziehe Gebäude auf die Karte oder baue am markierten Feld. Der erste Förderer braucht Erz und Holz.");
             DrawStep(canvas, left + 30, stepsTop + 140, "03", "Produktion einstellen",
-                "Klicke ein Gebäude für Details, freigeschaltete Rezepte und Upgrades.");
+                "HANDWERK zeigt Rezepte. Gebäudedetails bieten Rezepte und Upgrades.");
             DrawStep(canvas, left + 30, stepsTop + 210, "04", "Verkaufen",
                 "Verkaufe im Gebäudemenü oder mit Entf. Du erhältst 50 % der Kosten zurück.");
-            AddText(canvas, "Endziel: Rakete bauen, mit Uran betanken und einsteigen. Statistik: F2.",
+            AddText(canvas, "Endziel: Rakete mit Uran starten. Statistik: F2. Mentor überspringen: T.",
                 MutedBrush, left + 30, stepsTop + 275, width - 60, 40, 10);
 
             DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
@@ -396,6 +408,11 @@ namespace OOPGames
         {
             return _speedChoice == 0 ? "Entspannt" :
                 _speedChoice == 2 ? "Schnell" : "Standard";
+        }
+
+        private string TutorialLabel()
+        {
+            return _tutorialEnabled ? "Aktiv" : "Aus";
         }
 
         private void AddHitTarget(double left, double top, double width, double height, Action action)
@@ -522,8 +539,10 @@ namespace OOPGames
         private readonly List<(Rect Bereich, G5_FabrikAktionstyp Typ, G5_Bauwerkzeug Werkzeug, string Wert)> _menuAktionen =
             new List<(Rect, G5_FabrikAktionstyp, G5_Bauwerkzeug, string)>();
         private (G5_Bauwerkzeug Werkzeug, G5_GridPosition Position)? _pendingBuild;
+        private G5_Bauwerkzeug? _pendingToolSelection;
         private (G5_GridPosition Start, G5_GridPosition Ende)? _pendingConveyorLine;
         private bool _inventarGeoeffnet = true;
+        private bool _handwerkGeoeffnet;
 
         internal SatisfactoryFieldView(
             G5_FabrikSpielfeld field,
@@ -545,6 +564,7 @@ namespace OOPGames
         internal G5_FabrikSpielfeld Spielfeld => _field;
         internal bool GebaeuderegisterGeoeffnet => _field.GebaeuderegisterGeoeffnet;
         internal bool InventarGeoeffnet => _inventarGeoeffnet;
+        internal bool HandwerkGeoeffnet => _handwerkGeoeffnet;
         internal IG5_GebaeudeInfo AusgewaehltesGebaeude =>
             ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
         internal IReadOnlyDictionary<G5_Item, int> SpielerInventar =>
@@ -562,6 +582,11 @@ namespace OOPGames
         internal void ToggleInventar()
         {
             _inventarGeoeffnet = !_inventarGeoeffnet;
+        }
+
+        internal void ToggleHandwerk()
+        {
+            _handwerkGeoeffnet = !_handwerkGeoeffnet;
         }
 
         internal void SetInventarBereich(Rect bereich)
@@ -629,7 +654,49 @@ namespace OOPGames
             _pendingBuild = (werkzeug, position);
         }
 
-        internal bool TryConsumePendingBuild(out G5_Bauwerkzeug werkzeug, out G5_GridPosition position)
+        internal void QueuePendingToolSelection(G5_Bauwerkzeug werkzeug)
+        {
+            _pendingToolSelection = werkzeug;
+        }
+
+        internal bool TryConsumePendingToolSelection(out G5_Bauwerkzeug werkzeug)
+        {
+            if (!_pendingToolSelection.HasValue)
+            {
+                werkzeug = G5_Bauwerkzeug.Keines;
+                return false;
+            }
+
+            werkzeug = _pendingToolSelection.Value;
+            _pendingToolSelection = null;
+            return true;
+        }
+
+        internal void QueuePendingConveyorLine(G5_GridPosition start, G5_GridPosition end)
+        {
+            _pendingConveyorLine = (start, end);
+        }
+
+        internal bool TryConsumePendingConveyorLine(
+            out G5_GridPosition start,
+            out G5_GridPosition end)
+        {
+            if (!_pendingConveyorLine.HasValue)
+            {
+                start = default;
+                end = default;
+                return false;
+            }
+
+            start = _pendingConveyorLine.Value.Start;
+            end = _pendingConveyorLine.Value.Ende;
+            _pendingConveyorLine = null;
+            return true;
+        }
+
+        internal bool TryConsumePendingBuild(
+            out G5_Bauwerkzeug werkzeug,
+            out G5_GridPosition position)
         {
             if (!_pendingBuild.HasValue)
             {
@@ -641,26 +708,6 @@ namespace OOPGames
             werkzeug = _pendingBuild.Value.Werkzeug;
             position = _pendingBuild.Value.Position;
             _pendingBuild = null;
-            return true;
-        }
-
-        internal void QueuePendingConveyorLine(G5_GridPosition start, G5_GridPosition ende)
-        {
-            _pendingConveyorLine = (start, ende);
-        }
-
-        internal bool TryConsumePendingConveyorLine(out G5_GridPosition start, out G5_GridPosition ende)
-        {
-            if (!_pendingConveyorLine.HasValue)
-            {
-                start = default;
-                ende = default;
-                return false;
-            }
-
-            start = _pendingConveyorLine.Value.Start;
-            ende = _pendingConveyorLine.Value.Ende;
-            _pendingConveyorLine = null;
             return true;
         }
 

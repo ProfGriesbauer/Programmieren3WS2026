@@ -96,7 +96,9 @@ namespace OOPGames
             PaintWeltField(canvas, welt);
             if (currentField is SatisfactoryFieldView mentorField)
             {
-                if (mentorField.Mentor.IsActive)
+                if (mentorField.Mentor.IsActive &&
+                    mentorField.Spielfeld.Spielphase == G5_Spielphase.Fabrik &&
+                    !mentorField.Spielfeld.StatistikGeoeffnet)
                 {
                     mentorField.Mentor.Paint(
                         mentorField.MentorOverlay,
@@ -480,7 +482,19 @@ namespace OOPGames
                 {
                     if (position.Y <= top + 34)
                     {
-                        inventoryField.ToggleInventar();
+                        if (!inventoryField.InventarGeoeffnet)
+                        {
+                            inventoryField.ToggleInventar();
+                        }
+                        else if (position.X >= left + panelWidth - 112 ||
+                            inventoryField.HandwerkGeoeffnet)
+                        {
+                            inventoryField.ToggleHandwerk();
+                        }
+                        else
+                        {
+                            inventoryField.ToggleInventar();
+                        }
                     }
 
                     e.Handled = true;
@@ -1736,6 +1750,7 @@ namespace OOPGames
         {
             SatisfactoryFieldView fieldView = info as SatisfactoryFieldView;
             bool isOpen = fieldView == null || fieldView.InventarGeoeffnet;
+            bool handwerkOpen = fieldView != null && fieldView.HandwerkGeoeffnet;
             double width = isOpen ? 268 : 34;
             double left = viewportBreite - width - 10;
             double top = HudHoehe + 10;
@@ -1770,23 +1785,122 @@ namespace OOPGames
                 Height = Math.Max(0, height - 18),
                 IsHitTestVisible = false
             };
+            Grid header = new Grid { Width = width - 18, Height = 26 };
+            header.ColumnDefinitions.Add(new ColumnDefinition());
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(104) });
             Border toggle = new Border
             {
                 Padding = new Thickness(0),
-                Width = Math.Max(0, width - 24),
                 Height = 18,
                 Child = new TextBlock
                 {
-                    Text = isOpen ? "‹ INVENTAR" : "›",
+                    Text = !isOpen ? "›" : handwerkOpen ? "‹ ZURÜCK" : "‹ INVENTAR",
                     Foreground = HoverAccentBrush,
                     FontSize = 11,
                     FontWeight = FontWeights.Bold,
-                    TextAlignment = isOpen ? TextAlignment.Left : TextAlignment.Center
+                    TextAlignment = isOpen ? TextAlignment.Left : TextAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
                 }
             };
-            content.Children.Add(toggle);
+            header.Children.Add(toggle);
 
             if (isOpen)
+            {
+                Border handwerkToggle = new Border
+                {
+                    Child = new TextBlock
+                    {
+                        Text = handwerkOpen ? "WERKBANK" : "HANDWERK ›",
+                        Foreground = HoverAccentBrush,
+                        FontSize = 10,
+                        FontWeight = FontWeights.Bold,
+                        TextAlignment = TextAlignment.Right,
+                        VerticalAlignment = VerticalAlignment.Center
+                    }
+                };
+                Grid.SetColumn(handwerkToggle, 1);
+                header.Children.Add(handwerkToggle);
+            }
+
+            content.Children.Add(header);
+            if (isOpen && handwerkOpen)
+            {
+                StackPanel recipesPanel = new StackPanel();
+                Canvas.SetTop(recipesPanel, 26);
+                content.Children.Add(recipesPanel);
+                recipesPanel.Children.Add(new TextBlock
+                {
+                    Text = "ROHSTOFF → GRUNDSTOFF → BAUTEIL",
+                    Foreground = HoverAccentBrush,
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    Height = 18,
+                    Margin = new Thickness(0, 0, 0, 5)
+                });
+
+                IReadOnlyList<G5_Recipe> recipes = G5_StarterRecipes.CreateManualCraftingRecipes();
+                for (int index = 0; index < recipes.Count; index++)
+                {
+                    G5_Recipe recipe = recipes[index];
+                    bool canCraft = recipe.Ingredients.All(ingredient =>
+                        info.SpielerInventar.TryGetValue(ingredient.Key, out int amount) &&
+                        amount >= ingredient.Value);
+                    string ingredients = string.Join(" + ", recipe.Ingredients.Select(ingredient =>
+                        ingredient.Value + " " + G5_FabrikBezeichnungen.Gegenstand(ingredient.Key)));
+                    Border row = new Border
+                    {
+                        Height = 66,
+                        Margin = new Thickness(0, 0, 0, 5),
+                        Padding = new Thickness(6, 4, 6, 3),
+                        Background = new SolidColorBrush(Color.FromArgb(
+                            canCraft ? (byte)205 : (byte)125,
+                            canCraft ? (byte)72 : (byte)42,
+                            canCraft ? (byte)106 : (byte)58,
+                            canCraft ? (byte)64 : (byte)52)),
+                        BorderBrush = canCraft ? HoverAccentBrush : Brushes.DimGray,
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(6),
+                        Child = new StackPanel
+                        {
+                            Children =
+                            {
+                                new TextBlock
+                                {
+                                    Text = recipe.Name,
+                                    Foreground = Brushes.White,
+                                    FontSize = 10,
+                                    FontWeight = FontWeights.Bold,
+                                    TextTrimming = TextTrimming.CharacterEllipsis
+                                },
+                                new TextBlock
+                                {
+                                    Text = ingredients + "  →  " + recipe.OutputAmount + " " +
+                                        G5_FabrikBezeichnungen.Gegenstand(recipe.Output),
+                                    Foreground = canCraft ? HoverAccentBrush : Brushes.LightGray,
+                                    FontSize = 9,
+                                    TextTrimming = TextTrimming.CharacterEllipsis
+                                },
+                                new TextBlock
+                                {
+                                    Text = canCraft ? "Klicken zum Herstellen" : "Zutaten fehlen",
+                                    Foreground = canCraft ? Brushes.White : Brushes.LightGray,
+                                    FontSize = 8
+                                }
+                            }
+                        }
+                    };
+                    recipesPanel.Children.Add(row);
+                    fieldView?.RegisterMenuAktion(
+                        new Rect(
+                            left + 9,
+                            top + 9 + 26 + 23 + index * 71,
+                            width - 18,
+                            66),
+                        G5_FabrikAktionstyp.ManuellHerstellen,
+                        wert: recipe.Output.ToString());
+                }
+            }
+            else if (isOpen)
             {
                 G5_Item[] items =
                 {
@@ -1813,7 +1927,7 @@ namespace OOPGames
 
                 AddMenuText(content,
                     "Rucksack: " + info.SpielerInventarBelegt + "/" + info.SpielerInventarKapazitaet,
-                    0, 20, width - 24, 16, Brushes.White, 11, FontWeights.SemiBold);
+                    0, 29, width - 24, 16, Brushes.White, 11, FontWeights.SemiBold);
 
                 Grid headings = new Grid { Width = width - 24, Height = 16 };
                 headings.ColumnDefinitions.Add(new ColumnDefinition());
@@ -1825,7 +1939,7 @@ namespace OOPGames
                 AddInventoryCell(headings, "Lager", 2, true);
                 AddInventoryCell(headings, "Handwerk", 3, true);
                 Canvas.SetLeft(headings, 3);
-                Canvas.SetTop(headings, 40);
+                Canvas.SetTop(headings, 46);
                 content.Children.Add(headings);
 
                 for (int itemIndex = 0; itemIndex < items.Length; itemIndex++)
@@ -1881,7 +1995,7 @@ namespace OOPGames
                         CornerRadius = new CornerRadius(5),
                         Child = rowContent
                     };
-                    double rowTop = 60 + itemIndex * 20;
+                    double rowTop = 64 + itemIndex * 20;
                     Canvas.SetTop(row, rowTop);
                     content.Children.Add(row);
                     if (fieldView != null)

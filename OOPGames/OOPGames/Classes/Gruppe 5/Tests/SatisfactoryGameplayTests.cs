@@ -399,16 +399,96 @@ public sealed class SatisfactoryGameplayTests
     }
 
     [Fact]
-    public void BuildingCostsIncludeProcessedMaterialsAndConcrete()
+    public void FirstMinerUsesOnlyResourcesThePlayerCanMine()
     {
         IReadOnlyDictionary<G5_Item, int> minerCost =
             G5_FabrikKosten.Baupreis(G5_Bauwerkzeug.Foerderer);
-        IReadOnlyDictionary<G5_Item, int> smelterCost =
-            G5_FabrikKosten.Baupreis(G5_Bauwerkzeug.Schmelze);
 
-        Assert.True(minerCost.ContainsKey(G5_Item.Eisenplatte));
-        Assert.True(smelterCost.ContainsKey(G5_Item.Eisenbarren));
-        Assert.True(smelterCost.ContainsKey(G5_Item.Beton));
+        Assert.Equal(8, minerCost[G5_Item.Eisenerz]);
+        Assert.Equal(5, minerCost[G5_Item.Holz]);
+        Assert.All(minerCost.Keys, item =>
+            Assert.Contains(item, new[] { G5_Item.Eisenerz, G5_Item.Holz }));
+    }
+
+    [Fact]
+    public void ManualRecipesAreOrderedFromRawResourcesToComponents()
+    {
+        IReadOnlyList<G5_Recipe> recipes = G5_StarterRecipes.CreateManualCraftingRecipes();
+        G5_Item[] outputs = recipes.Select(recipe => recipe.Output).ToArray();
+
+        Assert.Equal(
+            new[]
+            {
+                G5_Item.Eisenbarren,
+                G5_Item.Kupferbarren,
+                G5_Item.Beton,
+                G5_Item.Eisenplatte,
+                G5_Item.Eisenstange
+            },
+            outputs);
+
+        HashSet<G5_Item> available = new HashSet<G5_Item>
+        {
+            G5_Item.Eisenerz,
+            G5_Item.Kupfererz,
+            G5_Item.Kalkstein,
+            G5_Item.Holz,
+            G5_Item.Kohle
+        };
+        foreach (G5_Recipe recipe in recipes)
+        {
+            Assert.All(recipe.Ingredients.Keys, ingredient => Assert.Contains(ingredient, available));
+            available.Add(recipe.Output);
+        }
+
+        foreach (G5_Bauwerkzeug tool in Enum.GetValues(typeof(G5_Bauwerkzeug)).Cast<G5_Bauwerkzeug>())
+        {
+            IReadOnlyDictionary<G5_Item, int> cost = G5_FabrikKosten.Baupreis(tool);
+            Assert.All(cost.Keys, ingredient => Assert.Contains(ingredient, available));
+        }
+    }
+
+    [Fact]
+    public void MentorAdvancesWhenThePlayerMovesAndMines()
+    {
+        RunOnSta(() =>
+        {
+            SatisfactoryGameMentor mentor = new SatisfactoryGameMentor();
+            mentor.Begin();
+            string opening = mentor.Message;
+
+            mentor.ObservePlayerMoved();
+            Assert.NotEqual(opening, mentor.Message);
+            Assert.Contains("drücke E", mentor.Message);
+
+            mentor.ObserveHandMining(G5_Item.Eisenerz);
+            Assert.Contains("8 Eisenerz", mentor.Message);
+        });
+    }
+
+    [Fact]
+    public void WorkshopDisplaysClickableManualRecipes()
+    {
+        RunOnSta(() =>
+        {
+            SatisfactoryFieldView view = new SatisfactoryFieldView(
+                CreateField(), new SatisfactoryStartScreen(), new SatisfactoryGameMentor(), true);
+            view.ToggleHandwerk();
+            Canvas canvas = new Canvas { Width = 1000, Height = 800 };
+            canvas.Measure(new Size(1000, 800));
+            canvas.Arrange(new Rect(0, 0, 1000, 800));
+
+            new G5_FabrikPainter().PaintGameField(canvas, view);
+
+            Assert.True(view.TryGetMenuAktion(
+                800,
+                160,
+                out G5_FabrikAktionstyp type,
+                out _,
+                out string output));
+            Assert.Equal(G5_FabrikAktionstyp.ManuellHerstellen, type);
+            Assert.Equal(nameof(G5_Item.Eisenbarren), output);
+        });
     }
 
     [Fact]

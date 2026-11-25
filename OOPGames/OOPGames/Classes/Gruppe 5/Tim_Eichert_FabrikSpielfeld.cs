@@ -933,7 +933,7 @@ namespace OOPGames
         private static readonly IReadOnlyDictionary<G5_Bauwerkzeug, IReadOnlyDictionary<G5_Item, int>> Baupreise =
             new Dictionary<G5_Bauwerkzeug, IReadOnlyDictionary<G5_Item, int>>
             {
-                [G5_Bauwerkzeug.Foerderer] = Kosten((G5_Item.Eisenerz, 8), (G5_Item.Eisenplatte, 2), (G5_Item.Holz, 5)),
+                [G5_Bauwerkzeug.Foerderer] = Kosten((G5_Item.Eisenerz, 8), (G5_Item.Holz, 5)),
                 [G5_Bauwerkzeug.Schmelze] = Kosten((G5_Item.Eisenbarren, 5), (G5_Item.Eisenplatte, 3), (G5_Item.Beton, 3), (G5_Item.Holz, 4)),
                 [G5_Bauwerkzeug.Foerderband] = Kosten((G5_Item.Eisenbarren, 2), (G5_Item.Eisenplatte, 1), (G5_Item.Beton, 1)),
                 [G5_Bauwerkzeug.Konstruktor] = Kosten((G5_Item.Eisenbarren, 6), (G5_Item.Eisenplatte, 3), (G5_Item.Eisenstange, 2), (G5_Item.Beton, 3)),
