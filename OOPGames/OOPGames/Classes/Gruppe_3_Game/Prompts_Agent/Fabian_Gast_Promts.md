@@ -92,4 +92,92 @@
 
 ## Prompt 23
 
+> Die Bildmitte der tachonadeln ist der drehpunkt, dieser sollte auf dem lila punkt an tacho liegen. Zudem ist die skalierung der tachonadeln genau auf den tacho abgestimmt (die tachonadeln müssen mit dem tacho 1 zu 1 skaliert werden)
+
+## Prompt 24
+
+> die tachonadeln sind ja jetzt noch weiter vom lila punkt verschoden wie davor, die lila punkte haben alle den farbwert von #e100ff und sind 2x2 pixel groß
+
+## Prompt 25
+
+> beim golf ist der drehzahlmesser und der tacho invertiert
+
+## Prompt 26
+
+> Die Autos haben alle die gleiche Max Geschwindigkeit. Alle Nadeln sind bei 0 Grad in der Statrt position (geschwindigkeit null, drehzahl standgas) füge daher hinzu, dass im Konstruktor der Maximal winkel der beiden nadeln implementiert wird, zudem die geschwindigkeit und drehzahl in diesem winkel
+
+## Prompt 27
+
+> Ich habe jetzt die Werte angepasst und die für die Turbo nadel eingefügt, kannst du dazu die Turbonadel noch einfügen. Die Nadeln drehen alle gegen den uhrzeigersinn. die autos sollen 300 km/h fahren, wenn die maximalgeschwindigkeit von tacho kleiner ist soll dieser bei der maximal geschwindigkeit stehen bleiben
+
+## Prompt 28
+
+> Was macht maxSpeed: 17.0,?
+
+## Prompt 29
+
+> entferne das, ich habe doch gesagt, dass alle autos genau gleich schnell sind. Ausserdem kann ich es nicht starten fixe das
+
+## Prompt 30
+
+> Nein, du sollt nichts am Factrorio spiel ändern!!!
+
+## Prompt 31
+
+> Ich habe jetzt das Factorio Spiel im MainWindow auskommentiert, warum geht es immer noch nicht
+
+## Prompt 32
+
+> Gut, dann ändere dass im Factorio Spiel
+
+## Prompt 33
+
+> Hab mich vertan, die nadeln drehen alle im Uhrzeigersinn
+
+## Prompt 34
+
+> Mach, dass die autos erst die höchst geschwindigkeit kurz vor der ziellinie erreichen
+
+## Prompt 35
+
+> Mach, das ich bereits, wenn die zum start heruntergezählt wird, gas geben kann, also das auto im neutral gang beschleunigt und wenn ich vor der timer abgelaufen ist verloren habe und oben die meldung mit Fehlstart kommt
+
+## Prompt 36
+
+> Mache, das bei einem Fehlstart und am ende vom rennen die autos langsam ausrollen, ändere zudem die abstufung der getriebe so, dass der drehzahl unterschied der gänge zwischen 1500 und 500 rpm liegt und je höher der gang wird im kleiner wird (aber immer noch in dem Bereich von 1500-500)
+
+## Prompt 37
+
+> Mach, dass es eine art leistungskurve gibt, die von standgas bis kurz vor maximal drehzahl linear ansteigt und kurz vor der maximaldrehzahl wieder abflacht. Mach zudem, dass der computer zufallig rund um diese optimal drehzahl schaltet, also manchmal davor, manchmal danach. Mache das gleiche beim losfahren, also das er manchmal einen fehlstart macht (aber eher sehr selten 10% ca) und eher bei start ein bischen zuspät schaltet also ca mit einer durchschnitts reaktionszeit von 250 ms
+
+## Prompt 38
+
+> Mach das der Computer auch am start gas gibt mach, dass das rennen nach ca 7,5 sekunden durchschnittlich endet (mit endgeschwindigkeit ca 300 kmh) skaliere so die geschwindigkeit, das die 7,5 sekunden bei der akutellen strecken länge ist. Mach zudem dass das Auto beim fahren etwas überdrehen kann dann aber kaum leistung hat und dadurch auch etwas schneller als die 300 km/h am ende sein kann
+
+## Prompt 39
+
+> Ich habe jetzt eine Font in Asstets/Gruppe_3_Game/Font eingefügt, kannst du diese für das Spiel nutzen. Mach zudem, das nach dem ende für jeden player die zeit und die endgeschwindigkeit, sowie die reaktionszeit in ms nebeneinader angezeigt werden.
+
+## Prompt 40
+
+> Was musst du an OOPGames.csproj ändern?
+
+## Prompt 41
+
+> Geht das auch ohne dort was zu ändern?
+
+## Prompt 42
+
+> Invertiere die schriftart (also weiße schrift schwarzer schaten) und mache den rand des fensters am ende eckig und etwas dicker mache zudem den auto auswählen schriftzug etwas höher und ersetze das ä zu ae. auserdem haben die autos nach der halben strecke bereits die höchstgeschwindigkeit erreicht, mache das sich die autos wesenlich schneller auf der strecke bewegen, so das die weißen striche kaum unterscheidbar sind bei fullspee, skaliere die strecke dementsprechend
+
+## Prompt 43
+
+> der computer kommt auf eine zeit von ca 10s, die strecke ist viel zu lang, ausserdem , wenn ich sie manuell kürzer mache komme ich auf 6,5 s und die autos erreichen immer noch weit vor der zielinie die maximalgeschwindigkeit. Und der Text ist immer noch nicht invertiert
+
+## Prompt 44
+
 > Vergiss das mit der Text invertierung, lösche alles in der richtung und ändere die text farbe in schwarz. Kannst du zudem die Fabian_Gast_Promts.md in Gruppe 3 Game für diese Session aktualisieren
+
+## Prompt 45
+
+> Geht es den durchsichtigen teil des textes weiß zu machen
