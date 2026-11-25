@@ -60,7 +60,15 @@ namespace OOPGames
                     _minerCycleTicks = settings.MinerCycleTicks;
                     _smelterCycleTicks = settings.SmelterCycleTicks;
                     _gameStarted = true;
-                    _mentor.Skip();
+                    if (settings.TutorialEnabled)
+                    {
+                        _mentor.Begin();
+                    }
+                    else
+                    {
+                        _mentor.Reset();
+                    }
+
                     ClearField();
                     _field.SetStatusMeldung("WASD: bewegen | E: abbauen | Gebäude am markierten Feld bauen.");
                 }
@@ -208,6 +216,7 @@ namespace OOPGames
             if (_field.MoveSpieler(dx, dy))
             {
                 _field.SetStatusMeldung("Du schaust auf das markierte Feld. E baut dort Rohstoffe ab.");
+                _mentor.Explain("WASD bewegt dich. Das gelb markierte Feld ist dein Ziel; mit E baust du dort selbst Rohstoffe ab.");
             }
             else
             {
@@ -260,6 +269,9 @@ namespace OOPGames
             _field.AddInventar(deposit.Item, extracted);
             _field.SetStatusMeldung("+" + extracted + " " +
                 G5_FabrikBezeichnungen.Gegenstand(deposit.Item) + " gesammelt.");
+            _mentor.Explain("Handabbau funktioniert mit E, wenn du auf ein Vorkommen blickst. " +
+                G5_FabrikBezeichnungen.Gegenstand(deposit.Item) +
+                " landet direkt in deinem Vorrat; der Handabbau hat eine kurze Abklingzeit.");
         }
 
         private void SelectBuilding(int x, int y)
@@ -293,6 +305,7 @@ namespace OOPGames
             _field.SetWerkzeug(tool);
             _field.SetStatusMeldung(G5_FabrikBezeichnungen.Werkzeug(tool) +
                 " ausgewählt. Ziehe es auf die markierte Kachel oder drücke Bauen.");
+            _mentor.Explain(BuildingExplanation(tool));
         }
 
         private void PlaceBuilding(G5_Bauwerkzeug tool, G5_GridPosition? buildPosition = null)
@@ -415,6 +428,7 @@ namespace OOPGames
             _buildingInvestments.Add(building, new Dictionary<G5_Item, int>(cost));
             RefreshConveyorConnections();
             _field.SetStatusMeldung(building.Name + " gebaut. Kosten: " + FormatCost(cost) + ".");
+            _mentor.Explain(building.Name + " gebaut. " + BuildingExplanation(tool));
         }
 
         private void SelectRecipe(string recipeName)
@@ -440,6 +454,7 @@ namespace OOPGames
 
             RefreshConveyorConnections();
             _field.SetStatusMeldung("Rezept geändert: " + recipeName + ".");
+            _mentor.Explain(RecipeExplanation(recipeName));
         }
 
         private void UpgradeSelectedBuilding()
@@ -620,6 +635,8 @@ namespace OOPGames
 
             _field.SetStatusMeldung(
                 recipe.Name + " gestartet. Die Herstellung dauert zwei Sekunden.");
+            _mentor.Explain(RecipeExplanation(recipe.Name) +
+                " Du stellst dieses Rezept gerade selbst her; die Zutaten werden aus deinem Vorrat genommen.");
         }
 
         private void SelectInventoryItemForDrop(string itemName)
@@ -1121,6 +1138,58 @@ namespace OOPGames
                 (overlapsY &&
                     (first.Position.X + first.Width == second.Position.X ||
                      second.Position.X + second.Width == first.Position.X));
+        }
+
+        private static string BuildingExplanation(G5_Bauwerkzeug tool)
+        {
+            switch (tool)
+            {
+                case G5_Bauwerkzeug.Foerderer:
+                    return "Der Förderer baut das Rohstofffeld unter ihm automatisch ab und liefert zum Lager oder auf ein verbundenes Förderband.";
+                case G5_Bauwerkzeug.Schmelze:
+                    return "Die Schmelze verarbeitet Eisenerz zu Eisenbarren oder Kupfererz zu Kupferbarren. Wähle das passende Rezept in den Gebäudedetails.";
+                case G5_Bauwerkzeug.Foerderband:
+                    return "Verbinde Förderer und passendes Produktionsgebäude mit einer durchgehenden Linie. Rohstoffe laufen über jedes Segment zum Ziel.";
+                case G5_Bauwerkzeug.Konstruktor:
+                    return "Der Konstruktor fertigt Eisenplatten, Eisenstangen, Kupferdraht oder Schrauben aus dem gemeinsamen Lager. Er benötigt Strom.";
+                case G5_Bauwerkzeug.Assembler:
+                    return "Der Assembler kombiniert eine Eisenstange und eine Schraube zu einem Rotor. Er benötigt Strom.";
+                case G5_Bauwerkzeug.Verbrennungsgenerator:
+                    return "Das Kohlekraftwerk verbrennt Kohle aus dem gemeinsamen Lager und erzeugt Strom.";
+                case G5_Bauwerkzeug.Strommast:
+                    return "Strommasten verbinden Kraftwerke mit Maschinen in ihrer Reichweite von acht Feldern.";
+                case G5_Bauwerkzeug.Lager:
+                    return "Ein Lager vergrößert den gemeinsamen Rohstoffvorrat, aus dem Produktionsgebäude ihre Zutaten beziehen.";
+                default:
+                    return "Öffne die Gebäudedetails, um verfügbare Rezepte und Einstellungen anzusehen.";
+            }
+        }
+
+        private static string RecipeExplanation(string recipeName)
+        {
+            switch (recipeName)
+            {
+                case "Eisenerz schmelzen":
+                case "Eisenerz zu Eisenbarren verarbeiten":
+                    return "Dieses Rezept verarbeitet Eisenerz zu Eisenbarren.";
+                case "Kupfererz schmelzen":
+                case "Kupfererz zu Kupferbarren verarbeiten":
+                    return "Dieses Rezept verarbeitet Kupfererz zu Kupferbarren.";
+                case "Eisenplatte herstellen":
+                    return "Eine Eisenplatte entsteht aus einem Eisenbarren.";
+                case "Eisenstange herstellen":
+                    return "Eine Eisenstange entsteht aus einem Eisenbarren.";
+                case "Kupferdraht herstellen":
+                    return "Kupferdraht entsteht aus einem Kupferbarren.";
+                case "Schrauben herstellen":
+                    return "Aus einer Eisenstange entstehen vier Schrauben.";
+                case "Beton herstellen":
+                    return "Für Beton werden zwei Kalkstein benötigt.";
+                case "Rotor herstellen":
+                    return "Ein Rotor benötigt eine Eisenstange und eine Schraube.";
+                default:
+                    return "Das gewählte Rezept verarbeitet seine Zutaten zu einem Produkt und legt es im gemeinsamen Lager ab.";
+            }
         }
 
         private static IReadOnlyDictionary<G5_Item, int> SingleItemCost(G5_Item item)
