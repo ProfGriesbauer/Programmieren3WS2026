@@ -533,3 +533,48 @@
 - **Datum:** 2026-11-25
 - **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
 - **Ergebnisvermerk:** Vollständige Integration der aktuellen Session-Prompts (Erstellung des Projektplans `Gruppe_3_Plans.md` und finale Dokumentationspflege in `Fabian_Gast_Promts.md`).
+
+## Prompt 51
+
+**Wortlaut:**
+> Was lässt sich noch so alles an dem Spiel optimieren (auch in fokus auf die anforderungen für dich als agent)
+
+- **Datum:** 2026-11-25
+- **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
+- **Ergebnisvermerk:** Analyse und Auflistung von Optimierungsmöglichkeiten (Clean Code, Code-Struktur, Performance, WPF-Ressourcen-Caching und Agenten-Restriktionen).
+
+## Prompt 52
+
+**Wortlaut:**
+> Mache 1
+
+- **Datum:** 2026-11-25
+- **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
+- **Ergebnisvermerk:** Umsetzung von Optimierungspunkt 1 (Code-Struktur & Aufteilung / Auslagerung von Konstanten).
+
+## Prompt 53
+
+**Wortlaut:**
+> Ja lagere die Sachen aus
+
+- **Datum:** 2026-11-25
+- **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
+- **Ergebnisvermerk:** Erstellung der neuen Klasse `Gruppe3DragRaceConstants.cs` zur Kapselung von magischen Zahlen und Konfigurationswerten.
+
+## Prompt 54
+
+**Wortlaut:**
+> Für was brauche ich das? das ist ja auch alles in cars implementiert public const double MaxSpeedKmh = 300.0; ...
+
+- **Datum:** 2026-11-25
+- **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
+- **Ergebnisvermerk:** Korrektur und Entfernung redundanter fahrzeugspezifischer Werte aus der Konstantenklasse, da diese bereits in der `Cars`-Klasse gepflegt werden.
+
+## Prompt 55
+
+**Wortlaut:**
+> Gibte es noch andere Konstanten, die man auslagern könnte? Und aktualiesiere die Promts.md
+
+- **Datum:** 2026-11-25
+- **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
+- **Ergebnisvermerk:** Auslagerung weiterer physikalischer Konstanten (Deceleration-Werte wie Bremsen, Ausrollen, Downshift und RPM-Schritte) in die zentrale `Gruppe3DragRaceConstants.cs` und Aktualisierung der `Fabian_Gast_Promts.md`.

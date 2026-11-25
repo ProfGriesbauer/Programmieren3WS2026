@@ -4,11 +4,11 @@ namespace OOPGames
 {
     internal static class Gruppe3DragRacePhysics
     {
-        private const double RollOutDeceleration = 0.1;
-        private const double BrakeDeceleration = 0.45;
-        private const double CoastDeceleration = 0.05;
-        private const double DownshiftDeceleration = 0.9;
-        private const double NeutralRpmStepFraction = 0.08;
+            private const double RollOutDeceleration = Gruppe3DragRaceConstants.RollOutDeceleration;
+            private const double BrakeDeceleration = Gruppe3DragRaceConstants.BrakeDeceleration;
+            private const double CoastDeceleration = Gruppe3DragRaceConstants.CoastDeceleration;
+            private const double DownshiftDeceleration = Gruppe3DragRaceConstants.DownshiftDeceleration;
+            private const double NeutralRpmStepFraction = Gruppe3DragRaceConstants.NeutralRpmStepFraction;
 
         public static double Advance(
             double distance,

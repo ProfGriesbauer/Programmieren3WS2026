@@ -158,12 +158,12 @@ namespace OOPGames
             _playerTwo.UpdateCountdownRpm();
 
             double elapsed = (now - _countdownStarted).TotalSeconds;
-            if (elapsed < 3 && HandleFalseStart(now))
+            if (elapsed < Gruppe3DragRaceConstants.CountdownSeconds && HandleFalseStart(now))
             {
                 return;
             }
 
-            if (elapsed >= 3)
+            if (elapsed >= Gruppe3DragRaceConstants.CountdownSeconds)
             {
                 _field.IsRaceStarted = true;
                 _raceStartedAt = now;
@@ -173,7 +173,7 @@ namespace OOPGames
             }
             else
             {
-                _field.CountdownText = Math.Ceiling(3 - elapsed).ToString();
+                _field.CountdownText = Math.Ceiling(Gruppe3DragRaceConstants.CountdownSeconds - elapsed).ToString();
             }
 
             SyncField();
@@ -203,7 +203,7 @@ namespace OOPGames
             }
 
             double reactionTimeMs =
-                (now - _countdownStarted.AddSeconds(3)).TotalMilliseconds;
+                (now - _countdownStarted.AddSeconds(Gruppe3DragRaceConstants.CountdownSeconds)).TotalMilliseconds;
             if (playerOneFalseStart)
             {
                 _playerOne.ApplyFalseStart(now, reactionTimeMs);
@@ -254,7 +254,7 @@ namespace OOPGames
             _field.SelectionFeedbackText =
                 "PLAYER " + playerNumber + ": AUTO " + (carIndex + 1) +
                 " GEWAEHLT!";
-            _field.SelectionFeedbackUntil = DateTime.UtcNow.AddSeconds(1.2);
+            _field.SelectionFeedbackUntil = DateTime.UtcNow.AddSeconds(Gruppe3DragRaceConstants.SelectionFeedbackDurationSeconds);
         }
 
         private void SyncField()
