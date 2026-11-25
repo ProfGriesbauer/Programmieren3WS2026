@@ -107,7 +107,7 @@ namespace OOPGames
         {
             if (args.Distance == 0) return;
 
-            G10_FallingPiece piece = args.Piece;
+            IG10_FallingPieceView piece = args.Piece;
             for (int column = 0; column < G10_TetrisConfig.Columns; column++)
             {
                 int top = int.MaxValue;

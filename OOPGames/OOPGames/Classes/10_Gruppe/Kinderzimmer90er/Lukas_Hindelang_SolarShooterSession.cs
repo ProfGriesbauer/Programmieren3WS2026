@@ -4,24 +4,42 @@ using System.Collections.ObjectModel;
 
 namespace OOPGames
 {
-    internal enum G10_ShooterPhase
+    // Read-only views of the entities. The renderer and the effects only ever see these
+    // interfaces, never the model classes, so they cannot move, damage or upgrade anything.
+    internal interface IG10_ShooterEntityView
     {
-        Playing,
-        BossWarning,
-        StageTransition,
-        GameOver,
-        Victory
+        float X { get; }
+        float Y { get; }
     }
 
-    // Read-only view for the renderer, the effects and the missions.
+    internal interface IG10_ShooterPlayerView : IG10_ShooterEntityView
+    {
+        int Lives { get; }
+        int WeaponLevel { get; }
+        bool IsInvulnerable { get; }
+    }
+
+    internal interface IG10_ShooterEnemyView : IG10_ShooterEntityView
+    {
+        G10_ShooterEnemyKind Kind { get; }
+    }
+
+    internal interface IG10_ShooterBossView : IG10_ShooterEntityView
+    {
+        int Health { get; }
+        int MaxHealth { get; }
+    }
+
+    // Read-only view of a run for the renderer and the effects.
     internal interface IG10_ShooterView
     {
-        G10_SolarShooterPlayer Player { get; }
-        IReadOnlyList<G10_SolarShooterEnemy> Enemies { get; }
-        IReadOnlyList<G10_SolarShooterProjectile> PlayerProjectiles { get; }
-        IReadOnlyList<G10_SolarShooterProjectile> EnemyProjectiles { get; }
-        IReadOnlyList<G10_SolarShooterPowerCell> PowerCells { get; }
-        G10_SolarShooterBoss Boss { get; }
+        IG10_ShooterPlayerView Player { get; }
+        IReadOnlyList<IG10_ShooterEnemyView> Enemies { get; }
+        IReadOnlyList<IG10_ShooterEntityView> PlayerProjectiles { get; }
+        IReadOnlyList<IG10_ShooterEntityView> EnemyProjectiles { get; }
+        IReadOnlyList<IG10_ShooterEntityView> PowerCells { get; }
+        // Null while no boss fight is running.
+        IG10_ShooterBossView Boss { get; }
         G10_SolarShooterStage Stage { get; }
         int StageIndex { get; }
         int Score { get; }
@@ -56,11 +74,10 @@ namespace OOPGames
         readonly ReadOnlyCollection<G10_SolarShooterProjectile> _PlayerProjectileView;
         readonly ReadOnlyCollection<G10_SolarShooterProjectile> _EnemyProjectileView;
         readonly ReadOnlyCollection<G10_SolarShooterPowerCell> _PowerCellView;
-        G10_ShooterPhase _Phase = G10_ShooterPhase.Playing;
+        IG10_ShooterPhase _Phase = G10_ShooterPhases.Playing;
         float _SpawnCooldown = 0.8f;
-        float _BossWarningTimer;
-        float _StageTransitionTimer;
         float _ShieldSeconds;
+        bool _BossDefeated;
 
         public G10_SolarShooterSession()
             : this(G10_SolarShooterStage.All) { }
@@ -94,6 +111,14 @@ namespace OOPGames
         public IReadOnlyList<G10_SolarShooterProjectile> PlayerProjectiles { get { return _PlayerProjectileView; } }
         public IReadOnlyList<G10_SolarShooterProjectile> EnemyProjectiles { get { return _EnemyProjectileView; } }
         public IReadOnlyList<G10_SolarShooterPowerCell> PowerCells { get { return _PowerCellView; } }
+        // The view is implemented explicitly: whoever only holds an IG10_ShooterView gets
+        // the read-only entity views, while the model code keeps the concrete classes.
+        IG10_ShooterPlayerView IG10_ShooterView.Player { get { return Player; } }
+        IReadOnlyList<IG10_ShooterEnemyView> IG10_ShooterView.Enemies { get { return _EnemyView; } }
+        IReadOnlyList<IG10_ShooterEntityView> IG10_ShooterView.PlayerProjectiles { get { return _PlayerProjectileView; } }
+        IReadOnlyList<IG10_ShooterEntityView> IG10_ShooterView.EnemyProjectiles { get { return _EnemyProjectileView; } }
+        IReadOnlyList<IG10_ShooterEntityView> IG10_ShooterView.PowerCells { get { return _PowerCellView; } }
+        IG10_ShooterBossView IG10_ShooterView.Boss { get { return Boss; } }
         IG10_Collidable IG10_ShooterCollisionContext.PlayerCollider { get { return Player; } }
         IG10_Collidable IG10_ShooterCollisionContext.BossCollider { get { return Boss; } }
         public G10_SolarShooterBoss Boss { get; private set; }
@@ -103,12 +128,25 @@ namespace OOPGames
         public int Score { get { return _Progress.Score; } }
         public int TickNumber { get; private set; }
         public int DefeatedEnemies { get { return _Progress.EnemiesDefeated; } }
-        public G10_ShooterPhase Phase { get { return _Phase; } }
-        public bool IsGameOver { get { return _Phase == G10_ShooterPhase.GameOver; } }
-        public bool IsVictory { get { return _Phase == G10_ShooterPhase.Victory; } }
-        public bool IsBossWarning { get { return _Phase == G10_ShooterPhase.BossWarning; } }
-        public bool IsStageTransition { get { return _Phase == G10_ShooterPhase.StageTransition; } }
+        public G10_ShooterPhase Phase { get { return _Phase.Kind; } }
+        public float PhaseSeconds { get; private set; }
+        public bool IsGameOver { get { return Phase == G10_ShooterPhase.GameOver; } }
+        public bool IsVictory { get { return Phase == G10_ShooterPhase.Victory; } }
+        public bool IsBossWarning { get { return Phase == G10_ShooterPhase.BossWarning; } }
+        public bool IsStageTransition { get { return Phase == G10_ShooterPhase.StageTransition; } }
         public float ShieldSeconds { get { return _ShieldSeconds; } }
+
+        // Queries the phases use to decide on their transitions.
+        internal bool IsBossDefeated { get { return _BossDefeated; } }
+        internal bool IsLastStage { get { return StageIndex == _Stages.Count - 1; } }
+        internal bool IsBossDue
+        {
+            get
+            {
+                return Boss == null && !_BossDefeated &&
+                       _Progress.EnemiesDefeated >= Stage.EnemiesToDefeat && _Enemies.Count == 0;
+            }
+        }
 
         public event EventHandler<G10_EntityDestroyedEventArgs> EnemyDestroyed;
         public event EventHandler<G10_EntityDestroyedEventArgs> PlayerHit;
@@ -155,28 +193,29 @@ namespace OOPGames
             if (handler != null) handler(this, EventArgs.Empty);
         }
 
+        // The current phase does the work of the tick; the session only switches phases.
         public void Update(float deltaSeconds, G10_SolarShooterInput input)
         {
-            if (IsGameOver || IsVictory) return;
+            PhaseSeconds += deltaSeconds;
+            IG10_ShooterPhase next = _Phase.Update(this, deltaSeconds, input);
+            if (next == null) throw new InvalidOperationException("A shooter phase returned no next phase.");
+            if (next == _Phase) return;
+            _Phase = next;
+            PhaseSeconds = 0;
+        }
+
+        // ---- Operations for the phases ----
+
+        internal void UpdateShip(float deltaSeconds, G10_SolarShooterInput input)
+        {
             TickNumber++;
             Player.Update(deltaSeconds);
             _ShieldSeconds = Math.Max(0, _ShieldSeconds - deltaSeconds);
             Player.Move(input.Horizontal, input.Vertical, deltaSeconds);
+        }
 
-            if (IsStageTransition)
-            {
-                _StageTransitionTimer -= deltaSeconds;
-                if (_StageTransitionTimer <= 0) AdvanceStage();
-                return;
-            }
-
-            if (IsBossWarning)
-            {
-                _BossWarningTimer -= deltaSeconds;
-                if (_BossWarningTimer <= 0) _Phase = G10_ShooterPhase.Playing;
-                return;
-            }
-
+        internal void UpdateCombat(float deltaSeconds, G10_SolarShooterInput input)
+        {
             if (Player.Fire(input.FirePressed, _PlayerProjectiles))
             {
                 EventHandler<G10_ShotFiredEventArgs> handler = ShotFired;
@@ -190,7 +229,6 @@ namespace OOPGames
             _CollisionResolver.ResolvePlayerShots(this);
             _CollisionResolver.ResolveEnemyHits(this);
             _CollisionResolver.ResolvePowerCells(this);
-            if (Player.Lives <= 0) _Phase = G10_ShooterPhase.GameOver;
         }
 
         void UpdateEnemies(float deltaSeconds)
@@ -213,16 +251,11 @@ namespace OOPGames
                 if (enemy.Y > G10_ShooterConfig.WorldHeight + 8)
                     _Enemies.RemoveAt(i);
             }
-
-            if (_Progress.EnemiesDefeated >= Stage.EnemiesToDefeat && _Enemies.Count == 0)
-                BeginBossEncounter();
         }
 
-        void BeginBossEncounter()
+        internal void BeginBossEncounter()
         {
             Boss = new G10_SolarShooterBoss(Stage, Player);
-            _BossWarningTimer = 1.5f;
-            _Phase = G10_ShooterPhase.BossWarning;
             _PlayerProjectiles.Clear();
             _EnemyProjectiles.Clear();
         }
@@ -298,22 +331,18 @@ namespace OOPGames
             float bossX = Boss.X;
             float bossY = Boss.Y;
             Boss = null;
+            _BossDefeated = true;
             _EnemyProjectiles.Clear();
-            _StageTransitionTimer = 1.8f;
-            _Phase = G10_ShooterPhase.StageTransition;
             EventHandler<G10_EntityDestroyedEventArgs> handler = BossDefeated;
             if (handler != null) handler(this, new G10_EntityDestroyedEventArgs(bossX, bossY, true));
         }
 
-        void AdvanceStage()
+        internal void AdvanceStage()
         {
-            if (StageIndex == _Stages.Count - 1)
-            {
-                _Phase = G10_ShooterPhase.Victory;
-                return;
-            }
+            if (IsLastStage) throw new InvalidOperationException("The last stage has no successor.");
 
             StageIndex++;
+            _BossDefeated = false;
             _Progress.ResetStage();
             _SpawnCooldown = 1;
             _Spawner.Reset();
@@ -322,7 +351,6 @@ namespace OOPGames
             _EnemyProjectiles.Clear();
             _PowerCells.Clear();
             Player.ResetPosition();
-            _Phase = G10_ShooterPhase.Playing;
         }
     }
 }

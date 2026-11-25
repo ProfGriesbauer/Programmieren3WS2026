@@ -14,7 +14,7 @@ namespace OOPGames
 
     // Template Method: the base class owns the shot timer, the aimed shot and the
     // horizontal clamp; subclasses only describe how they move and what they are worth.
-    internal abstract class G10_SolarShooterEnemy : G10_ShooterEntity
+    internal abstract class G10_SolarShooterEnemy : G10_ShooterEntity, IG10_ShooterEnemyView
     {
         protected float Direction;
         protected float Phase;

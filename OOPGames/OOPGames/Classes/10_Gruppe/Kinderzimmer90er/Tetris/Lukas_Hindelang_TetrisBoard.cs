@@ -3,7 +3,18 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
-    internal sealed class G10_FallingPiece
+    // Read-only view of the falling piece for the renderer and the effects; only the
+    // piece controller may move it.
+    internal interface IG10_FallingPieceView
+    {
+        G10_Tetromino Shape { get; }
+        int X { get; }
+        int Y { get; }
+        int Rotation { get; }
+        IReadOnlyList<G10_TetrominoCell> Cells { get; }
+    }
+
+    internal sealed class G10_FallingPiece : IG10_FallingPieceView
     {
         public G10_FallingPiece(G10_Tetromino shape, int x, int y)
         {

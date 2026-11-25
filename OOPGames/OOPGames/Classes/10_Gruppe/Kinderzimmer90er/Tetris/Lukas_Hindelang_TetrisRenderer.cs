@@ -210,7 +210,7 @@ namespace OOPGames
 
         void DrawActivePiece(DrawingContext drawing, IG10_TetrisView session)
         {
-            G10_FallingPiece piece = session.CurrentPiece;
+            IG10_FallingPieceView piece = session.CurrentPiece;
             if (piece == null || session.State == G10_TetrisState.Paused) return;
 
             G10_TetrisBlockStyle style = session.State == G10_TetrisState.GameOver ? GrayStyle : StyleFor(piece.Shape);

@@ -29,13 +29,13 @@ namespace OOPGames
 
     internal sealed class G10_TetrisHardDropEventArgs : EventArgs
     {
-        public G10_TetrisHardDropEventArgs(G10_FallingPiece piece, int distance)
+        public G10_TetrisHardDropEventArgs(IG10_FallingPieceView piece, int distance)
         {
             Piece = piece;
             Distance = distance;
         }
 
-        public G10_FallingPiece Piece { get; }
+        public IG10_FallingPieceView Piece { get; }
         public int Distance { get; }
     }
 
@@ -52,7 +52,8 @@ namespace OOPGames
         bool IsNewBest { get; }
         int Combo { get; }
         bool BackToBack { get; }
-        G10_FallingPiece CurrentPiece { get; }
+        // Null while no piece is falling.
+        IG10_FallingPieceView CurrentPiece { get; }
         int GhostY { get; }
         float LockProgress { get; }
         G10_Tetromino HeldPiece { get; }
@@ -73,7 +74,7 @@ namespace OOPGames
         readonly G10_TetrisScoreKeeper _ScoreKeeper = new G10_TetrisScoreKeeper();
         readonly G10_TetrisPieceController _Controller;
         readonly IG10_HighscoreStore _Highscore;
-        IG10_TetrisPhase _StateBeforePause;
+        IG10_TetrisPhase _PhaseBeforePause;
         float _SecondsBeforePause;
         bool _HoldUsed;
 
@@ -103,7 +104,9 @@ namespace OOPGames
         public bool BackToBack { get { return _ScoreKeeper.BackToBack; } }
         public int Best { get { return Math.Max(_Highscore.Best, Score); } }
         public bool IsNewBest { get; private set; }
-        public G10_FallingPiece CurrentPiece { get { return _Controller.Piece; } }
+        // The view only gets the read-only piece; the session itself works with the model.
+        IG10_FallingPieceView IG10_TetrisView.CurrentPiece { get { return _Controller.Piece; } }
+        G10_FallingPiece CurrentPiece { get { return _Controller.Piece; } }
         public int GhostY { get { return _Controller.GhostY; } }
         public float LockProgress { get { return _Controller.LockProgress; } }
         public G10_Tetromino HeldPiece { get; private set; }
@@ -111,19 +114,11 @@ namespace OOPGames
         public IReadOnlyList<G10_Tetromino> NextPieces { get { return _Bag.Upcoming; } }
         public IReadOnlyList<int> ClearingRows { get; private set; }
 
+        // Called by the game. A restart after game over goes through the game over phase.
         public void Start()
         {
-            _Board.Clear();
-            _Bag.Reset();
-            _ScoreKeeper.Reset();
-            _Controller.Remove();
-            _Controller.ResetShift();
-            ClearingRows = NoRows;
-            HeldPiece = null;
-            _HoldUsed = false;
-            IsNewBest = false;
-            PlaySeconds = 0;
-            SetState(G10_TetrisPhases.Ready);
+            ResetRound();
+            Enter(G10_TetrisPhases.Ready);
         }
 
         public G10_Tetromino GetCell(int column, int row)
@@ -136,17 +131,31 @@ namespace OOPGames
             StateSeconds += deltaSeconds;
             if (State != G10_TetrisState.Paused && State != G10_TetrisState.GameOver)
                 PlaySeconds += deltaSeconds;
-            IG10_TetrisPhase next = Phase.Update(this, deltaSeconds, input);
-            if (next != Phase) Phase = next;
+            TransitionTo(Phase.Update(this, deltaSeconds, input));
         }
 
-        internal void UpdatePlaying(float deltaSeconds, G10_TetrisInput input)
+        // ---- Operations for the phases; each one returns the phase that should follow ----
+
+        internal IG10_TetrisPhase PhaseBeforePause { get { return _PhaseBeforePause; } }
+
+        internal void ResetRound()
+        {
+            _Board.Clear();
+            _Bag.Reset();
+            _ScoreKeeper.Reset();
+            _Controller.Remove();
+            _Controller.ResetShift();
+            ClearingRows = NoRows;
+            HeldPiece = null;
+            _HoldUsed = false;
+            IsNewBest = false;
+            PlaySeconds = 0;
+        }
+
+        internal IG10_TetrisPhase UpdatePlaying(float deltaSeconds, G10_TetrisInput input)
         {
             if (input.Hold && !_HoldUsed)
-            {
-                Hold();
-                return;
-            }
+                return Hold();
 
             if (input.RotateClockwise) _Controller.Rotate(true);
             if (input.RotateCounterClockwise) _Controller.Rotate(false);
@@ -159,86 +168,87 @@ namespace OOPGames
                 EventHandler<G10_TetrisHardDropEventArgs> hardDropped = HardDropped;
                 if (hardDropped != null)
                     hardDropped(this, new G10_TetrisHardDropEventArgs(CurrentPiece, distance));
-                LockPiece();
-                return;
+                return LockPiece();
             }
 
             int softDropRows;
             bool lockNow = _Controller.ApplyGravity(deltaSeconds, input.SoftDrop, Level, out softDropRows);
             _ScoreKeeper.AddSoftDrop(softDropRows);
-            if (lockNow) LockPiece();
+            return lockNow ? LockPiece() : G10_TetrisPhases.Playing;
         }
 
-        void Hold()
+        internal IG10_TetrisPhase FinishClear()
+        {
+            _Board.RemoveRows(ClearingRows);
+            ClearingRows = NoRows;
+            return SpawnNext();
+        }
+
+        internal IG10_TetrisPhase SpawnNext()
+        {
+            return _Controller.Spawn(_Bag.Draw()) ? G10_TetrisPhases.Playing : EndGame();
+        }
+
+        IG10_TetrisPhase Hold()
         {
             G10_Tetromino current = CurrentPiece.Shape;
             G10_Tetromino next = HeldPiece ?? _Bag.Draw();
             HeldPiece = current;
             _HoldUsed = true;
-            if (!_Controller.Spawn(next)) EndGame();
+            return _Controller.Spawn(next) ? G10_TetrisPhases.Playing : EndGame();
         }
 
-        void LockPiece()
+        IG10_TetrisPhase LockPiece()
         {
             bool visible = _Board.Lock(CurrentPiece);
             _Controller.Remove();
             _HoldUsed = false;
-            if (!visible)
-            {
-                EndGame();
-                return;
-            }
+            if (!visible) return EndGame();
 
             ClearingRows = _Board.FindFullRows();
             G10_TetrisClearEventArgs clear = _ScoreKeeper.AddLock(ClearingRows.Count);
-            if (clear == null)
-            {
-                SpawnNext();
-                return;
-            }
+            if (clear == null) return SpawnNext();
 
-            SetState(G10_TetrisPhases.Clearing);
             EventHandler<G10_TetrisClearEventArgs> linesCleared = LinesCleared;
             if (linesCleared != null) linesCleared(this, clear);
+            return G10_TetrisPhases.Clearing;
         }
 
-        internal void FinishClear()
-        {
-            _Board.RemoveRows(ClearingRows);
-            ClearingRows = NoRows;
-            SetState(G10_TetrisPhases.Playing);
-            SpawnNext();
-        }
-
-        internal void SpawnNext()
-        {
-            if (!_Controller.Spawn(_Bag.Draw())) EndGame();
-        }
-
-        internal void Pause()
-        {
-            _StateBeforePause = Phase;
-            _SecondsBeforePause = StateSeconds;
-            SetState(G10_TetrisPhases.Paused);
-        }
-
-        internal void Resume()
-        {
-            Phase = _StateBeforePause;
-            StateSeconds = _SecondsBeforePause;
-            _Controller.ResetShift();
-        }
-
-        void EndGame()
+        IG10_TetrisPhase EndGame()
         {
             IsNewBest = Score > 0 && Score > _Highscore.Best;
             _Highscore.Submit(Score);
-            SetState(G10_TetrisPhases.GameOver);
+            return G10_TetrisPhases.GameOver;
         }
 
-        internal void SetState(IG10_TetrisPhase phase)
+        // The only place where the phase changes. Pausing remembers the interrupted phase
+        // and its elapsed time, so resuming continues exactly where the round stopped.
+        void TransitionTo(IG10_TetrisPhase next)
         {
-            if (phase == null) throw new ArgumentNullException("phase");
+            if (next == null) throw new InvalidOperationException("A Tetris phase returned no next phase.");
+            if (next == Phase) return;
+
+            if (next == G10_TetrisPhases.Paused)
+            {
+                _PhaseBeforePause = Phase;
+                _SecondsBeforePause = StateSeconds;
+                Enter(next);
+                return;
+            }
+
+            if (Phase == G10_TetrisPhases.Paused)
+            {
+                Phase = next;
+                StateSeconds = _SecondsBeforePause;
+                _Controller.ResetShift();
+                return;
+            }
+
+            Enter(next);
+        }
+
+        void Enter(IG10_TetrisPhase phase)
+        {
             Phase = phase;
             StateSeconds = 0;
         }

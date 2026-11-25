@@ -30,15 +30,24 @@ namespace OOPGames
         public string SummaryText { get { return null; } }
     }
 
+    // A mode is only the choice in the menu: name, id and a factory for runs. It keeps no
+    // state of a game in progress, so the same mode object can start any number of runs.
     internal abstract class G10_SolarShooterMode
     {
         public abstract string Id { get; }
         public abstract string Name { get; }
-        public virtual IG10_ModeHud Hud { get { return G10_EmptyModeHud.Instance; } }
 
-        public virtual G10_SolarShooterSession CreateSession(G10_SolarShooterModeSave savedRun)
+        // Starts a fresh run, or resumes the one stored in savedRun.
+        public abstract G10_SolarShooterRun StartRun(G10_SolarShooterModeSave savedRun);
+
+        protected static bool CanResume(G10_SolarShooterModeSave savedRun)
         {
-            if (savedRun == null || !savedRun.HasResume)
+            return savedRun != null && savedRun.HasResume;
+        }
+
+        protected static G10_SolarShooterSession CreateSession(G10_SolarShooterModeSave savedRun)
+        {
+            if (!CanResume(savedRun))
                 return new G10_SolarShooterSession(G10_SolarShooterStage.All);
             return new G10_SolarShooterSession(
                 G10_SolarShooterStage.All,
@@ -46,30 +55,41 @@ namespace OOPGames
                 savedRun.ResumeScore,
                 savedRun.ResumeWeaponLevel);
         }
+    }
 
-        public virtual void Update(
-            G10_SolarShooterSession session,
-            float deltaSeconds,
-            G10_SolarShooterInput input)
+    // One game in progress: the session plus everything the mode adds to it. The run owns
+    // its session, so update, saving and HUD always refer to the same game.
+    internal class G10_SolarShooterRun
+    {
+        public G10_SolarShooterRun(G10_SolarShooterMode mode, G10_SolarShooterSession session)
         {
-            session.Update(deltaSeconds, input);
+            if (mode == null) throw new ArgumentNullException("mode");
+            if (session == null) throw new ArgumentNullException("session");
+            Mode = mode;
+            Session = session;
         }
 
-        // Counterpart to CreateSession: each mode writes the data it needs to resume.
-        public virtual void WriteSave(
-            G10_SolarShooterModeSave save,
-            G10_SolarShooterSession session,
-            bool canResume)
+        public G10_SolarShooterMode Mode { get; }
+        public G10_SolarShooterSession Session { get; }
+        public bool IsFinished { get { return Session.IsGameOver || Session.IsVictory; } }
+        public virtual IG10_ModeHud Hud { get { return G10_EmptyModeHud.Instance; } }
+
+        public virtual void Update(float deltaSeconds, G10_SolarShooterInput input)
+        {
+            Session.Update(deltaSeconds, input);
+        }
+
+        // Counterpart to StartRun: each run writes the data it needs to resume.
+        public virtual void WriteSave(G10_SolarShooterModeSave save, bool canResume)
         {
             if (save == null) throw new ArgumentNullException("save");
-            if (session == null) throw new ArgumentNullException("session");
             save.HasResume = canResume;
-            save.ResumeStageIndex = session.StageIndex;
-            save.ResumeScore = session.Score;
-            save.ResumeWeaponLevel = session.Player.WeaponLevel;
-            save.BestScore = Math.Max(save.BestScore, session.Score);
-            save.BestStage = Math.Max(save.BestStage, session.StageNumber);
-            save.BestWeaponLevel = Math.Max(save.BestWeaponLevel, session.Player.WeaponLevel);
+            save.ResumeStageIndex = Session.StageIndex;
+            save.ResumeScore = Session.Score;
+            save.ResumeWeaponLevel = Session.Player.WeaponLevel;
+            save.BestScore = Math.Max(save.BestScore, Session.Score);
+            save.BestStage = Math.Max(save.BestStage, Session.StageNumber);
+            save.BestWeaponLevel = Math.Max(save.BestWeaponLevel, Session.Player.WeaponLevel);
         }
     }
 
@@ -77,46 +97,56 @@ namespace OOPGames
     {
         public override string Id { get { return "classic"; } }
         public override string Name { get { return "KLASSIK"; } }
+
+        public override G10_SolarShooterRun StartRun(G10_SolarShooterModeSave savedRun)
+        {
+            return new G10_SolarShooterRun(this, CreateSession(savedRun));
+        }
     }
 
     internal sealed class G10_MissionSolarShooterMode : G10_SolarShooterMode
     {
-        G10_MissionDirector _Director;
-
         public override string Id { get { return "missions"; } }
         public override string Name { get { return "MISSIONEN"; } }
-        public override IG10_ModeHud Hud
-        {
-            get { return _Director == null ? G10_EmptyModeHud.Instance : (IG10_ModeHud)_Director; }
-        }
 
-        public override G10_SolarShooterSession CreateSession(G10_SolarShooterModeSave savedRun)
+        public override G10_SolarShooterRun StartRun(G10_SolarShooterModeSave savedRun)
         {
-            G10_SolarShooterSession session = base.CreateSession(savedRun);
-            bool resume = savedRun != null && savedRun.HasResume;
-            _Director = new G10_MissionDirector(
+            G10_SolarShooterSession session = CreateSession(savedRun);
+            bool resume = CanResume(savedRun);
+            G10_MissionDirector director = new G10_MissionDirector(
                 session,
                 resume ? savedRun.ResumeMissionsCompleted : 0,
                 resume ? savedRun.ResumeMissionsAttempted : 0,
                 resume ? savedRun.ResumePreviousMissionId : null);
-            return session;
+            return new G10_MissionSolarShooterRun(this, session, director);
+        }
+    }
+
+    internal sealed class G10_MissionSolarShooterRun : G10_SolarShooterRun
+    {
+        readonly G10_MissionDirector _Director;
+
+        public G10_MissionSolarShooterRun(
+            G10_SolarShooterMode mode,
+            G10_SolarShooterSession session,
+            G10_MissionDirector director)
+            : base(mode, session)
+        {
+            if (director == null) throw new ArgumentNullException("director");
+            _Director = director;
         }
 
-        public override void Update(
-            G10_SolarShooterSession session,
-            float deltaSeconds,
-            G10_SolarShooterInput input)
+        public override IG10_ModeHud Hud { get { return _Director; } }
+
+        public override void Update(float deltaSeconds, G10_SolarShooterInput input)
         {
-            base.Update(session, deltaSeconds, input);
+            base.Update(deltaSeconds, input);
             _Director.Update(deltaSeconds);
         }
 
-        public override void WriteSave(
-            G10_SolarShooterModeSave save,
-            G10_SolarShooterSession session,
-            bool canResume)
+        public override void WriteSave(G10_SolarShooterModeSave save, bool canResume)
         {
-            base.WriteSave(save, session, canResume);
+            base.WriteSave(save, canResume);
             save.ResumeMissionsCompleted = _Director.MissionsCompleted;
             save.ResumeMissionsAttempted = _Director.MissionsAttempted;
             save.ResumePreviousMissionId = _Director.PreviousMissionId;

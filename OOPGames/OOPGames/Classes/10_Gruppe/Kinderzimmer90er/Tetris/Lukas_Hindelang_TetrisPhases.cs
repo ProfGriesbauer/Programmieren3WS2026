@@ -3,7 +3,8 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
-    // State pattern: each phase of a Tetris round decides what happens in its tick.
+    // State pattern: each phase of a Tetris round decides what happens in its tick and
+    // returns the phase for the next tick. Only the session performs the transition.
     internal enum G10_TetrisState
     {
         Ready,
@@ -16,6 +17,8 @@ namespace OOPGames
     internal interface IG10_TetrisPhase
     {
         G10_TetrisState State { get; }
+
+        // Returns itself to stay in this phase, or the phase to switch to.
         IG10_TetrisPhase Update(G10_TetrisSession session, float deltaSeconds, G10_TetrisInput input);
     }
 
@@ -34,12 +37,8 @@ namespace OOPGames
 
         public IG10_TetrisPhase Update(G10_TetrisSession session, float deltaSeconds, G10_TetrisInput input)
         {
-            if (session.StateSeconds >= G10_TetrisConfig.ReadySeconds)
-            {
-                session.SetState(G10_TetrisPhases.Playing);
-                session.SpawnNext();
-            }
-            return session.Phase;
+            if (session.StateSeconds < G10_TetrisConfig.ReadySeconds) return this;
+            return session.SpawnNext();
         }
     }
 
@@ -49,9 +48,8 @@ namespace OOPGames
 
         public IG10_TetrisPhase Update(G10_TetrisSession session, float deltaSeconds, G10_TetrisInput input)
         {
-            if (input.Start) session.Pause();
-            else session.UpdatePlaying(deltaSeconds, input);
-            return session.Phase;
+            if (input.Start) return G10_TetrisPhases.Paused;
+            return session.UpdatePlaying(deltaSeconds, input);
         }
     }
 
@@ -61,10 +59,9 @@ namespace OOPGames
 
         public IG10_TetrisPhase Update(G10_TetrisSession session, float deltaSeconds, G10_TetrisInput input)
         {
-            if (input.Start) session.Pause();
-            else if (session.StateSeconds >= G10_TetrisConfig.LineClearSeconds)
-                session.FinishClear();
-            return session.Phase;
+            if (input.Start) return G10_TetrisPhases.Paused;
+            if (session.StateSeconds < G10_TetrisConfig.LineClearSeconds) return this;
+            return session.FinishClear();
         }
     }
 
@@ -74,8 +71,7 @@ namespace OOPGames
 
         public IG10_TetrisPhase Update(G10_TetrisSession session, float deltaSeconds, G10_TetrisInput input)
         {
-            if (input.Start) session.Resume();
-            return session.Phase;
+            return input.Start ? session.PhaseBeforePause : this;
         }
     }
 
@@ -85,9 +81,9 @@ namespace OOPGames
 
         public IG10_TetrisPhase Update(G10_TetrisSession session, float deltaSeconds, G10_TetrisInput input)
         {
-            if (input.Start && session.StateSeconds >= G10_TetrisConfig.GameOverInputDelay)
-                session.Start();
-            return session.Phase;
+            if (!input.Start || session.StateSeconds < G10_TetrisConfig.GameOverInputDelay) return this;
+            session.ResetRound();
+            return G10_TetrisPhases.Ready;
         }
     }
 }

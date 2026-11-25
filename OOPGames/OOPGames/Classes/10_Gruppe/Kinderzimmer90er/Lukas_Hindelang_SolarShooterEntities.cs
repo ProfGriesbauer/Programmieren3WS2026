@@ -9,7 +9,7 @@ namespace OOPGames
     }
 
     // Common base of everything that moves in the playfield: position, hitbox, update.
-    internal abstract class G10_ShooterEntity : IG10_Collidable
+    internal abstract class G10_ShooterEntity : IG10_Collidable, IG10_ShooterEntityView
     {
         public float X { get; protected set; }
         public float Y { get; protected set; }
@@ -81,7 +81,7 @@ namespace OOPGames
         }
     }
 
-    internal sealed class G10_SolarShooterPlayer : G10_ShooterEntity
+    internal sealed class G10_SolarShooterPlayer : G10_ShooterEntity, IG10_ShooterPlayerView
     {
         readonly IG10_Weapon[] _Weapons =
         {

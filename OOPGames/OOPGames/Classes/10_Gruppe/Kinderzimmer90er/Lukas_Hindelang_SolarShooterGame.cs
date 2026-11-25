@@ -11,8 +11,7 @@ namespace OOPGames
         readonly G10_ShooterInputMapper _InputMapper;
         readonly G10_SolarShooterMenu _Menu;
         readonly IG10_ShooterSaveStore _Saves;
-        G10_SolarShooterSession _Session;
-        G10_SolarShooterMode _Mode;
+        G10_SolarShooterRun _Run;
         float _AutosaveTimer;
 
         public G10_SolarShooterGame()
@@ -46,8 +45,7 @@ namespace OOPGames
 
         public void Start()
         {
-            _Session = null;
-            _Mode = null;
+            _Run = null;
             _AutosaveTimer = 0;
             _Menu.Reset();
             _InputMapper.Reset();
@@ -65,23 +63,23 @@ namespace OOPGames
             bool restart = _InputMapper.Read(out input);
             if (ContainsBackKey(keys))
             {
-                SaveProgress(!_Session.IsGameOver && !_Session.IsVictory);
+                SaveProgress(!_Run.IsFinished);
                 _Menu.OpenPause();
                 _InputMapper.Reset();
                 return;
             }
 
-            if (_Session.IsGameOver || _Session.IsVictory)
+            if (_Run.IsFinished)
             {
                 if (restart || ContainsKey(keys, Key.Z))
                     _Menu.ReturnToMainMenu();
                 return;
             }
 
-            int previousStage = _Session.StageIndex;
-            _Mode.Update(_Session, G10_ShooterConfig.FixedDeltaSeconds, input);
+            int previousStage = _Run.Session.StageIndex;
+            _Run.Update(G10_ShooterConfig.FixedDeltaSeconds, input);
             _AutosaveTimer += G10_ShooterConfig.FixedDeltaSeconds;
-            if (_Session.StageIndex != previousStage)
+            if (_Run.Session.StageIndex != previousStage)
             {
                 _AutosaveTimer = 0;
                 SaveProgress(true);
@@ -91,39 +89,41 @@ namespace OOPGames
                 _AutosaveTimer = 0;
                 SaveProgress(true);
             }
-            if (_Session.IsGameOver || _Session.IsVictory)
+            if (_Run.IsFinished)
                 SaveProgress(false);
         }
 
         public void Draw(Canvas canvas)
         {
             G10_SolarShooterModeSave save = _Saves.GetMode(_Menu.SelectedMode.Id);
-            _Renderer.Draw(
-                canvas, _Session, _Menu, save,
-                _Mode == null ? G10_EmptyModeHud.Instance : _Mode.Hud);
+            if (_Run == null)
+                _Renderer.Draw(canvas, null, _Menu, save, G10_EmptyModeHud.Instance);
+            else
+                _Renderer.Draw(canvas, _Run.Session, _Menu, save, _Run.Hud);
         }
 
         void StartNewGame()
         {
-            _Mode = _Menu.SelectedMode;
-            _Session = _Mode.CreateSession(null);
-            _AutosaveTimer = 0;
-            _Menu.BeginGameplay();
-            _InputMapper.Reset();
+            BeginRun(_Menu.SelectedMode.StartRun(null));
             SaveProgress(true);
         }
 
         void ContinueGame()
         {
-            _Mode = _Menu.SelectedMode;
-            G10_SolarShooterModeSave save = _Saves.GetMode(_Mode.Id);
+            G10_SolarShooterMode mode = _Menu.SelectedMode;
+            G10_SolarShooterModeSave save = _Saves.GetMode(mode.Id);
             if (!save.HasResume)
             {
-                _Menu.SetStatusMessage("KEIN SPIELSTAND FUER " + _Mode.Name);
+                _Menu.SetStatusMessage("KEIN SPIELSTAND FUER " + mode.Name);
                 return;
             }
 
-            _Session = _Mode.CreateSession(save);
+            BeginRun(mode.StartRun(save));
+        }
+
+        void BeginRun(G10_SolarShooterRun run)
+        {
+            _Run = run;
             _AutosaveTimer = 0;
             _Menu.BeginGameplay();
             _InputMapper.Reset();
@@ -131,16 +131,15 @@ namespace OOPGames
 
         void SaveProgress(bool canResume)
         {
-            if (_Session == null || _Mode == null) return;
-            _Mode.WriteSave(_Saves.GetMode(_Mode.Id), _Session, canResume);
+            if (_Run == null) return;
+            _Run.WriteSave(_Saves.GetMode(_Run.Mode.Id), canResume);
             _Saves.Save();
         }
 
         void ReturnToMenu()
         {
-            SaveProgress(!_Session.IsGameOver && !_Session.IsVictory);
-            _Session = null;
-            _Mode = null;
+            if (_Run != null) SaveProgress(!_Run.IsFinished);
+            _Run = null;
             _InputMapper.Reset();
         }
 

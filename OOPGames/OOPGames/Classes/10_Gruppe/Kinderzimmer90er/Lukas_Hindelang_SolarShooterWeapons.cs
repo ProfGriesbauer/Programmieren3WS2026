@@ -82,7 +82,7 @@ namespace OOPGames
         }
     }
 
-    internal sealed class G10_SolarShooterBoss : G10_ShooterEntity
+    internal sealed class G10_SolarShooterBoss : G10_ShooterEntity, IG10_ShooterBossView
     {
         readonly G10_SolarShooterStage _Stage;
         readonly G10_SolarShooterPlayer _Player;

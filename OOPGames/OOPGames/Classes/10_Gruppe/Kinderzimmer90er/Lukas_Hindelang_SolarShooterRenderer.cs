@@ -158,13 +158,13 @@ namespace OOPGames
                 DrawHud(drawing, session);
                 DrawModeHud(drawing, session, modeHud);
 
-                foreach (G10_SolarShooterProjectile projectile in session.PlayerProjectiles)
+                foreach (IG10_ShooterEntityView projectile in session.PlayerProjectiles)
                     DrawProjectile(drawing, projectile, true);
-                foreach (G10_SolarShooterProjectile projectile in session.EnemyProjectiles)
+                foreach (IG10_ShooterEntityView projectile in session.EnemyProjectiles)
                     DrawProjectile(drawing, projectile, false);
-                foreach (G10_SolarShooterPowerCell cell in session.PowerCells)
+                foreach (IG10_ShooterEntityView cell in session.PowerCells)
                     DrawPowerCell(drawing, cell, session.TickNumber);
-                foreach (G10_SolarShooterEnemy enemy in session.Enemies)
+                foreach (IG10_ShooterEnemyView enemy in session.Enemies)
                     DrawEnemy(drawing, enemy, session.TickNumber);
                 if (session.Boss != null)
                     DrawBoss(drawing, session.Boss, session.StageIndex, session.TickNumber);
@@ -409,7 +409,7 @@ namespace OOPGames
 
         void DrawPlayer(DrawingContext drawing, IG10_ShooterView session)
         {
-            G10_SolarShooterPlayer player = session.Player;
+            IG10_ShooterPlayerView player = session.Player;
             if (player.IsInvulnerable && session.TickNumber % 4 < 2) return;
 
             drawing.PushTransform(new TranslateTransform(player.X, player.Y));
@@ -433,7 +433,7 @@ namespace OOPGames
             drawing.Pop();
         }
 
-        void DrawEnemy(DrawingContext drawing, G10_SolarShooterEnemy enemy, int tick)
+        void DrawEnemy(DrawingContext drawing, IG10_ShooterEnemyView enemy, int tick)
         {
             drawing.PushTransform(new TranslateTransform(enemy.X, enemy.Y));
             G10_ShooterEnemyStyle style = EnemyStyles[enemy.Kind];
@@ -455,7 +455,7 @@ namespace OOPGames
             drawing.Pop();
         }
 
-        void DrawBoss(DrawingContext drawing, G10_SolarShooterBoss boss, int stageIndex, int tick)
+        void DrawBoss(DrawingContext drawing, IG10_ShooterBossView boss, int stageIndex, int tick)
         {
             drawing.PushTransform(new TranslateTransform(boss.X, boss.Y));
             Brush glow = stageIndex == 1 ? VioletNebula : stageIndex == 2 ? AmberNebula : GreenNebula;
@@ -484,7 +484,7 @@ namespace OOPGames
             drawing.Pop();
         }
 
-        void DrawProjectile(DrawingContext drawing, G10_SolarShooterProjectile projectile, bool playerShot)
+        void DrawProjectile(DrawingContext drawing, IG10_ShooterEntityView projectile, bool playerShot)
         {
             Brush glow = playerShot ? PlayerShotGlow : EnemyShotGlow;
             Brush core = playerShot ? Solid(Color.FromRgb(190, 249, 255)) : Solid(Color.FromRgb(255, 220, 154));
@@ -497,7 +497,7 @@ namespace OOPGames
                 new Point(projectile.X, projectile.Y + (playerShot ? -1 : 1)));
         }
 
-        void DrawPowerCell(DrawingContext drawing, G10_SolarShooterPowerCell cell, int tick)
+        void DrawPowerCell(DrawingContext drawing, IG10_ShooterEntityView cell, int tick)
         {
             double pulse = 0.78 + 0.22 * Math.Sin(tick * 0.3);
             drawing.DrawEllipse(EngineGlow, null, new Point(cell.X, cell.Y), 7 * pulse, 7 * pulse);
