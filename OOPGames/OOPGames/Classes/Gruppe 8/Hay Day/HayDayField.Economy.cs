@@ -3,8 +3,10 @@ using System.Linq;
 
 namespace OOPGames
 {
+    // Enthält Preise, Handel, Ernten und das gemeinsame Platzieren von Hofobjekten.
     public sealed partial class HayDayField
     {
+        // Marktangebote liefern den Tagespreis; für unbekannte Produkte gilt ein Grundpreis.
         public int MarketPrice(string item)
         {
             MarketOffer offer = MarketOffers.FirstOrDefault(value => value.Item == item);
@@ -85,8 +87,7 @@ namespace OOPGames
 
         private void PlaceBuilding(int row, int column)
         {
-            if (IsRoad(row, column) || Plots.Any(plot => plot.Row == row && plot.Column == column) ||
-                Buildings.Any(value => value.Row == row && value.Column == column))
+            if (!IsAvailableLocation(row, column))
             {
                 SetStatus("Hier ist kein Bauplatz frei.");
                 return;
@@ -102,6 +103,7 @@ namespace OOPGames
 
             Coins -= cost;
             _pendingBuildingPlacement = false;
+            // Ein Acker wird als FarmPlot gespeichert; alle anderen Shop-Einträge sind Gebäude.
             if (kind == "Field")
             {
                 Plots.Add(new FarmPlot(row, column));
@@ -144,6 +146,18 @@ namespace OOPGames
             }
 
             SetStatus(BuildingLabel(kind) + " gebaut für " + cost + " Münzen.");
+        }
+
+        // Neue und verschobene Objekte teilen dieselben Grenzen und Belegungsregeln.
+        private bool IsAvailableLocation(int row, int column,
+            FarmPlot movingPlot = null, FarmBuilding movingBuilding = null)
+        {
+            return IsInside(row, column)
+                && !IsRoad(row, column)
+                && !Plots.Any(plot => plot != movingPlot
+                    && plot.Row == row && plot.Column == column)
+                && !Buildings.Any(building => building != movingBuilding
+                    && building.Row == row && building.Column == column);
         }
 
         private void Sell(string item, int amount)

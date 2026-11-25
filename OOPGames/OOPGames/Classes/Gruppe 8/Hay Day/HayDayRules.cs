@@ -2,6 +2,9 @@ using System;
 
 namespace OOPGames
 {
+    /// <summary>
+    /// Verbindet den Hay-Day-Spielzustand mit dem Framework und speichert angenommene Züge.
+    /// </summary>
     public sealed class HayDayRules : IGameRules2
     {
         private HayDayField _field = HayDayField.LoadOrCreate();
@@ -43,6 +46,7 @@ namespace OOPGames
                 return;
             }
 
+            // Das Feld verarbeitet den Zug; danach wird gespeichert und der nächste Spieler aktiviert.
             _field.Apply(farmMove);
             _field.Save();
             _nextPlayer = _nextPlayer == 1 ? 2 : 1;

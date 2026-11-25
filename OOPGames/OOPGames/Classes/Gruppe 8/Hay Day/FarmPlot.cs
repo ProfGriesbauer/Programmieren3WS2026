@@ -2,6 +2,9 @@ using System;
 
 namespace OOPGames
 {
+    /// <summary>
+    /// Ein Acker speichert seine Position und den Zustand der aktuell wachsenden Pflanze.
+    /// </summary>
     public sealed class FarmPlot
     {
         public FarmPlot(int row, int column) : this(row, column, null, default(DateTime))
@@ -34,6 +37,13 @@ namespace OOPGames
             Crop = null;
             PlantedAtUtc = default(DateTime);
             Ripe = false;
+        }
+
+        // Nur die Position ändert sich; Pflanze und Wachstumszeit bleiben erhalten.
+        internal void MoveTo(int row, int column)
+        {
+            Row = row;
+            Column = column;
         }
 
         public bool IsRipe(DateTime now)

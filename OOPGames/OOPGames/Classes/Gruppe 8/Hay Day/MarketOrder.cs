@@ -1,5 +1,8 @@
 namespace OOPGames
 {
+    /// <summary>
+    /// Eine Lieferanfrage mit benötigter Menge und Münzbelohnung.
+    /// </summary>
     public sealed class MarketOrder
     {
         public MarketOrder(string item, int quantity, int reward)

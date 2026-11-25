@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
+    /// <summary>
+    /// Datenmodell des JSON-Spielstands; enthält Hof, Lager, Tiere und Marktfortschritt.
+    /// </summary>
     public sealed class HayDaySaveData
     {
         public int SaveVersion { get; set; }

@@ -1,5 +1,8 @@
 namespace OOPGames
 {
+    /// <summary>
+    /// Ein Produkt und sein aktueller Verkaufspreis am Markt.
+    /// </summary>
     public sealed class MarketOffer
     {
         public MarketOffer(string item, int price)
