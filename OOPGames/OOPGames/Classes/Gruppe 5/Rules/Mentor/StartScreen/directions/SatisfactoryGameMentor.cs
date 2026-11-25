@@ -8,10 +8,22 @@ namespace OOPGames
 {
     internal sealed class SatisfactoryGameMentor
     {
+        private enum TutorialStep
+        {
+            Inactive,
+            FindDeposit,
+            MineResource,
+            GatherStarterMaterials,
+            BuildProduction,
+            Complete
+        }
+
         private static readonly Brush PanelBrush = BrushFromRgb(24, 35, 38, 244);
         private static readonly Brush AccentBrush = BrushFromRgb(130, 229, 107);
         private static readonly Brush TextBrush = BrushFromRgb(248, 246, 224);
         private static readonly Brush MutedBrush = BrushFromRgb(195, 207, 183);
+
+        private TutorialStep _step;
 
         internal bool IsActive { get; private set; }
         internal string Message { get; private set; }
@@ -19,7 +31,68 @@ namespace OOPGames
         internal void Begin()
         {
             IsActive = true;
-            Explain("Willkommen! Bewege dich mit WASD. Schaue ein Feld an und drücke E, um dort selbst Rohstoffe abzubauen.");
+            _step = TutorialStep.FindDeposit;
+            Explain("Willkommen! Bewege dich mit WASD zu einem Rohstoffvorkommen. " +
+                "Der erste Förderer kostet nur abbaubares Eisenerz und Holz.");
+        }
+
+        internal void ObservePlayerMoved()
+        {
+            if (_step == TutorialStep.FindDeposit)
+            {
+                _step = TutorialStep.MineResource;
+                Explain("Gut, du kannst dich bewegen. Laufe neben ein Erz- oder Holzvorkommen, richte den Blick darauf und drücke E.");
+            }
+        }
+
+        internal void ObserveHandMining(G5_Item item)
+        {
+            if (_step == TutorialStep.MineResource)
+            {
+                _step = TutorialStep.GatherStarterMaterials;
+                Explain("Handabbau funktioniert! Sammle 8 Eisenerz und 5 Holz für deinen ersten Förderer. " +
+                    "Danach kannst du weitere Zutaten im Inventar unter HANDWERK herstellen.");
+                return;
+            }
+
+            Explain("+" + G5_FabrikBezeichnungen.Gegenstand(item) +
+                ". Rohstoffe aus Vorkommen kommen direkt in deinen Rucksack.");
+        }
+
+        internal void ObserveBuildingPlaced(G5_Bauwerkzeug tool, string buildingName, string explanation)
+        {
+            if (tool == G5_Bauwerkzeug.Foerderer &&
+                _step == TutorialStep.GatherStarterMaterials)
+            {
+                _step = TutorialStep.BuildProduction;
+                Explain(buildingName + " gebaut! Er baut sein Vorkommen automatisch ab. " +
+                    "Als Nächstes kannst du im HANDWERK Eisenerz zu Barren und danach zu Platten verarbeiten.");
+                return;
+            }
+
+            if (tool == G5_Bauwerkzeug.Schmelze &&
+                _step == TutorialStep.BuildProduction)
+            {
+                _step = TutorialStep.Complete;
+                Explain(buildingName + " gebaut! Wähle in den Gebäudedetails ein passendes Erzrezept. " +
+                    "Förderbänder verbinden Förderer und Schmelze.");
+                return;
+            }
+
+            Explain(buildingName + " gebaut. " + explanation);
+        }
+
+        internal void ObserveManualCraftStarted(G5_Recipe recipe)
+        {
+            Explain(recipe.Name + " gestartet. Die Zutaten kommen aus deinem Rucksack; " +
+                "das Ergebnis wird nach kurzer Zeit dort abgelegt.");
+        }
+
+        internal void ObserveManualCraftCompleted(G5_Recipe recipe)
+        {
+            Explain(recipe.OutputAmount + " " + G5_FabrikBezeichnungen.Gegenstand(recipe.Output) +
+                " hergestellt. Die Reihenfolge im HANDWERK führt von Rohstoffen über Barren " +
+                "zu Bauteilen und Beton.");
         }
 
         internal void Explain(string message)
@@ -33,12 +106,14 @@ namespace OOPGames
         internal void Skip()
         {
             IsActive = false;
+            _step = TutorialStep.Complete;
             Message = "Tutorial übersprungen. Du kannst jederzeit frei spielen.";
         }
 
         internal void Reset()
         {
             IsActive = false;
+            _step = TutorialStep.Inactive;
             Message = string.Empty;
         }
 

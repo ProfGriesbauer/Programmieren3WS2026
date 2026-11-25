@@ -159,3 +159,5 @@ Falls noch Rahmenbedingungen und Game Logik fehlen, ergänze diese auf basis von
 [2026-11-25 11:14] Dann aktualisiere bitte die Dateien im Ordner Rules/Mentor etc so, dass sie zu den aktuellen Fabriklogiken passen. der Mentor soll auch wieder im Spiel verfügbar sein und die neuen Gebäude bzw. Äderungen bezüglich Rezeote beinhalten und vorstellen. Auch den Spieler, mit dem man selbst abbauen kann
 [2026-11-25 11:45] Löse die Probleme aus dem Terminal so dass der Build wieder erfolgreich ist und ich auch die neusten Änderungen der anderen Teilnehmer habe
 [2026-11-25 11:51] Pull push commit
+[2026-11-25 12:02] Bitte überarbeite die aktuellen Probleme die im Terminal stehen. Der Mentor bleibt aktuell beim erten Schritt hängen, bitte überarbeite das. Außerdem sollten die Rezepte eine logische Ordnung haben da man aktuell Rohstoffe anfangs benötigt die man noch garnicht herstellen kann
+[2026-11-25 12:13] pull push und commit

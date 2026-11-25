@@ -199,6 +199,7 @@ namespace OOPGames
                     abgeschlossenesHandwerk.OutputAmount + " " +
                     G5_FabrikBezeichnungen.Gegenstand(abgeschlossenesHandwerk.Output) +
                     " hergestellt.");
+                _mentor.ObserveManualCraftCompleted(abgeschlossenesHandwerk);
             }
 
             List<G5_Miner> miners = _field.InterneGebaeude.OfType<G5_Miner>().ToList();
@@ -216,7 +217,7 @@ namespace OOPGames
             if (_field.MoveSpieler(dx, dy))
             {
                 _field.SetStatusMeldung("Du schaust auf das markierte Feld. E baut dort Rohstoffe ab.");
-                _mentor.Explain("WASD bewegt dich. Das gelb markierte Feld ist dein Ziel; mit E baust du dort selbst Rohstoffe ab.");
+                _mentor.ObservePlayerMoved();
             }
             else
             {
@@ -230,18 +231,21 @@ namespace OOPGames
             if (!_deposits.TryGetValue(target, out G5_ResourceDeposit deposit))
             {
                 _field.SetStatusMeldung("Vor dir gibt es keinen abbaubaren Rohstoff.");
+                _mentor.Explain("Auf dem anvisierten Feld liegt kein Vorkommen. Laufe mit WASD neben Erz oder Holz und richte den Blick darauf.");
                 return;
             }
 
             if (deposit.RemainingAmount == 0)
             {
                 _field.SetStatusMeldung("Dieses Vorkommen ist erschöpft.");
+                _mentor.Explain("Dieses Vorkommen ist erschöpft. Suche mit WASD ein anderes Rohstofffeld.");
                 return;
             }
 
             if (!_field.KannEinlagern(1))
             {
                 _field.SetStatusMeldung("Rucksack und Lager sind voll. Baue ein Lager oder schaffe Platz.");
+                _mentor.Explain("Dein Rucksack ist voll. Lege Gegenstände ab oder baue ein Lager, bevor du weiter abbaust.");
                 return;
             }
 
@@ -269,9 +273,7 @@ namespace OOPGames
             _field.AddInventar(deposit.Item, extracted);
             _field.SetStatusMeldung("+" + extracted + " " +
                 G5_FabrikBezeichnungen.Gegenstand(deposit.Item) + " gesammelt.");
-            _mentor.Explain("Handabbau funktioniert mit E, wenn du auf ein Vorkommen blickst. " +
-                G5_FabrikBezeichnungen.Gegenstand(deposit.Item) +
-                " landet direkt in deinem Vorrat; der Handabbau hat eine kurze Abklingzeit.");
+            _mentor.ObserveHandMining(deposit.Item);
         }
 
         private void SelectBuilding(int x, int y)
@@ -428,7 +430,7 @@ namespace OOPGames
             _buildingInvestments.Add(building, new Dictionary<G5_Item, int>(cost));
             RefreshConveyorConnections();
             _field.SetStatusMeldung(building.Name + " gebaut. Kosten: " + FormatCost(cost) + ".");
-            _mentor.Explain(building.Name + " gebaut. " + BuildingExplanation(tool));
+            _mentor.ObserveBuildingPlaced(tool, building.Name, BuildingExplanation(tool));
         }
 
         private void SelectRecipe(string recipeName)
@@ -630,13 +632,15 @@ namespace OOPGames
             {
                 _field.SetStatusMeldung(
                     "Für " + recipe.Name + " fehlen Zutaten im Rucksack oder freier Platz.");
+                _mentor.Explain("Für " + recipe.Name + " fehlen Zutaten: " +
+                    FormatCost(recipe.Ingredients) +
+                    ". Baue die Rohstoffe mit E ab und arbeite die Handwerksliste von oben nach unten ab.");
                 return;
             }
 
             _field.SetStatusMeldung(
                 recipe.Name + " gestartet. Die Herstellung dauert zwei Sekunden.");
-            _mentor.Explain(RecipeExplanation(recipe.Name) +
-                " Du stellst dieses Rezept gerade selbst her; die Zutaten werden aus deinem Vorrat genommen.");
+            _mentor.ObserveManualCraftStarted(recipe);
         }
 
         private void SelectInventoryItemForDrop(string itemName)
@@ -1145,7 +1149,7 @@ namespace OOPGames
             switch (tool)
             {
                 case G5_Bauwerkzeug.Foerderer:
-                    return "Der Förderer baut das Rohstofffeld unter ihm automatisch ab und liefert zum Lager oder auf ein verbundenes Förderband.";
+                    return "Der erste Förderer kostet 8 Eisenerz und 5 Holz. Er baut das Vorkommen darunter automatisch ab und liefert ins Lager oder Förderband.";
                 case G5_Bauwerkzeug.Schmelze:
                     return "Die Schmelze verarbeitet Eisenerz zu Eisenbarren oder Kupfererz zu Kupferbarren. Wähle das passende Rezept in den Gebäudedetails.";
                 case G5_Bauwerkzeug.Foerderband:

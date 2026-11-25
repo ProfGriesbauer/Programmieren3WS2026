@@ -351,8 +351,8 @@ namespace OOPGames
             if (_hoverWelt is SatisfactoryFieldView inventoryField &&
                 inventoryField.AusgewaehltesGebaeude == null)
             {
-                double panelWidth = inventoryField.InventarGeoeffnet ? 190 : 34;
-                double panelHeight = inventoryField.InventarGeoeffnet ? 270 : 34;
+                double panelWidth = inventoryField.InventarGeoeffnet ? 268 : 34;
+                double panelHeight = inventoryField.InventarGeoeffnet ? 480 : 34;
                 double left = _zielCanvas.ActualWidth - panelWidth - 10;
                 double top = HudHoehe + 10;
                 if (position.X >= left && position.X <= left + panelWidth &&
@@ -360,7 +360,19 @@ namespace OOPGames
                 {
                     if (position.Y <= top + 34)
                     {
-                        inventoryField.ToggleInventar();
+                        if (!inventoryField.InventarGeoeffnet)
+                        {
+                            inventoryField.ToggleInventar();
+                        }
+                        else if (position.X >= left + panelWidth - 112 ||
+                            inventoryField.HandwerkGeoeffnet)
+                        {
+                            inventoryField.ToggleHandwerk();
+                        }
+                        else
+                        {
+                            inventoryField.ToggleInventar();
+                        }
                     }
 
                     e.Handled = true;
@@ -1360,6 +1372,7 @@ namespace OOPGames
         {
             SatisfactoryFieldView fieldView = info as SatisfactoryFieldView;
             bool isOpen = fieldView == null || fieldView.InventarGeoeffnet;
+            bool handwerkOpen = fieldView != null && fieldView.HandwerkGeoeffnet;
             double width = isOpen ? 268 : 34;
             double left = viewportBreite - width - 10;
             double top = HudHoehe + 10;
@@ -1389,22 +1402,119 @@ namespace OOPGames
             };
 
             StackPanel content = new StackPanel();
+            Grid header = new Grid { Height = 26 };
+            header.ColumnDefinitions.Add(new ColumnDefinition());
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(104) });
             Border toggle = new Border
             {
                 Padding = new Thickness(0),
                 Margin = new Thickness(0, 0, 0, isOpen ? 5 : 0),
                 Child = new TextBlock
                 {
-                    Text = isOpen ? "‹ INVENTAR" : "›",
+                    Text = !isOpen ? "›" : handwerkOpen ? "‹ ZURÜCK" : "‹ INVENTAR",
                     Foreground = HoverAccentBrush,
                     FontSize = 11,
                     FontWeight = FontWeights.Bold,
-                    TextAlignment = isOpen ? TextAlignment.Left : TextAlignment.Center
+                    TextAlignment = isOpen ? TextAlignment.Left : TextAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
                 }
             };
-            content.Children.Add(toggle);
+            header.Children.Add(toggle);
 
             if (isOpen)
+            {
+                Border handwerkToggle = new Border
+                {
+                    Child = new TextBlock
+                    {
+                        Text = handwerkOpen ? "WERKBANK" : "HANDWERK ›",
+                        Foreground = HoverAccentBrush,
+                        FontSize = 10,
+                        FontWeight = FontWeights.Bold,
+                        TextAlignment = TextAlignment.Right,
+                        VerticalAlignment = VerticalAlignment.Center
+                    }
+                };
+                Grid.SetColumn(handwerkToggle, 1);
+                header.Children.Add(handwerkToggle);
+            }
+
+            content.Children.Add(header);
+            if (isOpen && handwerkOpen)
+            {
+                content.Children.Add(new TextBlock
+                {
+                    Text = "ROHSTOFF → GRUNDSTOFF → BAUTEIL",
+                    Foreground = HoverAccentBrush,
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    Height = 18,
+                    Margin = new Thickness(0, 0, 0, 5)
+                });
+
+                IReadOnlyList<G5_Recipe> recipes = G5_StarterRecipes.CreateManualCraftingRecipes();
+                for (int index = 0; index < recipes.Count; index++)
+                {
+                    G5_Recipe recipe = recipes[index];
+                    bool canCraft = recipe.Ingredients.All(ingredient =>
+                        info.SpielerInventar.TryGetValue(ingredient.Key, out int amount) &&
+                        amount >= ingredient.Value);
+                    string ingredients = string.Join(" + ", recipe.Ingredients.Select(ingredient =>
+                        ingredient.Value + " " + G5_FabrikBezeichnungen.Gegenstand(ingredient.Key)));
+                    Border row = new Border
+                    {
+                        Height = 66,
+                        Margin = new Thickness(0, 0, 0, 5),
+                        Padding = new Thickness(6, 4, 6, 3),
+                        Background = new SolidColorBrush(Color.FromArgb(
+                            canCraft ? (byte)205 : (byte)125,
+                            canCraft ? (byte)72 : (byte)42,
+                            canCraft ? (byte)106 : (byte)58,
+                            canCraft ? (byte)64 : (byte)52)),
+                        BorderBrush = canCraft ? HoverAccentBrush : Brushes.DimGray,
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(6),
+                        Child = new StackPanel
+                        {
+                            Children =
+                            {
+                                new TextBlock
+                                {
+                                    Text = recipe.Name,
+                                    Foreground = Brushes.White,
+                                    FontSize = 10,
+                                    FontWeight = FontWeights.Bold,
+                                    TextTrimming = TextTrimming.CharacterEllipsis
+                                },
+                                new TextBlock
+                                {
+                                    Text = ingredients + "  →  " + recipe.OutputAmount + " " +
+                                        G5_FabrikBezeichnungen.Gegenstand(recipe.Output),
+                                    Foreground = canCraft ? HoverAccentBrush : Brushes.LightGray,
+                                    FontSize = 9,
+                                    TextTrimming = TextTrimming.CharacterEllipsis
+                                },
+                                new TextBlock
+                                {
+                                    Text = canCraft ? "Klicken zum Herstellen" : "Zutaten fehlen",
+                                    Foreground = canCraft ? Brushes.White : Brushes.LightGray,
+                                    FontSize = 8
+                                }
+                            }
+                        }
+                    };
+                    content.Children.Add(row);
+                    fieldView?.RegisterMenuAktion(
+                        new Rect(
+                            left + 8,
+                            top + 8 + 26 + 18 + index * 71,
+                            width - 16,
+                            66),
+                        G5_FabrikAktionstyp.ManuellHerstellen,
+                        wert: recipe.Output.ToString());
+                }
+            }
+            else if (isOpen)
             {
                 G5_Item[] items =
                 {

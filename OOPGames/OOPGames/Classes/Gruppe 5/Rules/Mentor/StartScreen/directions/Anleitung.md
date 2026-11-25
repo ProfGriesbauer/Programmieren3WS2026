@@ -29,6 +29,12 @@ kurze Abklingzeit. Ein Förderer muss direkt auf einem verfügbaren Vorkommen
 stehen; alle anderen Gebäude benötigen ein freies Feld. Neue Karten verteilen
 Vorkommen und Hindernisse zufällig.
 
+Im Inventar führt **HANDWERK** zu den manuellen Rezepten. Klicke ein Rezept an,
+um es mit den Zutaten aus deinem Rucksack herzustellen. Die Liste beginnt mit
+Erz und Kalkstein, daraus entstehen Barren und Beton; aus Eisenbarren werden
+anschließend Platten und Stangen. Fehlende Zutaten werden im Rezept angezeigt.
+Der erste Förderer kostet nur 8 Eisenerz und 5 Holz, die du direkt abbauen kannst.
+
 ## Gebäude und Fabriklogik
 
 | Gebäude | Funktion |
@@ -51,15 +57,14 @@ Splitter und Merger sind derzeit nicht im Bauregister verfügbar.
 ## Verfügbare Rezepte
 
 - **Handwerk:** Eisenerz → Eisenbarren; Kupfererz → Kupferbarren;
-  Eisenbarren → Eisenplatte oder Eisenstange; 2 Kalkstein → Beton.
+  2 Kalkstein → Beton; danach Eisenbarren → Eisenplatte oder Eisenstange.
 - **Schmelze:** Eisenerz → Eisenbarren oder Kupfererz → Kupferbarren.
 - **Konstruktor:** Eisenbarren → Eisenplatte oder Eisenstange;
   Kupferbarren → Kupferdraht; Eisenstange → 4 Schrauben.
 - **Assembler:** Eisenstange + Schraube → Rotor.
 
-Welche Rezepte für ein Gebäude verfügbar sind, steht in seinen Details. Handwerk
-startet über die Rezeptauswahl im Inventar; Produktionsgebäude benötigen die
-Zutaten im gemeinsamen Lager.
+Welche Rezepte für ein Gebäude verfügbar sind, steht in seinen Details.
+Produktionsgebäude benötigen ihre Zutaten im gemeinsamen Lager.
 
 ## Startwelt und Anzeige
 

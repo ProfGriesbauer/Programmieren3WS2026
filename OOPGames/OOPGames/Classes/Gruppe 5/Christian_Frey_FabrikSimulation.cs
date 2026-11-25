@@ -161,15 +161,15 @@ namespace OOPGames
                 new G5_Recipe("Kupfererz zu Kupferbarren verarbeiten", G5_RecipeType.Smelting,
                     new[] { new KeyValuePair<G5_Item, int>(G5_Item.Kupfererz, 1) },
                     G5_Item.Kupferbarren, 1, 1, 0),
+                new G5_Recipe("Beton herstellen", G5_RecipeType.Construction,
+                    new[] { new KeyValuePair<G5_Item, int>(G5_Item.Kalkstein, 2) },
+                    G5_Item.Beton, 1, 1, 0),
                 new G5_Recipe("Eisenplatte herstellen", G5_RecipeType.Construction,
                     new[] { new KeyValuePair<G5_Item, int>(G5_Item.Eisenbarren, 1) },
                     G5_Item.Eisenplatte, 1, 1, 0),
                 new G5_Recipe("Eisenstange herstellen", G5_RecipeType.Construction,
                     new[] { new KeyValuePair<G5_Item, int>(G5_Item.Eisenbarren, 1) },
-                    G5_Item.Eisenstange, 1, 1, 0),
-                new G5_Recipe("Beton herstellen", G5_RecipeType.Construction,
-                    new[] { new KeyValuePair<G5_Item, int>(G5_Item.Kalkstein, 2) },
-                    G5_Item.Beton, 1, 1, 0)
+                    G5_Item.Eisenstange, 1, 1, 0)
             };
         }
 

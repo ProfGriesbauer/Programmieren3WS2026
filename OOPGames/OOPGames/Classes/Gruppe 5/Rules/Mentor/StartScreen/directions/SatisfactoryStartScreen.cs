@@ -296,14 +296,14 @@ namespace OOPGames
 
             double stepsTop = top + Math.Max(136, (height - 330) / 2);
             DrawStep(canvas, left + 30, stepsTop, "01", "Laufen und abbauen",
-                "WASD bewegt dich. Schaue auf ein Vorkommen und drücke E für den Handabbau.");
+                "WASD bewegt dich. Laufe neben ein Vorkommen, richte den Blick darauf und drücke E.");
             DrawStep(canvas, left + 30, stepsTop + 70, "02", "Gebäude kaufen",
-                "F Förderer, S Schmelze, B Förderband. Tab öffnet das scrollbare Bauregister.");
+                "Der erste Förderer braucht nur 8 Eisenerz und 5 Holz. Verarbeite weitere Zutaten im Inventar unter HANDWERK.");
             DrawStep(canvas, left + 30, stepsTop + 140, "03", "Produktion einstellen",
-                "Konstruktor: Platten, Stangen, Kupferdraht, Schrauben. Assembler: Rotoren.");
+                "HANDWERK ordnet Rezepte nach Rohstoffen, Barren und Bauteilen. F Förderer, S Schmelze, B Förderband.");
             DrawStep(canvas, left + 30, stepsTop + 210, "04", "Strom und Handwerk",
                 "Generator verbrennt Kohle; Strommasten verbinden Maschinen. Rezepte stehen in der Anleitung.");
-            AddText(canvas, "Schmelze: Erz zu Barren. Handwerk: Barren zu Platten/Stangen, Kalkstein zu Beton. T überspringt den Mentor.",
+            AddText(canvas, "Handwerk: Erz → Barren, Kalkstein → Beton, Barren → Platten/Stangen. T überspringt den Mentor.",
                 MutedBrush, left + 30, stepsTop + 285, width - 60, 34, 10);
 
             DrawButton(canvas, left + 28, top + height - 60, width - 56, 44,
@@ -541,6 +541,7 @@ namespace OOPGames
         private G5_Bauwerkzeug? _pendingToolSelection;
         private (G5_GridPosition Start, G5_GridPosition Ende)? _pendingConveyorLine;
         private bool _inventarGeoeffnet = true;
+        private bool _handwerkGeoeffnet;
 
         internal SatisfactoryFieldView(
             G5_FabrikSpielfeld field,
@@ -561,6 +562,7 @@ namespace OOPGames
         internal Canvas MentorOverlay { get; }
         internal bool GebaeuderegisterGeoeffnet => _field.GebaeuderegisterGeoeffnet;
         internal bool InventarGeoeffnet => _inventarGeoeffnet;
+        internal bool HandwerkGeoeffnet => _handwerkGeoeffnet;
         internal IG5_GebaeudeInfo AusgewaehltesGebaeude =>
             ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
         internal IReadOnlyDictionary<G5_Item, int> SpielerInventar =>
@@ -578,6 +580,11 @@ namespace OOPGames
         internal void ToggleInventar()
         {
             _inventarGeoeffnet = !_inventarGeoeffnet;
+        }
+
+        internal void ToggleHandwerk()
+        {
+            _handwerkGeoeffnet = !_handwerkGeoeffnet;
         }
 
         internal void SetInventarBereich(Rect bereich)
