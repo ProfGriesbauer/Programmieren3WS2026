@@ -180,6 +180,48 @@ namespace OOPGames
             }
         }
 
+        private void ZeichneConveyorDragPreview(Canvas canvas, IG5_WeltSpielfeld welt)
+        {
+            if (!_isDraggingConveyorLine ||
+                !_conveyorDragStart.HasValue ||
+                !_conveyorDragEnd.HasValue ||
+                !TryGetKachelMitte(welt, _conveyorDragStart.Value, out Point start) ||
+                !TryGetKachelMitte(welt, _conveyorDragEnd.Value, out Point ende))
+            {
+                return;
+            }
+
+            canvas.Children.Add(new Line
+            {
+                X1 = start.X,
+                Y1 = start.Y,
+                X2 = ende.X,
+                Y2 = ende.Y,
+                Stroke = new SolidColorBrush(Color.FromArgb(220, 94, 210, 255)),
+                StrokeThickness = 4,
+                StrokeDashArray = new DoubleCollection { 5, 3 },
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            });
+        }
+
+        private static bool TryGetKachelMitte(
+            IG5_WeltSpielfeld welt,
+            G5_GridPosition position,
+            out Point mitte)
+        {
+            mitte = default;
+            if (!welt.TryRasterZuBildschirm(position.X, position.Y, out Point rasterPosition) ||
+                !TryGetKachelGroesse(welt, position.X, position.Y, out double breite, out double hoehe))
+            {
+                return false;
+            }
+
+            mitte = new Point(rasterPosition.X + breite / 2, rasterPosition.Y + hoehe / 2);
+            return true;
+        }
+
         private void StelleHintergrundSicher(Canvas canvas, IG5_WeltSpielfeld welt)
         {
             bool weltGewechselt = !ReferenceEquals(_hintergrundWelt, welt);

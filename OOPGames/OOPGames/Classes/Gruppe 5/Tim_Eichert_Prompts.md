@@ -314,3 +314,30 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > füge in miene prompt markdow datei alle weiteren prompts hinzu
 
 - **Ergebnisvermerk:** Die seit dem letzten dokumentierten Spieleintrag fehlenden Prompts aus dem Gesprächsverlauf wurden mit Uhrzeit und Ergebnisvermerk ergänzt.
+
+### 2026-11-25, 07:34 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> was sind die probleme, warum das spiel nicht builded?
+
+- **Ergebnisvermerk:** Der Projektbuild wurde ausgeführt. Dabei wurden drei Compilerfehler gefunden: eine fehlende Methode für die Förderband-Drag-Vorschau, ein falscher Tupel-Elementname und ein Aufruf mit einem fehlenden `out`-Parameter.
+
+### 2026-11-25, 07:35 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> löse die probleme
+
+- **Ergebnisvermerk:** Die Drag-Vorschau für Förderband-Verbindungen wurde ergänzt, der Tupelzugriff auf `Ende` korrigiert und die Build-Aktion so angepasst, dass Werkzeug und Ablageposition verarbeitet werden. Der Build lief anschließend mit 0 Warnungen und 0 Fehlern durch.
+
+### 2026-11-25, 07:48 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> pushe das spiel mit den gelösten problemen
+
+- **Ergebnisvermerk:** Die drei Buildkorrekturen samt Promptprotokoll wurden auf den aktuellen Remote-Stand gepusht. Nicht zum Spiel gehörende generierte Dateien blieben außerhalb des Commits.
