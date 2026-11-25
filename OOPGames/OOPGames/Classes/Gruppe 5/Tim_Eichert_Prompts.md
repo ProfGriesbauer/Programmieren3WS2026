@@ -454,3 +454,48 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 - **Rückfrage im Ablauf:** Wie soll die Werkbank des Teams mit dem kombinierten Panel zusammengeführt werden? Antwort: „Dein Panel behalten“. Das kombinierte Inventar ersetzt Werkbank-Umschalter und Zeilen-Knöpfe. Alle übrigen Team-Änderungen wurden übernommen.
 - **Weitere Anpassungen:** Die Team-Tests zum Herstellen wurden auf den neuen Ablauf umgestellt (Zeile wählen, dann **HERSTELLEN ×1**). Die Mentor- und Startbildschirm-Texte verweisen nicht mehr auf „HANDWERK“.
 - **Prüfung und Push:** Build 0 Warnungen, 0 Fehler; 48 von 49 Tests bestanden. Der eine fehlschlagende Test `ManualRecipesAreOrderedFromRawResourcesToComponents` stammt aus dem Team-Stand: Die Rakete kostet Rotoren, die nicht von Hand herstellbar sind. Er wurde nicht verändert. Danach wurde auf `origin/master` gepusht. Generierte `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.
+
+### 2026-11-25, 16:30 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> ich habe das problem, dass manchmal wenn ich aus dem förderer was rausnehme, dass die anzahl im inventar weniger wird ohne dass die teile irgendwo hin gehen. Füge außerdem eine minimap hinzu und eine option wie ich nach rohstoffen suchen kann und dass die dann gehoghlited werden und die richtung in der minimap angezeigt wird. dieminimap sollte auch über einen key anzeigbar und ausblendbar sein
+
+- **Ergebnisvermerk – Fehler:** `TransferMaterials` in den Rules hat Produktionsgebäude und Generatoren jeden Tick automatisch aus dem Rucksack versorgt. Abgeholtes Erz verschwand so sofort wieder in einer Schmelze mit passendem Rezept. Jetzt werden Maschinen nur noch aus Lagergebäuden bzw. über Förderbänder versorgt. Ein Regressionstest wurde ergänzt.
+- **Ergebnisvermerk – Minimap:** Neue Klasse `G5_FabrikMinimap` (`Tim_Eichert_FabrikMinimap.cs`), unten links bzw. rechts neben dem offenen Baumenü. Sie zeigt Gelände und Rohstoffe als Bitmap, Gebäude, Spieler und den sichtbaren Kartenausschnitt. Ein- und ausblenden mit `M` oder per Klick; ausgeblendet bleibt ein Knopf „▣ KARTE (M)“.
+- **Ergebnisvermerk – Rohstoffsuche:** Rohstoff-Knöpfe unter der Minimap oder Taste `R` (wechselt reihum). Treffer werden auf Karte und Minimap gelb hervorgehoben. Ein Pfeil auf der Minimap und ein Pfeil an der Spielfigur zeigen zum nächsten Vorkommen, dazu Entfernung und Himmelsrichtung.
+- **Technik:** Neue Aktionen `MinimapUmschalten` und `RohstoffSucheWaehlen`; der Zustand liegt im Spielfeld; Anleitung und HUD-Hilfe wurden ergänzt.
+- **Prüfung:** Build 0 Warnungen, 0 Fehler; 51 von 52 Tests bestanden. Der eine Fehlschlag ist weiterhin der Rotor-/Raketen-Test aus dem Team-Stand.
+
+### 2026-11-25, 16:53 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> wenn ich ein gebäude nicht bauen kann, dann soll angezeigt werden was fehlt. Teste dies und mache detlich auf der minimap wo meine gebäude sind. Förderbänder sollen nicht angezeigt werden und über felder mit förderbändern soll man drüber laufen können.
+
+- **Ergebnisvermerk – Bauen:** Ein fehlgeschlagener Bau nennt jetzt alle Gründe auf einmal. Bei Material steht genau, was fehlt, z. B. „Lager kann nicht gebaut werden: es fehlen 3 Eisenplatte (hast 0/3), 2 Beton (hast 2/4) …“. Beim Platz wird zwischen „außerhalb der Karte“, „Hindernis“, „steht bereits <Gebäude>“, „Förderer braucht Vorkommen“, „Vorkommen erschöpft“ und „auf Vorkommen nur Förderer“ unterschieden.
+- **Ergebnisvermerk – Baumenü und Verbessern:** Das Baumenü zeigt bei nicht bezahlbaren Gebäuden rot „Fehlt: …“; die vollen Kosten stehen im Tooltip. Auch die Meldung beim Verbessern nennt nur noch die fehlenden Posten. Die gemeinsame Hilfsfunktion dafür ist `G5_FabrikKosten.Fehlend` / `FormatFehlend`.
+- **Ergebnisvermerk – Minimap und Förderbänder:** Auf der Minimap sind Gebäude jetzt orange Quadrate (mind. 7 px) mit weißem Rand. Förderbänder werden dort nicht angezeigt. Eine Legende „Gebäude (Anzahl) · Du · Sicht“ wurde ergänzt. Über Förderbänder kann man laufen, andere Gebäude blockieren weiterhin.
+- **Tests und Prüfung:** Vier neue Tests decken fehlende Materialien, Platzprobleme samt erfolgreichem Bau, das Laufen über Förderbänder und die Minimap-Markierungen ab. Build 0 Warnungen, 0 Fehler; 55 von 56 Tests bestanden. Der eine Fehlschlag ist weiterhin der Rotor-/Raketen-Test aus dem Team-Stand.
+
+### 2026-11-25, 17:02 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> wie verbind eich den kohleförderer mit dem kohlekraftwerk und wie funktioniert der strom
+
+- **Ergebnisvermerk:** Reine Erklärung aus dem Code, keine Codeänderung. Förderbänder führen nur zu Produktionsgebäuden oder Lagern, nicht direkt ins Kohlekraftwerk. Der Weg ist Kohleförderer → Förderband → Lager; das Kraftwerk nimmt sich die Kohle selbst aus dem Lager (Puffer bis 5 Kohle).
+- **Stromnetz:** Strommasten mit Reichweite 8 (Manhattan-Abstand) verbinden sich untereinander. Kraftwerk und Verbraucher müssen in Reichweite eines Masts desselben Netzes stehen. Strom brauchen nur Konstruktor und Montagewerk (1 pro Tick); 1 Kohle liefert 30 Energie, ein Kraftwerk max. 20 pro Tick.
+- **Auffälligkeiten:** Verbraucher ziehen Strom auch im Leerlauf. Seit der letzten Änderung wird das Kraftwerk nicht mehr aus dem Rucksack befüllt.
+
+### 2026-11-25, 17:08 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> pushe den code
+
+- **Ergebnisvermerk:** Committet wurden nur die Gruppe-5-Dateien: Rucksack-Bug, Minimap mit Rohstoffsuche, Baumeldungen, begehbare Förderbänder, Tests, Anleitung und Promptprotokoll. Danach wurde mit dem Remote-Stand abgeglichen, gebaut, getestet und auf `origin/master` gepusht. `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.

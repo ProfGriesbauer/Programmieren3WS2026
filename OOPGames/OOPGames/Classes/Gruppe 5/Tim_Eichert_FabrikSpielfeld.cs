@@ -99,6 +99,83 @@ namespace OOPGames
             StatistikGeoeffnet = !StatistikGeoeffnet;
         }
 
+        // ---- Minimap und Rohstoffsuche ----
+
+        internal bool MinimapSichtbar { get; private set; } = true;
+
+        // Rohstoff, nach dem gerade gesucht wird (Keiner = Suche aus).
+        internal G5_Rohstofftyp GesuchterRohstoff { get; private set; } = G5_Rohstofftyp.Keiner;
+
+        internal void ToggleMinimap()
+        {
+            MinimapSichtbar = !MinimapSichtbar;
+        }
+
+        internal void SetzeGesuchtenRohstoff(G5_Rohstofftyp rohstoff)
+        {
+            GesuchterRohstoff = rohstoff;
+        }
+
+        // Alle Rohstoffarten, die aktuell auf erkundeten Kacheln der Karte vorkommen.
+        internal IReadOnlyList<G5_Rohstofftyp> VorhandeneRohstoffe()
+        {
+            HashSet<G5_Rohstofftyp> gefunden = new HashSet<G5_Rohstofftyp>();
+            IG5_WeltSpielfeld welt = _welt;
+            for (int y = 0; y < welt.Hoehe; y++)
+            {
+                for (int x = 0; x < welt.Breite; x++)
+                {
+                    if (welt.TryGetKachelInfo(x, y, out IG5_KachelInfo kachel) &&
+                        kachel.IstErkundet &&
+                        kachel.Rohstoff != G5_Rohstofftyp.Keiner)
+                    {
+                        gefunden.Add(kachel.Rohstoff);
+                    }
+                }
+            }
+
+            return Enum.GetValues(typeof(G5_Rohstofftyp))
+                .Cast<G5_Rohstofftyp>()
+                .Where(gefunden.Contains)
+                .ToArray();
+        }
+
+        // Sucht das zum Spieler nächstgelegene erkundete Vorkommen der Rohstoffart.
+        internal bool TryFindeNaechstesVorkommen(G5_Rohstofftyp rohstoff, out G5_GridPosition position)
+        {
+            position = default;
+            if (rohstoff == G5_Rohstofftyp.Keiner)
+            {
+                return false;
+            }
+
+            IG5_WeltSpielfeld welt = _welt;
+            int besteDistanz = int.MaxValue;
+            for (int y = 0; y < welt.Hoehe; y++)
+            {
+                for (int x = 0; x < welt.Breite; x++)
+                {
+                    if (!welt.TryGetKachelInfo(x, y, out IG5_KachelInfo kachel) ||
+                        !kachel.IstErkundet ||
+                        kachel.Rohstoff != rohstoff)
+                    {
+                        continue;
+                    }
+
+                    int dx = x - _spielerPosition.X;
+                    int dy = y - _spielerPosition.Y;
+                    int distanz = dx * dx + dy * dy;
+                    if (distanz < besteDistanz)
+                    {
+                        besteDistanz = distanz;
+                        position = new G5_GridPosition(x, y);
+                    }
+                }
+            }
+
+            return besteDistanz != int.MaxValue;
+        }
+
         internal bool TryBetankeRakete(G5_Rakete rakete, out string meldung)
         {
             if (!IstAnRakete(rakete))
@@ -333,7 +410,9 @@ namespace OOPGames
             int zielY = _spielerPosition.Y + dy;
             if (!_welt.TryGetKachel(zielX, zielY, out G5_Kachel kachel) ||
                 ((IG5_KachelInfo)kachel).Gelaende != G5_Gelaendeart.Begehbar ||
+                // Förderbänder sind begehbar, alle anderen Gebäude blockieren den Weg.
                 _simulation.Buildings.Any(building =>
+                    !(building is G5_Conveyor) &&
                     zielX >= building.Position.X &&
                     zielX < building.Position.X + building.Width &&
                     zielY >= building.Position.Y &&
@@ -1068,6 +1147,34 @@ namespace OOPGames
                 (G5_Item.Eisenerz, 8 * faktor),
                 (G5_Item.Kupfererz, 4 * faktor),
                 (G5_Item.Holz, 3 * faktor));
+        }
+
+        // Liefert nur die Posten, von denen zu wenig vorhanden ist (Gegenstand -> fehlende Anzahl).
+        internal static IReadOnlyDictionary<G5_Item, int> Fehlend(
+            IReadOnlyDictionary<G5_Item, int> kosten,
+            Func<G5_Item, int> vorhanden)
+        {
+            Dictionary<G5_Item, int> fehlend = new Dictionary<G5_Item, int>();
+            foreach (KeyValuePair<G5_Item, int> posten in kosten)
+            {
+                int differenz = posten.Value - vorhanden(posten.Key);
+                if (differenz > 0)
+                {
+                    fehlend.Add(posten.Key, differenz);
+                }
+            }
+
+            return new ReadOnlyDictionary<G5_Item, int>(fehlend);
+        }
+
+        // z. B. "3 Eisenplatte (hast 0/3), 2 Beton (hast 2/4)"
+        internal static string FormatFehlend(
+            IReadOnlyDictionary<G5_Item, int> kosten,
+            Func<G5_Item, int> vorhanden)
+        {
+            return string.Join(", ", Fehlend(kosten, vorhanden).Select(posten =>
+                posten.Value + " " + G5_FabrikBezeichnungen.Gegenstand(posten.Key) +
+                " (hast " + vorhanden(posten.Key) + "/" + kosten[posten.Key] + ")"));
         }
 
         private static IReadOnlyDictionary<G5_Item, int> Kosten(params (G5_Item Item, int Menge)[] kosten)

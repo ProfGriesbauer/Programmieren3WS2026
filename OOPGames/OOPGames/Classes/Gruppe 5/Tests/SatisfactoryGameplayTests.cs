@@ -684,6 +684,99 @@ public sealed class SatisfactoryGameplayTests
     }
 
     [Fact]
+    public void MachinesDoNotPullCollectedItemsOutOfTheBackpack()
+    {
+        RunOnSta(() =>
+        {
+            (SatisfactoryGameRules rules, _, _) = StartGame();
+            G5_FabrikSpielfeld field = ((SatisfactoryFieldView)rules.CurrentField).Spielfeld;
+            G5_Recipe recipe = G5_StarterRecipes.CreateSmeltingRecipes(1, 0)
+                .Single(candidate => candidate.Output == G5_Item.Eisenbarren);
+            G5_Smelter smelter = new G5_Smelter(
+                new G5_GridPosition(5, 5),
+                new[] { recipe },
+                inputCapacity: 5,
+                outputCapacity: 5);
+            Assert.True(smelter.SelectRecipe(recipe.Name));
+            field.AddGebaeude(smelter);
+            Assert.True(field.TryAddInventar(G5_Item.Eisenerz, 5));
+
+            for (int tick = 0; tick < 5; tick++)
+            {
+                rules.TickGameCall();
+            }
+
+            Assert.Equal(5, field.Menge(G5_Item.Eisenerz));
+            Assert.Equal(0, smelter.InputContents.GetValueOrDefault(G5_Item.Eisenerz));
+        });
+    }
+
+    [Fact]
+    public void ResourceSearchSelectsCyclesAndFindsNearestDeposit()
+    {
+        RunOnSta(() =>
+        {
+            (SatisfactoryGameRules rules, _, _) = StartGame();
+            SatisfactoryFieldView view = (SatisfactoryFieldView)rules.CurrentField;
+            G5_FabrikSpielfeld field = view.Spielfeld;
+            G5_FabrikHumanPlayer player = new G5_FabrikHumanPlayer();
+            player.SetPlayerNumber(1);
+
+            rules.DoMove(G5_FabrikAktion.RohstoffSucheWaehlen(1, nameof(G5_Rohstofftyp.Uran)));
+            Assert.Equal(G5_Rohstofftyp.Uran, field.GesuchterRohstoff);
+            Assert.True(field.TryFindeNaechstesVorkommen(G5_Rohstofftyp.Uran, out G5_GridPosition ziel));
+            Assert.True(((IG5_WeltSpielfeld)view).TryGetKachelInfo(ziel.X, ziel.Y, out IG5_KachelInfo kachel));
+            Assert.Equal(G5_Rohstofftyp.Uran, kachel.Rohstoff);
+
+            // Gleicher Rohstoff noch einmal = Suche aus.
+            rules.DoMove(G5_FabrikAktion.RohstoffSucheWaehlen(1, nameof(G5_Rohstofftyp.Uran)));
+            Assert.Equal(G5_Rohstofftyp.Keiner, field.GesuchterRohstoff);
+
+            // R wechselt zur ersten vorhandenen Rohstoffart.
+            IPlayMove move = player.GetMove(new KeySelection(Key.R), view);
+            Assert.NotNull(move);
+            rules.DoMove(move);
+            Assert.Equal(field.VorhandeneRohstoffe().First(), field.GesuchterRohstoff);
+        });
+    }
+
+    [Fact]
+    public void MinimapCanBeToggledWithKeyAndRegistersSearchButtons()
+    {
+        RunOnSta(() =>
+        {
+            (SatisfactoryGameRules rules, G5_FabrikPainter painter, Canvas canvas) = StartGame();
+            SatisfactoryFieldView view = (SatisfactoryFieldView)rules.CurrentField;
+            G5_FabrikHumanPlayer player = new G5_FabrikHumanPlayer();
+            player.SetPlayerNumber(1);
+
+            painter.PaintGameField(canvas, view);
+            canvas.UpdateLayout();
+            Assert.True(view.Spielfeld.MinimapSichtbar);
+            Assert.Contains(VisualDescendants(canvas).OfType<TextBlock>(),
+                text => text.Text.StartsWith("‹ MINIMAP"));
+            // "Uran" steht auch in der Inventarliste; der Such-Knopf liegt in einem Border mit Tooltip.
+            TextBlock uranChip = Assert.Single(VisualDescendants(canvas).OfType<TextBlock>(),
+                text => text.Text == "Uran" && text.Parent is Border chip && Equals(chip.ToolTip, "Uran"));
+            Point chipPosition = uranChip.TranslatePoint(new Point(0, 0), canvas);
+            IPlayMove chipMove = player.GetMove(
+                new ClickSelection((int)chipPosition.X + 2, (int)chipPosition.Y + 2, (int)MouseButton.Left), view);
+            Assert.NotNull(chipMove);
+            Assert.Equal(G5_FabrikAktionstyp.RohstoffSucheWaehlen, ((G5_FabrikAktion)chipMove).Aktionstyp);
+
+            IPlayMove toggle = player.GetMove(new KeySelection(Key.M), view);
+            Assert.NotNull(toggle);
+            rules.DoMove(toggle);
+            Assert.False(view.Spielfeld.MinimapSichtbar);
+            painter.PaintGameField(canvas, view);
+            canvas.UpdateLayout();
+            Assert.Contains(VisualDescendants(canvas).OfType<TextBlock>(), text => text.Text == "▣ KARTE (M)");
+            Assert.DoesNotContain(VisualDescendants(canvas).OfType<TextBlock>(),
+                text => text.Text.StartsWith("‹ MINIMAP"));
+        });
+    }
+
+    [Fact]
     public void SellingFuelledRocketReturnsAllUranAndHalfOfBuildingCost()
     {
         RunOnSta(() =>
@@ -771,6 +864,133 @@ public sealed class SatisfactoryGameplayTests
         rules.DoMove(G5_FabrikAktion.GebaeudePlatzieren(1, 500, 230));
         Assert.True(((SatisfactoryFieldView)rules.CurrentField).IsGameStarted);
         return (rules, painter, canvas);
+    }
+
+    [Fact]
+    public void FailedBuildListsExactlyWhichMaterialsAreMissing()
+    {
+        RunOnSta(() =>
+        {
+            (SatisfactoryGameRules rules, _, _) = StartGame();
+            SatisfactoryFieldView view = (SatisfactoryFieldView)rules.CurrentField;
+            G5_FabrikSpielfeld field = view.Spielfeld;
+            G5_GridPosition frei = FindFreeTile(view);
+            Assert.True(field.TryAddInventar(G5_Item.Beton, 2));
+
+            view.QueuePendingBuild(G5_Bauwerkzeug.Lager, frei);
+            rules.TickGameCall();
+
+            string meldung = ((IG5_FabrikSpielInfo)field).StatusMeldung;
+            Assert.Empty(field.InterneGebaeude);
+            Assert.Contains("Lager kann nicht gebaut werden", meldung);
+            Assert.Contains("3 Eisenplatte (hast 0/3)", meldung);
+            Assert.Contains("2 Eisenstange (hast 0/2)", meldung);
+            Assert.Contains("2 Beton (hast 2/4)", meldung);
+            Assert.Contains("6 Holz (hast 0/6)", meldung);
+        });
+    }
+
+    [Fact]
+    public void FailedBuildExplainsPlacementProblems()
+    {
+        RunOnSta(() =>
+        {
+            (SatisfactoryGameRules rules, _, _) = StartGame();
+            SatisfactoryFieldView view = (SatisfactoryFieldView)rules.CurrentField;
+            G5_FabrikSpielfeld field = view.Spielfeld;
+            G5_Storage warehouse = new G5_Storage(FindFreeTile(view), 500);
+            field.AddGebaeude(warehouse);
+            foreach (G5_Bauwerkzeug tool in new[] { G5_Bauwerkzeug.Lager, G5_Bauwerkzeug.Foerderer })
+            {
+                foreach (KeyValuePair<G5_Item, int> cost in G5_FabrikKosten.Baupreis(tool))
+                {
+                    Assert.True(warehouse.TryReceive(cost.Key, cost.Value));
+                }
+            }
+
+            // Feld ist bereits belegt.
+            view.QueuePendingBuild(G5_Bauwerkzeug.Lager, warehouse.Position);
+            rules.TickGameCall();
+            string belegt = ((IG5_FabrikSpielInfo)field).StatusMeldung;
+            Assert.Contains("steht bereits", belegt);
+            Assert.DoesNotContain("es fehlen", belegt);
+
+            // Förderer ohne Rohstoffvorkommen.
+            view.QueuePendingBuild(G5_Bauwerkzeug.Foerderer, FindFreeTile(view));
+            rules.TickGameCall();
+            Assert.Contains("ein Förderer muss auf einem Rohstoffvorkommen stehen",
+                ((IG5_FabrikSpielInfo)field).StatusMeldung);
+
+            // Mit Material und freiem Feld klappt der Bau.
+            G5_GridPosition frei = FindFreeTile(view);
+            view.QueuePendingBuild(G5_Bauwerkzeug.Lager, frei);
+            rules.TickGameCall();
+            Assert.Contains(field.InterneGebaeude, building => building.Position == frei);
+        });
+    }
+
+    [Fact]
+    public void PlayerCanWalkOverConveyorsButNotOtherBuildings()
+    {
+        G5_FabrikSpielfeld field = CreateField();
+        field.AddGebaeude(new G5_Conveyor(new G5_GridPosition(6, 5), bufferCapacity: 10, itemsPerTick: 1));
+        field.AddGebaeude(new G5_Storage(new G5_GridPosition(5, 6), capacity: 10));
+
+        Assert.True(field.MoveSpieler(1, 0));
+        Assert.Equal(new G5_GridPosition(6, 5), field.SpielerPosition);
+        Assert.True(field.MoveSpieler(-1, 0));
+        Assert.False(field.MoveSpieler(0, 1));
+        Assert.Equal(new G5_GridPosition(5, 5), field.SpielerPosition);
+    }
+
+    [Fact]
+    public void MinimapMarksBuildingsButHidesConveyors()
+    {
+        RunOnSta(() =>
+        {
+            (SatisfactoryGameRules rules, G5_FabrikPainter painter, Canvas canvas) = StartGame();
+            SatisfactoryFieldView view = (SatisfactoryFieldView)rules.CurrentField;
+            G5_FabrikSpielfeld field = view.Spielfeld;
+            G5_GridPosition lager = FindFreeTile(view);
+            field.AddGebaeude(new G5_Storage(lager, 100));
+            field.AddGebaeude(new G5_Conveyor(FindFreeTile(view), bufferCapacity: 10, itemsPerTick: 1));
+
+            painter.PaintGameField(canvas, view);
+            canvas.UpdateLayout();
+
+            List<System.Windows.Shapes.Rectangle> marker = VisualDescendants(canvas)
+                .OfType<System.Windows.Shapes.Rectangle>()
+                .Where(rectangle => rectangle.ToolTip is string)
+                .ToList();
+            Assert.Single(marker);
+            Assert.True(marker[0].Width >= 7);
+            Assert.Contains(VisualDescendants(canvas).OfType<TextBlock>(),
+                text => text.Text.StartsWith("Gebäude (1)"));
+        });
+    }
+
+    // Sucht eine begehbare, rohstofffreie und unbebaute Kachel (nicht unter dem Spieler).
+    private static G5_GridPosition FindFreeTile(SatisfactoryFieldView view)
+    {
+        IG5_WeltSpielfeld welt = view;
+        G5_FabrikSpielfeld field = view.Spielfeld;
+        for (int y = 1; y < welt.Hoehe - 1; y++)
+        {
+            for (int x = 1; x < welt.Breite - 1; x++)
+            {
+                G5_GridPosition position = new G5_GridPosition(x, y);
+                if (welt.TryGetKachelInfo(x, y, out IG5_KachelInfo kachel) &&
+                    kachel.Gelaende == G5_Gelaendeart.Begehbar &&
+                    kachel.Rohstoff == G5_Rohstofftyp.Keiner &&
+                    position != field.SpielerPosition &&
+                    !field.InterneGebaeude.Any(building => building.Position == position))
+                {
+                    return position;
+                }
+            }
+        }
+
+        throw new InvalidOperationException("Keine freie Kachel gefunden.");
     }
 
     private static G5_FabrikSpielfeld CreateField()

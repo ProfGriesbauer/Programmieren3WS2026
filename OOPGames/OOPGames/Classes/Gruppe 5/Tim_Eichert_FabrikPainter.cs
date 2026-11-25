@@ -51,7 +51,11 @@ namespace OOPGames
         private static readonly IReadOnlyList<G5_Recipe> Handwerksrezepte =
             G5_StarterRecipes.CreateManualCraftingRecipes();
 
+        private static readonly Brush SuchMarkierungBrush = CreateBrush(255, 255, 240, 90);
+        private static readonly Brush SuchMarkierungFuellung = CreateBrush(60, 255, 240, 90);
+
         private readonly G5_WieseHintergrund _wieseHintergrund = new G5_WieseHintergrund();
+        private readonly G5_FabrikMinimap _minimap = new G5_FabrikMinimap();
         private IG5_WeltSpielfeld _hintergrundWelt;
         private Canvas _hintergrundEbene;
         private Image _hintergrundBild;
@@ -184,8 +188,14 @@ namespace OOPGames
             }
 
             ZeichneSpielerUndZiel(_dynamischeEbene, currentField, fabrikInfo);
+            ZeichneSuchpfeil(_dynamischeEbene, currentField, fabrikInfo);
             ZeichneConveyorDragPreview(_dynamischeEbene, currentField);
             ZeichneHud(_dynamischeEbene, canvas.ActualWidth, fabrikInfo);
+            if (currentField is SatisfactoryFieldView minimapField &&
+                !minimapField.Spielfeld.StatistikGeoeffnet)
+            {
+                ZeichneMinimap(_dynamischeEbene, canvas.ActualWidth, canvas.ActualHeight, minimapField);
+            }
             if (currentField is SatisfactoryFieldView statistikField)
             {
                 if (statistikField.Spielfeld.StatistikGeoeffnet)
@@ -848,8 +858,53 @@ namespace OOPGames
             steuerung.SetzeAnsicht(zoom, offsetX, offsetY);
         }
 
+        private void ZeichneMinimap(
+            Canvas canvas,
+            double viewportBreite,
+            double viewportHoehe,
+            SatisfactoryFieldView view)
+        {
+            // Unten links; überdeckt sie das offene Baumenü, rückt sie rechts daneben.
+            const double geschaetzteHoehe = 250;
+            double left = 10;
+            Rect baumenue = view.BaumenueBereich;
+            if (!baumenue.IsEmpty && baumenue.Bottom + 10 > viewportHoehe - 10 - geschaetzteHoehe)
+            {
+                left = baumenue.Right + 10;
+            }
+
+            _minimap.Zeichne(canvas, left, viewportHoehe - 10, viewportBreite, viewportHoehe, HudHoehe, view);
+        }
+
+        // Pfeil direkt am Spieler, der zum nächsten Vorkommen des gesuchten Rohstoffs zeigt.
+        private static void ZeichneSuchpfeil(Canvas canvas, IG5_WeltSpielfeld welt, IG5_FabrikSpielInfo info)
+        {
+            if (!(welt is SatisfactoryFieldView view) ||
+                view.Spielfeld.GesuchterRohstoff == G5_Rohstofftyp.Keiner ||
+                !view.Spielfeld.TryFindeNaechstesVorkommen(view.Spielfeld.GesuchterRohstoff, out G5_GridPosition ziel))
+            {
+                return;
+            }
+
+            G5_GridPosition spieler = info.SpielerPosition;
+            if (!welt.TryRasterZuBildschirm(spieler.X, spieler.Y, out Point position) ||
+                !TryGetKachelGroesse(welt, spieler.X, spieler.Y, out double breite, out double hoehe))
+            {
+                return;
+            }
+
+            G5_FabrikMinimap.ZeichneSuchpfeilAmSpieler(
+                canvas,
+                new Point(position.X + breite / 2, position.Y + hoehe / 2),
+                Math.Max(breite, hoehe),
+                spieler,
+                ziel);
+        }
+
         private void ZeichneVorkommen(Canvas canvas, IG5_WeltSpielfeld welt)
         {
+            G5_Rohstofftyp gesucht = (welt as SatisfactoryFieldView)?.Spielfeld.GesuchterRohstoff
+                ?? G5_Rohstofftyp.Keiner;
             for (int y = 0; y < welt.Hoehe; y++)
             {
                 for (int x = 0; x < welt.Breite; x++)
@@ -874,6 +929,25 @@ namespace OOPGames
                     Canvas.SetLeft(vorkommen, position.X);
                     Canvas.SetTop(vorkommen, position.Y);
                     canvas.Children.Add(vorkommen);
+
+                    // Rohstoffsuche: passende Vorkommen gelb hervorheben.
+                    if (kachel.Rohstoff == gesucht)
+                    {
+                        Rectangle markierung = new Rectangle
+                        {
+                            Width = breite,
+                            Height = hoehe,
+                            Stroke = SuchMarkierungBrush,
+                            StrokeThickness = 3,
+                            Fill = SuchMarkierungFuellung,
+                            RadiusX = 4,
+                            RadiusY = 4,
+                            IsHitTestVisible = false
+                        };
+                        Canvas.SetLeft(markierung, position.X);
+                        Canvas.SetTop(markierung, position.Y);
+                        canvas.Children.Add(markierung);
+                    }
                 }
             }
         }
@@ -1218,7 +1292,7 @@ namespace OOPGames
             ZeichneHudZeile(
                 canvas,
                 viewportBreite,
-                "WASD: laufen    E: abbauen    Baumenü: kaufen & bauen    Gebäude anklicken: Details    Entf: verkaufen    Tab: Baumenü",
+                "WASD: laufen    E: abbauen    Gebäude anklicken: Details    Entf: verkaufen    Tab: Baumenü    M: Minimap    R: Rohstoff suchen",
                 0);
             G5_GridPosition ziel = info.ZielKachel;
             ZeichneHudZeile(
@@ -1310,14 +1384,21 @@ namespace OOPGames
                         FontSize = 11,
                         FontWeight = FontWeights.Bold
                     });
+                    // Bezahlbar: Kosten in Grün. Sonst direkt anzeigen, was noch fehlt.
                     rowContent.Children.Add(new TextBlock
                     {
-                        Text = FormatCost(cost),
+                        Text = affordable
+                            ? FormatCost(cost)
+                            : "Fehlt: " + string.Join(", ", G5_FabrikKosten
+                                .Fehlend(cost, fieldView.HubMenge)
+                                .Select(item => item.Value + " " + G5_FabrikBezeichnungen.Gegenstand(item.Key))),
+                        ToolTip = "Kosten: " + FormatCost(cost),
                         Foreground = affordable
                             ? new SolidColorBrush(Color.FromRgb(161, 220, 137))
-                            : new SolidColorBrush(Color.FromRgb(202, 177, 152)),
+                            : new SolidColorBrush(Color.FromRgb(255, 140, 120)),
                         FontFamily = new FontFamily("Segoe UI"),
-                        FontSize = 9
+                        FontSize = 9,
+                        TextTrimming = TextTrimming.CharacterEllipsis
                     });
                     Border row = new Border
                     {

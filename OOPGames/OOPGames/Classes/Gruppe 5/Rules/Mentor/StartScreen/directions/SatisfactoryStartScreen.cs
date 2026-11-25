@@ -536,6 +536,7 @@ namespace OOPGames
         private Rect _baumenueBereich;
         private Rect _gebaeudeMenueBereich;
         private Rect _statistikBereich = Rect.Empty;
+        private Rect _minimapBereich = Rect.Empty;
         private readonly List<(Rect Bereich, G5_FabrikAktionstyp Typ, G5_Bauwerkzeug Werkzeug, string Wert)> _menuAktionen =
             new List<(Rect, G5_FabrikAktionstyp, G5_Bauwerkzeug, string)>();
         private (G5_Bauwerkzeug Werkzeug, G5_GridPosition Position)? _pendingBuild;
@@ -604,6 +605,14 @@ namespace OOPGames
         {
             _menuAktionen.Clear();
             _statistikBereich = Rect.Empty;
+            _minimapBereich = Rect.Empty;
+        }
+
+        internal Rect BaumenueBereich => _baumenueBereich;
+
+        internal void SetMinimapBereich(Rect bereich)
+        {
+            _minimapBereich = bereich;
         }
 
         internal void SetStatistikBereich(Rect bereich)
@@ -741,7 +750,7 @@ namespace OOPGames
         {
             Point position = new Point(screenX, screenY);
             return _baumenueBereich.Contains(position) || _gebaeudeMenueBereich.Contains(position) ||
-                _statistikBereich.Contains(position);
+                _statistikBereich.Contains(position) || _minimapBereich.Contains(position);
         }
 
         internal bool TryGetConveyorRoute(

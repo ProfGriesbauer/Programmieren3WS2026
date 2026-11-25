@@ -97,6 +97,10 @@ namespace OOPGames
                         return G5_FabrikAktion.StatistikUmschalten(_playerNumber);
                     case Key.T:
                         return G5_FabrikAktion.TutorialUeberspringen(_playerNumber);
+                    case Key.M:
+                        return G5_FabrikAktion.MinimapUmschalten(_playerNumber);
+                    case Key.R:
+                        return G5_FabrikAktion.RohstoffSucheWaehlen(_playerNumber, "Naechster");
                     case Key.Escape:
                         return G5_FabrikAktion.GebaeudeAnsehen(_playerNumber, -1, -1);
                     default:
@@ -145,6 +149,10 @@ namespace OOPGames
                         return G5_FabrikAktion.RaketeStarten(_playerNumber);
                     case G5_FabrikAktionstyp.StatistikUmschalten:
                         return G5_FabrikAktion.StatistikUmschalten(_playerNumber);
+                    case G5_FabrikAktionstyp.MinimapUmschalten:
+                        return G5_FabrikAktion.MinimapUmschalten(_playerNumber);
+                    case G5_FabrikAktionstyp.RohstoffSucheWaehlen:
+                        return G5_FabrikAktion.RohstoffSucheWaehlen(_playerNumber, wert);
                     case G5_FabrikAktionstyp.GegenstandAbholen:
                         return G5_FabrikAktion.GegenstandAbholen(_playerNumber, wert);
                     case G5_FabrikAktionstyp.ManuellHerstellen:
@@ -285,6 +293,23 @@ namespace OOPGames
         internal static G5_FabrikAktion StatistikUmschalten(int playerNumber)
         {
             return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.StatistikUmschalten, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion MinimapUmschalten(int playerNumber)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.MinimapUmschalten, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        // wert: Name eines G5_Rohstofftyp oder "Naechster", um zur nächsten Rohstoffart zu wechseln.
+        internal static G5_FabrikAktion RohstoffSucheWaehlen(int playerNumber, string rohstoff)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.RohstoffSucheWaehlen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1,
+                rohstoff);
         }
 
         internal static G5_FabrikAktion GegenstandAbholen(int playerNumber, string anzahl)

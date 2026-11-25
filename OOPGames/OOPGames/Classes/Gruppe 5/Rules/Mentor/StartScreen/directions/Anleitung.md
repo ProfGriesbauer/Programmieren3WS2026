@@ -28,6 +28,8 @@ Handabbau, Gebäude und Rezepte passend zu den Aktionen im Spiel.
 | Gegenstand manuell herstellen | Gegenstand auswählen, Anzahl mit den Zahlentasten eingeben und **Herstellen** klicken oder `H` drücken; jedes Stück dauert zwei Sekunden |
 | Gegenstand ablegen | Gegenstand auswählen, Anzahl eingeben und **Ablegen** klicken oder `Enter` drücken |
 | Abgelegte Gegenstände aufnehmen | Auf den Ablageort gehen und **Aufnehmen** klicken |
+| Minimap ein- oder ausblenden | `M` oder auf die Minimap-Überschrift bzw. **▣ KARTE (M)** klicken |
+| Nach Rohstoff suchen | Rohstoff-Knopf unter der Minimap anklicken oder `R` (wechselt reihum, danach aus); erneuter Klick beendet die Suche |
 | Statistik öffnen oder schließen | `F2`, **Statistik** oder das `×` im Statistikfenster |
 | Mentor überspringen | `T` |
 
@@ -46,6 +48,19 @@ liegen (✓/✗) und wie viele Stück maximal möglich sind. Für manuelles Hand
 müssen die Zutaten im Rucksack sein. **Herstellen** fertigt genau die
 eingegebene Anzahl nacheinander, jedes Stück in zwei Sekunden; der Fortschritt
 steht unter den Knöpfen. Danach startet nichts weiter automatisch.
+Die Minimap unten links zeigt die ganze Karte mit Rohstoffen, deinen Gebäuden als
+orange Quadrate mit weißem Rand (Förderbänder werden nicht angezeigt), deinem
+Standort (weißer Punkt) und dem sichtbaren Ausschnitt (gestrichelter Rahmen).
+Über Förderbänder kannst du laufen, alle anderen Gebäude blockieren den Weg.
+Kann ein Gebäude nicht gebaut werden, nennt die Statuszeile alle Gründe: welche
+Materialien fehlen (mit Bestand, z. B. „3 Eisenplatte (hast 0/3)“), ob das Feld
+belegt, ein Hindernis oder ein Rohstoffvorkommen ist. Im Baumenü steht bei
+Gebäuden, die du dir noch nicht leisten kannst, rot „Fehlt: …“.
+Bei einer Rohstoffsuche werden alle passenden Vorkommen auf Karte und Minimap gelb
+hervorgehoben. Ein Pfeil auf der Minimap und ein Pfeil direkt an der Spielfigur
+zeigen zum nächstgelegenen Vorkommen; darunter stehen Entfernung und Himmelsrichtung.
+Maschinen werden nur aus Lagergebäuden oder über Förderbänder versorgt, nicht
+aus deinem Rucksack.
 Wähle ein Gebäude im Baumenü aus
 und ziehe es auf ein freies sichtbares Feld oder bestätige mit **Bauen** für das gelb markierte Feld; das Feld
 muss frei und bebaubar sein. Ein Förderer muss auf einem noch verfügbaren

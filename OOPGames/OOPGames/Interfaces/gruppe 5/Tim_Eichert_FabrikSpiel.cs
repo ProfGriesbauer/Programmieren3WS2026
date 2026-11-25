@@ -57,7 +57,9 @@ namespace OOPGames
         BaumenueUmschalten,
         TutorialUeberspringen,
         GebaeuderegisterUmschalten,
-        GebaeuderegisterScrollen
+        GebaeuderegisterScrollen,
+        MinimapUmschalten,
+        RohstoffSucheWaehlen
     }
 
     public enum G5_SpielerBlickrichtung
