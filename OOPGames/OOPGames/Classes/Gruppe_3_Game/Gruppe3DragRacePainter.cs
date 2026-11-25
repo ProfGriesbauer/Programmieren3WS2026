@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,23 +11,22 @@ namespace OOPGames
 {
     public sealed class Gruppe3DragRacePainter : IGruppe3DragRacePainter
     {
+        private static readonly FontFamily GameFont = LoadGameFont();
         private static readonly BitmapImage[] _carImages =
-            new BitmapImage[3];
+            new BitmapImage[Gruppe3DragRaceCars.All.Count];
         private static readonly BitmapImage[] _dashboardImages =
-            new BitmapImage[3];
+            new BitmapImage[Gruppe3DragRaceCars.All.Count];
         private static readonly BitmapImage[] _rpmNeedleImages =
-            new BitmapImage[3];
+            new BitmapImage[Gruppe3DragRaceCars.All.Count];
         private static readonly BitmapImage[] _speedNeedleImages =
-            new BitmapImage[3];
+            new BitmapImage[Gruppe3DragRaceCars.All.Count];
+        private static readonly BitmapImage[] _turboNeedleImages =
+            new BitmapImage[Gruppe3DragRaceCars.All.Count];
         private double _selectionCardWidth = 220;
         private double _selectionCardHeight = 120;
         private double _selectionGap = 15;
         private double _selectionLeft = 20;
         private double _selectionTop = 70;
-        private int _lastPlayerOneCar = -1;
-        private int _lastPlayerTwoCar = -1;
-        private DateTime _selectionFeedbackUntil;
-        private string _selectionFeedbackText;
 
         public Gruppe3DragRacePainter()
         {
@@ -36,32 +36,30 @@ namespace OOPGames
                 return;
             }
 
-            _carImages[0] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Golf", "Golf.png"));
-            _carImages[1] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Ford Mustang", "FordMustang.png"));
-            _carImages[2] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Audi", "AudiRS4.png"));
-
-            _dashboardImages[0] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Golf", "Golf_Tacho_Hintergrund.png"));
-            _dashboardImages[1] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Ford Mustang", "FordMustang_Tacho_Hintergrund.png"));
-            _dashboardImages[2] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Audi", "AudiRS4_Tacho_Hintergrund.png"));
-
-            _rpmNeedleImages[0] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Golf", "Golf_Tacho_Drehzahlnadel.png"));
-            _rpmNeedleImages[1] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Ford Mustang", "FordMustang_Tacho_Drehzahlnadel.png"));
-            _rpmNeedleImages[2] = null;
-
-            _speedNeedleImages[0] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Golf", "Golf_Tacho_Tachonadel.png"));
-            _speedNeedleImages[1] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Ford Mustang", "FordMustang_Tacho_Tachonadel.png"));
-            _speedNeedleImages[2] = LoadBitmap(
-                System.IO.Path.Combine(basePath, "Audi", "AudiRS4_Tacho_Nadel.png"));
+            foreach (Cars car in Gruppe3DragRaceCars.All)
+            {
+                _carImages[car.Index] = LoadBitmap(
+                    System.IO.Path.Combine(
+                        basePath, car.FolderName, car.CarFileName));
+                _dashboardImages[car.Index] = LoadBitmap(
+                    System.IO.Path.Combine(
+                        basePath, car.FolderName, car.DashboardFileName));
+                if (car.RpmNeedleFileName != null)
+                {
+                    _rpmNeedleImages[car.Index] = LoadBitmap(
+                        System.IO.Path.Combine(
+                            basePath, car.FolderName, car.RpmNeedleFileName));
+                }
+                _speedNeedleImages[car.Index] = LoadBitmap(
+                    System.IO.Path.Combine(
+                        basePath, car.FolderName, car.SpeedNeedleFileName));
+                if (car.TurboNeedleFileName != null)
+                {
+                    _turboNeedleImages[car.Index] = LoadBitmap(
+                        System.IO.Path.Combine(
+                            basePath, car.FolderName, car.TurboNeedleFileName));
+                }
+            }
         }
 
         public string Name { get { return "Gruppe 3 Retro Drag Race Darstellung"; } }
@@ -86,7 +84,6 @@ namespace OOPGames
             canvas.Children.Clear();
             canvas.Background = new SolidColorBrush(Color.FromRgb(25, 28, 38));
             double width = canvas.ActualWidth > 10 ? canvas.ActualWidth : 800;
-            UpdateSelectionFeedback(field);
             if (!field.CarSelectionComplete)
             {
                 PaintCarSelection(canvas, field, width);
@@ -123,17 +120,25 @@ namespace OOPGames
                     FontSize = 32 * scale,
                     FontWeight = FontWeights.Bold,
                     TextAlignment = TextAlignment.Center,
-                    Width = width
+                    Width = width,
+                    FontFamily = GameFont
                 };
-                Canvas.SetLeft(status, 0);
-                Canvas.SetTop(status, Math.Max(5, trackTop - 65 * scale));
-                canvas.Children.Add(status);
+                AddText(
+                    canvas, status, 0,
+                    Math.Max(5, trackTop - 65 * scale));
             }
 
             if (field.IsRaceStarted || field.Winner != 0)
             {
                 PaintRaceProgress(canvas, field, width, height, scale);
+            }
+            if (field.CarSelectionComplete)
+            {
                 PaintSpeedometers(canvas, field, width, height, scale);
+            }
+            if (field.Winner != 0)
+            {
+                PaintRaceResults(canvas, field, width, height, scale);
             }
         }
 
@@ -147,7 +152,8 @@ namespace OOPGames
                 column * (_selectionCardWidth + _selectionGap);
             double localY = y - _selectionTop -
                 row * (_selectionCardHeight + _selectionGap);
-            if (column < 0 || column >= 3 || row != 0 ||
+            if (column < 0 || column >= Gruppe3DragRaceCars.All.Count ||
+                row != 0 ||
                 localX > _selectionCardWidth || localY > _selectionCardHeight)
             {
                 return -1;
@@ -171,21 +177,26 @@ namespace OOPGames
                 (3 * _selectionCardWidth + 2 * _selectionGap)) / 2;
             _selectionTop = Math.Max(55, (height - _selectionCardHeight) / 2);
 
-            UpdateSelectionFeedback(field);
+            bool showSelectionFeedback =
+                !string.IsNullOrEmpty(field.SelectionFeedbackText) &&
+                DateTime.UtcNow < field.SelectionFeedbackUntil;
             TextBlock title = new TextBlock
             {
-                Text = DateTime.UtcNow < _selectionFeedbackUntil
-                    ? _selectionFeedbackText
+                Text = showSelectionFeedback
+                    ? field.SelectionFeedbackText
                     : field.CountdownText,
                 Foreground = Brushes.White,
                 FontSize = 30 * scale,
-                FontWeight = FontWeights.Bold
+                FontWeight = FontWeights.Bold,
+                FontFamily = GameFont
             };
-            Canvas.SetLeft(title, _selectionLeft);
-            Canvas.SetTop(title, Math.Max(5, _selectionTop - 45 * scale));
-            canvas.Children.Add(title);
+            AddText(
+                canvas, title, _selectionLeft,
+                Math.Max(5, _selectionTop - 60 * scale));
 
-            for (int carIndex = 0; carIndex < 3; carIndex++)
+            for (int carIndex = 0;
+                carIndex < Gruppe3DragRaceCars.All.Count;
+                carIndex++)
             {
                 int column = carIndex % 3;
                 int row = 0;
@@ -241,18 +252,142 @@ namespace OOPGames
                 Text = "PLAYER 1:  W = GAS    S = BREMSE       " +
                     "PLAYER 2:  NUMPAD 8 / ↑ = GAS    NUMPAD 5 / ↓ = BREMSE\n" +
                     "SCHALTEN:  P1  Q = HOCH  E = RUNTER       " +
-                    "P2  7 / Numpad 7 = HOCH  9 / Numpad 9 / Bild↑ / Bild↓",
+                    "P2  NUMPAD 7 / Bild↑ = HOCH  NUMPAD 9 / Bild↓ = RUNTER",
                 Foreground = Brushes.White,
                 FontSize = fontSize,
                 FontWeight = FontWeights.Bold,
                 TextAlignment = TextAlignment.Center,
                 Width = textWidth,
                 TextWrapping = TextWrapping.Wrap,
-                MaxHeight = Math.Max(30, 42 * scale)
+                MaxHeight = Math.Max(30, 42 * scale),
+                FontFamily = GameFont
             };
-            Canvas.SetLeft(controls, (width - textWidth) / 2);
-            Canvas.SetTop(controls, Math.Max(0, height - 45 * scale));
-            canvas.Children.Add(controls);
+            AddText(
+                canvas, controls, (width - textWidth) / 2,
+                Math.Max(0, height - 45 * scale));
+        }
+
+        private static void PaintRaceResults(
+            Canvas canvas,
+            IGruppe3DragRaceField field,
+            double width,
+            double height,
+            double scale)
+        {
+            double panelWidth = Math.Min(width - 24 * scale, 620 * scale);
+            double panelHeight = 170 * scale;
+            double left = (width - panelWidth) / 2;
+            double top = Math.Max(8 * scale, (height - panelHeight) / 2);
+            Rectangle panel = new Rectangle
+            {
+                Width = panelWidth,
+                Height = panelHeight,
+                Fill = new SolidColorBrush(Color.FromArgb(238, 15, 17, 24)),
+                Stroke = Brushes.White,
+                StrokeThickness = 3 * scale,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(panel, left);
+            Canvas.SetTop(panel, top);
+            canvas.Children.Add(panel);
+
+            TextBlock heading = new TextBlock
+            {
+                Text = "RENNERGEBNIS",
+                Foreground = Brushes.White,
+                FontFamily = GameFont,
+                FontSize = 20 * scale,
+                FontWeight = FontWeights.Bold,
+                TextAlignment = TextAlignment.Center,
+                Width = panelWidth
+            };
+            AddText(canvas, heading, left, top + 8 * scale);
+
+            double columnWidth = panelWidth / 2;
+            double resultFontSize = Math.Max(
+                9, Math.Min(15 * scale, columnWidth / 17));
+            AddRaceResultColumn(
+                canvas,
+                "PLAYER 1",
+                FormatTime(field.PlayerOneRaceTimeSeconds),
+                FormatSpeed(field.PlayerOneFinishSpeedKmh),
+                FormatReaction(field.PlayerOneReactionTimeMs),
+                left,
+                top + 42 * scale,
+                columnWidth,
+                resultFontSize,
+                scale);
+            AddRaceResultColumn(
+                canvas,
+                "PLAYER 2",
+                FormatTime(field.PlayerTwoRaceTimeSeconds),
+                FormatSpeed(field.PlayerTwoFinishSpeedKmh),
+                FormatReaction(field.PlayerTwoReactionTimeMs),
+                left + columnWidth,
+                top + 42 * scale,
+                columnWidth,
+                resultFontSize,
+                scale);
+        }
+
+        private static void AddRaceResultColumn(
+            Canvas canvas,
+            string player,
+            string time,
+            string speed,
+            string reaction,
+            double left,
+            double top,
+            double width,
+            double fontSize,
+            double scale)
+        {
+            TextBlock result = new TextBlock
+            {
+                Text = player + "\nZEIT: " + time +
+                    "\nENDGESCHW.: " + speed +
+                    "\nREAKTION: " + reaction,
+                Foreground = Brushes.White,
+                FontFamily = GameFont,
+                FontSize = fontSize,
+                FontWeight = FontWeights.Bold,
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                Width = width,
+                IsHitTestVisible = false
+            };
+            AddText(canvas, result, left, top);
+        }
+
+        private static string FormatTime(double? seconds)
+        {
+            return seconds.HasValue
+                ? seconds.Value.ToString("F2", CultureInfo.CurrentCulture) + " s"
+                : "--";
+        }
+
+        private static string FormatSpeed(double? speedKmh)
+        {
+            return speedKmh.HasValue
+                ? speedKmh.Value.ToString("F0", CultureInfo.CurrentCulture) +
+                    " km/h"
+                : "--";
+        }
+
+        private static string FormatReaction(double? reactionMs)
+        {
+            return reactionMs.HasValue
+                ? reactionMs.Value.ToString("F0", CultureInfo.CurrentCulture) +
+                    " ms"
+                : "--";
+        }
+
+        private static void AddText(
+            Canvas canvas, TextBlock text, double left, double top)
+        {
+            Canvas.SetLeft(text, left);
+            Canvas.SetTop(text, top);
+            canvas.Children.Add(text);
         }
 
         private static void PaintRaceProgress(
@@ -370,11 +505,9 @@ namespace OOPGames
                     left - size * 0.6,
                     top - size * 0.05,
                     dashboardWidth,
-                    dashboardHeight);
+                    dashboardHeight,
+                    dashboard);
             }
-
-            double speedRatio = Math.Min(1, engineSpeed / 16);
-            double kmh = speedRatio * 320;
 
         }
 
@@ -386,23 +519,35 @@ namespace OOPGames
             double dashboardLeft,
             double dashboardTop,
             double dashboardWidth,
-            double dashboardHeight)
+            double dashboardHeight,
+            BitmapImage dashboard)
         {
-            double rpmPivotX = dashboardLeft + dashboardWidth * 0.23;
-            double rpmPivotY = dashboardTop + dashboardHeight * 0.56;
-            double speedPivotX = dashboardLeft + dashboardWidth * 0.78;
-            double speedPivotY = dashboardTop + dashboardHeight * 0.56;
+            Cars car = Gruppe3DragRaceCars.Get(carIndex);
+            double dashboardScale = dashboardWidth / dashboard.PixelWidth;
+            double rpmPivotX =
+                dashboardLeft + car.RpmPivotX * dashboardScale;
+            double rpmPivotY =
+                dashboardTop + car.RpmPivotY * dashboardScale;
+            double speedPivotX =
+                dashboardLeft + car.SpeedPivotX * dashboardScale;
+            double speedPivotY =
+                dashboardTop + car.SpeedPivotY * dashboardScale;
 
-            double rpmRatio = Math.Max(0, Math.Min(1, rpm / 8000));
-            double speedRatio = Math.Max(0, Math.Min(1, engineSpeed / 16));
-            double rpmAngle = -135 + rpmRatio * 270;
-            if (rpm >= 7800)
+            double rpmAngle = car.GetRpmNeedleAngle(rpm);
+            if (rpm >= car.MaxRpm - 200)
             {
                 long jitterStep =
                     DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond / 35;
                 rpmAngle += jitterStep % 2 == 0 ? 1.2 : -1.2;
             }
-            double speedAngle = -135 + speedRatio * 270;
+            double speedAngle = car.GetSpeedNeedleAngle(engineSpeed);
+            double rpmRange = car.MaxRpm - car.IdleRpm;
+            double turboProgress = rpmRange <= 0
+                ? 0
+                : (rpm - car.IdleRpm) / rpmRange;
+            turboProgress = Math.Max(0, Math.Min(1, turboProgress));
+            double turboValue = car.TurboAtMaxAngle * turboProgress;
+            double turboAngle = car.GetTurboNeedleAngle(turboValue);
 
             BitmapImage rpmImage = carIndex >= 0 &&
                 carIndex < _rpmNeedleImages.Length
@@ -412,18 +557,32 @@ namespace OOPGames
                 carIndex < _speedNeedleImages.Length
                 ? _speedNeedleImages[carIndex]
                 : null;
+            BitmapImage turboImage = carIndex >= 0 &&
+                carIndex < _turboNeedleImages.Length
+                ? _turboNeedleImages[carIndex]
+                : null;
 
             if (rpmImage != null)
             {
                 AddRotatedNeedle(
                     canvas, rpmImage, rpmPivotX, rpmPivotY,
-                    dashboardWidth * 0.16, rpmAngle);
+                    dashboardScale, rpmAngle);
             }
             if (speedImage != null)
             {
                 AddRotatedNeedle(
                     canvas, speedImage, speedPivotX, speedPivotY,
-                    dashboardWidth * 0.16, speedAngle);
+                    dashboardScale, speedAngle);
+            }
+            if (turboImage != null)
+            {
+                double turboPivotX =
+                    dashboardLeft + car.TurboPivotX * dashboardScale;
+                double turboPivotY =
+                    dashboardTop + car.TurboPivotY * dashboardScale;
+                AddRotatedNeedle(
+                    canvas, turboImage, turboPivotX, turboPivotY,
+                    dashboardScale, turboAngle);
             }
         }
 
@@ -432,12 +591,11 @@ namespace OOPGames
             BitmapImage needleImage,
             double pivotX,
             double pivotY,
-            double needleWidth,
+            double imageScale,
             double angle)
         {
-            double needleHeight =
-                needleWidth * needleImage.PixelHeight /
-                needleImage.PixelWidth;
+            double needleWidth = needleImage.PixelWidth * imageScale;
+            double needleHeight = needleImage.PixelHeight * imageScale;
             Image needle = new Image
             {
                 Source = needleImage,
@@ -505,35 +663,6 @@ namespace OOPGames
                 IsHitTestVisible = false
             };
             canvas.Children.Add(polygon);
-        }
-
-        private void UpdateSelectionFeedback(IGruppe3DragRaceField field)
-        {
-            if (field.PlayerOneCar != _lastPlayerOneCar)
-            {
-                if (field.PlayerOneCar >= 0)
-                {
-                    _selectionFeedbackText =
-                        "PLAYER 1: AUTO " + (field.PlayerOneCar + 1) + " GEWÄHLT!";
-                    _selectionFeedbackUntil =
-                        DateTime.UtcNow.AddSeconds(1.2);
-                }
-
-                _lastPlayerOneCar = field.PlayerOneCar;
-            }
-
-            if (field.PlayerTwoCar != _lastPlayerTwoCar)
-            {
-                if (field.PlayerTwoCar >= 0)
-                {
-                    _selectionFeedbackText =
-                        "PLAYER 2: AUTO " + (field.PlayerTwoCar + 1) + " GEWÄHLT!";
-                    _selectionFeedbackUntil =
-                        DateTime.UtcNow.AddSeconds(1.2);
-                }
-
-                _lastPlayerTwoCar = field.PlayerTwoCar;
-            }
         }
 
         private static bool IsSelected(
@@ -710,6 +839,42 @@ namespace OOPGames
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.EndInit();
             return image;
+        }
+
+        private static FontFamily LoadGameFont()
+        {
+            string assetDirectory = FindAssetDirectory();
+            if (assetDirectory == null)
+            {
+                throw new DirectoryNotFoundException(
+                    "The Gruppe 3 game asset directory could not be found.");
+            }
+
+            string fontPath = System.IO.Path.Combine(
+                assetDirectory, "Font", "BACKTO19.TTF");
+            if (!File.Exists(fontPath))
+            {
+                throw new FileNotFoundException(
+                    "The Gruppe 3 game font could not be found.", fontPath);
+            }
+
+            Uri fontUri = new Uri(fontPath, UriKind.Absolute);
+            foreach (FontFamily family in Fonts.GetFontFamilies(fontUri))
+            {
+                foreach (string familyName in family.FamilyNames.Values)
+                {
+                    if (string.Equals(
+                        familyName,
+                        "Back to 1982",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        return family;
+                    }
+                }
+            }
+
+            throw new InvalidDataException(
+                "The font file does not contain the Back to 1982 family.");
         }
 
         private static void AddFallbackCar(

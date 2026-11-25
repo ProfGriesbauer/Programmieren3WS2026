@@ -126,7 +126,7 @@ namespace OOPGames
 
             return field.IsRaceStarted
                 ? new Gruppe3DragRaceMove(_playerNumber, true, false)
-                : null;
+                : new Gruppe3DragRaceMove(_playerNumber, false, false);
         }
 
         private static readonly System.Random _random = new System.Random();

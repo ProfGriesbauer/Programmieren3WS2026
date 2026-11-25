@@ -7,7 +7,7 @@ namespace OOPGames
 {
     // Drawing helpers for the printed labels of cartridges and disks. Everything is drawn in code
     // from the game's title and colour, so new games get a matching label automatically.
-    internal static class B5MediaArt
+    internal static class G10_MediaArt
     {
         internal static readonly Typeface TitleFont = new Typeface(new FontFamily("Arial Black"), FontStyles.Normal, FontWeights.Black, FontStretches.Normal);
         internal static readonly Typeface PrintFont = new Typeface(new FontFamily("Arial"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
@@ -68,7 +68,7 @@ namespace OOPGames
         internal static Brush Finish(DrawingGroup drawing)
         {
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
 

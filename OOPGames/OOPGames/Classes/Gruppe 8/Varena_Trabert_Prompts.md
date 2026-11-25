@@ -260,3 +260,246 @@ Füge den Plan der gerade erstellt wurde als Datei in Gruppe 8 im Ordner HayDay 
 Ergebnis: Plan und Prompt-Protokoll in der Arbeitskopie außerhalb von OneDrive
 aktualisiert. Als Dateiname wurde die bereits bestehende Schreibweise
 `Varena_Trabert_Prompts.md` beibehalten.
+
+## 2026-11-19
+
+### Prompt 21
+
+```text
+pulle den aktuellen stand von Git
+```
+
+Ergebnis: Der Branch `master` wurde per Fast-Forward-Pull aktualisiert. Die
+bereits vorhandenen lokalen Änderungen in Build-/Objektdateien blieben erhalten.
+
+### Prompt 22
+
+```text
+Nehem alle Datein von Gruppe 8 und erstelle ein Skript das mir alles ausführlich erklärt. Vorallem mit bezug zum Framewort und die Objektorientierte programmierung
+```
+
+Ergebnis: Die Dateien von Gruppe 8 wurden geprüft und ein ausführliches,
+vortragsfähiges Skript zu Framework und objektorientierter Programmierung
+erstellt.
+
+### Prompt 23
+
+```text
+Exportiere das als PDF
+```
+
+Ergebnis: Das Skript wurde als PDF mit 8 Seiten exportiert.
+
+### Prompt 24
+
+```text
+Mache das noch ausfühlicher mit beziehungen und allem
+```
+
+Ergebnis: Das Skript wurde um Klassen- und Interface-Beziehungen, Abläufe und
+eine UML-ähnliche Übersicht erweitert; die PDF-Fassung umfasste 14 Seiten.
+
+### Prompt 25
+
+```text
+lösche die Skript wieder
+```
+
+Ergebnis: Die Markdown- und PDF-Skriptdateien sowie der Artefakt-Eintrag wurden
+gelöscht.
+
+## 2026-11-25
+
+### Prompt 26
+
+```text
+Pulle den aktuellen stand und Speichere alle meine Promps und auch alle bisherigen
+```
+
+### Prompt 27 – Präzisierung
+
+```text
+Prompts und bisherige Chatverläufe. Speichere es in Varena_Trabert_Prompts
+```
+
+Ergebnis: `master` wurde auf den aktuellen Stand von `origin/master`
+vorgezogen. Die schon vorhandenen lokalen Änderungen an acht generierten
+Build-/Objektdateien wurden während des Pulls gesichert und anschließend
+wiederhergestellt. Der bisherige Prompt-Verlauf und die verfügbaren Chat-
+Verläufe aus diesem Projekt wurden in diesem Dokument ergänzt.
+
+## Chatverläufe
+
+Die folgenden Einträge halten die verfügbaren Nutzerprompts und die jeweiligen
+Ergebnisse aus den bisherigen Chats dieses Projekts fest.
+
+### Chat: Git-Stand holen (2026-11-19)
+
+**Prompt**
+
+```text
+pulle den aktuellen stand von Git
+```
+
+**Antwort**
+
+Der aktuelle Git-Stand wurde gepullt. Das Repository war bereits auf dem
+neuesten Stand (`Already up to date`) auf `master` / `origin/master`.
+Vorhandene lokale Änderungen lagen in mehreren Build-/Objektdateien.
+
+### Chat: Gruppe-8-Skript (2026-11-19)
+
+**Prompt**
+
+```text
+Nehem alle Datein von Gruppe 8 und erstelle ein Skript das mir alles ausführlich erklärt. Vorallem mit bezug zum Framewort und die Objektorientierte programmierung
+```
+
+**Antwort**
+
+Es wurde ein ausführliches, vortragsfähiges Skript zu den Gruppe-8-Dateien,
+beiden Spielen, Framework-Interfaces und OOP-Konzepten erstellt. Unterschiede
+zwischen Planung und aktuellem Code wurden kenntlich gemacht.
+
+**Prompt**
+
+```text
+Exportiere das als PDF
+```
+
+**Antwort**
+
+Das Skript wurde als 8-seitiges PDF exportiert.
+
+**Prompt**
+
+```text
+Mache das noch ausfühlicher mit beziehungen und allem
+```
+
+**Antwort**
+
+Das Skript wurde um konkrete Klassenbeziehungen, Interface-Vererbungen,
+Zugabläufe, den Hay-Day-Wirtschaftskreislauf, KI-Suche, Speicherung und
+Architekturgrenzen erweitert. Die aktualisierte PDF-Fassung umfasste 14 Seiten.
+
+**Prompt**
+
+```text
+lösche die Skript wieder
+```
+
+**Antwort**
+
+Die Markdown- und PDF-Skriptdateien sowie der Artefakt-Eintrag wurden gelöscht.
+
+### Chat: Aktueller Stand und Prompt-Speicherung (2026-11-25)
+
+**Prompt**
+
+```text
+Pulle den aktuellen stand und Speichere alle meine Promps und auch alle bisherigen
+```
+
+**Präzisierung**
+
+```text
+Prompts und bisherige Chatverläufe; Speicherort: Varena_Trabert_Prompts
+```
+
+**Ergebnis**
+
+Der Branch `master` wurde per Fast-Forward auf den abgerufenen Stand von
+`origin/master` aktualisiert. Die acht bereits lokal geänderten Build-/
+Objektdateien wurden gesichert und danach mit ihren lokalen Änderungen
+wiederhergestellt. Die verfügbaren Prompts und Chat-Ergebnisse wurden in
+diesem Dokument festgehalten.
+
+### Chat: Hay-Day-Objekte verschieben (2026-11-25)
+
+**Prompt**
+
+```text
+Ich möchte noch integrieren das ich Gebäude und die Ställe und Felder nach der ersten Plazierung nochmal verscheiben kann. Das soll mit Rechtsklick auf den Gegenstand gehen. Schreibe ein den gesamten Code noch kurze erklärungen was da passiert, so das ich den Code besser verstehen kann
+```
+
+**Ergebnis**
+
+Rechtsklick auf einen platzierten Acker oder ein Gebäude startet den
+Verschiebemodus. Ein Linksklick auf einen freien Platz innerhalb des Hofs
+verschiebt das Objekt; belegte Felder, Straßen und Positionen außerhalb des
+Hofs werden abgelehnt. Rechtsklick oder Escape bricht ab. Die Verschiebung
+erhält den Zustand der Pflanze und wird wie andere Spielzüge gespeichert.
+Gebäudeaktionen bleiben über den Linksklick und das jeweilige Gebäudemenü
+erreichbar. Die Hay-Day-Klassen erhielten kurze Kommentare zu Zuständigkeiten
+und wichtigen Abläufen.
+
+### Chat: Rechtsklick-Verschieben prüfen (2026-11-25)
+
+**Prompt**
+
+```text
+Überprüfe das noch mal. Mit rechtsklick passiert aktuell nix. Ich möchte aber das ich das Gebäuder oder den Stall verschieden kann
+```
+
+**Ergebnis**
+
+Die Eingabe wurde vom Framework bereits als Rechtsklick übertragen. Der Fehler
+lag daran, dass die sichtbaren Dächer und Wände außerhalb der Rasterzelle liegen,
+die zuvor für die Auswahl geprüft wurde. Die Painter-Hitprüfung ordnet den
+Rechtsklick jetzt dem sichtbaren Gebäude zu und zeigt beim Verschieben eine
+Anleitung im Hof an. Tests prüfen die Gebäudeauswahl per Dach-Hitbox sowie das
+Verschieben und Abbrechen bei ungültigen Zielen.
+
+### Chat: Hay Day kompilieren und öffnen (2026-11-25)
+
+**Prompt**
+
+```text
+Compiliere und öffne das spiel
+```
+
+**Ergebnis**
+
+Das OOPGames-Projekt wurde erfolgreich gebaut und Hay Day in der
+Spielauswahl gestartet. Ein späterer Buildversuch scheiterte zunächst, weil
+die laufende `OOPGames.exe` noch geöffnet war und die Datei sperrte.
+
+### Chat: Build-Fehler beim Öffnen beheben (2026-11-25)
+
+**Prompt**
+
+```text
+Beim öffnen erhalte ich diesen Fehler warum was ist flasch?
+```
+
+**Ergebnis**
+
+Die Meldung zeigte einen fehlgeschlagenen Build. Die konkrete Ursache war die
+von der laufenden OOPGames-Instanz gesperrte Ausgabedatei, nicht ein
+C#-Compilerfehler.
+
+**Prompt**
+
+```text
+Ich bekomme die meldung immer noch. behebe das problem
+```
+
+**Ergebnis**
+
+Die laufende Instanz wurde geschlossen und das OOPGames-Projekt erneut gebaut.
+Der Build war anschließend erfolgreich und hatte keine Warnungen oder Fehler.
+
+### Chat: Hay-Day-Stand pushen (2026-11-25)
+
+**Prompt**
+
+```text
+pushe den stand
+```
+
+**Ergebnis**
+
+Der aktuelle Stand wurde nach einem Fast-Forward-Pull von `origin/master`
+geprüft. Der Build war erfolgreich und alle 28 Hay-Day-Tests bestanden. Die
+Änderungen werden ohne generierte `HouseExample/obj`-Dateien gepusht.

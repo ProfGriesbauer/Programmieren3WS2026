@@ -7,6 +7,9 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
+    /// <summary>
+    /// Zeichnet Hof, Menüs und Statusinformationen und übersetzt Bildschirmkoordinaten.
+    /// </summary>
     public sealed class HayDayPainter : IPaintGame2
     {
         private double _canvasWidth;
@@ -16,7 +19,38 @@ namespace OOPGames
 
         public PointOnFarm FarmPosition(int x, int y, HayDayField field)
         {
+            // Der Feldzustand rechnet den Bildschirmklick in ein isometrisches Rasterfeld um.
             return field.ScreenToFarm(x, y, _canvasWidth, _canvasHeight);
+        }
+
+        public FarmBuilding BuildingAt(int x, int y, HayDayField field)
+        {
+            double tileWidth = field.TileWidth(_canvasWidth, _canvasHeight);
+            double tileHeight = tileWidth * 0.5;
+
+            // Gebäude werden von hinten nach vorne gezeichnet; das vorderste passende wird angeklickt.
+            foreach (FarmBuilding building in field.Buildings
+                .OrderByDescending(value => value.Row + value.Column))
+            {
+                Point ground = ToScreen(building.Row, building.Column, field, tileWidth, tileHeight);
+                double width = Math.Max(12, tileWidth * 0.84);
+                double wallHeight = Math.Max(9, tileHeight * 0.9);
+                double roofHeight = Math.Max(6, tileHeight * 0.58);
+                double wallTop = ground.Y + tileHeight * 0.28 - wallHeight;
+                double peakY = wallTop - roofHeight;
+                double baseY = ground.Y + tileHeight * 0.28;
+                double hitPadding = Math.Max(2, tileWidth * 0.04);
+
+                if (x >= ground.X - width * 0.6 - hitPadding
+                    && x <= ground.X + width * 0.6 + hitPadding
+                    && y >= peakY - hitPadding
+                    && y <= baseY + tileHeight * 0.08 + hitPadding)
+                {
+                    return building;
+                }
+            }
+
+            return null;
         }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
@@ -737,6 +771,27 @@ namespace OOPGames
             Canvas.SetTop(shopButton, 0);
             canvas.Children.Add(shopButton);
             AddText(canvas, "Shop", 145, 8, 13, Brushes.SaddleBrown, true, 100);
+
+            if (field.MovingItemName != null)
+            {
+                double instructionWidth = Math.Max(120, Math.Min(420, canvas.ActualWidth - 16));
+                Rectangle instructionPanel = new Rectangle
+                {
+                    Width = instructionWidth,
+                    Height = 25,
+                    Fill = new SolidColorBrush(Color.FromArgb(240, 255, 250, 226)),
+                    Stroke = new SolidColorBrush(Color.FromRgb(153, 117, 65)),
+                    StrokeThickness = 1,
+                    RadiusX = 5,
+                    RadiusY = 5,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(instructionPanel, 8);
+                Canvas.SetTop(instructionPanel, 40);
+                canvas.Children.Add(instructionPanel);
+                AddText(canvas, field.StatusMessage, 14, 45, 11,
+                    Brushes.SaddleBrown, true, instructionWidth - 12);
+            }
         }
 
         private void DrawBuildingMenu(Canvas canvas, HayDayField field)

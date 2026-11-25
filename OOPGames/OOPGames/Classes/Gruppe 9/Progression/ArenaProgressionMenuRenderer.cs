@@ -1,20 +1,60 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace OOPGames
 {
     internal sealed class ArenaProgressionMenuRenderer
     {
+        // Scroll positions per menu page (and per scroll area on it) while the game runs, so a
+        // purchase, which rebuilds the page, does not jump back to the top and a page reopens
+        // where it was left.
+        private readonly Dictionary<string, double> _scrollOffsets =
+            new Dictionary<string, double>(StringComparer.Ordinal);
+        private double _skillTreeZoom = 0.65;
+        private double _skillTreeHorizontalOffset;
+        private double _skillTreeVerticalOffset;
+        private bool _hasSkillTreeViewport;
+        private ScrollViewer _skillTreePreviewScrollViewer;
+        private bool _isPanningSkillTree;
+        private MouseButton _skillTreePanButton;
+
+        // Menu click sound for windows outside the game canvas (skill point question).
+        public Action PlayMenuClick { get; set; }
         private static readonly Brush TextBrush =
             new SolidColorBrush(Color.FromRgb(225, 233, 241));
         private const double ButtonHeight = 36;
         private const double SplitRowWidth = 300;
+        private const double MinimumSkillTreeZoom = 0.3;
+        private const double MaximumSkillTreeZoom = 2.5;
         private const string MaxedOutLabel = "Maximale Stufe erreicht";
 
-        public UIElement CreateSkillTree(ArenaField field, Action refresh)
+        internal void CaptureSkillTreeViewport()
+        {
+            if (_skillTreePreviewScrollViewer == null)
+            {
+                return;
+            }
+            _skillTreeHorizontalOffset =
+                _skillTreePreviewScrollViewer.HorizontalOffset;
+            _skillTreeVerticalOffset =
+                _skillTreePreviewScrollViewer.VerticalOffset;
+            _hasSkillTreeViewport = true;
+        }
+
+        public UIElement CreateSkillTree(
+            ArenaField field, Action refresh, double availableWidth,
+            double availableHeight, BitmapSource startNodeSprite)
         {
             ArenaProgression progression = field.Progression;
             StackPanel content = CreateContent(
@@ -24,6 +64,9 @@ namespace OOPGames
                     : "Skillpunkte: " + progression.UniversalPoints)
                     + "  |  Kills: " + progression.TotalKills
                     + "  |  1 Punkt je 5 Kills. Spielerfähigkeiten sind unabhängig von Waffen.");
+            content.Children.Add(CreateSkillTreePreview(
+                field, refresh, availableWidth,
+                Math.Max(360, availableHeight - 140), startNodeSprite));
 
             TreeView tree = new TreeView
             {
@@ -44,14 +87,16 @@ namespace OOPGames
             };
             AddPlayerStatUpgrade(
                 stats, field, ArenaProgression.MaximumHealth,
-                "Maximale Gesundheit",
+                ArenaSkillTreeRepository.GetPlayerStatName(
+                    ArenaProgression.MaximumHealth),
                 "Erhöht die maximale Gesundheit um "
                     + ArenaProgression.HealthIncreasePerRank + ".",
                 field.Player.MaxHitPoints,
                 ArenaProgression.HealthIncreasePerRank, refresh);
             AddPlayerStatUpgrade(
                 stats, field, ArenaProgression.MaximumSpeed,
-                "Maximale Geschwindigkeit",
+                ArenaSkillTreeRepository.GetPlayerStatName(
+                    ArenaProgression.MaximumSpeed),
                 "Erhöht die Bewegungsgeschwindigkeit um "
                     + ArenaProgression.SpeedIncreasePerRank + ".",
                 field.Player.MaxSpeed,
@@ -74,7 +119,7 @@ namespace OOPGames
                         ? MaxedOutLabel
                         : (rank == 0 ? "Freischalten" : "Verbessern")
                             + " (" + cost + " universelle Punkte)",
-                    !isMaxed && progression.UniversalPoints >= cost,
+                    progression.CanUpgradeSkill(definition.Id),
                     () =>
                     {
                         progression.TryUpgradeSkill(definition.Id);
@@ -97,13 +142,409 @@ namespace OOPGames
                 root.Items.Add(skill);
             }
             tree.Items.Add(root);
-            content.Children.Add(tree);
-
-            AddText(content, "Spielerfähigkeiten");
-            AddAbilitySlots(content, progression.EntityAbilities,
+            StackPanel details = new StackPanel();
+            details.Children.Add(tree);
+            AddText(details, "Spielerfähigkeiten");
+            AddAbilitySlots(details, progression.EntityAbilities,
                 GetUnlockedEntityAbilities(progression),
                 progression.TryAssignEntityAbility, "Spielerfähigkeit", refresh);
-            return CreateScrollablePage(content);
+            content.Children.Add(new Expander
+            {
+                Header = "Skill-Details und Zusatzupgrades",
+                IsExpanded = false,
+                Content = details,
+                Foreground = TextBrush,
+                Margin = new Thickness(0, 8, 0, 0)
+            });
+            ScrollViewer page = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = content
+            };
+            RememberScrollPositions(page, "skills");
+            return page;
+        }
+
+        private UIElement CreateSkillTreePreview(
+            ArenaField field, Action refresh,
+            double availableWidth, double availableHeight,
+            BitmapSource startNodeSprite)
+        {
+            ArenaSkillTreeDocument tree = field.Progression.SkillTree;
+            double boardWidth = Math.Max(1024,
+                tree.Nodes.Count == 0 ? 1024
+                    : tree.Nodes.Max(node =>
+                        node.X + ArenaSkillTreeVisuals.NodeWidth + 40));
+            double boardHeight = Math.Max(520,
+                tree.Nodes.Count == 0 ? 520
+                    : tree.Nodes.Max(node =>
+                        node.Y + ArenaSkillTreeVisuals.NodeHeight + 40));
+            Canvas board = new Canvas
+            {
+                Width = boardWidth,
+                Height = boardHeight,
+                Background = new SolidColorBrush(Color.FromRgb(13, 19, 27))
+            };
+            ArenaSkillTreeVisuals.DrawConnections(
+                board, tree,
+                connection =>
+                {
+                    ArenaSkillTreeNode target = tree.Nodes.First(
+                        node => ArenaSkillTreeRepository.GetNodeId(node)
+                            == connection.ToSkillId);
+                    return !target.IsFork
+                        && field.Progression.GetSkillRank(target.SkillId)
+                            > field.Progression.GetSkillNodeRankStart(
+                                ArenaSkillTreeRepository.GetNodeId(target))
+                        ? Brushes.MediumSeaGreen
+                        : Brushes.DeepSkyBlue;
+                },
+                forksAsMarkers: true);
+
+            IReadOnlyList<ArenaSkillInfo> skills =
+                ArenaSkillTreeRepository.GetImplementedSkills();
+            foreach (ArenaSkillTreeNode node in tree.Nodes)
+            {
+                if (node.IsFork)
+                {
+                    FrameworkElement forkMarker =
+                        ArenaSkillTreeVisuals.CreateForkMarkerVisual(
+                            node.ForceDecision,
+                            node.ForceDecision
+                                && field.Progression.HasChosenForcedForkBranch(
+                                    ArenaSkillTreeRepository.GetNodeId(node)),
+                            field.Progression.GetForkInputsRemaining(
+                                ArenaSkillTreeRepository.GetNodeId(node)));
+                    Canvas.SetLeft(forkMarker,
+                        node.X + (ArenaSkillTreeVisuals.NodeWidth
+                            - forkMarker.Width) / 2);
+                    Canvas.SetTop(forkMarker,
+                        node.Y + (ArenaSkillTreeVisuals.NodeHeight
+                            - forkMarker.Height) / 2);
+                    board.Children.Add(forkMarker);
+                    continue;
+                }
+
+                if (ArenaSkillTreeRepository.IsStartNode(node.SkillId))
+                {
+                    Border startTile =
+                        ArenaSkillTreeVisuals.CreateStartNodeTile(startNodeSprite);
+                    startTile.ToolTip =
+                        ArenaSkillTreeRepository.StartNodeInfo.Description;
+                    Canvas.SetLeft(startTile, node.X);
+                    Canvas.SetTop(startTile, node.Y);
+                    board.Children.Add(startTile);
+                    continue;
+                }
+
+                ArenaSkillInfo skill = skills.FirstOrDefault(
+                    item => item.Id == node.SkillId);
+                if (skill == null)
+                {
+                    throw new InvalidDataException(
+                        "The selected skill tree contains an unknown skill.");
+                }
+
+                string nodeId = ArenaSkillTreeRepository.GetNodeId(node);
+                int rank = field.Progression.GetSkillRank(node.SkillId);
+                int rankStart =
+                    field.Progression.GetSkillNodeRankStart(nodeId);
+                int rankStages =
+                    field.Progression.GetSkillNodeRankStages(nodeId);
+                int rankLimit = rankStart + rankStages;
+                bool nodeUnlocked = rank > rankStart;
+                bool isStat = node.SkillId == ArenaProgression.MaximumHealth
+                    || node.SkillId == ArenaProgression.MaximumSpeed;
+                int maximumRank = isStat
+                    ? field.Progression.GetPlayerStatMaximumRank(node.SkillId)
+                    : PlayerAbilityCatalog.GetDefinition(node.SkillId).MaximumRank;
+                int nextCost = isStat
+                    ? field.Progression.GetPlayerStatNextRankCost(node.SkillId)
+                    : PlayerAbilityCatalog.GetDefinition(node.SkillId)
+                        .GetNextRankCost(rank);
+                bool hasPrerequisites =
+                    field.Progression.HasSkillNodePrerequisites(nodeId);
+                bool isMaxed = rank >= Math.Min(maximumRank, rankLimit);
+                bool waitingForEarlierRanks = rank < rankStart;
+                bool canPurchase = isStat
+                    ? field.Progression.CanUpgradePlayerStatNode(nodeId)
+                    : field.Progression.CanUpgradeSkillNode(nodeId);
+
+                string subtitle = isMaxed
+                    ? "Rang " + rank + "/" + maximumRank + " · Stufen "
+                        + (rankStart + 1) + "–" + rankLimit
+                    : waitingForEarlierRanks
+                        ? "Wartet auf vorherige Stufen · Rang " + rank + "/"
+                            + maximumRank
+                    : !hasPrerequisites
+                        ? "Gesperrt · " + nextCost + " Punkte"
+                    : !canPurchase
+                        ? "Nicht genug Skillpunkte · " + nextCost + " Punkte"
+                    : rank > 0
+                        ? "Rang " + rank + "/" + maximumRank
+                            + " · Stufen " + (rankStart + 1) + "–" + rankLimit
+                            + " · " + nextCost + " Punkte"
+                        : "Freischaltbar · Stufen " + (rankStart + 1)
+                            + "–" + rankLimit + " · " + nextCost + " Punkte";
+                ArenaSkillTreeTileState tileState = isMaxed
+                    ? ArenaSkillTreeTileState.Unlocked
+                    : canPurchase
+                        ? nodeUnlocked
+                            ? ArenaSkillTreeTileState.Unlocked
+                            : ArenaSkillTreeTileState.Available
+                        : ArenaSkillTreeTileState.Locked;
+
+                Button nodeButton = new Button
+                {
+                    Width = ArenaSkillTreeVisuals.NodeWidth,
+                    Height = ArenaSkillTreeVisuals.NodeHeight,
+                    Padding = new Thickness(0),
+                    Background = Brushes.Transparent,
+                    BorderThickness = new Thickness(0),
+                    FocusVisualStyle = null,
+                    ToolTip = skill.Description
+                        + (rank == 0 && !hasPrerequisites
+                            ? "\nGesperrt: erst die Voraussetzungen freischalten."
+                            : "\nNächste Stufe: " + nextCost + " Skillpunkte."),
+                    IsEnabled = !isMaxed && canPurchase,
+                    Content = ArenaSkillTreeVisuals.CreateNodeTile(
+                        skill.Name, subtitle, tileState)
+                };
+                nodeButton.Click += (sender, args) =>
+                {
+                    if (isStat)
+                    {
+                        field.Progression.TryUpgradePlayerStatNode(nodeId);
+                    }
+                    else
+                    {
+                        field.Progression.TryUpgradeSkillNode(nodeId);
+                    }
+                    refresh();
+                };
+                Canvas.SetLeft(nodeButton, node.X);
+                Canvas.SetTop(nodeButton, node.Y);
+                board.Children.Add(nodeButton);
+            }
+
+            if (!_hasSkillTreeViewport)
+            {
+                _skillTreeZoom = Math.Max(
+                    0.65, Math.Min(1, availableWidth / boardWidth));
+            }
+            board.LayoutTransform = new ScaleTransform(
+                _skillTreeZoom, _skillTreeZoom);
+            ScrollViewer previewScroll = new ScrollViewer
+            {
+                Content = board,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                CanContentScroll = false,
+                PanningMode = PanningMode.None,
+                Background = new SolidColorBrush(Color.FromRgb(13, 19, 27))
+            };
+            _skillTreePreviewScrollViewer = previewScroll;
+            previewScroll.PreviewMouseWheel += (sender, args) =>
+                ZoomSkillTreeAtPointer(
+                    previewScroll, board, args);
+            previewScroll.PreviewMouseDown += (sender, args) =>
+                BeginSkillTreePan(previewScroll, args);
+            previewScroll.PreviewMouseMove += (sender, args) =>
+                ContinueSkillTreePan(previewScroll, args);
+            previewScroll.PreviewMouseUp += (sender, args) =>
+                EndSkillTreePan(previewScroll, args);
+            previewScroll.LostMouseCapture += (sender, args) =>
+                ResetSkillTreePan(previewScroll);
+            previewScroll.ScrollChanged += (sender, args) =>
+            {
+                if (_hasSkillTreeViewport)
+                {
+                    _skillTreeHorizontalOffset = previewScroll.HorizontalOffset;
+                    _skillTreeVerticalOffset = previewScroll.VerticalOffset;
+                }
+            };
+            previewScroll.Loaded += (sender, args) =>
+                previewScroll.Dispatcher.BeginInvoke(
+                    DispatcherPriority.Loaded,
+                    new Action(() =>
+                    {
+                        if (_hasSkillTreeViewport)
+                        {
+                            previewScroll.ScrollToHorizontalOffset(
+                                _skillTreeHorizontalOffset);
+                            previewScroll.ScrollToVerticalOffset(
+                                _skillTreeVerticalOffset);
+                        }
+                        else
+                        {
+                            previewScroll.ScrollToHorizontalOffset(Math.Max(
+                                0, (previewScroll.ExtentWidth
+                                    - previewScroll.ViewportWidth) / 2));
+                            previewScroll.ScrollToVerticalOffset(Math.Max(
+                                0, (previewScroll.ExtentHeight
+                                    - previewScroll.ViewportHeight) / 2));
+                            _hasSkillTreeViewport = true;
+                        }
+                    }));
+
+            Grid preview = new Grid
+            {
+                Background = new SolidColorBrush(Color.FromRgb(13, 19, 27)),
+                ClipToBounds = true
+            };
+            preview.Children.Add(previewScroll);
+            Border navigationHint = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(210, 8, 13, 19)),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(7, 4, 7, 4),
+                Margin = new Thickness(8),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                IsHitTestVisible = false,
+                Child = new TextBlock
+                {
+                    Text = "Mausrad: scrollen · Shift+Mausrad: zoomen · Ziehen/Mausradklick: verschieben",
+                    Foreground = Brushes.White,
+                    FontSize = 11
+                }
+            };
+            preview.Children.Add(navigationHint);
+
+            return new Border
+            {
+                Width = availableWidth,
+                Height = availableHeight,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(77, 94, 113)),
+                BorderThickness = new Thickness(1),
+                Child = preview
+            };
+        }
+
+        private void ZoomSkillTreeAtPointer(
+            ScrollViewer scrollViewer, Canvas board, MouseWheelEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Shift) == 0)
+            {
+                return;
+            }
+            double oldZoom = _skillTreeZoom;
+            double zoomFactor = e.Delta > 0 ? 1.1 : 1 / 1.1;
+            double newZoom = Math.Max(
+                MinimumSkillTreeZoom,
+                Math.Min(MaximumSkillTreeZoom, oldZoom * zoomFactor));
+            if (Math.Abs(newZoom - oldZoom) < 0.0001)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            Point pointer = e.GetPosition(scrollViewer);
+            double contentX = (scrollViewer.HorizontalOffset + pointer.X) / oldZoom;
+            double contentY = (scrollViewer.VerticalOffset + pointer.Y) / oldZoom;
+            _skillTreeZoom = newZoom;
+            board.LayoutTransform = new ScaleTransform(newZoom, newZoom);
+            scrollViewer.Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    scrollViewer.ScrollToHorizontalOffset(
+                        contentX * newZoom - pointer.X);
+                    scrollViewer.ScrollToVerticalOffset(
+                        contentY * newZoom - pointer.Y);
+                }));
+            e.Handled = true;
+        }
+
+        private void BeginSkillTreePan(
+            ScrollViewer scrollViewer, MouseButtonEventArgs e)
+        {
+            bool isMiddleClick = e.ChangedButton == MouseButton.Middle;
+            bool isLeftDrag = e.ChangedButton == MouseButton.Left
+                && !IsInsideSkillTreeControl(e.OriginalSource as DependencyObject);
+            if ((!isMiddleClick && !isLeftDrag) || _isPanningSkillTree)
+            {
+                return;
+            }
+
+            _isPanningSkillTree = true;
+            _skillTreePanButton = e.ChangedButton;
+            _skillTreePanStart = e.GetPosition(scrollViewer);
+            _skillTreePanStartHorizontalOffset = scrollViewer.HorizontalOffset;
+            _skillTreePanStartVerticalOffset = scrollViewer.VerticalOffset;
+            scrollViewer.Cursor = Cursors.SizeAll;
+            scrollViewer.CaptureMouse();
+            e.Handled = true;
+        }
+
+        private Point _skillTreePanStart;
+        private double _skillTreePanStartHorizontalOffset;
+        private double _skillTreePanStartVerticalOffset;
+
+        private void ContinueSkillTreePan(
+            ScrollViewer scrollViewer, MouseEventArgs e)
+        {
+            if (!_isPanningSkillTree)
+            {
+                return;
+            }
+            bool buttonStillPressed = _skillTreePanButton == MouseButton.Middle
+                ? e.MiddleButton == MouseButtonState.Pressed
+                : e.LeftButton == MouseButtonState.Pressed;
+            if (!buttonStillPressed)
+            {
+                ResetSkillTreePan(scrollViewer);
+                return;
+            }
+
+            Point current = e.GetPosition(scrollViewer);
+            scrollViewer.ScrollToHorizontalOffset(
+                _skillTreePanStartHorizontalOffset
+                    - (current.X - _skillTreePanStart.X));
+            scrollViewer.ScrollToVerticalOffset(
+                _skillTreePanStartVerticalOffset
+                    - (current.Y - _skillTreePanStart.Y));
+            e.Handled = true;
+        }
+
+        private void EndSkillTreePan(
+            ScrollViewer scrollViewer, MouseButtonEventArgs e)
+        {
+            if (_isPanningSkillTree && e.ChangedButton == _skillTreePanButton)
+            {
+                ResetSkillTreePan(scrollViewer);
+                e.Handled = true;
+            }
+        }
+
+        private void ResetSkillTreePan(ScrollViewer scrollViewer)
+        {
+            if (!_isPanningSkillTree)
+            {
+                return;
+            }
+            _isPanningSkillTree = false;
+            scrollViewer.Cursor = null;
+            if (scrollViewer.IsMouseCaptured)
+            {
+                scrollViewer.ReleaseMouseCapture();
+            }
+        }
+
+        private static bool IsInsideSkillTreeControl(DependencyObject source)
+        {
+            while (source != null)
+            {
+                if (source is ButtonBase || source is ScrollBar || source is Thumb)
+                {
+                    return true;
+                }
+                source = source is Visual || source is Visual3D
+                    ? VisualTreeHelper.GetParent(source)
+                    : LogicalTreeHelper.GetParent(source);
+            }
+            return false;
         }
 
         public UIElement CreateWeaponUpgrades(ArenaField field, Action refresh)
@@ -130,6 +571,16 @@ namespace OOPGames
                         + "können nach Bestätigung aus Skillpunkten bezahlt werden.")
                     + " LMB: Grundangriff, RMB: Waffenfähigkeit 1. "
                     + "Elemente wirken auf die Waffenangriffe.");
+            if (!field.IsGodMode && !ArenaPreferences.Default.AskBeforeSkillPointPayment)
+            {
+                AddText(content, "Fehlende Waffenpunkte werden ohne Rückfrage mit Skillpunkten bezahlt.");
+                AddButton(content, "Rückfrage vor Skillpunkt-Zahlung wieder einschalten", true,
+                    () =>
+                    {
+                        ArenaPreferences.Default.AskBeforeSkillPointPayment = true;
+                        refresh();
+                    });
+            }
 
             TreeView tree = new TreeView
             {
@@ -183,7 +634,7 @@ namespace OOPGames
                     AddText(node, "Ein anderer Elementzweig ist bereits gewählt.");
                 }
 
-                AddPurchaseButton(node, field, upgrade,
+                AddPurchaseButton(PlayMenuClick, node, field, upgrade,
                     canPurchase, cost, weaponPointsToSpend,
                     skillPointsToSpend, rank >= maximumRank, refresh);
 
@@ -207,7 +658,9 @@ namespace OOPGames
                 GetUnlockedWeaponAbilities(progression, weaponId),
                 (slot, ability) => progression.TryAssignWeaponAbility(
                     weaponId, slot, ability), "Waffenfähigkeit", refresh);
-            return CreateScrollablePage(content);
+            ScrollViewer page = CreateScrollablePage(content);
+            RememberScrollPositions(page, "weapon:" + weaponId);
+            return page;
         }
 
         public UIElement CreateKeyBindings(
@@ -467,7 +920,7 @@ namespace OOPGames
         }
 
         private static void AddPurchaseButton(
-            ItemsControl content, ArenaField field,
+            Action playMenuClick, ItemsControl content, ArenaField field,
             WeaponUpgradeDefinition upgrade, bool enabled, int cost,
             int weaponPointsToSpend, int skillPointsToSpend,
             bool isMaxed, Action refresh)
@@ -482,9 +935,11 @@ namespace OOPGames
                 enabled, () =>
                 {
                     // Every purchase that uses skill points needs an explicit confirmation,
-                    // also when the weapon has no weapon points left at all.
+                    // also when the weapon has no weapon points left at all, unless the
+                    // player chose "Nicht erneut fragen".
                     if (skillPointsToSpend > 0
-                        && MessageBox.Show(
+                        && ArenaPreferences.Default.AskBeforeSkillPointPayment
+                        && !SkillPointPaymentDialog.Confirm(
                             (weaponPointsToSpend == 0
                                 ? "Du hast keine Waffenpunkte für "
                                     + field.SelectedPlayerWeapon.Name + ". "
@@ -497,9 +952,7 @@ namespace OOPGames
                                         + (weaponPointsToSpend == 1 ? "" : "en")
                                     : string.Empty)
                                 + " bezahlen?",
-                            "Mit Skillpunkten bezahlen?",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Question) != MessageBoxResult.Yes)
+                            ArenaPreferences.Default, playMenuClick))
                     {
                         return;
                     }
@@ -535,6 +988,44 @@ namespace OOPGames
             });
             AddText(content, summary);
             return content;
+        }
+
+        // Restores the remembered offsets of every scroll area on the page once it is laid
+        // out, then keeps them up to date while the player scrolls.
+        private void RememberScrollPositions(FrameworkElement page, string pageKey)
+        {
+            page.Loaded += (sender, e) => page.Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded, new Action(() =>
+                {
+                    int index = 0;
+                    foreach (ScrollViewer viewer in FindScrollViewers(page))
+                    {
+                        string key = pageKey + "#" + index++;
+                        if (_scrollOffsets.TryGetValue(key, out double offset))
+                        {
+                            viewer.ScrollToVerticalOffset(offset);
+                        }
+                        viewer.ScrollChanged += (o, args) =>
+                            _scrollOffsets[key] = viewer.VerticalOffset;
+                    }
+                }));
+        }
+
+        private static IEnumerable<ScrollViewer> FindScrollViewers(DependencyObject element)
+        {
+            if (element is ScrollViewer viewer)
+            {
+                yield return viewer;
+            }
+            int count = VisualTreeHelper.GetChildrenCount(element);
+            for (int i = 0; i < count; i++)
+            {
+                foreach (ScrollViewer child in FindScrollViewers(
+                    VisualTreeHelper.GetChild(element, i)))
+                {
+                    yield return child;
+                }
+            }
         }
 
         private static ScrollViewer CreateScrollablePage(StackPanel content)

@@ -27,7 +27,7 @@ namespace OOPGames
     // camera zoom begins. Start therefore stays cheap: it only begins a background warm-up of
     // everything that needs no WPF. The game, the bitmap and the media players are created when
     // the game is first shown and the 3D room is already hidden.
-    public sealed class G10_PacManGame : IB5RoomMiniGame
+    public sealed class G10_PacManGame : IG10_RoomMiniGame
     {
         // One per process: all game objects share the sound output and the warm-up.
         static G10_MediaSoundOutput _SharedOutput;
@@ -62,7 +62,7 @@ namespace OOPGames
             {
                 if (!_HighscoreSaved)
                 {
-                    B5RoomHighscores.Save(Title, _Session.Score);
+                    G10_RoomHighscores.Save(Title, _Session.Score);
                     _HighscoreSaved = true;
                 }
                 if (!input.Confirm) return;
@@ -90,7 +90,7 @@ namespace OOPGames
 
         void NewSession()
         {
-            _Session = new G10_PacManSession(B5RoomHighscores.Get(Title), Environment.TickCount);
+            _Session = new G10_PacManSession(G10_RoomHighscores.Get(Title), Environment.TickCount);
             _HighscoreSaved = false;
         }
 
@@ -98,7 +98,7 @@ namespace OOPGames
         // game logic, sprites, maze background, HUD, sounds and the highscore file.
         static void WarmUp()
         {
-            G10_PacManSession session = new G10_PacManSession(B5RoomHighscores.Get("Pac-Man"), 0);
+            G10_PacManSession session = new G10_PacManSession(G10_RoomHighscores.Get("Pac-Man"), 0);
             G10_PacManInput none = new G10_PacManInput(G10_Direction.None, false);
             for (int i = 0; i <= G10_PacManSession.ReadyTicks; i++) session.Update(none);
             new G10_PacManRenderer().Compose(session);
@@ -113,10 +113,10 @@ namespace OOPGames
             bool confirm = false;
             foreach (Key key in keys)
             {
-                if (B5RoomKeys.IsLeft(key)) direction = G10_Direction.Left;
-                else if (B5RoomKeys.IsRight(key)) direction = G10_Direction.Right;
-                else if (B5RoomKeys.IsUp(key)) direction = G10_Direction.Up;
-                else if (B5RoomKeys.IsDown(key)) direction = G10_Direction.Down;
+                if (G10_RoomKeys.IsLeft(key)) direction = G10_Direction.Left;
+                else if (G10_RoomKeys.IsRight(key)) direction = G10_Direction.Right;
+                else if (G10_RoomKeys.IsUp(key)) direction = G10_Direction.Up;
+                else if (G10_RoomKeys.IsDown(key)) direction = G10_Direction.Down;
                 else if (key == Key.Enter || key == Key.Z || key == Key.Space || key == Key.P) confirm = true;
             }
             return new G10_PacManInput(direction, confirm);

@@ -32,14 +32,14 @@ namespace OOPGames
             double scaleX = width / 1800;
             double scaleY = height / 1200;
 
-            canvas.Children.Add(new Image
+            canvas.Children.Add(Sharp(new Image
             {
                 Source = _overlay,
                 Width = width,
                 Height = height,
                 Stretch = Stretch.Fill,
                 IsHitTestVisible = false
-            });
+            }));
             PaintPortrait(canvas, portraitSource, scaleX, scaleY);
 
             AddHudText(canvas, "Kills: " + field.Score, 16, 16);
@@ -73,6 +73,11 @@ namespace OOPGames
                     + (field.SlowMotionTimeScale * 100).ToString("0")
                     + " % Tempo  |  noch " + field.SlowMotionRemainingSeconds.ToString("0.0")
                     + " s", 16, statusTop);
+                statusTop += 28;
+            }
+            if (field.SaveNoticeRemainingSeconds > 0)
+            {
+                AddHudText(canvas, field.SaveNoticeText + " (Strg + S)", 16, statusTop);
             }
 
             PaintHealthBar(canvas, player, scaleX, scaleY);
@@ -118,21 +123,36 @@ namespace OOPGames
         public void PaintStatusPlaceholder(
             Canvas canvas, Entity entity, double centerX, double centerY)
         {
-            if (entity.ActiveStatusEffects.Count == 0)
+            // Freezing is shown by ice crystals around the entity (ArenaParticleRenderer) and
+            // being devoured by the frog's tongue, so neither gets a ring; the other movement
+            // statuses (slow, stun) keep theirs.
+            bool hasRingStatus = false;
+            bool isStunned = false;
+            foreach (ActiveStatusEffect effect in entity.ActiveStatusEffects)
             {
+                if (effect.Id == "freeze" || effect.Id == "devoured")
+                {
+                    continue;
+                }
+                hasRingStatus = true;
+                if (effect.SpeedMultiplier == 0)
+                {
+                    isStunned = true;
+                }
+            }
+
+            // Weakness (Blacksteel) has its own ring even without a movement status.
+            if (!hasRingStatus)
+            {
+                if (entity.IsWeakened)
+                {
+                    AddStatusRing(canvas, entity, centerX, centerY, Brushes.DarkViolet, false);
+                }
                 return;
             }
 
-            bool isFrozen = false;
             bool isBurning = false;
             bool isPoisoned = false;
-            foreach (ActiveStatusEffect effect in entity.ActiveStatusEffects)
-            {
-                if (effect.SpeedMultiplier == 0)
-                {
-                    isFrozen = true;
-                }
-            }
             foreach (ActiveDamageOverTimeEffect effect
                 in entity.ActiveDamageOverTimeEffects)
             {
@@ -146,22 +166,39 @@ namespace OOPGames
                 }
             }
 
+            AddStatusRing(canvas, entity, centerX, centerY,
+                isStunned ? Brushes.LightCyan
+                    : isBurning ? Brushes.OrangeRed
+                    : isPoisoned ? Brushes.GreenYellow
+                    : entity.IsWeakened ? Brushes.DarkViolet : Brushes.Plum,
+                isStunned);
+        }
+
+        private static void AddStatusRing(
+            Canvas canvas, Entity entity, double centerX, double centerY,
+            Brush stroke, bool isSolid)
+        {
             double diameter = entity.Size + 12;
             Ellipse indicator = new Ellipse
             {
                 Width = diameter,
                 Height = diameter,
                 Fill = Brushes.Transparent,
-                Stroke = isFrozen ? Brushes.LightCyan
-                    : isBurning ? Brushes.OrangeRed
-                    : isPoisoned ? Brushes.GreenYellow : Brushes.Plum,
+                Stroke = stroke,
                 StrokeThickness = 3,
-                StrokeDashArray = isFrozen ? null : new DoubleCollection { 2, 2 },
+                StrokeDashArray = isSolid ? null : new DoubleCollection { 2, 2 },
                 IsHitTestVisible = false
             };
             Canvas.SetLeft(indicator, centerX - diameter / 2);
             Canvas.SetTop(indicator, centerY - diameter / 2);
             canvas.Children.Add(indicator);
+        }
+
+        // HUD textures are pixel art: scaled without smoothing they stay sharp.
+        private static Image Sharp(Image image)
+        {
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
+            return image;
         }
 
         private void PaintPortrait(
@@ -178,6 +215,7 @@ namespace OOPGames
                     0, 0, diameter * scaleX, diameter * scaleY)),
                 IsHitTestVisible = false
             };
+            Sharp(portrait);
             Canvas.SetLeft(portrait, (98 - diameter / 2) * scaleX);
             Canvas.SetTop(portrait, (1101 - diameter / 2) * scaleY);
             canvas.Children.Add(portrait);
@@ -211,12 +249,12 @@ namespace OOPGames
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Fill = Brushes.IndianRed
             });
-            healthBar.Children.Add(new Image
+            healthBar.Children.Add(Sharp(new Image
             {
                 Source = _healthBarTexture,
                 Stretch = Stretch.Fill,
                 IsHitTestVisible = false
-            });
+            }));
             healthBar.Children.Add(new TextBlock
             {
                 Text = "HP: " + player.CurrentHitPoints + " / " + player.MaxHitPoints,
@@ -301,6 +339,7 @@ namespace OOPGames
                     Stretch = Stretch.Fill,
                     IsHitTestVisible = false
                 };
+                Sharp(indicator);
                 Canvas.SetLeft(indicator, iconLeft);
                 Canvas.SetTop(indicator, iconTop);
                 canvas.Children.Add(indicator);

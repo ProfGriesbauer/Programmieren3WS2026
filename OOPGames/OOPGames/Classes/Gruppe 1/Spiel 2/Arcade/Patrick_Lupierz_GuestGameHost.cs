@@ -50,12 +50,22 @@ namespace OOPGames
         }
 
         // Entwickler: Patrick Lupierz – Datum: 18.11.2026 – Gruppe aus dem Klassennamen (Text vor dem ersten "_")
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – auch Klassen ohne "_" (z. B. Gruppe3DragRaceRules, HayDayRules)
+        // bekommen eine brauchbare Gruppe: 1. Text vor "_", 2. "Gruppe3"/"G5" am Anfang, 3. Name ohne Rollen-Endung
+        // (Rules, Painter, HumanPlayer, ComputerPlayer, Player), damit Regeln, Painter und Spieler zusammenpassen.
+        private static readonly string[] RoleSuffixes = { "ComputerPlayer", "HumanPlayer", "Painter", "Rules", "Player" };
+
         public static string GroupOf(object part)
         {
             if (part == null) return "";
             string name = part.GetType().Name;
             int cut = name.IndexOf('_');
-            return cut > 0 ? name.Substring(0, cut) : name;
+            if (cut > 0) return name.Substring(0, cut);
+            System.Text.RegularExpressions.Match number = System.Text.RegularExpressions.Regex.Match(name, @"^(Gruppe|G)\d+");
+            if (number.Success) return number.Value;
+            foreach (string suffix in RoleSuffixes)
+                if (name.Length > suffix.Length && name.EndsWith(suffix, StringComparison.Ordinal)) return name.Substring(0, name.Length - suffix.Length);
+            return name;
         }
 
         // Entwickler: Patrick Lupierz – Datum: 18.11.2026
@@ -80,7 +90,10 @@ namespace OOPGames
             List<IGamePlayer> playerList = (players ?? Enumerable.Empty<IGamePlayer>()).Where(p => p != null).ToList();
             foreach (IGameRules registered in rules ?? Enumerable.Empty<IGameRules>())
             {
-                if (registered == null || registered is IG1C_CasinoRules || result.Count >= G1C_ArcadeCatalog.MaxGamesPerCabinet) continue;
+                // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – keine Obergrenze mehr im Gast-Automaten: alle
+                // registrierten Spiele anderer Gruppen erscheinen in der (scrollbaren) Liste. Die vier eigenen Automaten
+                // behalten ihre Grenze von neun Spielen (G1C_ArcadeCatalog.MaxGamesPerCabinet).
+                if (registered == null || registered is IG1C_CasinoRules) continue;
                 try
                 {
                     IGameRules probe = Fresh(registered);
@@ -157,8 +170,10 @@ namespace OOPGames
     {
         public const int EntryFee = 5;
         public const int WinReward = 20;
-        public const int CanvasW = 480, CanvasH = 320;
-        private const double ViewW = 330, ViewH = 220;
+        // Änderung durch: Patrick Lupierz – Datum: 25.11.2026 – Zeichenfläche wie im Hauptfenster (vorher 480x320: fremde Spiele
+        // wirkten riesig und abgeschnitten). Das Bild wird auf die Fenstergröße herunterskaliert (Seitenverhältnis 3:2 bleibt).
+        public const int CanvasW = 960, CanvasH = 640;
+        private const double ViewTop = 34;
 
         private readonly G1C_GuestGameEntry _entry;
         private readonly Canvas _canvas = new Canvas { Width = CanvasW, Height = CanvasH, Background = Brushes.White };
@@ -198,6 +213,25 @@ namespace OOPGames
 
         protected override Color BackgroundColor { get { return Color.FromRgb(0x12, 0x0E, 0x1C); } }
 
+        // Änderung durch: Patrick Lupierz – 25.11.2026 – während der Partie keine Meldungsleiste (das Spiel füllt das Fenster)
+        protected override bool ShowMessage { get { return !Running; } }
+
+        // Entwickler: Patrick Lupierz – Datum: 25.11.2026
+        // Aufgabe: Bildbereich des fremden Spiels: so groß wie das Fenster erlaubt (unter der Kopfzeile, bei laufender Partie
+        //          bis zum unteren Rand), im Seitenverhältnis der Zeichenfläche und zentriert. Außerhalb der Partie bleibt
+        //          unten Platz für Meldung und Knöpfe.
+        private void ViewRect(out double x, out double y, out double w, out double h)
+        {
+            double left = G1C_Renderer.WindowLeft + 14, right = G1C_Renderer.WindowRight - 14;
+            double bottom = Running ? G1C_Renderer.WindowBottom - 10 : G1C_Renderer.ScreenHeight - 64;
+            double availW = Math.Max(60, right - left), availH = Math.Max(40, bottom - ViewTop);
+            double aspect = (double)CanvasW / CanvasH;
+            w = Math.Min(availW, availH * aspect);
+            h = w / aspect;
+            x = left + (availW - w) / 2;
+            y = ViewTop + (availH - h) / 2;
+        }
+
         // Änderung durch: Patrick Lupierz – 18.11.2026 – [Esc] verlässt immer (auch mitten in der Partie) und stellt
         // den Framework-Stand wieder her; der GameManager kehrt danach zur Spielauswahl zurück.
         protected override void OnKey(Key key)
@@ -220,13 +254,11 @@ namespace OOPGames
 
         protected override void OnClick(double x, double y)
         {
-            double vx = ViewX, vy = ViewY;
-            if (!Running || x < vx || y < vy || x > vx + ViewW || y > vy + ViewH) return;
-            Forward(new ClickSelection((int)((x - vx) / ViewW * CanvasW), (int)((y - vy) / ViewH * CanvasH), (int)MouseButton.Left));
+            double vx, vy, vw, vh;
+            ViewRect(out vx, out vy, out vw, out vh);
+            if (!Running || x < vx || y < vy || x > vx + vw || y > vy + vh) return;
+            Forward(new ClickSelection((int)((x - vx) / vw * CanvasW), (int)((y - vy) / vh * CanvasH), (int)MouseButton.Left));
         }
-
-        private static double ViewX { get { return (G1C_Renderer.ScreenWidth - ViewW) / 2; } }
-        private const double ViewY = 34;
 
         // Entwickler: Patrick Lupierz – neue Partie wie im Hauptfenster (StartGame_Click) starten
         public bool Start()
@@ -249,8 +281,7 @@ namespace OOPGames
                 Winner = null;
                 MovesMade = 0;
                 _rewardPaid = false;
-                Message = (_entry.HasComputerOpponent ? "Du gegen die KI von " + _entry.Group + "." : "Zwei Spieler abwechselnd.")
-                          + " [Esc] zur Spielauswahl.";
+                Message = "";   // Änderung durch: Patrick Lupierz – 25.11.2026 – während der Partie keine Nachricht
                 Render(false);
                 RunComputerMoves();
                 CheckEnd();
@@ -395,7 +426,8 @@ namespace OOPGames
 
         protected override void DrawGame(G1C_Renderer r)
         {
-            double vx = ViewX, vy = ViewY;
+            double vx, vy, ViewW, ViewH;
+            ViewRect(out vx, out vy, out ViewW, out ViewH);
             r.DrawRect(vx - 10, vy - 4, ViewW + 20, ViewH + 8, Color.FromRgb(0x18, 0x18, 0x20), Color.FromRgb(0xF8, 0x60, 0xD0), 2);
             if (_frame != null) r.DrawBitmap(_frame, vx, vy, ViewW, ViewH);
             else

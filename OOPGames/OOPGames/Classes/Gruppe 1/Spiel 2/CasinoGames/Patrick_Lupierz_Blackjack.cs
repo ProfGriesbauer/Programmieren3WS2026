@@ -48,13 +48,13 @@ namespace OOPGames
     /// Blackjack: Spieler und KI-Mitspieler spielen jeweils gegen den Dealer.
     /// Ablauf: Einsatz → Austeilen → Spieler (Karte/Halten) → KI → Dealer → Abrechnung.
     /// </summary>
-    public class G1C_Blackjack : G1C_CasinoGameBase
+    public class G1C_Blackjack : G1C_CasinoGameBase, IG1C_NpcDuelGame   // Änderung durch: Patrick Lupierz – 23.11.2026 – auch als NPC-Duell
     {
         private enum Phase { Betting, PlayerTurn, AiTurn, DealerTurn, RoundOver }
 
         private const int ActionDelay = 18; // Pause zwischen KI-/Dealer-Zügen (ca. 0,7 s)
 
-        private readonly G1C_BlackjackAI _ai;
+        private G1C_BlackjackAI _ai;
         private readonly List<G1C_BlackjackHand> _playerHands = new List<G1C_BlackjackHand>();
         private readonly List<int> _playerBets = new List<int>();
         private readonly List<bool> _playerNaturals = new List<bool>();
@@ -77,7 +77,29 @@ namespace OOPGames
             Message = "Einsatz mit [W]/[S] wählen, [E] Austeilen, [Q] Verlassen.";
         }
 
-        public override string Name { get { return "Blackjack"; } }
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Duell: der NPC sitzt als Mitspieler am Tisch; wer am Ende
+        // gegen den Dealer mehr gewonnen hat, gewinnt das Duell.
+        public string DuelOpponent { get; private set; }
+        private int _duelStartBalance;
+
+        public void ConfigureDuel(string opponent)
+        {
+            DuelOpponent = opponent;
+            _ai = new G1C_BlackjackAI(opponent, 1000, Random);
+            _duelStartBalance = Money.Balance;
+        }
+
+        public int PlayerNet { get { return Money.Balance - _duelStartBalance; } }
+        public int OpponentNet { get { return _ai.Net; } }
+        public bool DuelDecided { get { return DuelOpponent != null && PlayerNet != OpponentNet; } }
+        public bool PlayerWonDuel { get { return PlayerNet > OpponentNet; } }
+        public int NpcPurseChange { get { return OpponentNet; } }
+
+        public override string Name { get { return DuelOpponent != null ? "Blackjack-Duell gegen " + DuelOpponent : "Blackjack"; } }
+
+        private string ShortName { get { string[] parts = _ai.Name.Split(' '); return parts[parts.Length - 1]; } }
+
+        private static string Signed(int value) { return (value > 0 ? "+" : "") + value; }
 
         private G1C_Card DealerUpCard { get { return _dealerHand.Cards.Count > 0 ? _dealerHand.Cards[0] : null; } }
 
@@ -377,7 +399,9 @@ namespace OOPGames
             r.Text("Dealer hält ab 17 - Blackjack zahlt 3:2", 250, 36, 9, G1C_UiColors.PanelFill);
 
             // KI-Mitspieler
-            r.Text("KI " + _ai.Name + "  (Kasse " + _ai.Bankroll + ")", 20, 134, 11, G1C_UiColors.Gold);
+            if (DuelOpponent != null)
+                r.Text(_ai.Name + "  (du " + Signed(PlayerNet) + " / " + ShortName + " " + Signed(OpponentNet) + ")", 20, 134, 11, G1C_UiColors.Gold, 236);
+            else r.Text("KI " + _ai.Name + "  (Kasse " + _ai.Bankroll + ")", 20, 134, 11, G1C_UiColors.Gold);
             if (inRound)
             {
                 r.Text("Einsatz " + _aiBet + "  Wert " + _aiHand.Value + "  " + _aiResult, 20, 150, 10, Colors.White);
@@ -396,7 +420,9 @@ namespace OOPGames
                     r.Text((i == _activeHand && _phase == Phase.PlayerTurn ? "► " : "") +
                            (i + 1) + ": " + hand.Value + " / " + _playerBets[i] + " " + _playerResults[i],
                            260, y, 8, Colors.White);
-                    G1C_CardView.DrawHand(r, hand.Cards, 386, y - 2, 16);
+                    double cardAreaWidth = G1C_Renderer.ScreenWidth - 260;
+                    double cardX = 260 + System.Math.Max(0, (cardAreaWidth - System.Math.Max(1, hand.Cards.Count) * 16) / 2);
+                    G1C_CardView.DrawHand(r, hand.Cards, cardX, y - 2, 16);
                 }
             }
             else

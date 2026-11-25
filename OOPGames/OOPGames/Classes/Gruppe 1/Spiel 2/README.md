@@ -46,8 +46,8 @@ ein Klick auf ein Gebäude zeigt dessen Namen. Am Bett kann die Aufwachzeit gew�
 Im Casino bietet der Greifautomat eine animierte Item-Chance. Verkaufsautomaten verkaufen
 Kaffee, Wasser und Snacks; **F3** kauft dort Kaffee mit 12 % Chance auf ein zweites Item.
 Ladenpreise enthalten einen Aufschlag von 5 %. Beim Blackjack sind **3** = Split und **4** = Double.
-In der Bank kannst du Chips einzahlen und abheben; der Geldhai verleiht einmalig 250 Chips,
-die mit 300 Chips zurückzuzahlen sind. Möbel kaufst du im Möbelhaus und platzierst sie zuhause
+In der Bank kannst du Chips einzahlen und abheben; der Geldhai verleiht bis zu 5000 Chips; offene Schulden wachsen täglich um 50 % und verlieren Respekt.
+Möbel kaufst du im Möbelhaus und platzierst sie zuhause
 über den Einrichtungsplan.
 
 Zuhause wartet **Mama**, im Haus rechts daneben wohnt **Oma Gerda** (betretbar) mit ihren drei Katzen; beide stehen von Anfang an im

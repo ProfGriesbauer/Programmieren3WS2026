@@ -1,0 +1,45 @@
+{
+  "Id": "MineTurtle",
+  "Name": "Mine Turtle",
+  "Description": "Steht still und l\u00E4sst sich nicht verschieben. Tritt der Spieler auf sie, geht der Knopf runter, sie sagt \u201EHello\u201C und explodiert: Die Explosion t\u00F6tet alles im Radius, auch die Schildkr\u00F6te selbst.",
+  "SpeedFactor": 0,
+  "Size": 40,
+  "CanBePushed": false,
+  "BlocksMovement": false,
+  "KnockbackResistance": 1,
+  "Attacks": [
+    {
+      "Pattern": "Wave",
+      "Range": 160,
+      "DurationSeconds": 0.3,
+      "Damage": 0,
+      "CooldownSeconds": 0,
+      "Knockback": 0,
+      "Targets": "Everyone",
+      "Lethal": true,
+      "Trigger": "Contact",
+      "TriggeredBy": "Player",
+      "Windup": [
+        {
+          "Clip": "Aktive",
+          "Seconds": 0.3
+        },
+        {
+          "Clip": "Hello",
+          "Seconds": 0.7,
+          "Sound": "MineTurtleHello"
+        }
+      ],
+      "Sound": "PowerBlast",
+      "KillsAttacker": true
+    }
+  ],
+  "BehaviorType": "Turret",
+  "WarnsOthers": false,
+  "CanBeWarned": false,
+  "StartCount": 2,
+  "SpawnIntervalSeconds": 10,
+  "MaxAlive": 8,
+  "SpriteSheet": "Mine Turtel.png",
+  "ShowHealthBar": false
+}

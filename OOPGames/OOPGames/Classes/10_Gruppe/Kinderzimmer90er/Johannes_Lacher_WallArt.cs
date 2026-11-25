@@ -6,8 +6,8 @@ using System.Windows.Media;
 namespace OOPGames
 {
     // Painted pictures for the room wall: the arcade poster behind the Atari TV and the evening view
-    // through the window. Both are drawn once as vector art and turned into bitmaps (B5RoomTextures).
-    static class B5WallArt
+    // through the window. Both are drawn once as vector art and turned into bitmaps (G10_RoomTextures).
+    static class G10_WallArt
     {
         // Poster drawing size; the poster in the room is 2.06 x 0.86 m, so the same 2.4 : 1 ratio.
         const double PosterWidth = 960;
@@ -539,7 +539,7 @@ namespace OOPGames
         static Brush ToTexture(DrawingGroup drawing)
         {
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            return B5RoomTextures.ToBitmap(brush, PictureTextureSize);
+            return G10_RoomTextures.ToBitmap(brush, PictureTextureSize);
         }
     }
 }

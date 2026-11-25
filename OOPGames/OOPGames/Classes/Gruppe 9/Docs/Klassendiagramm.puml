@@ -1,0 +1,560 @@
+@startuml Gruppe9_Projektuebersicht
+' Klassendiagramm der Gruppe-9-Spiele (Arena Survival und 4-Gewinnt), Stand 25.11.2026.
+' Übersicht: wichtigste Mitglieder je Klasse; private Hilfsklassen
+' (z. B. RunningAttack, DevourGrip, FieldEditor<T>) und reine Datencontainer-
+' Details sind weggelassen. Gleichartige Implementierungen (Effekte, Angriffsmuster)
+' sind über ihr Interface zusammengefasst.
+
+skinparam classAttributeIconSize 0
+skinparam groupInheritance 3
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam class {
+  BackgroundColor<<Framework>> #EEEEEE
+  BackgroundColor<<static>> #FFF8E1
+  BackgroundColor<<WPF>> #E3F2FD
+  BackgroundColor<<JSON>> #F1F8E9
+}
+hide empty members
+
+' =====================================================================
+package "OOPGames-Framework" {
+  interface IGameRules2 <<Framework>> {
+    + Name : string
+    + CurrentField : IGameField
+    + DoMove(move)
+    + ClearField()
+    + StartedGameCall()
+    + TickGameCall()
+  }
+  interface IGameField <<Framework>> {
+    + CanBePaintedBy(painter) : bool
+  }
+  interface IGameRules <<Framework>>
+  interface IPaintGame <<Framework>>
+  interface IPaintGame2 <<Framework>> {
+    + PaintGameField(canvas, field)
+    + TickPaintGameField(canvas, field)
+  }
+  interface IHumanGamePlayer <<Framework>>
+  interface IComputerGamePlayer <<Framework>>
+  interface IRowMove <<Framework>>
+  interface IColumnMove <<Framework>>
+  interface I4GWFeld <<Framework>> {
+    + Item[row, column] : int
+  }
+  interface I4GWMove <<Framework>>
+  interface IG9_4GewinntPainter <<Framework>> {
+    + Paint4GewinntField(canvas, field)
+  }
+  interface IG9_4GewinntRules <<Framework>> {
+    + VierGewinntField : I4GWFeld
+    + Do4GewinntMove(move)
+  }
+  interface IG9_Human4GewinntPlayer <<Framework>> {
+    + GetMove(selection, field) : I4GWMove
+  }
+  interface IG9_Computer4GewinntPlayer <<Framework>> {
+    + GetMove(field) : I4GWMove
+  }
+  interface IConnectFourPainter <<Framework>> {
+    + ColumnAt(x, y) : int
+  }
+  interface IEntities <<Framework>> {
+    + MaxHitPoints, CurrentHitPoints
+    + PositionX, PositionY, Facing
+    + Move(dx, dy, bounds)
+    + TakeDamage(damage)
+  }
+}
+
+' =====================================================================
+package "Spielkern" {
+  class ArenaGameRegistration <<static>> {
+    + RegisterArenaGame()
+  }
+  class ArenaRules {
+    - _field : ArenaField
+  }
+  class HumanPlayerSteering
+  class ArenaField {
+    + Player : PlayerCharacter
+    + Enemies : IReadOnlyList<NonPlayerCharacter>
+    + MirrorImages : IReadOnlyList<MirrorImage>
+    + EnemyTypes : IReadOnlyList<EnemyType>
+    + MapRegions : IReadOnlyList<ArenaMapRegion>
+    + Progression : ArenaProgression
+    + KeyBindings : ArenaKeyBindings
+    + SaveGames : ArenaSaveGameRepository
+    + Scoreboard : ArenaScoreboard
+    + Score, Deaths, RunSeconds
+    --
+    + Tick()
+    + HandleKeyDown(key) / HandleMouseDown(button)
+    + SpawnEnemy(type) / SpawnEnemyNearPlayer(type)
+    + AlertEnemyAndNeighbours(enemy)
+    + ApplyMapAndSkillTree(map, tree)
+    + SaveNow() / LoadSaveGame(game, slot)
+    + Respawn()
+    --
+    <<events>> PlayerDied, EnemySoundRequested, ...
+  }
+  enum ArenaMenuRequest {
+    None
+    WeaponTree
+    SkillTree
+  }
+  class ArenaMapAssets <<static>> {
+    + LoadMap(file) : ArenaMapDefinition
+    + GetMapFileNames()
+    + SaveMap(...)
+  }
+  class ArenaMapDefinition {
+    + FileName, Image, Width, Height
+  }
+}
+
+ArenaGameRegistration ..> ArenaRules : registriert
+ArenaGameRegistration ..> PainterG9 : registriert
+ArenaGameRegistration ..> HumanPlayerSteering : registriert
+ArenaRules ..|> IGameRules2
+ArenaField ..|> IGameField
+HumanPlayerSteering ..|> IHumanGamePlayer
+ArenaRules *-- "1" ArenaField
+ArenaField --> ArenaMenuRequest
+ArenaField --> "1" ArenaMapDefinition : _map
+ArenaMapAssets ..> ArenaMapDefinition : erzeugt
+
+' =====================================================================
+package "4-Gewinnt" {
+  class G9_VierGewinntRules {
+    + Name : string
+    + VierGewinntField : I4GWFeld
+    + MovesPossible : bool
+    + DoMove(move) / Do4GewinntMove(move)
+    + CheckIfPLayerWon() : int
+    + ClearField()
+  }
+  class G9_VierGewinntField {
+    + Item[row, column] : int
+    + CanBePaintedBy(painter) : bool
+  }
+  class G9_VierGewinntMove {
+    + Row, Column, PlayerNumber : int
+  }
+  class G9_VierGewinntPainter {
+    + PaintGameField(canvas, field)
+    + Paint4GewinntField(canvas, field)
+  }
+  class G9_Human4GewinntPlayer {
+    + Name : string
+    + SetPlayerNumber(number)
+    + GetMove(selection, field) : I4GWMove
+  }
+  class G9_Computer4GewinntPlayer {
+    + Name : string
+    + SetPlayerNumber(number)
+    + GetMove(field) : I4GWMove
+  }
+  class G9_VierGewinntBoard <<static>> {
+    + Rows = 6
+    + Columns = 7
+  }
+}
+
+G9_VierGewinntRules ..|> IG9_4GewinntRules
+G9_VierGewinntRules *-- "1" G9_VierGewinntField
+G9_VierGewinntField ..|> I4GWFeld
+G9_VierGewinntMove ..|> I4GWMove
+G9_VierGewinntPainter ..|> IG9_4GewinntPainter
+G9_Human4GewinntPlayer ..|> IG9_Human4GewinntPlayer
+G9_Computer4GewinntPlayer ..|> IG9_Computer4GewinntPlayer
+IG9_4GewinntPainter --|> IPaintGame
+IG9_4GewinntRules --|> IGameRules
+IG9_Human4GewinntPlayer --|> IHumanGamePlayer
+IG9_Computer4GewinntPlayer --|> IComputerGamePlayer
+I4GWFeld --|> IGameField
+I4GWMove --|> IRowMove
+I4GWMove --|> IColumnMove
+IConnectFourPainter --|> IPaintGame
+G9_VierGewinntRules ..> G9_VierGewinntBoard
+G9_VierGewinntPainter ..> G9_VierGewinntBoard
+G9_VierGewinntPainter ..> I4GWFeld
+G9_Human4GewinntPlayer ..> I4GWFeld
+G9_Human4GewinntPlayer ..> IConnectFourPainter : optionale Spaltenauswahl
+G9_Computer4GewinntPlayer ..> I4GWFeld
+G9_VierGewinntRules ..> I4GWMove
+
+' =====================================================================
+package "Figuren" {
+  abstract class Entity {
+    + Team : CombatTeam
+    + EquippedWeapon : Weapon
+    + IsInvulnerable, CanBePushed, BlocksMovement
+    + DamageTakenMultiplier, KnockbackResistance
+    + StatusImmunities
+    + Hitbox : Rect
+    --
+    + TakeDamage(damage) / TakeFatalDamage()
+    + Heal(amount)
+    + ApplyMovementStatus(...)
+    + ApplyDamageOverTime(...)
+  }
+  class PlayerCharacter {
+    + GetRightHandOffset(facing)
+    + StartAttack(facing, holdSeconds)
+  }
+  abstract class NonPlayerCharacter {
+    + Type : EnemyType
+    + Attacks : IReadOnlyList<EnemyAttack>
+    + Behavior, TargetSelection, MovementStyle
+    + SightRange, AlertRadius, ...
+    + CurrentTarget : Entity
+    + IsAlerted, IsDevouring
+    --
+    + {abstract} UpdateBehavior(field, speedScale)
+    + TryAttack(field, combat) : bool
+    + Alert()
+    + StartDevouring(victim, seconds)
+    # Wander(field, speedScale, ...)
+    --
+    <<events>> Devoured, SoundRequested, SelfDestructed
+  }
+  class PursuerEnemy {
+    + IsFleeing, IsWindingUp
+    + TryAttackTargetInRange(target, combat)
+    + GetPlannedDestination(field)
+  }
+  class MirrorImage {
+    + RestoreSpawnTimers(...)
+  }
+  enum PlayerFacing {
+    Front
+    Back
+    Left
+    Right
+  }
+  class EntityHitboxCatalog <<static>> {
+    + GetHitboxOffset(sprite, height)
+    + GetEnemyHitboxOffset(sheet, height)
+  }
+}
+
+Entity ..|> IEntities
+PlayerCharacter --|> Entity
+NonPlayerCharacter --|> Entity
+PursuerEnemy --|> NonPlayerCharacter
+MirrorImage --|> NonPlayerCharacter
+Entity --> PlayerFacing
+ArenaField "1" *-- "1" PlayerCharacter
+ArenaField "1" *-- "*" NonPlayerCharacter : Gegner
+ArenaField "1" *-- "*" MirrorImage
+PursuerEnemy ..> EntityHitboxCatalog
+
+' =====================================================================
+package "Combat" {
+  class ArenaCombatSystem {
+    + TryStartAttack(source, weapon, dx, dy)
+    + Update(entities, bounds, deltaFor)
+    + IsAttacking(source)
+    + GetCooldownRemaining(entity, weapon)
+    + Clear()
+    --
+    <<events>> EntityDefeated, EntityStruck, LightningChained
+  }
+  class Weapon {
+    + Id, Name
+    + AttackPattern : IAttackPattern
+    + Effect : ICombatEffect
+    + CooldownSeconds, KnockbackDistance
+    + TargetingMode : WeaponTargetingMode
+    + Appearance : WeaponAppearance
+    + ChainLightning : ChainLightning
+  }
+  class WeaponCatalog <<static>> {
+    + Sword, MagicWand, Bow, EnemyClaws
+  }
+  enum WeaponTargetingMode {
+    Opponents
+    Allies
+    Self
+    Everyone
+  }
+  interface IAttackPattern {
+    + Range : double
+    + BeginAttack(source, dx, dy, weapon) : IAttackInstance
+  }
+  interface IAttackInstance {
+    + Update(delta, targets) : hits
+    + IsComplete
+    + VisualState : AttackVisualState
+  }
+  class "MeleeCone / SweepingArc / Spinning /\nProjectile / SelfPulse / Radial\nAttackPattern" as Patterns
+  interface ICombatEffect {
+    + Kind : CombatEffectKind
+    + Apply(source, target)
+  }
+  class "Damage / Healing / Poison / Burning /\nFreeze / Stun / Slow / Weakness /\nLifeSteal / TimeSlow / MirrorImageSummon /\nDevour / Lethal / Composite Effect" as Effects
+  class ArenaGroundEffect
+  class ChainLightning
+  class WeaponAppearance
+  class AttackGeometry <<static>>
+  enum CombatTeam {
+    Neutral
+    Player
+    Enemies
+  }
+}
+
+Patterns ..|> IAttackPattern
+Effects ..|> ICombatEffect
+IAttackPattern ..> IAttackInstance : erzeugt
+Weapon --> "1" IAttackPattern
+Weapon --> "1" ICombatEffect
+Weapon --> WeaponTargetingMode
+Weapon --> "0..1" WeaponAppearance
+Weapon --> "0..1" ChainLightning
+WeaponCatalog ..> Weapon
+ArenaCombatSystem o-- "*" ArenaGroundEffect
+ArenaCombatSystem ..> IAttackInstance : laufende Angriffe
+ArenaCombatSystem ..> Entity
+ArenaField *-- "1" ArenaCombatSystem
+Entity --> "0..1" Weapon : EquippedWeapon
+Entity --> CombatTeam
+Patterns ..> AttackGeometry
+
+' =====================================================================
+package "Enemies (Gegnerarten)" {
+  class EnemyTypeDefinition <<JSON>> {
+    alle Felder optional (null = Standard)
+    + Id, Name, MaxHitPoints, SpeedFactor, ...
+    + Attacks : List<EnemyAttackDefinition>
+    + Regions, PlayerCondition, SpriteSheet, ...
+  }
+  class EnemyAttackDefinition <<JSON>> {
+    + BaseWeapon, Pattern, Range, Damage, ...
+    + Trigger, TriggeredBy, Windup, Lethal, Devour
+  }
+  class EnemyWindupStepDefinition <<JSON>> {
+    + Clip, Seconds, Sound
+  }
+  class EnemyType {
+    + {static} Standard : EnemyType
+    + Id, Name, Enabled
+    + MaxHitPoints, SpeedFactor, Size, ...
+    + Attacks : IReadOnlyList<EnemyAttack>
+    + Behavior, SpawnIntervalSeconds, MaxAlive, ...
+    + {static} Resolve(definition, problems) : EnemyType
+  }
+  class EnemyAttack {
+    + Weapon : Weapon
+    + UseFromDistance, UseUpToDistance, Weight
+    + Trigger, TriggeredBy, WindupSteps
+    + Sound, KillsAttacker
+    + FitsDistance(d) / MayBeTriggeredBy(entity)
+  }
+  class EnemyWindupStep {
+    + Clip, Seconds, Sound
+  }
+  class EnemyValueChecker {
+    + Int(...) / Double(...) / Report(...)
+  }
+  class EnemyTypeRepository <<static>> {
+    + LoadAll(problems) : IReadOnlyList<EnemyType>
+    + LoadDefinition(id) / SaveDefinition(def)
+    + DeleteDefinition(id)
+  }
+  interface IEnemySpawnHost {
+    + LivingEnemyCount
+    + CountLivingEnemies(typeId)
+    + IsPlayerConditionMet(type)
+    + TrySpawnEnemy(type) : bool
+  }
+  class EnemySpawnDirector {
+    + Reset(types)
+    + SpawnStartEnemies(types, host)
+    + Update(delta, types, host)
+  }
+  class EnemySpawnPositionFinder {
+    + FindAwayFromPlayer(size, sheet, distance, regions)
+    + FindBesidePlayer(size, sheet)
+  }
+  class ArenaMapRegion {
+    + Name, Shape, X, Y, Width, Height, Radius
+    + Contains(x, y) / GetRandomPoint(random)
+  }
+  class ArenaMapRegionRepository <<static>> {
+    + Load(map) / Save(map, regions)
+    + GetAllRegionNames()
+  }
+  enum "EnemyBehavior\nEnemyTargetSelection\nEnemyMovementStyle\nEnemyAttackTrigger\nEnemyTriggerSource\nEnemySpawnPlayerCondition\nArenaRegionShape" as EnemyEnums
+}
+
+EnemyTypeDefinition *-- "*" EnemyAttackDefinition
+EnemyAttackDefinition *-- "*" EnemyWindupStepDefinition
+EnemyType ..> EnemyTypeDefinition : Resolve
+EnemyType *-- "1..*" EnemyAttack
+EnemyAttack *-- "*" EnemyWindupStep
+EnemyAttack --> "1" Weapon
+EnemyType ..> EnemyValueChecker
+EnemyType ..> EnemyEnums
+EnemyTypeRepository ..> EnemyTypeDefinition : JSON lesen/schreiben
+EnemyTypeRepository ..> EnemyType
+ArenaMapRegionRepository ..> ArenaMapRegion
+NonPlayerCharacter --> "1" EnemyType : Type
+ArenaField ..|> IEnemySpawnHost
+ArenaField *-- "1" EnemySpawnDirector
+ArenaField *-- "1" EnemySpawnPositionFinder
+ArenaField o-- "*" EnemyType
+ArenaField o-- "*" ArenaMapRegion
+EnemySpawnDirector ..> IEnemySpawnHost
+EnemySpawnPositionFinder ..> ArenaMapRegion
+
+' =====================================================================
+package "Progression" {
+  class ArenaProgression {
+    + UniversalPoints, TotalKills, IsGodMode
+    + EntityAbilities
+    + AwardKill(weapon, kills, weaponPoints)
+    + TryUpgradeSkill(id)
+    + TryUpgradeSword / MagicWand / Bow(...)
+    + ApplyDeathPenalty(...)
+    + Export() / Import(state)
+  }
+  class "SwordUpgradeCatalog\nMagicWandUpgradeCatalog\nBowUpgradeCatalog" as WeaponUpgradeCatalogs <<static>>
+  class PlayerAbilityCatalog <<static>>
+  class ArenaSkillTreeRepository <<static>> {
+    + LoadSelectedTree() / LoadTreeByName(name)
+    + SaveTree(name, tree) / SelectTree(name)
+  }
+  class ArenaSkillTreeDocument {
+    + Name
+    + Nodes : List<ArenaSkillTreeNode>
+    + Connections : List<ArenaSkillTreeConnection>
+  }
+  class WeaponElementEffectFactory <<static>>
+  class ArenaProgressionMenuRenderer
+  class SkillPointPaymentDialog <<WPF>>
+}
+
+ArenaField *-- "1" ArenaProgression
+ArenaProgression --> "1" ArenaSkillTreeDocument
+ArenaSkillTreeRepository ..> ArenaSkillTreeDocument
+ArenaProgression ..> WeaponUpgradeCatalogs
+ArenaProgression ..> PlayerAbilityCatalog
+WeaponUpgradeCatalogs ..> Weapon : erzeugt aufgerüstete Waffen
+WeaponUpgradeCatalogs ..> WeaponElementEffectFactory
+ArenaProgressionMenuRenderer ..> SkillPointPaymentDialog
+
+' =====================================================================
+package "SaveGames" {
+  class ArenaSaveGameRepository {
+    + Load(slot) / Save(slot, game) / Delete(slot)
+    + FindFreeSlot() / FindMostRecentSlot()
+  }
+  class ArenaSaveGame <<JSON>> {
+    + RunId, MapFileName, SkillTreeName
+    + Score, Deaths, RunSeconds
+    + Progression : ArenaProgressionSave
+    + Player : ArenaEntitySave
+    + Enemies : List<ArenaEntitySave>
+    + EnemySpawnTimers
+  }
+  class ArenaEntitySave <<JSON>> {
+    + X, Y, HitPoints, EnemyTypeId, AlertSeconds, ...
+  }
+  class ArenaProgressionSave <<JSON>>
+  class ArenaScoreboard {
+    + Entries : IReadOnlyList<ArenaScoreEntry>
+    + Record(...) / Save()
+  }
+}
+
+ArenaField o-- "0..1" ArenaSaveGameRepository
+ArenaField o-- "0..1" ArenaScoreboard
+ArenaSaveGameRepository ..> ArenaSaveGame
+ArenaSaveGame *-- ArenaEntitySave
+ArenaSaveGame *-- ArenaProgressionSave
+ArenaField ..> ArenaSaveGame : CreateSaveGame / LoadSaveGame
+
+' =====================================================================
+package "Input" {
+  class ArenaKeyBindings {
+    + GetKey(action) / MatchesKey(action, key)
+    + SetBinding(action, binding)
+    + Save() / {static} LoadDefault()
+  }
+  enum ArenaAction
+  class ArenaInputBinding
+  class ArenaPreferences
+  class ArenaWeaponWheel <<static>>
+}
+
+ArenaField *-- "1" ArenaKeyBindings
+ArenaKeyBindings *-- "*" ArenaInputBinding
+ArenaKeyBindings --> ArenaAction
+
+' =====================================================================
+package "Audio" {
+  class ArenaAudio {
+    + {static} EnemySoundNames
+    + Attach(field)
+    + Update()
+  }
+  class ArenaSoundGroup
+  interface IArenaSoundEffect
+  class ArenaSoundEffect
+  class ArenaLoopingSound
+}
+
+ArenaAudio *-- "*" ArenaSoundGroup
+ArenaSoundGroup o-- "*" IArenaSoundEffect
+ArenaSoundEffect ..|> IArenaSoundEffect
+ArenaAudio *-- "0..1" ArenaLoopingSound : Sprint-Motor
+ArenaAudio ..> ArenaField : abonniert Ereignisse
+
+' =====================================================================
+package "Darstellung und Dev Tool" {
+  class PainterG9 {
+    - _menuPage / _menuHistory
+    + TickPaintGameField(canvas, field)
+    + GetAttackAnimationName(...)
+  }
+  class SpriteSheetAnimator {
+    + GetFrame(clip, timeScale)
+    + HasClip(clip)
+    + {static} GetMirroredClipName(clip)
+  }
+  class "ArenaHudRenderer\nArenaDebugRenderer\nArenaWeaponRenderer\nArenaParticleRenderer\nArenaWeaponWheelRenderer" as Renderers
+  class ArenaUiButton <<WPF>>
+  class ArenaDevToolsControl <<WPF>>
+  class ArenaMapEditorControl <<WPF>>
+  class ArenaRegionEditorControl <<WPF>>
+  class ArenaSkillTreeEditorControl <<WPF>>
+  class ArenaEnemyEditorControl <<WPF>>
+  class ArenaIntegerTextBox <<WPF>>
+}
+
+PainterG9 ..|> IPaintGame2
+PainterG9 *-- Renderers
+PainterG9 *-- "1" ArenaAudio
+PainterG9 *-- "*" SpriteSheetAnimator : Spieler / Spiegelbilder / je Gegner-Sheet
+PainterG9 *-- "1" ArenaProgressionMenuRenderer
+PainterG9 ..> ArenaField : zeichnet
+PainterG9 ..> ArenaDevToolsControl : Dev-Tool-Seite
+PainterG9 ..> ArenaUiButton
+ArenaDevToolsControl *-- ArenaMapEditorControl : Tab
+ArenaDevToolsControl *-- ArenaRegionEditorControl : Tab
+ArenaDevToolsControl *-- ArenaSkillTreeEditorControl : Tab
+ArenaDevToolsControl *-- ArenaEnemyEditorControl : Tab
+ArenaEnemyEditorControl ..> EnemyTypeRepository
+ArenaEnemyEditorControl ..> ArenaIntegerTextBox
+ArenaRegionEditorControl ..> ArenaMapRegionRepository
+ArenaSkillTreeEditorControl ..> ArenaSkillTreeRepository
+ArenaMapEditorControl ..> ArenaMapAssets
+ArenaMapEditorControl ..> ArenaIntegerTextBox
+
+@enduml

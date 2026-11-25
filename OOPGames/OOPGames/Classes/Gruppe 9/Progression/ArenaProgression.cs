@@ -16,7 +16,9 @@ namespace OOPGames
         Poison,
         Lightning,
         Fire,
-        Freeze
+        Freeze,
+        // Sword only: the Blacksteel blade weakens hit enemies.
+        BlackSteel
     }
 
     public sealed class ArenaProgression
@@ -38,10 +40,13 @@ namespace OOPGames
             new Dictionary<string, int>();
         private readonly Dictionary<string, int> _weaponUpgradeRanks =
             new Dictionary<string, int>();
+        private readonly Dictionary<string, string> _forcedForkChoices =
+            new Dictionary<string, string>(StringComparer.Ordinal);
         private readonly string[] _entityAbilities =
             new string[AbilitySlotCount];
         private readonly Dictionary<string, string[]> _weaponAbilities =
             new Dictionary<string, string[]>();
+        private ArenaSkillTreeDocument _skillTree;
         private int _universalPoints;
         private bool _isBuyingEverything;
 
@@ -70,6 +75,11 @@ namespace OOPGames
             return _skillRanks.TryGetValue(skillId, out int rank) ? rank : 0;
         }
 
+        public bool HasChosenForcedForkBranch(string forkId)
+        {
+            return _forcedForkChoices.ContainsKey(forkId);
+        }
+
         public int GetWeaponUpgradeRank(string upgradeId)
         {
             return _weaponUpgradeRanks.TryGetValue(upgradeId, out int rank) ? rank : 0;
@@ -91,6 +101,10 @@ namespace OOPGames
         {
             get
             {
+                if (GetWeaponUpgradeRank(SwordUpgradeCatalog.BlackSteel) > 0)
+                {
+                    return WeaponElement.BlackSteel;
+                }
                 return GetSelectedElement(
                     SwordUpgradeCatalog.Poison,
                     SwordUpgradeCatalog.Lightning,
@@ -113,7 +127,17 @@ namespace OOPGames
 
         public ArenaProgression()
         {
+            _skillTree = ArenaSkillTreeRepository.LoadSelectedTree();
             Reset();
+        }
+
+        internal ArenaSkillTreeDocument SkillTree { get { return _skillTree; } }
+
+        internal void SetSkillTree(ArenaSkillTreeDocument skillTree)
+        {
+            ArenaSkillTreeRepository.ValidateTree(skillTree);
+            _skillTree = skillTree;
+            _forcedForkChoices.Clear();
         }
 
         public void Reset()
@@ -124,6 +148,7 @@ namespace OOPGames
             _weaponPoints.Clear();
             _skillRanks.Clear();
             _weaponUpgradeRanks.Clear();
+            _forcedForkChoices.Clear();
             _weaponAbilities.Clear();
             Array.Clear(_entityAbilities, 0, _entityAbilities.Length);
         }
@@ -133,54 +158,221 @@ namespace OOPGames
             IsGodMode = enabled;
         }
 
+        // Dying costs skill points and weapon points of the equipped weapon; points never
+        // drop below zero and bought upgrades stay.
+        public void ApplyDeathPenalty(string weaponId, int skillPoints, int weaponPoints)
+        {
+            _universalPoints = Math.Max(0, _universalPoints - skillPoints);
+            if (weaponId != null)
+            {
+                _weaponPoints[weaponId] =
+                    Math.Max(0, GetStoredWeaponPoints(weaponId) - weaponPoints);
+            }
+        }
+
+        public ArenaProgressionSave Export()
+        {
+            return new ArenaProgressionSave
+            {
+                UniversalPoints = _universalPoints,
+                TotalKills = TotalKills,
+                IsGodMode = IsGodMode,
+                WeaponPoints = new Dictionary<string, int>(_weaponPoints),
+                SkillRanks = new Dictionary<string, int>(_skillRanks),
+                WeaponUpgradeRanks = new Dictionary<string, int>(_weaponUpgradeRanks),
+                ForcedForkChoices = new Dictionary<string, string>(_forcedForkChoices),
+                EntityAbilities = (string[])_entityAbilities.Clone(),
+                WeaponAbilities = _weaponAbilities.ToDictionary(
+                    pair => pair.Key, pair => (string[])pair.Value.Clone())
+            };
+        }
+
+        public void Import(ArenaProgressionSave state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            Reset();
+            _universalPoints = state.UniversalPoints;
+            TotalKills = state.TotalKills;
+            IsGodMode = state.IsGodMode;
+            CopyInto(state.WeaponPoints, _weaponPoints);
+            CopyInto(state.SkillRanks, _skillRanks);
+            CopyInto(state.WeaponUpgradeRanks, _weaponUpgradeRanks);
+            if (state.ForcedForkChoices != null)
+            {
+                foreach (KeyValuePair<string, string> pair in state.ForcedForkChoices)
+                {
+                    _forcedForkChoices[pair.Key] = pair.Value;
+                }
+            }
+            if (state.EntityAbilities != null)
+            {
+                Array.Copy(state.EntityAbilities, _entityAbilities,
+                    Math.Min(state.EntityAbilities.Length, _entityAbilities.Length));
+            }
+            if (state.WeaponAbilities != null)
+            {
+                foreach (KeyValuePair<string, string[]> pair in state.WeaponAbilities)
+                {
+                    string[] slots = new string[AbilitySlotCount];
+                    if (pair.Value != null)
+                    {
+                        Array.Copy(pair.Value, slots, Math.Min(pair.Value.Length, slots.Length));
+                    }
+                    _weaponAbilities[pair.Key] = slots;
+                }
+            }
+        }
+
+        private static void CopyInto(
+            Dictionary<string, int> source, Dictionary<string, int> target)
+        {
+            if (source == null)
+            {
+                return;
+            }
+            foreach (KeyValuePair<string, int> pair in source)
+            {
+                target[pair.Key] = pair.Value;
+            }
+        }
+
         public void AwardKill(Weapon weapon)
+        {
+            AwardKill(weapon, 1, WeaponPointsPerKill);
+        }
+
+        // An enemy kind can count as several kills (or none) towards the skill-point
+        // milestones and give its own number of weapon points.
+        public void AwardKill(Weapon weapon, int kills, int weaponPoints)
         {
             if (weapon == null)
             {
                 throw new ArgumentNullException(nameof(weapon));
             }
+            if (kills < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kills));
+            }
+            if (weaponPoints < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(weaponPoints));
+            }
 
-            TotalKills++;
+            int killsBefore = TotalKills;
+            TotalKills += kills;
             string weaponId = weapon.Id == MagicWandUpgradeCatalog.StrikeAbility
                 ? WeaponCatalog.MagicWand.Id
                 : weapon.Id == SwordUpgradeCatalog.SpinAbility
                     ? WeaponCatalog.Sword.Id
                     : weapon.Id;
             _weaponPoints[weaponId] =
-                GetStoredWeaponPoints(weaponId) + WeaponPointsPerKill;
-            if (TotalKills % KillsPerUniversalPoint == 0)
-            {
-                _universalPoints += UniversalPointsPerKillMilestone;
-            }
+                GetStoredWeaponPoints(weaponId) + weaponPoints;
+            int milestones = TotalKills / KillsPerUniversalPoint
+                - killsBefore / KillsPerUniversalPoint;
+            _universalPoints += milestones * UniversalPointsPerKillMilestone;
         }
 
         public bool TryUpgradeSkill(string skillId)
         {
+            ArenaSkillTreeNode node = _skillTree.Nodes.FirstOrDefault(
+                item => !item.IsFork && item.SkillId == skillId
+                    && CanUpgradeSkillNode(
+                        ArenaSkillTreeRepository.GetNodeId(item)));
+            return node != null
+                && TryUpgradeSkillNode(ArenaSkillTreeRepository.GetNodeId(node));
+        }
+
+        public bool TryUpgradeSkillNode(string nodeId)
+        {
+            ArenaSkillTreeNode node = GetPurchasableNode(nodeId);
+            if (node == null || !CanUpgradeSkillNode(nodeId))
+            {
+                return false;
+            }
+
             PlayerAbilityDefinition definition =
-                PlayerAbilityCatalog.GetDefinition(skillId);
-            int currentRank = GetSkillRank(skillId);
-            if (currentRank >= definition.MaximumRank)
-            {
-                return false;
-            }
-
+                PlayerAbilityCatalog.GetDefinition(node.SkillId);
+            int currentRank = GetSkillRank(node.SkillId);
             int cost = definition.GetNextRankCost(currentRank);
-            if (!IsGodMode && _universalPoints < cost)
-            {
-                return false;
-            }
-
             if (!IsGodMode)
             {
                 _universalPoints -= cost;
             }
-            _skillRanks[skillId] = currentRank + 1;
+            _skillRanks[node.SkillId] = currentRank + 1;
             if (currentRank == 0)
             {
-                AssignToFirstFreeSlot(_entityAbilities, skillId);
+                RecordForkChoices(nodeId);
+                AssignToFirstFreeSlot(_entityAbilities, node.SkillId);
             }
             RaiseUpgradePurchased();
             return true;
+        }
+
+        public bool CanUpgradeSkill(string skillId)
+        {
+            return _skillTree.Nodes.Any(node => !node.IsFork
+                && node.SkillId == skillId
+                && CanUpgradeSkillNode(ArenaSkillTreeRepository.GetNodeId(node)));
+        }
+
+        public bool CanUpgradeSkillNode(string nodeId)
+        {
+            ArenaSkillTreeNode node = GetPurchasableNode(nodeId);
+            if (node == null || IsPlayerStat(node.SkillId))
+            {
+                return false;
+            }
+
+            int currentRank = GetSkillRank(node.SkillId);
+            int rankStart = ArenaSkillTreeRepository.GetRankStart(_skillTree, node);
+            int rankLimit = rankStart
+                + ArenaSkillTreeRepository.GetRankStages(node);
+            PlayerAbilityDefinition definition =
+                PlayerAbilityCatalog.GetDefinition(node.SkillId);
+            return currentRank >= rankStart
+                && currentRank < rankLimit
+                && ArenaSkillTreeRepository.AreNodePrerequisitesMet(
+                    _skillTree, nodeId, GetSkillRank, GetChosenForkBranch)
+                && (IsGodMode
+                    || _universalPoints
+                        >= definition.GetNextRankCost(currentRank));
+        }
+
+        public int GetSkillNodeRankStart(string nodeId)
+        {
+            ArenaSkillTreeNode node = GetPurchasableNode(nodeId);
+            return node == null
+                ? 0
+                : ArenaSkillTreeRepository.GetRankStart(_skillTree, node);
+        }
+
+        public int GetSkillNodeRankStages(string nodeId)
+        {
+            ArenaSkillTreeNode node = GetPurchasableNode(nodeId);
+            return node == null
+                ? 0
+                : ArenaSkillTreeRepository.GetRankStages(node);
+        }
+
+        public bool HasSkillPrerequisites(string skillId)
+        {
+            return AreSkillPrerequisitesMet(skillId);
+        }
+
+        public bool HasSkillNodePrerequisites(string nodeId)
+        {
+            return ArenaSkillTreeRepository.AreNodePrerequisitesMet(
+                _skillTree, nodeId, GetSkillRank, GetChosenForkBranch);
+        }
+
+        public int GetForkInputsRemaining(string nodeId)
+        {
+            return ArenaSkillTreeRepository.GetForkInputsRemaining(
+                _skillTree, nodeId, GetSkillRank, GetChosenForkBranch);
         }
 
         // Godmode helper: buys every skill, ability modifier, player stat and weapon upgrade
@@ -292,22 +484,62 @@ namespace OOPGames
         public bool CanUpgradePlayerStat(string statId)
         {
             ValidatePlayerStatId(statId);
-            return GetSkillRank(statId) < PlayerStatMaximumRank
-                && (IsGodMode || _universalPoints >= GetPlayerStatNextRankCost(statId));
+            return _skillTree.Nodes.Any(node => !node.IsFork
+                && node.SkillId == statId
+                && CanUpgradePlayerStatNode(
+                    ArenaSkillTreeRepository.GetNodeId(node)));
         }
 
         public bool TryUpgradePlayerStat(string statId)
         {
-            if (!CanUpgradePlayerStat(statId))
+            ArenaSkillTreeNode node = _skillTree.Nodes.FirstOrDefault(
+                item => !item.IsFork && item.SkillId == statId
+                    && CanUpgradePlayerStatNode(
+                        ArenaSkillTreeRepository.GetNodeId(item)));
+            return node != null
+                && TryUpgradePlayerStatNode(
+                    ArenaSkillTreeRepository.GetNodeId(node));
+        }
+
+        public bool CanUpgradePlayerStatNode(string nodeId)
+        {
+            ArenaSkillTreeNode node = GetPurchasableNode(nodeId);
+            if (node == null || !IsPlayerStat(node.SkillId))
             {
                 return false;
             }
 
+            int currentRank = GetSkillRank(node.SkillId);
+            int rankStart = ArenaSkillTreeRepository.GetRankStart(_skillTree, node);
+            int rankLimit = rankStart
+                + ArenaSkillTreeRepository.GetRankStages(node);
+            return currentRank >= rankStart
+                && currentRank < rankLimit
+                && ArenaSkillTreeRepository.AreNodePrerequisitesMet(
+                    _skillTree, nodeId, GetSkillRank, GetChosenForkBranch)
+                && (IsGodMode
+                    || _universalPoints
+                        >= GetPlayerStatNextRankCost(node.SkillId));
+        }
+
+        public bool TryUpgradePlayerStatNode(string nodeId)
+        {
+            ArenaSkillTreeNode node = GetPurchasableNode(nodeId);
+            if (node == null || !CanUpgradePlayerStatNode(nodeId))
+            {
+                return false;
+            }
+
+            int currentRank = GetSkillRank(node.SkillId);
             if (!IsGodMode)
             {
-                _universalPoints -= GetPlayerStatNextRankCost(statId);
+                _universalPoints -= GetPlayerStatNextRankCost(node.SkillId);
             }
-            _skillRanks[statId] = GetSkillRank(statId) + 1;
+            _skillRanks[node.SkillId] = currentRank + 1;
+            if (currentRank == 0)
+            {
+                RecordForkChoices(nodeId);
+            }
             RaiseUpgradePurchased();
             return true;
         }
@@ -384,6 +616,51 @@ namespace OOPGames
                     "Unknown ability modifier: " + modifierId, nameof(modifierId));
             }
             return owner;
+        }
+
+        private bool AreSkillPrerequisitesMet(string skillId)
+        {
+            return ArenaSkillTreeRepository.ArePrerequisitesMet(
+                _skillTree, skillId, GetSkillRank, GetChosenForkBranch);
+        }
+
+        private string GetChosenForkBranch(string forkId)
+        {
+            return _forcedForkChoices.TryGetValue(
+                forkId, out string choice) ? choice : null;
+        }
+
+        private ArenaSkillTreeNode GetPurchasableNode(string nodeId)
+        {
+            return _skillTree.Nodes.FirstOrDefault(node =>
+                !node.IsFork
+                && String.Equals(
+                    ArenaSkillTreeRepository.GetNodeId(node),
+                    nodeId, StringComparison.Ordinal));
+        }
+
+        private static bool IsPlayerStat(string skillId)
+        {
+            return skillId == MaximumHealth || skillId == MaximumSpeed;
+        }
+
+        private void RecordForkChoices(string nodeId)
+        {
+            foreach (ArenaSkillTreeNode fork in _skillTree.Nodes.Where(
+                node => node.IsFork && node.ForceDecision))
+            {
+                bool isDirectBranch = _skillTree.Connections.Any(
+                    connection => connection.FromSkillId
+                            == ArenaSkillTreeRepository.GetNodeId(fork)
+                        && connection.ToSkillId == nodeId);
+                if (isDirectBranch
+                    && !_forcedForkChoices.ContainsKey(
+                        ArenaSkillTreeRepository.GetNodeId(fork)))
+                {
+                    _forcedForkChoices.Add(
+                        ArenaSkillTreeRepository.GetNodeId(fork), nodeId);
+                }
+            }
         }
 
         public bool TryAssignEntityAbility(int slotIndex, string abilityId)

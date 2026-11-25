@@ -32,7 +32,8 @@ namespace OOPGames
         public CombatEffectKind EffectKind { get; }
         public string AnimationPlaceholder { get; }
         public double Range { get; }
-        public double Radius { get; }
+        // Current radius of bursts: power blast and pulses grow outwards over their duration.
+        public double Radius { get; internal set; }
         public double CenterX { get; internal set; }
         public double CenterY { get; internal set; }
         public double DirectionX { get; internal set; }
@@ -41,6 +42,16 @@ namespace OOPGames
         public double Progress { get; internal set; }
         public double ProjectileX { get; internal set; }
         public double ProjectileY { get; internal set; }
+        // Blade of a sword attack: the damage area is exactly this segment, from the grip in
+        // the hand to the tip, BladeHalfWidth wide on each side. Unused when HasBlade is false.
+        public double BladeStartX { get; internal set; }
+        public double BladeStartY { get; internal set; }
+        public double BladeEndX { get; internal set; }
+        public double BladeEndY { get; internal set; }
+        public double BladeHalfWidth { get; internal set; }
+        public bool HasBlade { get { return BladeHalfWidth > 0; } }
+        // Sprite clips of the weapon that started the attack; null without sprites.
+        public WeaponAppearance Appearance { get; internal set; }
     }
 
     public interface IAttackInstance

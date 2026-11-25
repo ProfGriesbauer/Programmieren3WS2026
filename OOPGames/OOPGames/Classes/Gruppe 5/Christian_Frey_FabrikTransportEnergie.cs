@@ -40,7 +40,7 @@ namespace OOPGames
             _itemsPerTick = itemsPerTick;
         }
 
-        public override string Name => "Laufband";
+        public override string Name => "Förderband";
         public IReadOnlyDictionary<G5_Item, int> Contents => _items.Contents;
         public override IReadOnlyDictionary<G5_Item, int> TransferableContents => _items.Contents;
         internal IG5_ItemEndpoint Source => _source;
@@ -299,7 +299,7 @@ namespace OOPGames
             _maxOutputPerTick = maxOutputPerTick;
         }
 
-        public override string Name => "Verbrennungsgenerator";
+        public override string Name => "Kohlekraftwerk";
         public int MaxOutputPerTick => _maxOutputPerTick;
         public IReadOnlyDictionary<G5_Item, int> FuelContents => _fuel.Contents;
 

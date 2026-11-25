@@ -1,0 +1,1535 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace OOPGames
+{
+    public sealed class SatisfactoryGameRules : IGameRules2
+    {
+        private const int MapWidth = 120;
+        private const int MapHeight = 80;
+        private const int BuildingWidth = 1;
+        private const int BuildingHeight = 1;
+        private const int HudHeight = 56;
+        private int _resourceAmount = 300;
+        private int _minerCycleTicks = 35;
+        private int _smelterCycleTicks = 55;
+        private readonly Random _random = new Random();
+        private readonly Dictionary<G5_GridPosition, G5_ResourceDeposit> _deposits =
+            new Dictionary<G5_GridPosition, G5_ResourceDeposit>();
+        private readonly Dictionary<G5_Building, Dictionary<G5_Item, int>> _buildingInvestments =
+            new Dictionary<G5_Building, Dictionary<G5_Item, int>>();
+        private readonly HashSet<G5_Building> _beltConnectedSources = new HashSet<G5_Building>();
+        private readonly HashSet<(G5_ProductionBuilding Building, G5_Item Item)> _beltConnectedInputs =
+            new HashSet<(G5_ProductionBuilding Building, G5_Item Item)>();
+        private readonly SatisfactoryStartScreen _startScreen = new SatisfactoryStartScreen();
+        private readonly SatisfactoryGameMentor _mentor = new SatisfactoryGameMentor();
+        private G5_FabrikSpielfeld _field;
+        private SatisfactoryFieldView _fieldView;
+        private bool _gameStarted;
+
+        public SatisfactoryGameRules()
+        {
+            ClearField();
+        }
+
+        public string Name => "G5 Fabrikregeln";
+        public IGameField CurrentField => _fieldView;
+        public bool MovesPossible => _field != null;
+
+        public void DoMove(IPlayMove move)
+        {
+            if (_field == null)
+            {
+                return;
+            }
+
+            if (!(move is G5_FabrikAktion action))
+            {
+                _field.SetStatusMeldung("Eingabe konnte nicht verarbeitet werden.");
+                return;
+            }
+
+            if (!_gameStarted)
+            {
+                if (action.Aktionstyp == G5_FabrikAktionstyp.GebaeudePlatzieren &&
+                    _startScreen.HandleClick(action.X, action.Y))
+                {
+                    SatisfactoryStartScreenSettings settings = _startScreen.SelectedSettings;
+                    _resourceAmount = settings.ResourceAmount;
+                    _minerCycleTicks = settings.MinerCycleTicks;
+                    _smelterCycleTicks = settings.SmelterCycleTicks;
+                    _gameStarted = true;
+                    if (settings.TutorialEnabled)
+                    {
+                        _mentor.Begin();
+                    }
+                    else
+                    {
+                        _mentor.Reset();
+                    }
+
+                    ClearField();
+                    _field.SetStatusMeldung("WASD: bewegen | E: abbauen | Gebäude über das Baumenü platzieren.");
+                }
+
+                return;
+            }
+
+            if (action.Aktionstyp == G5_FabrikAktionstyp.StatistikUmschalten)
+            {
+                _field.ToggleStatistik();
+                return;
+            }
+
+            if (_field.Spielphase != G5_Spielphase.Fabrik)
+            {
+                return;
+            }
+
+            switch (action.Aktionstyp)
+            {
+                case G5_FabrikAktionstyp.SpielerBewegen:
+                    MovePlayer(action.X, action.Y);
+                    break;
+                case G5_FabrikAktionstyp.RohstoffAbbauen:
+                    MineFacingResource();
+                    break;
+                case G5_FabrikAktionstyp.GebaeudeAnsehen:
+                    SelectBuilding(action.X, action.Y);
+                    break;
+                case G5_FabrikAktionstyp.WerkzeugWaehlen:
+                    SelectBuildTool(action.Werkzeug);
+                    break;
+                case G5_FabrikAktionstyp.GebaeudeBauen:
+                    PlaceBuilding(action.Werkzeug);
+                    break;
+                case G5_FabrikAktionstyp.RezeptWaehlen:
+                    SelectRecipe(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.GebaeudeUpgraden:
+                    UpgradeSelectedBuilding();
+                    break;
+                case G5_FabrikAktionstyp.GebaeudeVerkaufen:
+                    SellSelectedBuilding();
+                    break;
+                case G5_FabrikAktionstyp.RaketeBetanken:
+                    _field.TryBetankeRakete(_field.AusgewaehltesInternesGebaeude as G5_Rakete, out string tankmeldung);
+                    _field.SetStatusMeldung(tankmeldung);
+                    break;
+                case G5_FabrikAktionstyp.RaketeStarten:
+                    _field.TryStarteRakete(_field.AusgewaehltesInternesGebaeude as G5_Rakete, out string startmeldung);
+                    _field.SetStatusMeldung(startmeldung);
+                    break;
+                case G5_FabrikAktionstyp.GegenstandAbholen:
+                    CollectSelectedBuildingOutput(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.ManuellHerstellen:
+                    CraftManually(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.InventarGegenstandWaehlen:
+                    SelectInventoryItemForDrop(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.AbwurfMengeEingeben:
+                    _field.AendereMengeEingabe(action.Wert);
+                    break;
+                case G5_FabrikAktionstyp.InventarGegenstandAblegen:
+                    DropSelectedInventoryItem();
+                    break;
+                case G5_FabrikAktionstyp.BodenGegenstaendeAufnehmen:
+                    PickUpGroundItems();
+                    break;
+                case G5_FabrikAktionstyp.BaumenueUmschalten:
+                case G5_FabrikAktionstyp.GebaeuderegisterUmschalten:
+                    _field.ToggleBaumenue();
+                    break;
+                case G5_FabrikAktionstyp.TutorialUeberspringen:
+                    _mentor.Skip();
+                    break;
+                case G5_FabrikAktionstyp.MinimapUmschalten:
+                    _field.ToggleMinimap();
+                    _field.SetStatusMeldung(_field.MinimapSichtbar
+                        ? "Minimap eingeblendet (M)."
+                        : "Minimap ausgeblendet (M).");
+                    break;
+                case G5_FabrikAktionstyp.RohstoffSucheWaehlen:
+                    SelectResourceSearch(action.Wert);
+                    break;
+                default:
+                    _field.SetStatusMeldung("Unbekannte Aktion.");
+                    break;
+            }
+        }
+
+        public void ClearField()
+        {
+            _deposits.Clear();
+            _buildingInvestments.Clear();
+            _beltConnectedSources.Clear();
+            _beltConnectedInputs.Clear();
+
+            G5_WeltSpielfeld world = new G5_WeltSpielfeld(MapWidth, MapHeight);
+            int playerX = MapWidth / 2;
+            int playerY = MapHeight / 2;
+            _field = new G5_FabrikSpielfeld(world, playerX, playerY);
+            CreateRandomMap(playerX, playerY);
+
+            for (int y = 0; y < MapHeight; y++)
+            {
+                for (int x = 0; x < MapWidth; x++)
+                {
+                    if (!world.TrySetSichtbarkeit(x, y, true))
+                    {
+                        throw new InvalidOperationException("Eine Startkachel konnte nicht sichtbar gemacht werden.");
+                    }
+                }
+            }
+
+            _fieldView = new SatisfactoryFieldView(_field, _startScreen, _mentor, _gameStarted);
+            _field.SetStatusMeldung(
+                "WASD: bewegen | E: Rohstoff abbauen | Baumenü: Gebäude auswählen und platzieren.");
+        }
+
+        public int CheckIfPLayerWon()
+        {
+            return -1;
+        }
+
+        public void StartedGameCall()
+        {
+            _gameStarted = false;
+            _mentor.Reset();
+            _startScreen.ShowHome();
+            ClearField();
+        }
+
+        public void TickGameCall()
+        {
+            if (_field == null || !_gameStarted)
+            {
+                return;
+            }
+
+            if (_field.Spielphase != G5_Spielphase.Fabrik)
+            {
+                _field.TickRaketenstart();
+                return;
+            }
+
+            if (_fieldView.TryConsumePendingConveyorLine(
+                out G5_GridPosition lineStart,
+                out G5_GridPosition lineEnd))
+            {
+                PlaceConveyorLine(lineStart, lineEnd);
+            }
+
+            if (_fieldView.TryConsumePendingBuild(
+                out G5_Bauwerkzeug droppedTool,
+                out G5_GridPosition dropPosition))
+            {
+                PlaceBuilding(droppedTool, dropPosition);
+            }
+
+            _field.TickHandabbauCooldown();
+            _field.EntferneAbgelaufeneGegenstaende(DateTimeOffset.UtcNow);
+
+            G5_Recipe abgeschlossenesHandwerk = _field.TickManuellesHandwerk();
+            if (abgeschlossenesHandwerk != null)
+            {
+                int offen = _field.OffeneHandwerkAnzahl;
+                _field.SetStatusMeldung(
+                    abgeschlossenesHandwerk.OutputAmount + " " +
+                    G5_FabrikBezeichnungen.Gegenstand(abgeschlossenesHandwerk.Output) +
+                    " hergestellt." +
+                    (offen > 0 ? " Noch " + offen + " in Arbeit." : ""));
+                _mentor.ObserveManualCraftCompleted(abgeschlossenesHandwerk);
+            }
+
+            List<G5_Miner> miners = _field.InterneGebaeude.OfType<G5_Miner>().ToList();
+            Dictionary<G5_Miner, long?> depositsBeforeTick = miners.ToDictionary(
+                miner => miner,
+                miner => miner.RemainingDeposit);
+
+            _field.Simulation.Tick();
+            UpdateVisibleDeposits(miners, depositsBeforeTick);
+            TransferMaterials();
+        }
+
+        private void MovePlayer(int dx, int dy)
+        {
+            if (_field.MoveSpieler(dx, dy))
+            {
+                _field.SetStatusMeldung("Du schaust auf das markierte Feld. E baut dort Rohstoffe ab.");
+                _mentor.ObservePlayerMoved();
+            }
+            else
+            {
+                _field.SetStatusMeldung("Dort kannst du nicht weitergehen.");
+            }
+        }
+
+        private void MineFacingResource()
+        {
+            G5_GridPosition target = _field.ZielKachel;
+            if (!_deposits.TryGetValue(target, out G5_ResourceDeposit deposit))
+            {
+                _field.SetStatusMeldung("Vor dir gibt es keinen abbaubaren Rohstoff.");
+                _mentor.Explain("Auf dem anvisierten Feld liegt kein Vorkommen. Laufe mit WASD neben Erz oder Holz und richte den Blick darauf.");
+                return;
+            }
+
+            if (deposit.RemainingAmount == 0)
+            {
+                _field.SetStatusMeldung("Dieses Vorkommen ist erschöpft.");
+                _mentor.Explain("Dieses Vorkommen ist erschöpft. Suche mit WASD ein anderes Rohstofffeld.");
+                return;
+            }
+
+            if (!_field.KannEinlagern(1))
+            {
+                _field.SetStatusMeldung("Rucksack und Lager sind voll. Baue ein Lager oder schaffe Platz.");
+                _mentor.Explain("Dein Rucksack ist voll. Lege Gegenstände ab oder baue ein Lager, bevor du weiter abbaust.");
+                return;
+            }
+
+            if (!_field.TryStartHandabbau())
+            {
+                double verbleibendeSekunden = _field.VerbleibendeHandabbauCooldownTicks * 0.04;
+                _field.SetStatusMeldung(
+                    "Handabbau dauert etwa 2 Sekunden. Bitte noch " +
+                    verbleibendeSekunden.ToString("0.0") + " Sekunden warten.");
+                return;
+            }
+
+            int extracted = deposit.ExtractUpTo(1);
+            if (extracted == 0)
+            {
+                _field.SetStatusMeldung("Dieses Vorkommen ist erschöpft.");
+                return;
+            }
+
+            if (!_field.Welt.TryReduceRohstoff(target.X, target.Y, extracted))
+            {
+                throw new InvalidOperationException("Der Ressourcenbestand des Spielfelds konnte nicht aktualisiert werden.");
+            }
+
+            _field.AddInventar(deposit.Item, extracted);
+            _field.ErfasseAbbau(deposit.Item, extracted);
+            _field.SetStatusMeldung("+" + extracted + " " +
+                G5_FabrikBezeichnungen.Gegenstand(deposit.Item) + " gesammelt.");
+            _mentor.ObserveHandMining(deposit.Item);
+        }
+
+        private void SelectBuilding(int x, int y)
+        {
+            if (x < 0 || y < 0)
+            {
+                _field.DeselectBuilding();
+                return;
+            }
+
+            if (_field.SelectBuildingAt(x, y))
+            {
+                _field.SetStatusMeldung("Gebäudedetails geöffnet.");
+            }
+            else
+            {
+                _field.DeselectBuilding();
+                _field.SetStatusMeldung("Kein Gebäude an dieser Stelle.");
+            }
+        }
+
+        private void SelectBuildTool(G5_Bauwerkzeug tool)
+        {
+            IReadOnlyDictionary<G5_Item, int> cost = G5_FabrikKosten.Baupreis(tool);
+            if (cost.Count == 0)
+            {
+                _field.SetStatusMeldung("Dieses Gebäude kann nicht gebaut werden.");
+                return;
+            }
+
+            _field.SetWerkzeug(tool);
+            _field.SetStatusMeldung(G5_FabrikBezeichnungen.Werkzeug(tool) +
+                " ausgewählt. Ziehe es auf die Karte oder drücke Bauen für die Zielkachel.");
+            _mentor.Explain(BuildingExplanation(tool));
+        }
+
+        private void PlaceBuilding(G5_Bauwerkzeug tool, G5_GridPosition? buildPosition = null)
+        {
+            if (tool == G5_Bauwerkzeug.Keines ||
+                tool == G5_Bauwerkzeug.GebaeudeVerschieben ||
+                !Enum.IsDefined(typeof(G5_Bauwerkzeug), tool))
+            {
+                _field.SetStatusMeldung("Wähle ein Gebäude im Baumenü aus.");
+                return;
+            }
+
+            IReadOnlyDictionary<G5_Item, int> cost = G5_FabrikKosten.Baupreis(tool);
+            if (cost.Count == 0)
+            {
+                _field.SetStatusMeldung("Dieses Gebäude kann nicht gebaut werden.");
+                return;
+            }
+
+            G5_GridPosition target = buildPosition ?? _field.ZielKachel;
+
+            // Alle Gründe sammeln, damit der Spieler auf einen Blick sieht, was fehlt.
+            List<string> probleme = new List<string>();
+            if (tool == G5_Bauwerkzeug.Rakete &&
+                _field.InterneGebaeude.OfType<G5_Rakete>().Any())
+            {
+                probleme.Add("du hast bereits eine Rakete gebaut");
+            }
+
+            string ortProblem = DescribePlacementProblem(tool, target);
+            if (ortProblem != null)
+            {
+                probleme.Add(ortProblem);
+            }
+
+            if (G5_FabrikKosten.Fehlend(cost, _field.Gesamtmenge).Count > 0)
+            {
+                probleme.Add("es fehlen " + G5_FabrikKosten.FormatFehlend(cost, _field.Gesamtmenge));
+            }
+
+            if (probleme.Count > 0)
+            {
+                _field.SetStatusMeldung(
+                    G5_FabrikBezeichnungen.Werkzeug(tool) + " kann nicht gebaut werden: " +
+                    string.Join("; ", probleme) + ".");
+                return;
+            }
+
+            G5_Building building;
+            if (tool == G5_Bauwerkzeug.Foerderer)
+            {
+                building = new G5_Miner(
+                    target,
+                    _deposits[target],
+                    outputCapacity: 20,
+                    cycleTicks: _minerCycleTicks,
+                    amountPerCycle: 1,
+                    powerDemandPerTick: 0);
+            }
+            else if (tool == G5_Bauwerkzeug.Foerderband)
+            {
+                building = new G5_Conveyor(target, bufferCapacity: 10, itemsPerTick: 1);
+            }
+            else if (tool == G5_Bauwerkzeug.Schmelze)
+            {
+                building = CreateSmelter(target.X, target.Y, "Eisenerz schmelzen");
+            }
+            else if (tool == G5_Bauwerkzeug.Konstruktor)
+            {
+                G5_Constructor constructor = new G5_Constructor(
+                    target,
+                    G5_StarterRecipes.CreateConstructionRecipes(
+                        ScaleProductionTime(_smelterCycleTicks, 3, 2),
+                        powerDemandPerTick: 1),
+                    inputCapacity: 30,
+                    outputCapacity: 30);
+                constructor.SelectRecipe("Eisenplatte herstellen");
+                building = constructor;
+            }
+            else if (tool == G5_Bauwerkzeug.Assembler)
+            {
+                G5_Assembler assembler = new G5_Assembler(
+                    target,
+                    G5_StarterRecipes.CreateAssemblyRecipes(
+                        ScaleProductionTime(_smelterCycleTicks, 2, 1),
+                        powerDemandPerTick: 1),
+                    inputCapacity: 30,
+                    outputCapacity: 30);
+                assembler.SelectRecipe("Rotor herstellen");
+                building = assembler;
+            }
+            else if (tool == G5_Bauwerkzeug.Verbrennungsgenerator)
+            {
+                building = new G5_BurningGenerator(
+                    target,
+                    fuelCapacity: 100,
+                    maxOutputPerTick: 20,
+                    energyPerFuel: new[]
+                    {
+                        new KeyValuePair<G5_Item, int>(G5_Item.Kohle, 30)
+                    });
+            }
+            else if (tool == G5_Bauwerkzeug.Strommast)
+            {
+                building = new G5_PowerPole(target, connectionRange: 8);
+            }
+            else if (tool == G5_Bauwerkzeug.Lager)
+            {
+                building = new G5_Storage(target, capacity: 500);
+            }
+            else if (tool == G5_Bauwerkzeug.Rakete)
+            {
+                building = new G5_Rakete(target);
+            }
+            else
+            {
+                _field.SetStatusMeldung("Dieses Gebäude wird nicht unterstützt.");
+                return;
+            }
+
+            _field.AddGebaeude(building);
+            if (!_field.TryVerbraucheRessourcen(cost))
+            {
+                _field.RemoveGebaeude(building);
+                throw new InvalidOperationException("Baukosten haben sich während des Bauens geändert.");
+            }
+
+            _buildingInvestments.Add(building, new Dictionary<G5_Item, int>(cost));
+            _field.ErfasseGebaeudebau();
+            RefreshConveyorConnections();
+            _field.SetStatusMeldung(building.Name + " gebaut. Kosten: " + FormatCost(cost) + ".");
+            G5_Item? minedResource = building is G5_Miner builtMiner
+                ? builtMiner.Resource
+                : (G5_Item?)null;
+            _mentor.ObserveBuildingPlaced(
+                tool,
+                building.Name,
+                BuildingExplanation(tool),
+                minedResource);
+        }
+
+        private void PlaceConveyorLine(G5_GridPosition start, G5_GridPosition end)
+        {
+            G5_Building source = FindBuildingAt(start);
+            G5_Building destination = FindBuildingAt(end);
+            if (!IsProductionSource(source) || !TryGetProducedItem(source, out G5_Item item))
+            {
+                _field.SetStatusMeldung(
+                    "Ziehe das Förderband vom Ausgang eines Förderers oder Produktionsgebäudes.");
+                return;
+            }
+
+            if (!(destination is G5_Storage) &&
+                (!(destination is G5_ProductionBuilding productionDestination) ||
+                    productionDestination.SelectedRecipe == null ||
+                    !productionDestination.SelectedRecipe.Ingredients.ContainsKey(item)))
+            {
+                _field.SetStatusMeldung(
+                    "Ziehe das Förderband zum passenden Eingang eines Produktionsgebäudes oder Lagers.");
+                return;
+            }
+
+            IReadOnlyList<G5_GridPosition> route = CreateConveyorLinePath(start, end);
+            if (route.Count <= 2)
+            {
+                _field.SetStatusMeldung(
+                    "Zwischen Ausgang und Eingang ist kein Feld für ein Förderband frei.");
+                return;
+            }
+
+            List<G5_GridPosition> newBeltPositions = new List<G5_GridPosition>();
+            List<G5_GridPosition> blockedPositions = new List<G5_GridPosition>();
+            foreach (G5_GridPosition position in route.Skip(1).Take(route.Count - 2))
+            {
+                G5_Building existing = FindBuildingAt(position);
+                if (existing is G5_Conveyor)
+                {
+                    continue;
+                }
+
+                newBeltPositions.Add(position);
+                if (existing != null ||
+                    !IsBuildableArea(position.X, position.Y, BuildingWidth, BuildingHeight, null))
+                {
+                    blockedPositions.Add(position);
+                }
+            }
+
+            Dictionary<G5_Item, int> cost = new Dictionary<G5_Item, int>();
+            IReadOnlyDictionary<G5_Item, int> costPerBelt =
+                G5_FabrikKosten.Baupreis(G5_Bauwerkzeug.Foerderband);
+            foreach (G5_GridPosition _ in newBeltPositions)
+            {
+                AddCost(cost, costPerBelt);
+            }
+
+            if (blockedPositions.Count > 0)
+            {
+                G5_GridPosition blocked = blockedPositions[0];
+                string costText = cost.Count == 0
+                    ? "Keine zusätzlichen Förderbandsegmente erforderlich"
+                    : "Kosten für die geplante Linie mit " + newBeltPositions.Count +
+                        " Segmenten: " + FormatCost(cost);
+                _field.SetStatusMeldung(
+                    "Förderbandlinie nicht gebaut: Feld " + blocked.X + ", " + blocked.Y +
+                    " ist blockiert. " + costText + ".");
+                return;
+            }
+
+            if (newBeltPositions.Count == 0)
+            {
+                RefreshConveyorConnections();
+                _field.SetStatusMeldung("Die Förderbandlinie besteht bereits; Verbindungen aktualisiert.");
+                _mentor.ObserveConveyorLinePlaced();
+                return;
+            }
+
+            if (!_field.HatRessourcen(cost))
+            {
+                string available = string.Join(", ", cost.Select(entry =>
+                    _field.Gesamtmenge(entry.Key) + " " +
+                    G5_FabrikBezeichnungen.Gegenstand(entry.Key)));
+                _field.SetStatusMeldung(
+                    "Förderbandlinie nicht gebaut (" + newBeltPositions.Count +
+                    " Segmente). Benötigt: " + FormatCost(cost) +
+                    ". Vorhanden: " + available + ".");
+                return;
+            }
+
+            List<G5_Conveyor> placedBelts = new List<G5_Conveyor>();
+            foreach (G5_GridPosition position in newBeltPositions)
+            {
+                G5_Conveyor conveyor = new G5_Conveyor(
+                    position,
+                    bufferCapacity: 10,
+                    itemsPerTick: 1);
+                _field.AddGebaeude(conveyor);
+                _buildingInvestments.Add(
+                    conveyor,
+                    new Dictionary<G5_Item, int>(costPerBelt));
+                placedBelts.Add(conveyor);
+            }
+
+            if (!_field.TryVerbraucheRessourcen(cost))
+            {
+                foreach (G5_Conveyor conveyor in placedBelts)
+                {
+                    _buildingInvestments.Remove(conveyor);
+                    _field.RemoveGebaeude(conveyor);
+                }
+
+                RefreshConveyorConnections();
+                throw new InvalidOperationException(
+                    "Förderbandkosten haben sich während des Linienbaus geändert.");
+            }
+
+            foreach (G5_Conveyor _ in placedBelts)
+            {
+                _field.ErfasseGebaeudebau();
+            }
+
+            RefreshConveyorConnections();
+            _field.SetStatusMeldung(
+                newBeltPositions.Count + " Förderbandsegmente gebaut. Kosten: " +
+                FormatCost(cost) + ".");
+            _mentor.ObserveConveyorLinePlaced();
+        }
+
+        internal static IReadOnlyList<G5_GridPosition> CreateConveyorLinePath(
+            G5_GridPosition start,
+            G5_GridPosition end)
+        {
+            List<G5_GridPosition> positions = new List<G5_GridPosition> { start };
+            int x = start.X;
+            int y = start.Y;
+            int xStep = Math.Sign(end.X - x);
+            while (x != end.X)
+            {
+                x += xStep;
+                positions.Add(new G5_GridPosition(x, y));
+            }
+
+            int yStep = Math.Sign(end.Y - y);
+            while (y != end.Y)
+            {
+                y += yStep;
+                positions.Add(new G5_GridPosition(x, y));
+            }
+
+            return positions.AsReadOnly();
+        }
+
+        private G5_Building FindBuildingAt(G5_GridPosition position)
+        {
+            return _field.InterneGebaeude.FirstOrDefault(building =>
+                building.Position == position);
+        }
+
+        // Setzt die Rohstoffsuche. "Naechster" wechselt reihum durch alle Rohstoffarten der Karte
+        // (danach wieder aus); ein Rohstoffname wählt diesen direkt bzw. schaltet ihn bei erneutem Klick aus.
+        private void SelectResourceSearch(string wert)
+        {
+            IReadOnlyList<G5_Rohstofftyp> vorhanden = _field.VorhandeneRohstoffe();
+            G5_Rohstofftyp aktuell = _field.GesuchterRohstoff;
+            G5_Rohstofftyp neu;
+
+            if (string.Equals(wert, "Naechster", StringComparison.Ordinal))
+            {
+                int index = -1;
+                for (int i = 0; i < vorhanden.Count; i++)
+                {
+                    if (vorhanden[i] == aktuell)
+                    {
+                        index = i;
+                    }
+                }
+
+                neu = index + 1 < vorhanden.Count ? vorhanden[index + 1] : G5_Rohstofftyp.Keiner;
+            }
+            else if (Enum.TryParse(wert, out G5_Rohstofftyp gewaehlt) &&
+                Enum.IsDefined(typeof(G5_Rohstofftyp), gewaehlt))
+            {
+                neu = gewaehlt == aktuell ? G5_Rohstofftyp.Keiner : gewaehlt;
+            }
+            else
+            {
+                _field.SetStatusMeldung("Unbekannter Rohstoff für die Suche.");
+                return;
+            }
+
+            _field.SetzeGesuchtenRohstoff(neu);
+            if (neu == G5_Rohstofftyp.Keiner)
+            {
+                _field.SetStatusMeldung("Rohstoffsuche beendet.");
+            }
+            else if (_field.TryFindeNaechstesVorkommen(neu, out G5_GridPosition ziel))
+            {
+                G5_GridPosition spieler = _field.SpielerPosition;
+                _field.SetStatusMeldung(
+                    "Suche " + G5_FabrikMinimap.RohstoffName(neu) + ": nächstes Vorkommen bei " +
+                    ziel.X + ", " + ziel.Y + " (" +
+                    G5_FabrikMinimap.Richtungstext(ziel.X - spieler.X, ziel.Y - spieler.Y) +
+                    "). R: nächster Rohstoff.");
+            }
+            else
+            {
+                _field.SetStatusMeldung(
+                    "Kein " + G5_FabrikMinimap.RohstoffName(neu) + "-Vorkommen auf der erkundeten Karte.");
+            }
+        }
+
+        private void SelectRecipe(string recipeName)
+        {
+            if (!(_field.AusgewaehltesInternesGebaeude is G5_ProductionBuilding production))
+            {
+                _field.SetStatusMeldung("Wähle zuerst ein Produktionsgebäude aus.");
+                return;
+            }
+
+            IG5_GebaeudeInfo info = ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
+            if (!info.VerfuegbareRezepte.Contains(recipeName))
+            {
+                _field.SetStatusMeldung("Dieses Rezept ist noch gesperrt. Verbessere das Gebäude zuerst.");
+                return;
+            }
+
+            if (!production.SelectRecipe(recipeName))
+            {
+                _field.SetStatusMeldung("Dieses Rezept kann in diesem Gebäude nicht verwendet werden.");
+                return;
+            }
+
+            RefreshConveyorConnections();
+            _field.SetStatusMeldung("Rezept geändert: " + recipeName + ".");
+            _mentor.Explain(RecipeExplanation(recipeName));
+        }
+
+        private void UpgradeSelectedBuilding()
+        {
+            G5_Building building = _field.AusgewaehltesInternesGebaeude;
+            IG5_GebaeudeInfo info = ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
+            if (building == null || info == null || !info.KannVerbessertWerden)
+            {
+                _field.SetStatusMeldung("Dieses Gebäude kann nicht weiter verbessert werden.");
+                return;
+            }
+
+            IReadOnlyDictionary<G5_Item, int> cost = G5_FabrikKosten.UpgradePreis(building.Level);
+            if (!_field.HatRessourcen(cost))
+            {
+                _field.SetStatusMeldung("Für die Verbesserung fehlen: " +
+                    G5_FabrikKosten.FormatFehlend(cost, _field.Gesamtmenge) + ".");
+                return;
+            }
+
+            G5_BuildingUpgrade upgrade;
+            if (building is G5_Miner)
+            {
+                upgrade = new G5_BuildingUpgrade(
+                    productionTicksReduction: 8,
+                    outputCapacityIncrease: 5,
+                    outputAmountIncrease: 1);
+            }
+            else if (building is G5_ProductionBuilding)
+            {
+                upgrade = new G5_BuildingUpgrade(
+                    productionTicksReduction: 10,
+                    inputCapacityIncrease: 10,
+                    outputCapacityIncrease: 10,
+                    powerDemandReduction: 1);
+            }
+            else if (building is G5_Storage)
+            {
+                upgrade = new G5_BuildingUpgrade(storageCapacityIncrease: 100);
+            }
+            else if (building is G5_BurningGenerator)
+            {
+                upgrade = new G5_BuildingUpgrade(powerOutputIncrease: 10);
+            }
+            else if (building is G5_Conveyor)
+            {
+                upgrade = new G5_BuildingUpgrade(
+                    outputCapacityIncrease: 5,
+                    transportCapacityIncrease: 1);
+            }
+            else
+            {
+                _field.SetStatusMeldung("Für dieses Gebäude gibt es keine Verbesserung.");
+                return;
+            }
+
+            if (!_field.TryVerbraucheRessourcen(cost))
+            {
+                throw new InvalidOperationException(
+                    "Die Kosten haben sich während der Gebäude-Verbesserung geändert.");
+            }
+
+            building.Upgrade(upgrade);
+            if (!_buildingInvestments.TryGetValue(building, out Dictionary<G5_Item, int> investment))
+            {
+                investment = new Dictionary<G5_Item, int>();
+                _buildingInvestments.Add(building, investment);
+            }
+
+            AddCost(investment, cost);
+            _field.SetStatusMeldung(building.Name + " auf Stufe " + building.Level + " verbessert.");
+        }
+
+        private void SellSelectedBuilding()
+        {
+            G5_Building building = _field.AusgewaehltesInternesGebaeude;
+            if (building == null)
+            {
+                _field.SetStatusMeldung("Wähle zuerst ein Gebäude aus.");
+                return;
+            }
+
+            if (!_buildingInvestments.TryGetValue(building, out Dictionary<G5_Item, int> investment))
+            {
+                investment = new Dictionary<G5_Item, int>();
+            }
+
+            G5_Storage storage = building as G5_Storage;
+            if (storage != null && storage.UsedCapacity > 0)
+            {
+                _field.SetStatusMeldung("Leere das Lager, bevor du es verkaufst.");
+                return;
+            }
+
+            Dictionary<G5_Item, int> refund = investment.ToDictionary(
+                item => item.Key,
+                item => item.Value / 2);
+            if (building is G5_Rakete rakete && rakete.UranVorrat > 0)
+            {
+                refund[G5_Item.Uran] = checked(
+                    (refund.TryGetValue(G5_Item.Uran, out int vorhandenesUran) ? vorhandenesUran : 0) +
+                    rakete.UranVorrat);
+            }
+            if (!_field.KannEinlagern(refund, storage))
+            {
+                _field.SetStatusMeldung("Rucksack und Lager sind voll. Schaffe Platz für die Rückerstattung.");
+                return;
+            }
+
+            if (!_field.RemoveGebaeude(building))
+            {
+                _field.SetStatusMeldung("Das Gebäude konnte nicht verkauft werden.");
+                return;
+            }
+
+            _buildingInvestments.Remove(building);
+            foreach (KeyValuePair<G5_Item, int> item in refund)
+            {
+                _field.AddInventar(item.Key, item.Value);
+            }
+
+            RefreshConveyorConnections();
+            _field.SetStatusMeldung("Gebäude verkauft: 50 % der Bau- und Verbesserungskosten wurden erstattet.");
+        }
+
+        private void CollectSelectedBuildingOutput(string amountText)
+        {
+            G5_Building building = _field.AusgewaehltesInternesGebaeude;
+            if (!(building is G5_Miner) && !(building is G5_ProductionBuilding))
+            {
+                _field.SetStatusMeldung(
+                    "Wähle einen Förderer oder ein Produktionsgebäude aus, um die Ausgabe abzuholen.");
+                return;
+            }
+
+            IReadOnlyDictionary<G5_Item, int> outputContents =
+                building is G5_Miner miner
+                    ? miner.OutputContents
+                    : ((G5_ProductionBuilding)building).OutputContents;
+            KeyValuePair<G5_Item, int> output = outputContents
+                .FirstOrDefault(entry => entry.Value > 0);
+            if (output.Value <= 0)
+            {
+                _field.SetStatusMeldung("Das Gebäude hat noch nichts zum Abholen.");
+                return;
+            }
+
+            if (!int.TryParse(amountText, out int requestedAmount) || requestedAmount <= 0)
+            {
+                _field.SetStatusMeldung("Gib eine Anzahl größer als null ein.");
+                return;
+            }
+
+            if (!_field.TryCollectBuildingOutput(
+                building,
+                output.Key,
+                requestedAmount,
+                out int amount))
+            {
+                _field.SetStatusMeldung("Rucksack und Lager sind voll. Schaffe Platz zum Abholen.");
+                return;
+            }
+
+            _field.SetStatusMeldung(
+                amount + " " + G5_FabrikBezeichnungen.Gegenstand(output.Key) +
+                " aus " + building.Name + " abgeholt.");
+            _field.BestaetigeMengeEingabe();
+        }
+
+        private void CraftManually(string itemName)
+        {
+            if (_field.ManuellesHandwerkLaeuft)
+            {
+                _field.SetStatusMeldung("Eine manuelle Herstellung läuft bereits. Warte, bis sie fertig ist.");
+                return;
+            }
+
+            if (!Enum.TryParse(itemName, out G5_Item output))
+            {
+                _field.SetStatusMeldung("Dieses Produkt kann nicht manuell hergestellt werden.");
+                return;
+            }
+
+            G5_Recipe recipe = G5_StarterRecipes.CreateManualCraftingRecipes()
+                .FirstOrDefault(candidate => candidate.Output == output);
+            if (recipe == null)
+            {
+                _field.SetStatusMeldung("Dieses Produkt kann nicht manuell hergestellt werden.");
+                return;
+            }
+
+            if (!int.TryParse(_field.MengeEingabe, out int anzahl) || anzahl <= 0)
+            {
+                _field.SetStatusMeldung("Gib eine Anzahl größer als null ein.");
+                return;
+            }
+
+            int maximal = _field.MaxHerstellbar(recipe);
+            if (maximal < anzahl)
+            {
+                string fehlend = string.Join(", ", recipe.Ingredients
+                    .Where(ingredient => _field.Menge(ingredient.Key) < ingredient.Value * anzahl)
+                    .Select(ingredient =>
+                        (ingredient.Value * anzahl - _field.Menge(ingredient.Key)) + " " +
+                        G5_FabrikBezeichnungen.Gegenstand(ingredient.Key)));
+                _field.SetStatusMeldung(
+                    "Für " + anzahl + "× " + G5_FabrikBezeichnungen.Gegenstand(output) +
+                    " reicht es nicht (möglich: " + maximal + ")" +
+                    (fehlend.Length > 0 ? ". Es fehlen: " + fehlend + "." : ". Der Rucksack ist zu voll."));
+                return;
+            }
+
+            if (!_field.TryStarteManuellesHandwerk(recipe, anzahl))
+            {
+                _field.SetStatusMeldung(
+                    "Für " + recipe.Name + " fehlen Zutaten im Rucksack oder freier Platz.");
+                _mentor.Explain("Für " + recipe.Name + " fehlen Zutaten: " +
+                    FormatCost(recipe.Ingredients) +
+                    ". Baue die Rohstoffe mit E ab und arbeite die Handwerksliste von oben nach unten ab.");
+                return;
+            }
+
+            _field.BestaetigeMengeEingabe();
+            _field.SetStatusMeldung(
+                anzahl + "× " + G5_FabrikBezeichnungen.Gegenstand(output) +
+                " gestartet. Jedes Stück dauert zwei Sekunden (gesamt " + (anzahl * 2) + " s).");
+            _mentor.ObserveManualCraftStarted(recipe);
+        }
+
+        private void SelectInventoryItemForDrop(string itemName)
+        {
+            if (!Enum.TryParse(itemName, out G5_Item item) ||
+                !Enum.IsDefined(typeof(G5_Item), item))
+            {
+                _field.SetStatusMeldung("Dieser Gegenstand kann nicht abgelegt werden.");
+                return;
+            }
+
+            bool herstellbar = G5_StarterRecipes.CreateManualCraftingRecipes()
+                .Any(candidate => candidate.Output == item);
+            if (_field.Menge(item) == 0 && !herstellbar)
+            {
+                _field.SetStatusMeldung("Von diesem Gegenstand hast du nichts im Rucksack.");
+                return;
+            }
+
+            _field.WaehleAbwurfGegenstand(item);
+            _field.SetStatusMeldung(
+                G5_FabrikBezeichnungen.Gegenstand(item) +
+                " ausgewählt. Anzahl mit den Zahlentasten eingeben" +
+                (herstellbar ? ", dann Herstellen (H) oder Ablegen (Enter)." : ", dann Ablegen (Enter)."));
+        }
+
+        private void DropSelectedInventoryItem()
+        {
+            if (!_field.AusgewaehlterAbwurfGegenstand.HasValue)
+            {
+                _field.SetStatusMeldung("Wähle zuerst einen Gegenstand im Rucksack aus.");
+                return;
+            }
+
+            if (!int.TryParse(_field.MengeEingabe, out int anzahl) || anzahl <= 0)
+            {
+                _field.SetStatusMeldung("Gib eine Anzahl größer als null ein.");
+                return;
+            }
+
+            G5_Item item = _field.AusgewaehlterAbwurfGegenstand.Value;
+            if (!_field.TryAblegen(item, anzahl, DateTimeOffset.UtcNow))
+            {
+                _field.SetStatusMeldung(
+                    "Du hast nicht so viele " + G5_FabrikBezeichnungen.Gegenstand(item) +
+                    " im Rucksack.");
+                return;
+            }
+
+            _field.BestaetigeMengeEingabe();
+            _field.SetStatusMeldung(
+                anzahl + " " + G5_FabrikBezeichnungen.Gegenstand(item) +
+                " abgelegt. Sie bleiben zwei Minuten liegen.");
+        }
+
+        private void PickUpGroundItems()
+        {
+            G5_GridPosition spielerposition = _field.SpielerPosition;
+            int aufgenommen = _field.NimmAbgelegteGegenstaendeAuf(
+                spielerposition,
+                DateTimeOffset.UtcNow);
+            if (aufgenommen == 0)
+            {
+                _field.SetStatusMeldung("Hier liegen keine Gegenstände zum Aufnehmen.");
+                return;
+            }
+
+            int uebrig = _field.AnzahlAbgelegterGegenstaende(
+                spielerposition,
+                DateTimeOffset.UtcNow);
+            _field.SetStatusMeldung(uebrig == 0
+                ? aufgenommen + " Gegenstände aufgenommen."
+                : aufgenommen + " Gegenstände aufgenommen. Der Rest bleibt liegen, bis Platz frei ist.");
+        }
+
+        private bool IsBuildableArea(int x, int y, int width, int height, G5_Building ignoredBuilding)
+        {
+            if (x < 0 || y < 0 || x + width > MapWidth || y + height > MapHeight)
+            {
+                return false;
+            }
+
+            for (int tileY = y; tileY < y + height; tileY++)
+            {
+                for (int tileX = x; tileX < x + width; tileX++)
+                {
+                    if (!_field.TryGetKachel(tileX, tileY, out G5_Kachel tile) ||
+                        ((IG5_KachelInfo)tile).Gelaende != G5_Gelaendeart.Begehbar)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return !OverlapsBuilding(x, y, width, height, ignoredBuilding);
+        }
+
+        // Beschreibt, warum auf dem Zielfeld nicht gebaut werden kann (null = Platz ist in Ordnung).
+        private string DescribePlacementProblem(G5_Bauwerkzeug tool, G5_GridPosition target)
+        {
+            if (target.X < 0 || target.Y < 0 ||
+                target.X + BuildingWidth > MapWidth || target.Y + BuildingHeight > MapHeight)
+            {
+                return "das Feld " + target.X + ", " + target.Y + " liegt außerhalb der Karte";
+            }
+
+            for (int tileY = target.Y; tileY < target.Y + BuildingHeight; tileY++)
+            {
+                for (int tileX = target.X; tileX < target.X + BuildingWidth; tileX++)
+                {
+                    if (!_field.TryGetKachel(tileX, tileY, out G5_Kachel tile) ||
+                        ((IG5_KachelInfo)tile).Gelaende != G5_Gelaendeart.Begehbar)
+                    {
+                        return "auf Feld " + tileX + ", " + tileY + " ist ein Hindernis";
+                    }
+                }
+            }
+
+            G5_Building existing = _field.InterneGebaeude.FirstOrDefault(candidate =>
+                target.X < candidate.Position.X + candidate.Width &&
+                candidate.Position.X < target.X + BuildingWidth &&
+                target.Y < candidate.Position.Y + candidate.Height &&
+                candidate.Position.Y < target.Y + BuildingHeight);
+            if (existing != null)
+            {
+                return "auf Feld " + target.X + ", " + target.Y + " steht bereits " + existing.Name;
+            }
+
+            if (tool == G5_Bauwerkzeug.Foerderer)
+            {
+                if (!_deposits.TryGetValue(target, out G5_ResourceDeposit deposit))
+                {
+                    return "ein Förderer muss auf einem Rohstoffvorkommen stehen";
+                }
+
+                if (deposit.RemainingAmount == 0)
+                {
+                    return "das Vorkommen auf Feld " + target.X + ", " + target.Y + " ist erschöpft";
+                }
+            }
+            else if (ContainsDeposit(target.X, target.Y, BuildingWidth, BuildingHeight))
+            {
+                return "auf einem Rohstoffvorkommen kann nur ein Förderer stehen";
+            }
+
+            return null;
+        }
+
+        private bool ContainsDeposit(int x, int y, int width, int height)
+        {
+            for (int tileY = y; tileY < y + height; tileY++)
+            {
+                for (int tileX = x; tileX < x + width; tileX++)
+                {
+                    if (_field.TryGetKachel(tileX, tileY, out G5_Kachel tile) &&
+                        ((IG5_KachelInfo)tile).Rohstoff != G5_Rohstofftyp.Keiner)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool OverlapsBuilding(int x, int y, int width, int height, G5_Building ignoredBuilding)
+        {
+            return _field.InterneGebaeude.Any(existing =>
+                !ReferenceEquals(existing, ignoredBuilding) &&
+                x < existing.Position.X + existing.Width &&
+                existing.Position.X < x + width &&
+                y < existing.Position.Y + existing.Height &&
+                existing.Position.Y < y + height);
+        }
+
+        private void RefreshConveyorConnections()
+        {
+            List<G5_Building> buildings = _field.InterneGebaeude.ToList();
+            List<G5_Conveyor> conveyors = buildings.OfType<G5_Conveyor>().ToList();
+            foreach (G5_Conveyor conveyor in conveyors)
+            {
+                conveyor.Disconnect();
+            }
+
+            _beltConnectedSources.Clear();
+            _beltConnectedInputs.Clear();
+            HashSet<G5_Conveyor> usedBelts = new HashSet<G5_Conveyor>();
+
+            foreach (G5_Building source in buildings.Where(IsProductionSource))
+            {
+                if (!TryGetProducedItem(source, out G5_Item item))
+                {
+                    continue;
+                }
+
+                IEnumerable<G5_Building> destinations = buildings.OfType<G5_ProductionBuilding>()
+                    .Where(production => production.SelectedRecipe != null &&
+                        production.SelectedRecipe.Ingredients.ContainsKey(item))
+                    .Cast<G5_Building>()
+                    .Concat(buildings.OfType<G5_Storage>());
+
+                foreach (G5_Building destination in destinations)
+                {
+                    if (!TryFindConveyorPath(source, destination, conveyors, usedBelts, out List<G5_Building> path))
+                    {
+                        continue;
+                    }
+
+                    for (int index = 1; index < path.Count - 1; index++)
+                    {
+                        G5_Conveyor conveyor = (G5_Conveyor)path[index];
+                        conveyor.Connect(path[index - 1], path[index + 1]);
+                        usedBelts.Add(conveyor);
+                    }
+
+                    _beltConnectedSources.Add(source);
+                    if (destination is G5_ProductionBuilding production)
+                    {
+                        _beltConnectedInputs.Add((production, item));
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        private void CreateRandomMap(int playerX, int playerY)
+        {
+            AddDeposit(playerX + 3, playerY, G5_Rohstofftyp.Eisen, G5_Item.Eisenerz, _resourceAmount);
+            AddDeposit(playerX - 3, playerY, G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz, _resourceAmount);
+            AddDeposit(playerX, playerY + 3, G5_Rohstofftyp.Holz, G5_Item.Holz, 15);
+            AddDeposit(playerX, playerY - 3, G5_Rohstofftyp.Kohle, G5_Item.Kohle, _resourceAmount);
+            AddDeposit(playerX + 5, playerY + 5, G5_Rohstofftyp.Uran, G5_Item.Uran, _resourceAmount);
+
+            (G5_Rohstofftyp Type, G5_Item Item)[] resources =
+            {
+                (G5_Rohstofftyp.Eisen, G5_Item.Eisenerz),
+                (G5_Rohstofftyp.Kupfer, G5_Item.Kupfererz),
+                (G5_Rohstofftyp.Kohle, G5_Item.Kohle),
+                (G5_Rohstofftyp.Kalkstein, G5_Item.Kalkstein),
+                (G5_Rohstofftyp.Quarz, G5_Item.Quarz),
+                (G5_Rohstofftyp.Schwefel, G5_Item.Schwefel),
+                (G5_Rohstofftyp.Uran, G5_Item.Uran)
+            };
+
+            int placed = 0;
+            for (int attempt = 0; attempt < 12000 && placed < 180; attempt++)
+            {
+                int x = _random.Next(2, MapWidth - 2);
+                int y = _random.Next(2, MapHeight - 2);
+                if (Math.Abs(x - playerX) <= 6 && Math.Abs(y - playerY) <= 6)
+                {
+                    continue;
+                }
+
+                G5_GridPosition position = new G5_GridPosition(x, y);
+                if (_deposits.ContainsKey(position))
+                {
+                    continue;
+                }
+
+                (G5_Rohstofftyp Type, G5_Item Item) resource = resources[_random.Next(resources.Length)];
+                AddDeposit(x, y, resource.Type, resource.Item, _resourceAmount);
+                placed++;
+            }
+
+            int trees = 0;
+            for (int attempt = 0; attempt < 16000 && trees < 320; attempt++)
+            {
+                int x = _random.Next(1, MapWidth - 1);
+                int y = _random.Next(1, MapHeight - 1);
+                G5_GridPosition position = new G5_GridPosition(x, y);
+                if ((Math.Abs(x - playerX) <= 2 && Math.Abs(y - playerY) <= 2) ||
+                    _deposits.ContainsKey(position))
+                {
+                    continue;
+                }
+
+                AddDeposit(x, y, G5_Rohstofftyp.Holz, G5_Item.Holz, _random.Next(8, 16));
+                trees++;
+            }
+
+            CreateRandomObstacles(playerX, playerY);
+        }
+
+        private void CreateRandomObstacles(int playerX, int playerY)
+        {
+            int placed = 0;
+            for (int attempt = 0; attempt < 12000 && placed < 420; attempt++)
+            {
+                int x = _random.Next(MapWidth);
+                int y = _random.Next(MapHeight);
+                G5_GridPosition position = new G5_GridPosition(x, y);
+                if ((Math.Abs(x - playerX) <= 3 && Math.Abs(y - playerY) <= 3) ||
+                    _deposits.ContainsKey(position) ||
+                    _field.InterneGebaeude.Any(building => building.Position == position))
+                {
+                    continue;
+                }
+
+                if (_field.Welt.TrySetGelaende(x, y, G5_Gelaendeart.Hindernis))
+                {
+                    placed++;
+                }
+            }
+        }
+
+        private void AddDeposit(int x, int y, G5_Rohstofftyp resource, G5_Item item, int amount)
+        {
+            G5_GridPosition position = new G5_GridPosition(x, y);
+            G5_ResourceDeposit deposit = new G5_ResourceDeposit(item, amount);
+            _deposits.Add(position, deposit);
+            if (!_field.Welt.TrySetRohstoff(x, y, resource, amount))
+            {
+                throw new InvalidOperationException("Ein Rohstoffvorkommen konnte nicht platziert werden.");
+            }
+        }
+
+        private G5_Smelter CreateSmelter(int x, int y, string recipeName)
+        {
+            G5_Smelter smelter = new G5_Smelter(
+                new G5_GridPosition(x, y),
+                G5_StarterRecipes.CreateSmeltingRecipes(_smelterCycleTicks, powerDemandPerTick: 0),
+                inputCapacity: 20,
+                outputCapacity: 20);
+            if (!smelter.SelectRecipe(recipeName))
+            {
+                throw new InvalidOperationException("Das Satisfactory-Schmelzrezept ist nicht verfügbar.");
+            }
+
+            return smelter;
+        }
+
+        private void UpdateVisibleDeposits(
+            IReadOnlyList<G5_Miner> miners,
+            IReadOnlyDictionary<G5_Miner, long?> depositsBeforeTick)
+        {
+            foreach (G5_Miner miner in miners)
+            {
+                long? before = depositsBeforeTick[miner];
+                long? after = miner.RemainingDeposit;
+                if (!before.HasValue || !after.HasValue || before.Value <= after.Value)
+                {
+                    continue;
+                }
+
+                if (!_field.Welt.TryReduceRohstoff(
+                    miner.Position.X,
+                    miner.Position.Y,
+                    checked((int)(before.Value - after.Value))))
+                {
+                    throw new InvalidOperationException("Der Ressourcenbestand des Spielfelds konnte nicht aktualisiert werden.");
+                }
+            }
+        }
+
+        private void TransferMaterials()
+        {
+            foreach (G5_ProductionBuilding production in _field.InterneGebaeude.OfType<G5_ProductionBuilding>())
+            {
+                G5_Recipe recipe = production.SelectedRecipe;
+                if (recipe == null)
+                {
+                    continue;
+                }
+
+                foreach (KeyValuePair<G5_Item, int> ingredient in recipe.Ingredients)
+                {
+                    if (_beltConnectedInputs.Contains((production, ingredient.Key)))
+                    {
+                        continue;
+                    }
+
+                    production.InputContents.TryGetValue(ingredient.Key, out int currentAmount);
+                    int amountNeeded = Math.Max(0, ingredient.Value - currentAmount);
+                    foreach (G5_Storage storage in _field.InterneGebaeude.OfType<G5_Storage>())
+                    {
+                        if (amountNeeded == 0)
+                        {
+                            break;
+                        }
+
+                        amountNeeded -= G5_ItemTransfer.Transfer(storage, production, ingredient.Key, amountNeeded);
+                    }
+
+                    // Bewusst KEINE Versorgung aus dem Rucksack: Sonst verschwinden gerade
+                    // abgeholte Teile sofort wieder in einer Maschine (z. B. Erz in der Schmelze).
+                    // Maschinen werden nur aus Lagergebäuden oder über Förderbänder beliefert.
+                }
+            }
+
+            foreach (G5_BurningGenerator generator in _field.InterneGebaeude.OfType<G5_BurningGenerator>())
+            {
+                foreach (G5_Storage storage in _field.InterneGebaeude.OfType<G5_Storage>())
+                {
+                    while (generator.FuelContents.Values.Sum() < 5 &&
+                        storage.TryExtract(G5_Item.Kohle, 1))
+                    {
+                        if (!generator.TryAddFuel(G5_Item.Kohle, 1) &&
+                            !storage.TryRestoreExtracted(G5_Item.Kohle, 1))
+                        {
+                            throw new InvalidOperationException("Abgezogene Kohle konnte nicht zurückgegeben werden.");
+                        }
+                    }
+                }
+            }
+        }
+
+        private static bool IsProductionSource(G5_Building building)
+        {
+            return building is G5_Miner || building is G5_ProductionBuilding;
+        }
+
+        private static bool TryGetProducedItem(G5_Building building, out G5_Item item)
+        {
+            if (building is G5_Miner miner)
+            {
+                item = miner.Resource;
+                return true;
+            }
+
+            if (building is G5_ProductionBuilding production && production.SelectedRecipe != null)
+            {
+                item = production.SelectedRecipe.Output;
+                return true;
+            }
+
+            item = default;
+            return false;
+        }
+
+        private static int ScaleProductionTime(int baseTicks, int numerator, int denominator)
+        {
+            return checked((baseTicks * numerator + denominator - 1) / denominator);
+        }
+
+        private static bool TryFindConveyorPath(
+            G5_Building source,
+            G5_Building destination,
+            IReadOnlyList<G5_Conveyor> conveyors,
+            IReadOnlySet<G5_Conveyor> usedBelts,
+            out List<G5_Building> path)
+        {
+            path = null;
+            Queue<G5_Conveyor> queue = new Queue<G5_Conveyor>();
+            Dictionary<G5_Conveyor, G5_Conveyor> previous = new Dictionary<G5_Conveyor, G5_Conveyor>();
+            foreach (G5_Conveyor conveyor in conveyors)
+            {
+                if (!usedBelts.Contains(conveyor) && AreAdjacent(source, conveyor))
+                {
+                    previous.Add(conveyor, null);
+                    queue.Enqueue(conveyor);
+                }
+            }
+
+            G5_Conveyor last = null;
+            while (queue.Count > 0)
+            {
+                G5_Conveyor current = queue.Dequeue();
+                if (AreAdjacent(current, destination))
+                {
+                    last = current;
+                    break;
+                }
+
+                foreach (G5_Conveyor candidate in conveyors)
+                {
+                    if (!usedBelts.Contains(candidate) &&
+                        !previous.ContainsKey(candidate) &&
+                        AreAdjacent(current, candidate))
+                    {
+                        previous.Add(candidate, current);
+                        queue.Enqueue(candidate);
+                    }
+                }
+            }
+
+            if (last == null)
+            {
+                return false;
+            }
+
+            List<G5_Conveyor> reversed = new List<G5_Conveyor>();
+            for (G5_Conveyor current = last; current != null; current = previous[current])
+            {
+                reversed.Add(current);
+            }
+
+            reversed.Reverse();
+            path = new List<G5_Building> { source };
+            path.AddRange(reversed);
+            path.Add(destination);
+            return true;
+        }
+
+        private static bool AreAdjacent(G5_Building first, G5_Building second)
+        {
+            bool overlapsX = first.Position.X < (long)second.Position.X + second.Width &&
+                second.Position.X < (long)first.Position.X + first.Width;
+            bool overlapsY = first.Position.Y < (long)second.Position.Y + second.Height &&
+                second.Position.Y < (long)first.Position.Y + first.Height;
+            return (overlapsX &&
+                    (first.Position.Y + first.Height == second.Position.Y ||
+                     second.Position.Y + second.Height == first.Position.Y)) ||
+                (overlapsY &&
+                    (first.Position.X + first.Width == second.Position.X ||
+                     second.Position.X + second.Width == first.Position.X));
+        }
+
+        private static string BuildingExplanation(G5_Bauwerkzeug tool)
+        {
+            switch (tool)
+            {
+                case G5_Bauwerkzeug.Foerderer:
+                    return "Der erste Förderer kostet 8 Eisenerz und 5 Holz. Er baut das Vorkommen darunter automatisch ab und liefert ins Lager oder Förderband.";
+                case G5_Bauwerkzeug.Schmelze:
+                    return "Die Schmelze verarbeitet Eisenerz zu Eisenbarren oder Kupfererz zu Kupferbarren. Wähle das passende Rezept in den Gebäudedetails.";
+                case G5_Bauwerkzeug.Foerderband:
+                    return "Verbinde Förderer und passendes Produktionsgebäude mit einer durchgehenden Linie. Rohstoffe laufen über jedes Segment zum Ziel.";
+                case G5_Bauwerkzeug.Konstruktor:
+                    return "Der Konstruktor fertigt Eisenplatten, Eisenstangen, Kupferdraht oder Schrauben aus dem gemeinsamen Lager. Er benötigt Strom.";
+                case G5_Bauwerkzeug.Assembler:
+                    return "Der Assembler kombiniert eine Eisenstange und eine Schraube zu einem Rotor. Er benötigt Strom.";
+                case G5_Bauwerkzeug.Verbrennungsgenerator:
+                    return "Das Kohlekraftwerk verbrennt Kohle aus dem gemeinsamen Lager und erzeugt Strom.";
+                case G5_Bauwerkzeug.Strommast:
+                    return "Strommasten verbinden Kraftwerke mit Maschinen in ihrer Reichweite von acht Feldern.";
+                case G5_Bauwerkzeug.Lager:
+                    return "Ein Lager vergrößert den gemeinsamen Rohstoffvorrat, aus dem Produktionsgebäude ihre Zutaten beziehen.";
+                case G5_Bauwerkzeug.Rakete:
+                    return "Die Rakete ist das Spielziel: Baue sie aus 40 Eisenplatten, 30 Beton und 20 Rotoren, tanke 50 Uran und starte sie.";
+                default:
+                    return "Öffne die Gebäudedetails, um verfügbare Rezepte und Einstellungen anzusehen.";
+            }
+        }
+
+        private static string RecipeExplanation(string recipeName)
+        {
+            switch (recipeName)
+            {
+                case "Eisenerz schmelzen":
+                case "Eisenerz zu Eisenbarren verarbeiten":
+                    return "Dieses Rezept verarbeitet Eisenerz zu Eisenbarren.";
+                case "Kupfererz schmelzen":
+                case "Kupfererz zu Kupferbarren verarbeiten":
+                    return "Dieses Rezept verarbeitet Kupfererz zu Kupferbarren.";
+                case "Eisenplatte herstellen":
+                    return "Eine Eisenplatte entsteht aus einem Eisenbarren.";
+                case "Eisenstange herstellen":
+                    return "Eine Eisenstange entsteht aus einem Eisenbarren.";
+                case "Kupferdraht herstellen":
+                    return "Kupferdraht entsteht aus einem Kupferbarren.";
+                case "Schrauben herstellen":
+                    return "Aus einer Eisenstange entstehen vier Schrauben.";
+                case "Beton herstellen":
+                    return "Für Beton werden zwei Kalkstein benötigt.";
+                case "Rotor herstellen":
+                    return "Ein Rotor benötigt eine Eisenstange und eine Schraube.";
+                default:
+                    return "Das gewählte Rezept verarbeitet seine Zutaten zu einem Produkt und legt es im gemeinsamen Lager ab.";
+            }
+        }
+
+        private static void AddCost(Dictionary<G5_Item, int> destination, IReadOnlyDictionary<G5_Item, int> cost)
+        {
+            foreach (KeyValuePair<G5_Item, int> item in cost)
+            {
+                destination[item.Key] = checked(
+                    destination.TryGetValue(item.Key, out int current) ? current + item.Value : item.Value);
+            }
+        }
+
+        private static string FormatCost(IReadOnlyDictionary<G5_Item, int> cost)
+        {
+            return string.Join(", ", cost.Select(item =>
+                item.Value + " " + G5_FabrikBezeichnungen.Gegenstand(item.Key)));
+        }
+    }
+}

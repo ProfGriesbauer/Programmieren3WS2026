@@ -14,7 +14,8 @@ namespace OOPGames
         Assembler,
         Verbrennungsgenerator,
         Strommast,
-        Lager
+        Lager,
+        Rakete
     }
 
     public enum G5_FabrikGebaeudeTyp
@@ -29,7 +30,8 @@ namespace OOPGames
         Lager,
         Laufband,
         Splitter,
-        Merger
+        Merger,
+        Rakete
     }
 
     public enum G5_FabrikAktionstyp
@@ -43,10 +45,21 @@ namespace OOPGames
         RezeptWaehlen,
         GebaeudeUpgraden,
         GebaeudeVerkaufen,
+        RaketeBetanken,
+        RaketeStarten,
+        StatistikUmschalten,
+        GegenstandAbholen,
+        ManuellHerstellen,
+        InventarGegenstandWaehlen,
+        AbwurfMengeEingeben,
+        InventarGegenstandAblegen,
+        BodenGegenstaendeAufnehmen,
         BaumenueUmschalten,
         TutorialUeberspringen,
         GebaeuderegisterUmschalten,
-        GebaeuderegisterScrollen
+        GebaeuderegisterScrollen,
+        MinimapUmschalten,
+        RohstoffSucheWaehlen
     }
 
     public enum G5_SpielerBlickrichtung
@@ -70,6 +83,7 @@ namespace OOPGames
         G5_BuildingStatus Status { get; }
         bool IstMitStromVersorgt { get; }
         string AusgewaehltesRezept { get; }
+        IReadOnlyDictionary<G5_Item, int> AusgabeInhalt { get; }
         IReadOnlyList<string> VerfuegbareRezepte { get; }
         IReadOnlyDictionary<G5_Item, int> UpgradeKosten { get; }
         bool KannVerbessertWerden { get; }
@@ -86,6 +100,7 @@ namespace OOPGames
         IReadOnlyDictionary<G5_Item, int> SpielerInventar { get; }
         int SpielerInventarKapazitaet { get; }
         int SpielerInventarBelegt { get; }
+        IReadOnlyList<G5_AbgelegterGegenstandInfo> AbgelegteGegenstaende { get; }
         bool BaumenueGeoeffnet { get; }
         int HubMenge(G5_Item item);
         string StatusMeldung { get; }

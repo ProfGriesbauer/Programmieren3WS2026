@@ -34,6 +34,49 @@ namespace OOPGames
 
             if (selection is IKeySelection keySelection)
             {
+                if (field is SatisfactoryFieldView inventarAnsicht)
+                {
+                    bool inventarGegenstandAusgewaehlt =
+                        inventarAnsicht.InventarGeoeffnet &&
+                        inventarAnsicht.AusgewaehlterAbwurfGegenstand.HasValue;
+
+                    // H stellt die eingegebene Anzahl des ausgewählten Gegenstands her.
+                    if (inventarGegenstandAusgewaehlt && keySelection.Key == Key.H)
+                    {
+                        return G5_FabrikAktion.ManuellHerstellen(
+                            _playerNumber,
+                            inventarAnsicht.AusgewaehlterAbwurfGegenstand.Value.ToString());
+                    }
+                    G5_FabrikGebaeudeTyp? gebaeudeTyp =
+                        inventarAnsicht.AusgewaehltesGebaeude?.Typ;
+                    bool ausgabeGebaeudeAusgewaehlt =
+                        gebaeudeTyp == G5_FabrikGebaeudeTyp.Foerderer ||
+                        gebaeudeTyp == G5_FabrikGebaeudeTyp.Schmelze ||
+                        gebaeudeTyp == G5_FabrikGebaeudeTyp.Konstruktor ||
+                        gebaeudeTyp == G5_FabrikGebaeudeTyp.Assembler;
+                    if (inventarGegenstandAusgewaehlt || ausgabeGebaeudeAusgewaehlt)
+                    {
+                        if (TryGetDigit(keySelection.Key, out char digit))
+                        {
+                            return G5_FabrikAktion.AbwurfMengeEingeben(_playerNumber, digit.ToString());
+                        }
+
+                        if (keySelection.Key == Key.Back)
+                        {
+                            return G5_FabrikAktion.AbwurfMengeEingeben(_playerNumber, "\b");
+                        }
+
+                        if (keySelection.Key == Key.Enter)
+                        {
+                            return inventarGegenstandAusgewaehlt
+                                ? G5_FabrikAktion.InventarGegenstandAblegen(_playerNumber)
+                                : G5_FabrikAktion.GegenstandAbholen(
+                                    _playerNumber,
+                                    inventarAnsicht.MengeEingabe);
+                        }
+                    }
+                }
+
                 switch (keySelection.Key)
                 {
                     case Key.W:
@@ -50,6 +93,14 @@ namespace OOPGames
                         return G5_FabrikAktion.GebaeudeVerkaufen(_playerNumber);
                     case Key.Tab:
                         return G5_FabrikAktion.BaumenueUmschalten(_playerNumber);
+                    case Key.F2:
+                        return G5_FabrikAktion.StatistikUmschalten(_playerNumber);
+                    case Key.T:
+                        return G5_FabrikAktion.TutorialUeberspringen(_playerNumber);
+                    case Key.M:
+                        return G5_FabrikAktion.MinimapUmschalten(_playerNumber);
+                    case Key.R:
+                        return G5_FabrikAktion.RohstoffSucheWaehlen(_playerNumber, "Naechster");
                     case Key.Escape:
                         return G5_FabrikAktion.GebaeudeAnsehen(_playerNumber, -1, -1);
                     default:
@@ -92,9 +143,37 @@ namespace OOPGames
                         return G5_FabrikAktion.GebaeudeUpgraden(_playerNumber);
                     case G5_FabrikAktionstyp.GebaeudeVerkaufen:
                         return G5_FabrikAktion.GebaeudeVerkaufen(_playerNumber);
+                    case G5_FabrikAktionstyp.RaketeBetanken:
+                        return G5_FabrikAktion.RaketeBetanken(_playerNumber);
+                    case G5_FabrikAktionstyp.RaketeStarten:
+                        return G5_FabrikAktion.RaketeStarten(_playerNumber);
+                    case G5_FabrikAktionstyp.StatistikUmschalten:
+                        return G5_FabrikAktion.StatistikUmschalten(_playerNumber);
+                    case G5_FabrikAktionstyp.MinimapUmschalten:
+                        return G5_FabrikAktion.MinimapUmschalten(_playerNumber);
+                    case G5_FabrikAktionstyp.RohstoffSucheWaehlen:
+                        return G5_FabrikAktion.RohstoffSucheWaehlen(_playerNumber, wert);
+                    case G5_FabrikAktionstyp.GegenstandAbholen:
+                        return G5_FabrikAktion.GegenstandAbholen(_playerNumber, wert);
+                    case G5_FabrikAktionstyp.ManuellHerstellen:
+                        return G5_FabrikAktion.ManuellHerstellen(_playerNumber, wert);
+                    case G5_FabrikAktionstyp.InventarGegenstandWaehlen:
+                        return G5_FabrikAktion.InventarGegenstandWaehlen(_playerNumber, wert);
+                    case G5_FabrikAktionstyp.InventarGegenstandAblegen:
+                        return G5_FabrikAktion.InventarGegenstandAblegen(_playerNumber);
+                    case G5_FabrikAktionstyp.BodenGegenstaendeAufnehmen:
+                        return G5_FabrikAktion.BodenGegenstaendeAufnehmen(_playerNumber);
                     case G5_FabrikAktionstyp.GebaeudeAnsehen:
                         return G5_FabrikAktion.GebaeudeAnsehen(_playerNumber, -1, -1);
                 }
+            }
+
+            if (field is SatisfactoryFieldView menuView &&
+                (menuView.Spielfeld.StatistikGeoeffnet ||
+                 menuView.IsMenueBereich(clickSelection.XClickPos, clickSelection.YClickPos) ||
+                 menuView.IsInventarBereich(clickSelection.XClickPos, clickSelection.YClickPos)))
+            {
+                return null;
             }
 
             if (field is IG5_WeltSpielfeld welt &&
@@ -108,6 +187,36 @@ namespace OOPGames
             }
 
             return null;
+        }
+
+        private static bool TryGetDigit(Key key, out char digit)
+        {
+            switch (key)
+            {
+                case Key.D0:
+                case Key.NumPad0: digit = '0'; return true;
+                case Key.D1:
+                case Key.NumPad1: digit = '1'; return true;
+                case Key.D2:
+                case Key.NumPad2: digit = '2'; return true;
+                case Key.D3:
+                case Key.NumPad3: digit = '3'; return true;
+                case Key.D4:
+                case Key.NumPad4: digit = '4'; return true;
+                case Key.D5:
+                case Key.NumPad5: digit = '5'; return true;
+                case Key.D6:
+                case Key.NumPad6: digit = '6'; return true;
+                case Key.D7:
+                case Key.NumPad7: digit = '7'; return true;
+                case Key.D8:
+                case Key.NumPad8: digit = '8'; return true;
+                case Key.D9:
+                case Key.NumPad9: digit = '9'; return true;
+                default:
+                    digit = default;
+                    return false;
+            }
         }
     }
 
@@ -169,6 +278,96 @@ namespace OOPGames
         internal static G5_FabrikAktion GebaeudeVerkaufen(int playerNumber)
         {
             return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.GebaeudeVerkaufen, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion RaketeBetanken(int playerNumber)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.RaketeBetanken, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion RaketeStarten(int playerNumber)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.RaketeStarten, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion StatistikUmschalten(int playerNumber)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.StatistikUmschalten, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        internal static G5_FabrikAktion MinimapUmschalten(int playerNumber)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.MinimapUmschalten, G5_Bauwerkzeug.Keines, -1, -1);
+        }
+
+        // wert: Name eines G5_Rohstofftyp oder "Naechster", um zur nächsten Rohstoffart zu wechseln.
+        internal static G5_FabrikAktion RohstoffSucheWaehlen(int playerNumber, string rohstoff)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.RohstoffSucheWaehlen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1,
+                rohstoff);
+        }
+
+        internal static G5_FabrikAktion GegenstandAbholen(int playerNumber, string anzahl)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.GegenstandAbholen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1,
+                anzahl);
+        }
+
+        internal static G5_FabrikAktion ManuellHerstellen(int playerNumber, string itemName)
+        {
+            return new G5_FabrikAktion(playerNumber, G5_FabrikAktionstyp.ManuellHerstellen, G5_Bauwerkzeug.Keines, -1, -1, itemName);
+        }
+
+        internal static G5_FabrikAktion InventarGegenstandWaehlen(int playerNumber, string itemName)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.InventarGegenstandWaehlen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1,
+                itemName);
+        }
+
+        internal static G5_FabrikAktion AbwurfMengeEingeben(int playerNumber, string eingabe)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.AbwurfMengeEingeben,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1,
+                eingabe);
+        }
+
+        internal static G5_FabrikAktion InventarGegenstandAblegen(int playerNumber)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.InventarGegenstandAblegen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1);
+        }
+
+        internal static G5_FabrikAktion BodenGegenstaendeAufnehmen(int playerNumber)
+        {
+            return new G5_FabrikAktion(
+                playerNumber,
+                G5_FabrikAktionstyp.BodenGegenstaendeAufnehmen,
+                G5_Bauwerkzeug.Keines,
+                -1,
+                -1);
         }
 
         internal static G5_FabrikAktion BaumenueUmschalten(int playerNumber)

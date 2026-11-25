@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq; // Patrick Lupierz – 22.11.2026
 
 namespace OOPGames
 {
@@ -69,11 +70,17 @@ namespace OOPGames
         private void BuildHospital()
         {
             AddFurniture("Empfangstresen", "obj_counter", 2, 2, 3, 1);
+            _objects.Add(new G1C_Npc("Schwester Emma", "dealer_blue", 4, 3,
+                                     G1C_Direction.Down, G1C_InteractionType.Nurse));
             AddFurniture("Behandlungsbett", "obj_medical_bed", 3, 4, 2, 1);
             AddFurniture("Behandlungsbett", "obj_medical_bed", 9, 4, 2, 1);
             AddFurniture("Medizinschrank", "obj_clinic_cabinet", 3, 7, 2, 2);
             AddFurniture("Pflanze", "obj_plant", 13, 2, 1, 1);
             AddFurniture("Stuhl", "obj_chair", 7, 6, 1, 1);
+            // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Hinweiszettel im Krankenhaus
+            _objects.Add(new G1C_WorldObject("Krankenhaus-Hinweiszettel", "obj_picture_hospital_notice", 11, 0, 1, 1, true,
+                G1C_InteractionType.Inspect,
+                "Hier werden keine Mitarbeiter benötigt, da man sich im Casino sowieso nicht verletzen kann."));
         }
 
         // Entwickler: Denis Mock
@@ -175,6 +182,11 @@ namespace OOPGames
                                      G1C_Direction.Down, G1C_InteractionType.Talk));
             AddFurniture("Stuhl", "obj_chair", 10, 9, 1, 1);
             AddFurniture("Pflanze", "obj_plant", 14, 10, 1, 1);
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Patrick steht neben dem mittleren Automaten (Gast-Automat)
+            // und schaut darauf; die Vorderseite bleibt frei, damit der Spieler den Automaten weiter benutzen kann.
+            G1C_ArcadeCabinet middle = G1C_ArcadeCatalog.Cabinets.First(c => c.IsGuestCabinet);
+            _objects.Add(new G1C_Npc(G1C_ArcadeMentor.NpcName, G1C_ArcadeMentor.Skin, middle.X + 1, middle.Y,
+                                     G1C_Direction.Left, G1C_InteractionType.Talk));
         }
 
         // Entwickler: Patrick Lupierz – Datum: 15.11.2026

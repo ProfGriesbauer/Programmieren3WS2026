@@ -2,7 +2,7 @@
 
 Hier werden die Programmdateien für das Tower-Defense-Spiel der Commodore-Konsole abgelegt.
 
-Die Klasse `Tower` bildet die gemeinsame Grundlage für verschiedene Tower-Typen.
+Die Klasse `G10_Tower` bildet die gemeinsame Grundlage für verschiedene Tower-Typen.
 
 Das Spiel ist im Commodore-Menue als `Tower Defense` auswaehlbar. Das eigentliche
 Spielfeld und die Spieloberflaeche werden in einem spaeteren Schritt ergaenzt.
@@ -17,37 +17,37 @@ Schwierigkeitsauswahl und danach zur Kartenauswahl. Verfuegbar sind `Easy`,
 `1.80` fuer spaetere Gegner-Basiswerte. Die erste Karte `Gruene Wiese` besitzt
 einen festen Gegnerpfad und fuenf Stein-Podeste als vorgesehene Tower-Spots.
 
-`Enemy` beschreibt Gegner mit Bewegung, Leben, Rüstung, Schaden am Hauptgebäude,
+`G10_Enemy` beschreibt Gegner mit Bewegung, Leben, Rüstung, Schaden am Hauptgebäude,
 Schadensresistenzen, Schwächen und einer Belohnung. Eine passende Schadensart aus
-`WeakAgainst` verursacht 50 Prozent zusätzlichen Schaden. `MainBuilding` erbt die Angriffswerte von
-`Tower` und besitzt zusätzlich Lebenspunkte. Das Spiel kann enden, sobald
-`MainBuilding.IsDestroyed` den Wert `true` liefert.
+`WeakAgainst` verursacht 50 Prozent zusätzlichen Schaden. `G10_MainBuilding` erbt die Angriffswerte von
+`G10_Tower` und besitzt zusätzlich Lebenspunkte. Das Spiel kann enden, sobald
+`G10_MainBuilding.IsDestroyed` den Wert `true` liefert.
 
-Die verfügbaren Standard-Tower sind `PhysicalArcher`, `FireMage`, `IceMage`,
-`EarthMage`, `PoisonArcher`, `StromMage`, `Flamethrower` und `IceAreaTower`. Das
-`MainBuilding` verursacht immer physischen Einzelziel-Schaden.
+Die verfügbaren Standard-Tower sind `G10_PhysicalArcher`, `G10_FireMage`, `G10_IceMage`,
+`G10_EarthMage`, `G10_PoisonArcher`, `G10_StromMage`, `G10_Flamethrower` und `G10_IceAreaTower`. Das
+`G10_MainBuilding` verursacht immer physischen Einzelziel-Schaden.
 
 Eigene Spielideen können in [TowerDefensePlan.md](./TowerDefensePlan.md)
 gesammelt und weiterentwickelt werden.
 
-`FireMage` und `Flamethrower` wenden Burn an, `PoisonArcher` verursacht
-Schaden über Zeit, Ice-Tower verlangsamen Gegner und `EarthMage` verursacht
-Rüstungsbruch. Der `StromMage` verursacht Storm-Schaden und kann vom zuerst
+`G10_FireMage` und `G10_Flamethrower` wenden Burn an, `G10_PoisonArcher` verursacht
+Schaden über Zeit, Ice-Tower verlangsamen Gegner und `G10_EarthMage` verursacht
+Rüstungsbruch. Der `G10_StromMage` verursacht Storm-Schaden und kann vom zuerst
 getroffenen Gegner aus in beide Richtungen bis zu sechs Gegner verketten. Dafür wird
 `GetChainTargets(enemies, firstTargetIndex)` verwendet.
 
-`MiniBoss` und `Boss` erben von `Enemy` und besitzen dadurch alle Eigenschaften
+`G10_MiniBoss` und `G10_Boss` erben von `G10_Enemy` und besitzen dadurch alle Eigenschaften
 und das Verhalten eines normalen Gegners. Sie können später um spezielle
 Boss-Fähigkeiten erweitert werden.
 
-Die 20 Standard-Gegner in `StandardEnemies.cs` erhalten eine Wellenstufe im
+Die 20 Standard-Gegner in `Johannes_Gabriel_StandardEnemies.cs` erhalten eine Wellenstufe im
 Konstruktor, zum Beispiel `new Orc(wave: 5)`. Dadurch steigen ihre Lebenspunkte,
 Rüstung, Gebäudeschaden und Belohnung mit jeder Welle.
 
-Zusätzliche Bosse sind `SkeletonKing`, `OrcLord`, `ElementalGod`, `VampireLord`
-und `ElderDragon`. Mini-Bosse sind `FireDragon`, `SkeletonMage`, `DarkElfKing`,
-`AllElementsGolem` und `GoblinLord`. Der frühere `AncientDragon` heißt jetzt
-`Dragon`.
+Zusätzliche Bosse sind `G10_SkeletonKing`, `G10_OrcLord`, `G10_ElementalGod`, `G10_VampireLord`
+und `G10_ElderDragon`. Mini-Bosse sind `G10_FireDragon`, `G10_SkeletonMage`, `G10_DarkElfKing`,
+`G10_AllElementsGolem` und `G10_GoblinLord`. Der frühere `AncientDragon` heißt jetzt
+`G10_Dragon`.
 
 ## Grafik
 
@@ -70,13 +70,13 @@ Alle Grafiken liegen in `Tower Defense/Assets` (Sprite-Paket v4, Ordner 1080p, s
 
 `sprites.json` beschreibt jedes Sheet (Framegroesse, Animationen mit Zeile/Frames/fps/Schleife,
 Pivot = Fusspunkt, Schussursprung der Tower) und wird zur Laufzeit gelesen
-(`Kinderzimmer90er/B5_TowerDefenseSprites.cs`). Ein Sheet mit gleichem Format laesst sich daher
+(`Kinderzimmer90er/G10_TowerDefenseSprites.cs`). Ein Sheet mit gleichem Format laesst sich daher
 ohne Code-Aenderung austauschen. Figuren schauen nach rechts und werden fuer die Laufrichtung
 links gespiegelt; Treffer lassen sie kurz weiss aufblitzen.
 
 ## Karten und Freischaltung
 
-Die fuenf Karten werden aus `Assets/karten/map*.json` geladen (`B5_TowerDefenseMaps.cs`):
+Die fuenf Karten werden aus `Assets/karten/map*.json` geladen (`Johannes_Gabriel_TowerDefenseMaps.cs`):
 Routen (ein oder zwei Spawns), Podeste (Pivot fuer den Tower-Fuss), Burgposition und
 Brueckenkreuzungen. Gezeichnet wird in den Ebenen Boden, Deko, Gegner unter einer Bruecke,
 Brueckendeck, dann Tower, Burg und uebrige Gegner nach ihrer Hoehe sortiert. Bei zwei Spawns
@@ -94,7 +94,7 @@ Die 10 Podeste jeder Karte stehen an den vom Spieler markierten Stellen, jeweils
 Weg (93-99 px vom Weg; Baeume oder Steine an diesen Stellen wurden entfernt).
 Jedes Podest liegt so nah am Weg, dass jeder Tower ihn schon mit seiner Grundreichweite
 erreicht (auch Flamethrower und Ice Area Tower mit 3 x 48 px). Die Reichweite wird von der
-Podestmitte am Boden gemessen. Die Gegnerstaerke je Karte (`TowerDefenseMaps.EnemyStrength`)
+Podestmitte am Boden gemessen. Die Gegnerstaerke je Karte (`G10_TowerDefenseMaps.EnemyStrength`)
 gleicht die Karten mit dem Simulations-Bot aus, damit sie der Reihe nach schwerer werden.
 Am Anfang ist nur die erste
 Karte spielbar; gesperrte Karten sind in
@@ -117,7 +117,7 @@ nicht mit Esc schliessen.
 
 Der dritte Button `ENDLOS-MODUS` spielt die geschaffte Karte mit Welle 51 weiter, mit allen
 Tuermen, Upgrades und dem Gold. Es geht so lange weiter, bis die Burg faellt. Die Wellen nach 50 sind
-zufaellig (`TowerDefenseWaves.Endless`): Die Anzahl der Gegner waechst weiter wie in Welle 1-50
+zufaellig (`G10_TowerDefenseWaves.Endless`): Die Anzahl der Gegner waechst weiter wie in Welle 1-50
 (hoechstens 60 Plaetze pro Welle), aber welche Gegner kommen, wird aus allen 20 normalen Gegnertypen
 ausgewuerfelt. Jede 5. Welle endet mit einem zufaelligen Mini-Boss, jede 10. mit einem zufaelligen
 Boss. Jeder Endlos-Lauf bekommt beim Start einen eigenen Zufallswert (`EndlessSeed`, im Spielstand
@@ -130,7 +130,7 @@ Stufe (`EnemyLevel`: normale Stufe x 1,5 + 2). Dadurch ist Welle 51 im Schnitt s
 Gegnerbelohnung plus Wellenbonus; uebriges Gold steckt man in die Meister-Stufen. Das HUD zeigt
 `<Welle> ENDLOS`.
 
-Der Endlos-Lauf wird wie ein normaler Lauf nach jeder Welle gespeichert (`TowerDefenseRunState.Endless`)
+Der Endlos-Lauf wird wie ein normaler Lauf nach jeder Welle gespeichert (`G10_TowerDefenseRunState.Endless`)
 und laesst sich fortsetzen. Pro Karte merkt sich der Spielstand den Rekord: die hoechste geschaffte
 Wellennummer inklusive der ersten 50 (`EndlessRecords`, mindestens 50, sobald der Endlos-Modus
 beginnt). Die Kartenauswahl zeigt ihn als `REKORD: BIS WELLE n`, die Niederlage als
@@ -162,7 +162,7 @@ Deko, alle Wege enden darueber) liegen ausserhalb des Bildes.
 
 `Esc` (oder `X`) schliesst Tower Defense nicht mehr, sondern oeffnet ein Menue mit
 `FORTSETZEN`, `HAUPTMENUE` und `SPIEL VERLASSEN`. Im Hauptbildschirm gibt es zusaetzlich den
-Eintrag `SPIEL VERLASSEN`. Technisch implementiert das Spiel `IB5RoomOwnBackKey`; der
+Eintrag `SPIEL VERLASSEN`. Technisch implementiert das Spiel `IG10_RoomOwnBackKey`; der
 Kinderzimmer-Kern reicht Esc/X dann an das Spiel weiter, statt es zu beenden.
 
 Alles ist auch mit der Maus bedienbar: Ueberfahren waehlt Menueeintraege, Podeste und Tower
@@ -189,12 +189,12 @@ entfernt. Spielstaende lassen sich in der Auswahl mit `Entf` oder dem Button `LO
 Rueckfrage) leeren.
 
 Alles liegt in `%LOCALAPPDATA%\Programmieren3WS2026\Kinderzimmer90er\towerdefense_saves.json`
-(`B5_TowerDefenseSaves.cs`). Ein Freischaltstand aus der aelteren Datei
+(`Johannes_Gabriel_TowerDefenseSaves.cs`). Ein Freischaltstand aus der aelteren Datei
 `towerdefense_progress.json` wird beim ersten Start in Spielstand 1 uebernommen.
 
 ## Wellen und Kampf
 
-Jede Karte hat 50 Wellen (`Waves.cs`). Zwischen den Wellen ist Bauphase; mit `Leertaste`
+Jede Karte hat 50 Wellen (`Johannes_Gabriel_Waves.cs`). Zwischen den Wellen ist Bauphase; mit `Leertaste`
 oder dem Button `WELLE STARTEN` beginnt die naechste. `T` bzw. `TEMPO` schaltet x1/x2/x3.
 TEMPO x1 laeuft 1,5-mal so schnell wie Echtzeit, x2 und x3 entsprechend 3- und 4,5-mal so schnell
 (`BaseSpeed`); die Spielzeit pro Tick wird dabei in gleich grosse Teilschritte von hoechstens 40 ms
@@ -223,14 +223,14 @@ Waehrend Bau-, Upgrade-, Esc-Menue und Dialogen ist der Kampf angehalten.
 - Der Arcane Titan hat 75 statt 90 Grund-Ruestung, weil er im Endlos-Modus (hohe Stufe) sonst kaum
   noch zu knacken war.
 
-Kampf (`Battle.cs`): Gegner laufen den Kartenweg entlang (`MoveSpeed` x 100 px/s). Tower
+Kampf (`Johannes_Gabriel_Battle.cs`): Gegner laufen den Kartenweg entlang (`MoveSpeed` x 100 px/s). Tower
 schiessen auf den vordersten Gegner in Reichweite (`AttackRange` x 48 px ab Podestmitte). Flaechen-Tower
 treffen bis zu `MaxTargets` Gegner in der Naehe, der Strom Mage verkettet ueber
-`GetChainTargets`, Effekte (Brand, Gift, Verlangsamung, Ruestungsbruch) kommen aus `Enemy`.
-Die Burg (`MainBuilding`, 1000 Leben) schiesst selbst mit und wird nach jeder Welle um 3 %
+`GetChainTargets`, Effekte (Brand, Gift, Verlangsamung, Ruestungsbruch) kommen aus `G10_Enemy`.
+Die Burg (`G10_MainBuilding`, 1000 Leben) schiesst selbst mit und wird nach jeder Welle um 3 %
 repariert. Sie hilft nur gegen Gegner in ihrer Naehe: Reichweite 5 x 48 px, ein Arkanbolzen
 pro Sekunde mit 30 Grundschaden. Der Schaden waechst pro Welle linear um einen Anteil, der von
-der Schwierigkeit abhaengt (`TowerDefenseDifficultyRules.CastleGrowthPerWave`):
+der Schwierigkeit abhaengt (`G10_TowerDefenseDifficultyRules.CastleGrowthPerWave`):
 
 | Schwierigkeit | Zuwachs pro Welle | Schaden Welle 1 / 25 / 50 |
 | --- | --- | --- |
@@ -245,7 +245,7 @@ verloren (siehe Burg zerstoert).
 
 Gold: Jeder besiegte Gegner zahlt einen Anteil seines `Reward` direkt aufs Konto (als `+n` ueber
 dem Gegner sichtbar): bis Welle 15 sind es 60 %, danach sinkt der Anteil gleichmaessig auf 30 % in
-Welle 50 und bleibt dann dort (`TowerDefenseBattle.RewardFactorAt`, auch fuer einen spaeteren
+Welle 50 und bleibt dann dort (`G10_TowerDefenseBattle.RewardFactorAt`, auch fuer einen spaeteren
 Endlos-Modus). Jede geschaffte Welle gibt zusaetzlich 20 + 5 x Welle Gold (Boss-Wellen doppelt).
 Verkaufen erstattet die Haelfte aller Ausgaben fuer den Tower.
 
@@ -255,7 +255,7 @@ fliesst in die Meisterschaft (bis Welle 50 etwa drei Meister-Stufen pro Tower).
 
 ## Upgrades
 
-Jeder Tower hat vier unabhaengige Upgrade-Wege (`TowerUpgrades.cs`). Die Prozentwerte beziehen
+Jeder Tower hat vier unabhaengige Upgrade-Wege (`Johannes_Gabriel_TowerUpgrades.cs`). Die Prozentwerte beziehen
 sich auf die Basiswerte des Towers; die Turmstufe erhoeht diese Basiswerte selbst, die
 Prozent-Upgrades wirken also darauf.
 
@@ -279,7 +279,7 @@ drei Balken unter dem Podest die Stufen von Schaden (rot), Reichweite (gruen) un
 Gespeichert wird pro Podest `TowerTiers`, `DamageLevels`, `RangeLevels`, `SpeedLevels` und
 `MasteryLevels`; aeltere Spielstaende mit nur einer Stufe werden als Schaden-Upgrades uebernommen.
 
-Schadensmodell (`Enemy.TakeDamage`): Schwaeche +50 %, Resistenz -50 % (nicht mehr immun),
+Schadensmodell (`G10_Enemy.TakeDamage`): Schwaeche +50 %, Resistenz -50 % (nicht mehr immun),
 Ruestung reduziert prozentual um `150 / (150 + Ruestung)`. Brand und Gift zaehlen als Feuer-
 bzw. Giftschaden, ignorieren Ruestung und sammeln Bruchteile ueber die Ticks. Die
 Schwierigkeit teilt den eingehenden Schaden (`IncomingDamageFactor`), wirkt also wie mehr Leben.
@@ -304,14 +304,14 @@ Jede Karte bekommt einen eigenen Soundtrack im 16-Bit-Retro-Stil, dazu Menue-, M
 Boss-Musik. Die Musik wird im Code komponiert und synthetisiert, es gibt keine fremden
 Audiodateien:
 
-- `Kinderzimmer90er/B5_TowerDefenseMusicSynth.cs`: Synthesizer (Pulswellen mit waehlbarer
+- `Kinderzimmer90er/G10_TowerDefenseMusicSynth.cs`: Synthesizer (Pulswellen mit waehlbarer
   Breite, Dreieck, Sinus, Saegezahn, Orgel, Glocke, Rausch-Schlagzeug, ADSR-Huellkurve, Vibrato,
   Tiefpass, Echo) und eine kleine Tracker-Notation (`g4:8` = G4 als Halbe, `c4+e4+g4` = Akkord,
-  `r` = Pause). `TowerDefenseChords` erzeugt Arpeggios, Basslinien und Akkordflaechen aus
+  `r` = Pause). `G10_TowerDefenseChords` erzeugt Arpeggios, Basslinien und Akkordflaechen aus
   Akkordsymbolen. Toene und Echos, die ueber das Loop-Ende hinausklingen, laufen am Anfang weiter,
   der Loop hat also keine Naht.
-- `Kinderzimmer90er/B5_TowerDefenseSongs.cs`: die Kompositionen.
-- `Kinderzimmer90er/B5_TowerDefenseMusic.cs`: Wiedergabe. Die Stuecke werden beim ersten Start im
+- `Kinderzimmer90er/G10_TowerDefenseSongs.cs`: die Kompositionen.
+- `Kinderzimmer90er/G10_TowerDefenseMusic.cs`: Wiedergabe. Die Stuecke werden beim ersten Start im
   Hintergrund gerendert und als WAV nach `%LOCALAPPDATA%\Programmieren3WS2026\Kinderzimmer90er\TowerDefenseMusic`
   geschrieben. Alle Stuecke werden auf die gleiche Lautheit gebracht. Die Lautstaerke betraegt 25 % des globalen Lautstaerkereglers (Hintergrund), im
   Esc-Menue, in der Anleitung und in Dialogen noch einmal 45 % davon. Wechsel sind harte Schnitte.
@@ -337,7 +337,7 @@ wenn er besiegt ist.
 ## Anleitung im Spiel
 
 Ueber `ANLEITUNG` im Esc-Menue (und im Hauptmenue) oeffnet sich eine bebilderte Anleitung mit
-acht Seiten (`Kinderzimmer90er/B5_TowerDefenseHelp.cs`): Spielziel, Spieloberflaeche,
+acht Seiten (`Kinderzimmer90er/G10_TowerDefenseHelp.cs`): Spielziel, Spieloberflaeche,
 Tuerme bauen, Upgrades, Gegner und Wellen, Schadensarten, Steuerung (Tastatur und Maus) und
 Spielstaende. Die Bilder werden aus den echten Kartenausschnitten und Sprites zusammengesetzt;
 nummerierte Markierungen verbinden Bildstellen mit dem Text. Blaettern mit Pfeiltasten, Enter

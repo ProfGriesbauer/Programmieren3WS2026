@@ -5,7 +5,7 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
-    public sealed class G10_SolarShooterGame : IB5RoomOwnBackKey
+    public sealed class G10_SolarShooterGame : IG10_RoomOwnBackKey
     {
         readonly G10_SolarShooterRenderer _Renderer;
         readonly G10_ShooterInputMapper _InputMapper;

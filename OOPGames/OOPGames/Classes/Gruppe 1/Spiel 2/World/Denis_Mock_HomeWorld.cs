@@ -31,10 +31,19 @@ namespace OOPGames
         private readonly List<G1C_WorldObject> _objects = new List<G1C_WorldObject>();
         private readonly List<G1C_PlacedFurniture> _placedFurniture = new List<G1C_PlacedFurniture>();
         private readonly List<G1C_WorldObject> _placedObjects = new List<G1C_WorldObject>();
+        private G1C_PetAnimal _houseCat;
 
         public G1C_HomeMap Map { get; } = new G1C_HomeMap();
         public IReadOnlyList<G1C_WorldObject> Objects { get { return _objects; } }
         public IReadOnlyList<G1C_PlacedFurniture> PlacedFurniture { get { return _placedFurniture; } }
+        public G1C_PetAnimal HouseCat { get { return _houseCat; } }
+
+        public void SetHouseCatPresent(bool present)
+        {
+            if (_houseCat == null) return;
+            if (present && !_objects.Contains(_houseCat)) _objects.Add(_houseCat);
+            if (!present) _objects.Remove(_houseCat);
+        }
         IG1C_WorldMap IG1C_WorldScene.Grid { get { return Map; } }
 
         public int PlayerStartX { get { return 5; } }
@@ -50,6 +59,8 @@ namespace OOPGames
         // Entwickler: Denis Mock
         private void BuildHome()
         {
+            _houseCat = new G1C_PetAnimal("Hauskatze Milo", G1C_PetKind.Cat, "orange", 6, 6, 2);
+            _objects.Add(_houseCat);
             // Änderung durch: Patrick Lupierz – Datum: 12.11.2026 – Bett, Kleiderschrank und Spiegel sind benutzbar
             _objects.Add(new G1C_WorldObject("Bett", "obj_home_bed", 2, 2, 2, 1, true, G1C_InteractionType.Bed));
             _objects.Add(new G1C_WorldObject("Kleiderschrank", "obj_wardrobe", 5, 1, 1, 1, true, G1C_InteractionType.Wardrobe));

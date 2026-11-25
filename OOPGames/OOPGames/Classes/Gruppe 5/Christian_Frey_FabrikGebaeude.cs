@@ -213,6 +213,29 @@ namespace OOPGames
             Status = status;
         }
     }
+    internal sealed class G5_Rakete : G5_Building
+    {
+        internal const int UranBedarf = 50;
+
+        internal G5_Rakete(G5_GridPosition position) : base(position, 1, 1)
+        {
+        }
+
+        public override string Name => "Rakete";
+        internal int UranVorrat { get; private set; }
+        internal bool Startbereit => UranVorrat == UranBedarf;
+
+        internal void Betanken(int menge)
+        {
+            if (menge <= 0 || menge > UranBedarf - UranVorrat)
+            {
+                throw new ArgumentOutOfRangeException(nameof(menge));
+            }
+
+            UranVorrat += menge;
+        }
+    }
+
     public sealed class G5_ResourceDeposit
     {
         public G5_ResourceDeposit(G5_Item item, long? amount)
@@ -295,7 +318,7 @@ namespace OOPGames
             }
         }
 
-        public override string Name => "Miner";
+        public override string Name => "Förderer";
         public G5_Item Resource => _deposit.Item;
         public long? RemainingDeposit => _deposit.RemainingAmount;
         public IReadOnlyDictionary<G5_Item, int> OutputContents => _output.Contents;
@@ -575,7 +598,7 @@ namespace OOPGames
             int inputCapacity,
             int outputCapacity,
             int powerPriority = 0)
-            : base(position, "Assembler", G5_RecipeType.Assembly, recipes, inputCapacity, outputCapacity, powerPriority)
+            : base(position, "Montagewerk", G5_RecipeType.Assembly, recipes, inputCapacity, outputCapacity, powerPriority)
         {
         }
     }

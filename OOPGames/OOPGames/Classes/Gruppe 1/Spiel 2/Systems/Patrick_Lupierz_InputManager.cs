@@ -101,7 +101,8 @@ namespace OOPGames
             }
         }
 
-        public static bool IsConfirm(Key key) { return key == Key.E; }
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – E und Enter bestätigen dieselbe Aktion
+        public static bool IsConfirm(Key key) { return key == Key.E || key == Key.Enter; }
 
         public static bool IsBack(Key key) { return key == Key.Q || key == Key.Escape; }
 

@@ -212,7 +212,7 @@ namespace OOPGames
             _coins.Clear();
             int count = CoinsForBet(bet);
             for (int i = 0; i < count; i++)
-                _coins.Add(new double[] { 8 + Random.NextDouble() * 464, -10 - Random.NextDouble() * 260, 2 + Random.NextDouble() * 3, Random.NextDouble() * 6 });
+                _coins.Add(new double[] { 8 + Random.NextDouble() * 464, G1C_Renderer.WindowTop - 10 - Random.NextDouble() * 260, 2 + Random.NextDouble() * 3, Random.NextDouble() * 6 });
             _rainTicks = 0;
         }
 
@@ -222,7 +222,8 @@ namespace OOPGames
             _rainTicks++;
             foreach (double[] coin in _coins)
             {
-                double floor = 250 + (coin[0] * 7 % 10);
+                // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Münzen landen am unteren Fensterrand (auch im Vollbild)
+                double floor = G1C_Renderer.WindowBottom - 14 + (coin[0] * 7 % 10);
                 if (coin[1] < floor) { coin[1] = Math.Min(floor, coin[1] + coin[2]); coin[2] += 0.15; }
                 coin[3] += 0.3;
             }
@@ -235,13 +236,15 @@ namespace OOPGames
 
         protected override void DrawGame(G1C_Renderer r)
         {
+            double machineWidth = 320;
+            double machineX = (G1C_Renderer.ScreenWidth - machineWidth) / 2;
             // Gehäuse
-            r.DrawRect(80, 34, 320, 176, Color.FromRgb(0xC8, 0x30, 0x30), G1C_UiColors.Gold, 3);
-            r.Text("★ LUCKY SLOTS ★", 80, 38, 14, G1C_UiColors.Gold, 320);
+            r.DrawRect(machineX, 34, machineWidth, 176, Color.FromRgb(0xC8, 0x30, 0x30), G1C_UiColors.Gold, 3);
+            r.Text("★ LUCKY SLOTS ★", machineX, 38, 14, G1C_UiColors.Gold, machineWidth);
 
             for (int i = 0; i < ReelCount; i++)
             {
-                double x = 100 + i * 96;
+                double x = machineX + 20 + i * 96;
                 r.DrawRect(x, 60, 88, 140, Colors.White, Color.FromRgb(0x40, 0x40, 0x40), 2);
                 for (int row = -1; row <= 1; row++)
                 {
@@ -250,8 +253,8 @@ namespace OOPGames
                 }
             }
             // Gewinnlinie
-            r.FillRect(92, 129, 296, 2, Color.FromArgb(0xC0, 0xE0, 0x20, 0x20));
-            if (_lastWin > 0) r.DrawRect(98, 104, 284, 48, Colors.Transparent, G1C_UiColors.Highlight, 3);
+            r.FillRect(machineX + 12, 129, machineWidth - 24, 2, Color.FromArgb(0xC0, 0xE0, 0x20, 0x20));
+            if (_lastWin > 0) r.DrawRect(machineX + 18, 104, machineWidth - 36, 48, Colors.Transparent, G1C_UiColors.Highlight, 3);
 
             // Einsatz und Gewinntabelle
             r.Text("Einsatz", 0, 100, 11, G1C_UiColors.Gold, 80);
@@ -264,10 +267,12 @@ namespace OOPGames
             foreach (double[] coin in _coins)
             {
                 double w = 5 * Math.Abs(Math.Cos(coin[3])) + 1;
-                r.FillEllipse(coin[0], coin[1], w + 1, 6, Color.FromRgb(0xB0, 0x80, 0x10));
-                r.FillEllipse(coin[0], coin[1], w, 5, G1C_UiColors.Gold);
+                // Münzen über die ganze Fensterbreite verteilt (x wurde für 480 Einheiten gewürfelt)
+                double cx = G1C_Renderer.WindowLeft + coin[0] / G1C_Renderer.BaseScreenWidth * (G1C_Renderer.WindowRight - G1C_Renderer.WindowLeft);
+                r.FillEllipse(cx, coin[1], w + 1, 6, Color.FromRgb(0xB0, 0x80, 0x10));
+                r.FillEllipse(cx, coin[1], w, 5, G1C_UiColors.Gold);
             }
-            if (_coins.Count > 0 && _rainTicks % 10 < 7) r.Text("JACKPOT!", 80, 66, 36, G1C_UiColors.Gold, 320);
+            if (_coins.Count > 0 && _rainTicks % 10 < 7) r.Text("JACKPOT!", machineX, 66, 36, G1C_UiColors.Gold, machineWidth);
 
             AddButtonRow(Btn("[W] Einsatz +", Key.W, !_spinning), Btn("[S] Einsatz -", Key.S, !_spinning),
                          Btn("[E] Drehen", Key.E, !_spinning), Btn("[Q] Verlassen", Key.Q, !_spinning));

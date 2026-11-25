@@ -228,29 +228,218 @@ namespace OOPGames
         }
     }
 
-    internal static class AttackGeometry
+    public static class AttackGeometry
     {
+        // Part of a blade weapon's reach in front of the body that the blade does not cover:
+        // the blade starts at the grip and its tip lies at reach - BladeGripGap.
+        public const double BladeGripGap = 8;
+        // Half the blade width per unit of blade length (3 pixels wide, 23 pixels long).
+        public const double BladeHalfWidthPerLength = 1.5 / 23;
+        // Angle step a blade may sweep per hit test, in units of movement at its tip.
+        private const double BladeSampleDistance = 6;
+
+        // Number of points along the axis of a cone used to find hitboxes that cross it.
+        private const int ConeAxisSamples = 8;
+
+        public static bool RectsOverlap(Rect first, Rect second)
+        {
+            return first.Left < second.Right && second.Left < first.Right
+                && first.Top < second.Bottom && second.Top < first.Bottom;
+        }
+
+        public static Point ClosestPointOnRect(Point point, Rect rect)
+        {
+            return new Point(
+                Math.Max(rect.Left, Math.Min(rect.Right, point.X)),
+                Math.Max(rect.Top, Math.Min(rect.Bottom, point.Y)));
+        }
+
+        public static double DistanceToRect(Point point, Rect rect)
+        {
+            Point closest = ClosestPointOnRect(point, rect);
+            return (point - closest).Length;
+        }
+
+        public static double DistanceBetweenRects(Rect first, Rect second)
+        {
+            double gapX = Math.Max(0, Math.Max(first.Left - second.Right, second.Left - first.Right));
+            double gapY = Math.Max(0, Math.Max(first.Top - second.Bottom, second.Top - first.Bottom));
+            return Math.Sqrt(gapX * gapX + gapY * gapY);
+        }
+
+        public static double SegmentDistanceToRect(Point start, Point end, Rect rect)
+        {
+            if (rect.Contains(start) || rect.Contains(end))
+            {
+                return 0;
+            }
+
+            Point topLeft = rect.TopLeft;
+            Point topRight = rect.TopRight;
+            Point bottomRight = rect.BottomRight;
+            Point bottomLeft = rect.BottomLeft;
+            if (SegmentsIntersect(start, end, topLeft, topRight)
+                || SegmentsIntersect(start, end, topRight, bottomRight)
+                || SegmentsIntersect(start, end, bottomRight, bottomLeft)
+                || SegmentsIntersect(start, end, bottomLeft, topLeft))
+            {
+                return 0;
+            }
+
+            return Math.Min(
+                Math.Min(DistanceToRect(start, rect), DistanceToRect(end, rect)),
+                Math.Min(
+                    Math.Min(DistanceToSegment(topLeft, start, end),
+                        DistanceToSegment(topRight, start, end)),
+                    Math.Min(DistanceToSegment(bottomRight, start, end),
+                        DistanceToSegment(bottomLeft, start, end))));
+        }
+
+        private static bool SegmentsIntersect(Point a, Point b, Point c, Point d)
+        {
+            double d1 = Cross(c, d, a);
+            double d2 = Cross(c, d, b);
+            double d3 = Cross(a, b, c);
+            double d4 = Cross(a, b, d);
+            return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0))
+                && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+        }
+
+        private static double Cross(Point origin, Point first, Point second)
+        {
+            return (first.X - origin.X) * (second.Y - origin.Y)
+                - (first.Y - origin.Y) * (second.X - origin.X);
+        }
+
+        // Center distance at which two hitboxes (relative to their positions) start to touch
+        // when the second lies in the unit direction from the first.
+        public static double GetContactDistance(
+            Rect first, Rect second, double directionX, double directionY)
+        {
+            double limitX = double.PositiveInfinity;
+            double limitY = double.PositiveInfinity;
+            if (directionX > 1e-12) limitX = (first.Right - second.Left) / directionX;
+            else if (directionX < -1e-12) limitX = (first.Left - second.Right) / directionX;
+            if (directionY > 1e-12) limitY = (first.Bottom - second.Top) / directionY;
+            else if (directionY < -1e-12) limitY = (first.Top - second.Bottom) / directionY;
+            double contact = Math.Min(limitX, limitY);
+            return double.IsInfinity(contact) ? 0 : Math.Max(0, contact);
+        }
+
+        // How far the second hitbox must move in the unit direction so it no longer overlaps
+        // the first; infinite when that direction cannot separate them.
+        public static double GetSeparationDistance(
+            Rect first, Rect second, double directionX, double directionY)
+        {
+            double distance = double.PositiveInfinity;
+            if (directionX > 1e-12)
+                distance = Math.Min(distance, (first.Right - second.Left) / directionX);
+            else if (directionX < -1e-12)
+                distance = Math.Min(distance, (first.Left - second.Right) / directionX);
+            if (directionY > 1e-12)
+                distance = Math.Min(distance, (first.Bottom - second.Top) / directionY);
+            else if (directionY < -1e-12)
+                distance = Math.Min(distance, (first.Top - second.Bottom) / directionY);
+            return double.IsInfinity(distance) ? distance : Math.Max(0, distance);
+        }
+
+        public static PlayerFacing GetFacingForDirection(double directionX, double directionY)
+        {
+            return Math.Abs(directionX) >= Math.Abs(directionY)
+                ? (directionX < 0 ? PlayerFacing.Left : PlayerFacing.Right)
+                : (directionY < 0 ? PlayerFacing.Back : PlayerFacing.Front);
+        }
+
+        // Places the blade of an entity: the grip lies in its hand for the given facing, and
+        // the blade points from the grip at the point of the direction at the given reach.
+        public static void SetBlade(
+            AttackVisualState visual, Entity source, PlayerFacing facing,
+            double directionX, double directionY, double reach)
+        {
+            Vector hand = source.GetHandOffset(facing);
+            Vector blade = new Vector(directionX, directionY) * reach - hand;
+            if (blade.Length < 1e-9)
+            {
+                blade = new Vector(directionX, directionY);
+            }
+            blade.Normalize();
+            double length = Math.Max(0, reach - BladeGripGap);
+            visual.BladeStartX = source.PositionX + hand.X;
+            visual.BladeStartY = source.PositionY + hand.Y;
+            visual.BladeEndX = visual.BladeStartX + blade.X * length;
+            visual.BladeEndY = visual.BladeStartY + blade.Y * length;
+            visual.BladeHalfWidth = Math.Max(1e-6, length * BladeHalfWidthPerLength);
+        }
+
+        public static bool IsTouchingBlade(Entity target, AttackVisualState visual)
+        {
+            return SegmentDistanceToRect(
+                    new Point(visual.BladeStartX, visual.BladeStartY),
+                    new Point(visual.BladeEndX, visual.BladeEndY),
+                    target.Hitbox)
+                <= visual.BladeHalfWidth;
+        }
+
+        // Number of intermediate blade positions needed so a fast swing cannot skip a target.
+        public static int GetBladeSampleCount(double angleRadians, double reach)
+        {
+            return Math.Max(1, (int)Math.Ceiling(
+                Math.Abs(angleRadians) * reach / BladeSampleDistance));
+        }
+
+        // True when any part of the target's hitbox lies inside the cone.
         public static bool IsInsideCone(
             Entity target, double centerX, double centerY, double directionX,
             double directionY, double range, double halfAngleRadians)
         {
-            double offsetX = target.PositionX - centerX;
-            double offsetY = target.PositionY - centerY;
-            double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-            if (distance > range + target.Size / 2)
+            Rect hitbox = target.Hitbox;
+            Point center = new Point(centerX, centerY);
+            if (hitbox.Contains(center))
+            {
+                return true;
+            }
+            if (DistanceToRect(center, hitbox) > range)
             {
                 return false;
             }
 
-            if (distance == 0)
+            List<Point> candidates = new List<Point>
             {
-                return true;
+                ClosestPointOnRect(center, hitbox),
+                new Point(hitbox.X + hitbox.Width / 2, hitbox.Y + hitbox.Height / 2),
+                hitbox.TopLeft, hitbox.TopRight, hitbox.BottomLeft, hitbox.BottomRight
+            };
+            for (int sample = 1; sample <= ConeAxisSamples; sample++)
+            {
+                double along = range * sample / ConeAxisSamples;
+                candidates.Add(ClosestPointOnRect(new Point(
+                    centerX + directionX * along, centerY + directionY * along), hitbox));
             }
 
-            double forward = offsetX * directionX + offsetY * directionY;
-            return forward >= 0
-                && Math.Abs(offsetX * directionY - offsetY * directionX)
-                    <= forward * Math.Tan(halfAngleRadians) + target.Size / 2;
+            double tangent = Math.Tan(halfAngleRadians);
+            foreach (Point point in candidates)
+            {
+                double offsetX = point.X - centerX;
+                double offsetY = point.Y - centerY;
+                double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
+                if (distance > range + 1e-9)
+                {
+                    continue;
+                }
+                if (distance == 0)
+                {
+                    return true;
+                }
+
+                double forward = offsetX * directionX + offsetY * directionY;
+                if (forward >= 0
+                    && Math.Abs(offsetX * directionY - offsetY * directionX)
+                        <= forward * tangent + 1e-9)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public static void NormalizeDirection(
@@ -356,6 +545,7 @@ namespace OOPGames
         private readonly SweepingArcAttackPattern _pattern;
         private readonly double _baseDirectionX;
         private readonly double _baseDirectionY;
+        private readonly PlayerFacing _facing;
         private double _elapsedSeconds;
 
         public SweepingArcAttackInstance(
@@ -368,47 +558,61 @@ namespace OOPGames
                 directionX, directionY, out double normalizedX, out double normalizedY);
             _baseDirectionX = normalizedX;
             _baseDirectionY = normalizedY;
+            // The player keeps the strike facing during the whole swing, so does the hand.
+            _facing = AttackGeometry.GetFacingForDirection(normalizedX, normalizedY);
             VisualState = new AttackVisualState(
                 source, AttackVisualKind.Sweep, weapon.Effect.Kind,
                 weapon.AnimationPlaceholder, pattern.Range, 0,
-                pattern.HitHalfAngleRadians)
-            {
-                DirectionX = _baseDirectionX,
-                DirectionY = _baseDirectionY
-            };
+                pattern.HitHalfAngleRadians);
+            SetDirection(GetSweepAngle(0));
         }
 
         public bool IsComplete { get { return _elapsedSeconds >= _pattern.DurationSeconds; } }
         public AttackVisualState VisualState { get; }
 
+        // The damage area is the blade itself, swept from the previous to the current
+        // position of the swing.
         public IReadOnlyList<Entity> Update(
             double deltaSeconds, IReadOnlyList<Entity> targets)
         {
+            double previousAngle = GetSweepAngle(VisualState.Progress);
             _elapsedSeconds += deltaSeconds;
             VisualState.Progress = Math.Min(1, _elapsedSeconds / _pattern.DurationSeconds);
             VisualState.CenterX = _source.PositionX;
             VisualState.CenterY = _source.PositionY;
+            double angle = GetSweepAngle(VisualState.Progress);
 
-            double sweepAngle = -_pattern.TotalArcRadians / 2
-                + _pattern.TotalArcRadians * VisualState.Progress;
+            List<Entity> hits = new List<Entity>();
+            int samples = AttackGeometry.GetBladeSampleCount(angle - previousAngle, _pattern.Range);
+            for (int sample = 1; sample <= samples; sample++)
+            {
+                SetDirection(previousAngle + (angle - previousAngle) * sample / samples);
+                foreach (Entity target in targets)
+                {
+                    if (!hits.Contains(target)
+                        && AttackGeometry.IsTouchingBlade(target, VisualState))
+                    {
+                        hits.Add(target);
+                    }
+                }
+            }
+            return hits;
+        }
+
+        private double GetSweepAngle(double progress)
+        {
+            return -_pattern.TotalArcRadians / 2 + _pattern.TotalArcRadians * progress;
+        }
+
+        private void SetDirection(double sweepAngle)
+        {
             AttackGeometry.RotateDirection(
                 _baseDirectionX, _baseDirectionY, sweepAngle,
                 out double directionX, out double directionY);
             VisualState.DirectionX = directionX;
             VisualState.DirectionY = directionY;
-
-            List<Entity> hits = new List<Entity>();
-            foreach (Entity target in targets)
-            {
-                if (AttackGeometry.IsInsideCone(
-                    target, _source.PositionX, _source.PositionY,
-                    directionX, directionY, _pattern.Range,
-                    _pattern.HitHalfAngleRadians))
-                {
-                    hits.Add(target);
-                }
-            }
-            return hits;
+            AttackGeometry.SetBlade(
+                VisualState, _source, _facing, directionX, directionY, _pattern.Range);
         }
     }
 
@@ -437,6 +641,7 @@ namespace OOPGames
                 source, AttackVisualKind.Sweep, weapon.Effect.Kind,
                 weapon.AnimationPlaceholder, pattern.Range, 0,
                 pattern.HitHalfAngleRadians);
+            SetDirection(0);
         }
 
         public bool IsComplete
@@ -445,67 +650,58 @@ namespace OOPGames
         }
         public AttackVisualState VisualState { get; }
 
+        // The damage area is the blade itself, which revolves with the player; each target
+        // can be hit once per revolution.
         public IReadOnlyList<Entity> Update(
             double deltaSeconds, IReadOnlyList<Entity> targets)
         {
-            double previousProgress = VisualState.Progress;
+            const double fullRotation = Math.PI * 2;
+            double previousAngle = fullRotation * _pattern.Rotations * VisualState.Progress;
             _elapsedSeconds += deltaSeconds;
             VisualState.Progress = Math.Min(
                 1, _elapsedSeconds / _pattern.DurationSeconds);
             VisualState.CenterX = _source.PositionX;
             VisualState.CenterY = _source.PositionY;
+            double angle = fullRotation * _pattern.Rotations * VisualState.Progress;
 
-            double angle = Math.PI * 2 * _pattern.Rotations * VisualState.Progress;
+            List<Entity> hits = new List<Entity>();
+            int samples = AttackGeometry.GetBladeSampleCount(angle - previousAngle, _pattern.Range);
+            for (int sample = 1; sample <= samples; sample++)
+            {
+                double sampleAngle = previousAngle + (angle - previousAngle) * sample / samples;
+                int rotation = Math.Min(_pattern.Rotations - 1,
+                    (int)Math.Floor(sampleAngle / fullRotation));
+                SetDirection(sampleAngle);
+                foreach (Entity target in targets)
+                {
+                    int lastHitRotation = _lastHitRotation.TryGetValue(
+                        target, out int previousHitRotation)
+                        ? previousHitRotation
+                        : -1;
+                    if (rotation > lastHitRotation
+                        && AttackGeometry.IsTouchingBlade(target, VisualState))
+                    {
+                        _lastHitRotation[target] = rotation;
+                        hits.Add(target);
+                    }
+                }
+            }
+            return hits;
+        }
+
+        // The spin shows the view of the current direction, so the grip moves to the hand
+        // of that view.
+        private void SetDirection(double angle)
+        {
             AttackGeometry.RotateDirection(
                 _baseDirectionX, _baseDirectionY, angle,
                 out double directionX, out double directionY);
             VisualState.DirectionX = directionX;
             VisualState.DirectionY = directionY;
-
-            double previousAngle = Math.PI * 2
-                * _pattern.Rotations * previousProgress;
-            double angleStep = Math.PI * 2 * _pattern.Rotations
-                * (VisualState.Progress - previousProgress);
-            const double fullRotation = Math.PI * 2;
-            List<Entity> hits = new List<Entity>();
-            foreach (Entity target in targets)
-            {
-                double offsetX = target.PositionX - _source.PositionX;
-                double offsetY = target.PositionY - _source.PositionY;
-                double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-                if (distance > _pattern.Range + target.Size / 2 || distance == 0)
-                {
-                    continue;
-                }
-
-                double targetAngle = Math.Atan2(
-                    _baseDirectionX * offsetY - _baseDirectionY * offsetX,
-                    _baseDirectionX * offsetX + _baseDirectionY * offsetY);
-                if (targetAngle < 0)
-                {
-                    targetAngle += fullRotation;
-                }
-
-                double tolerance = Math.Min(Math.PI,
-                    _pattern.HitHalfAngleRadians
-                    + Math.Min(Math.PI / 2, angleStep / 2)
-                    + Math.Asin(Math.Min(1, target.Size / (2 * distance))));
-                int firstRotation = Math.Max(0, (int)Math.Ceiling(
-                    (previousAngle - targetAngle - tolerance) / fullRotation));
-                int lastRotation = Math.Min(_pattern.Rotations - 1, (int)Math.Floor(
-                    (angle - targetAngle + tolerance) / fullRotation));
-                int lastHitRotation = _lastHitRotation.TryGetValue(
-                    target, out int previousHitRotation)
-                    ? previousHitRotation
-                    : -1;
-                for (int rotation = Math.Max(firstRotation, lastHitRotation + 1);
-                    rotation <= lastRotation; rotation++)
-                {
-                    _lastHitRotation[target] = rotation;
-                    hits.Add(target);
-                }
-            }
-            return hits;
+            AttackGeometry.SetBlade(
+                VisualState, _source,
+                AttackGeometry.GetFacingForDirection(directionX, directionY),
+                directionX, directionY, _pattern.Range);
         }
     }
 
@@ -534,6 +730,8 @@ namespace OOPGames
             _directionX = normalizedX;
             _directionY = normalizedY;
             double startOffset = source.Size / 2 + pattern.ProjectileRadius;
+            Point launchPoint = source.GetProjectileLaunchPoint(
+                weapon, normalizedX, normalizedY, startOffset);
             VisualState = new AttackVisualState(
                 source, AttackVisualKind.Projectile, weapon.Effect.Kind,
                 weapon.AnimationPlaceholder, pattern.Range,
@@ -541,8 +739,8 @@ namespace OOPGames
             {
                 DirectionX = _directionX,
                 DirectionY = _directionY,
-                ProjectileX = source.PositionX + _directionX * startOffset,
-                ProjectileY = source.PositionY + _directionY * startOffset
+                ProjectileX = launchPoint.X,
+                ProjectileY = launchPoint.Y
             };
         }
 
@@ -587,11 +785,11 @@ namespace OOPGames
             double firstHitDistance = double.MaxValue;
             foreach (Entity target in targets)
             {
-                double distance = AttackGeometry.DistanceToSegment(
-                    new Point(target.PositionX, target.PositionY),
+                double distance = AttackGeometry.SegmentDistanceToRect(
                     new Point(previousX, previousY),
-                    new Point(VisualState.ProjectileX, VisualState.ProjectileY));
-                if (distance <= _pattern.ProjectileRadius + target.Size / 2
+                    new Point(VisualState.ProjectileX, VisualState.ProjectileY),
+                    target.Hitbox);
+                if (distance <= _pattern.ProjectileRadius
                     && distance < firstHitDistance)
                 {
                     firstHit = target;
@@ -618,8 +816,9 @@ namespace OOPGames
                 double offsetX = target.PositionX - _source.PositionX;
                 double offsetY = target.PositionY - _source.PositionY;
                 double distanceSquared = offsetX * offsetX + offsetY * offsetY;
-                double maximumDistance = _pattern.Range + target.Size / 2;
-                if (distanceSquared > maximumDistance * maximumDistance)
+                if (AttackGeometry.DistanceToRect(
+                    new Point(_source.PositionX, _source.PositionY), target.Hitbox)
+                    > _pattern.Range)
                 {
                     continue;
                 }
@@ -683,7 +882,7 @@ namespace OOPGames
             _pattern = pattern;
             VisualState = new AttackVisualState(
                 source, AttackVisualKind.Burst, weapon.Effect.Kind,
-                weapon.AnimationPlaceholder, pattern.Range, pattern.Range, Math.PI);
+                weapon.AnimationPlaceholder, pattern.Range, 0, Math.PI);
         }
 
         public bool IsComplete { get { return _elapsedSeconds >= _pattern.DurationSeconds; } }
@@ -696,6 +895,7 @@ namespace OOPGames
             VisualState.CenterX = _source.PositionX;
             VisualState.CenterY = _source.PositionY;
             VisualState.Progress = Math.Min(1, _elapsedSeconds / _pattern.DurationSeconds);
+            VisualState.Radius = _pattern.Range * VisualState.Progress;
 
             if (_resolved)
             {
@@ -707,21 +907,28 @@ namespace OOPGames
         }
     }
 
+    // A wave that starts at the feet of the source and runs outwards at constant speed: its
+    // radius grows from 0 to Range over the duration, and each target is hit once when the
+    // wave front reaches its hitbox.
     internal sealed class RadialAttackInstance : IAttackInstance
     {
-        private readonly Entity _source;
         private readonly RadialAttackPattern _pattern;
+        private readonly HashSet<Entity> _hitTargets = new HashSet<Entity>();
+        private readonly Point _origin;
         private double _elapsedSeconds;
-        private bool _resolved;
 
         public RadialAttackInstance(
             Entity source, Weapon weapon, RadialAttackPattern pattern)
         {
-            _source = source;
             _pattern = pattern;
+            _origin = new Point(source.PositionX, source.Hitbox.Bottom);
             VisualState = new AttackVisualState(
                 source, AttackVisualKind.Burst, weapon.Effect.Kind,
-                weapon.AnimationPlaceholder, pattern.Range, pattern.Range, Math.PI);
+                weapon.AnimationPlaceholder, pattern.Range, 0, Math.PI)
+            {
+                CenterX = _origin.X,
+                CenterY = _origin.Y
+            };
         }
 
         public bool IsComplete { get { return _elapsedSeconds >= _pattern.DurationSeconds; } }
@@ -731,24 +938,17 @@ namespace OOPGames
             double deltaSeconds, IReadOnlyList<Entity> targets)
         {
             _elapsedSeconds += deltaSeconds;
-            VisualState.CenterX = _source.PositionX;
-            VisualState.CenterY = _source.PositionY;
             VisualState.Progress = Math.Min(1, _elapsedSeconds / _pattern.DurationSeconds);
+            VisualState.Radius = _pattern.Range * VisualState.Progress;
 
-            if (_resolved)
-            {
-                return Array.Empty<Entity>();
-            }
-
-            _resolved = true;
             List<Entity> hits = new List<Entity>();
             foreach (Entity target in targets)
             {
-                double offsetX = target.PositionX - _source.PositionX;
-                double offsetY = target.PositionY - _source.PositionY;
-                double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-                if (distance <= _pattern.Range + target.Size / 2)
+                if (!_hitTargets.Contains(target)
+                    && AttackGeometry.DistanceToRect(_origin, target.Hitbox)
+                        <= VisualState.Radius)
                 {
+                    _hitTargets.Add(target);
                     hits.Add(target);
                 }
             }

@@ -7,7 +7,7 @@ namespace OOPGames
 {
     // Adapter between the Kinderzimmer hub and the game: translates keys, saves the highscore and
     // hands the game state to the renderer and the audio. The only Bomberman class that knows the hub.
-    public sealed class G10_BombermanGame : IB5RoomMiniGame
+    public sealed class G10_BombermanGame : IG10_RoomMiniGame
     {
         // One per process: creating the media players is slow, and all game objects can share them.
         static IG10_ClipOutput _SharedOutput;
@@ -61,7 +61,7 @@ namespace OOPGames
             if (_Session.Phase == _LastPhase) return;
             _LastPhase = _Session.Phase;
             if (_LastPhase == G10_BomberPhaseKind.StageClear || IsOver(_LastPhase))
-                B5RoomHighscores.Save(Title, _Session.Score);
+                G10_RoomHighscores.Save(Title, _Session.Score);
         }
 
         // The hub calls Start while its camera still zooms in, so the media players are created on
@@ -75,7 +75,7 @@ namespace OOPGames
 
         void NewSession()
         {
-            _Session = new G10_BomberSession(B5RoomHighscores.Get(Title), Environment.TickCount);
+            _Session = new G10_BomberSession(G10_RoomHighscores.Get(Title), Environment.TickCount);
             _LastPhase = _Session.Phase;
         }
 

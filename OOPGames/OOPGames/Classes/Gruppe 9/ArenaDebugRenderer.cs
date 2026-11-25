@@ -39,12 +39,18 @@ namespace OOPGames
         private static readonly Brush DamageEffectBrush =
             new SolidColorBrush(Color.FromArgb(100, 255, 100, 70));
 
+        private static readonly Brush RegionStrokeBrush =
+            new SolidColorBrush(Color.FromArgb(220, 120, 220, 255));
+        private static readonly Brush RegionFillBrush =
+            new SolidColorBrush(Color.FromArgb(28, 120, 220, 255));
+
         public void PaintWorldOverlays(
             Canvas canvas, ArenaField field, double left, double top)
         {
             if (field.ShowDamageRanges)
             {
-                foreach (PursuerEnemy enemy in field.Enemies)
+                PaintSpawnRegions(canvas, field, left, top);
+                foreach (NonPlayerCharacter enemy in field.Enemies)
                 {
                     if (!enemy.IsAlive)
                     {
@@ -53,7 +59,7 @@ namespace OOPGames
 
                     AddPlannedEnemyPath(canvas, enemy, field, left, top);
                     AddSightRange(canvas, enemy.PositionX - left,
-                        enemy.PositionY - top, PursuerEnemy.SightRange, false);
+                        enemy.PositionY - top, enemy.SightRange, false);
                     if (enemy.HasSeenPlayer)
                     {
                         AddSightRange(canvas, enemy.PositionX - left,
@@ -68,21 +74,39 @@ namespace OOPGames
                 PaintWeaponRange(canvas, field.Player.EquippedWeapon,
                     field.Player.PositionX - left, field.Player.PositionY - top,
                     field.AimDirectionX, field.AimDirectionY);
-                AddEntityHitbox(canvas, field.Player.PositionX - left,
-                    field.Player.PositionY - top, field.Player.Size);
-                foreach (PursuerEnemy enemy in field.Enemies)
+                AddEntityHitbox(canvas, field.Player.Hitbox, left, top);
+                foreach (NonPlayerCharacter enemy in field.Enemies)
                 {
                     if (enemy.IsAlive)
                     {
-                        AddEntityHitbox(canvas, enemy.PositionX - left,
-                            enemy.PositionY - top, enemy.Size);
+                        AddEntityHitbox(canvas, enemy.Hitbox, left, top);
                     }
                 }
             }
 
+            // In normal play the weapons, projectiles and particles show the attacks; their
+            // exact damage areas are only drawn in the debug view.
+            if (!field.ShowDamageRanges)
+            {
+                return;
+            }
             foreach (AttackVisualState visual in field.ActiveAttackVisuals)
             {
+                if (visual.HasBlade)
+                {
+                    AddBladeHitArea(canvas, visual, left, top);
+                    continue;
+                }
                 PaintActiveAttack(canvas, visual, left, top);
+            }
+            foreach (ArenaGroundEffect groundEffect in field.GroundEffects)
+            {
+                if (groundEffect.Effect != null)
+                {
+                    AddDamageRange(canvas, FireEffectBrush,
+                        groundEffect.CenterX - left, groundEffect.CenterY - top,
+                        groundEffect.Radius);
+                }
             }
         }
 
@@ -125,6 +149,23 @@ namespace OOPGames
                         centerX, centerY, pattern.DebugRadius);
                     break;
             }
+        }
+
+        private static void AddBladeHitArea(
+            Canvas canvas, AttackVisualState visual, double left, double top)
+        {
+            canvas.Children.Add(new Line
+            {
+                X1 = visual.BladeStartX - left,
+                Y1 = visual.BladeStartY - top,
+                X2 = visual.BladeEndX - left,
+                Y2 = visual.BladeEndY - top,
+                Stroke = PlayerAttackBrush,
+                StrokeThickness = visual.BladeHalfWidth * 2,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            });
         }
 
         private static void PaintActiveAttack(
@@ -179,8 +220,9 @@ namespace OOPGames
             }
             if (visual.VisualKind == AttackVisualKind.Burst)
             {
+                // Radius already grows with the wave.
                 AddOutlinedRange(canvas, fill, stroke,
-                    centerX, centerY, visual.Radius, visual.Progress);
+                    centerX, centerY, visual.Radius, 1);
                 return;
             }
 
@@ -220,7 +262,7 @@ namespace OOPGames
                 "Gegner: {0} | Kills: {1}", field.Enemies.Count, field.Score));
 
             int shownEnemies = 0;
-            foreach (PursuerEnemy enemy in field.Enemies)
+            foreach (NonPlayerCharacter enemy in field.Enemies)
             {
                 if (!enemy.IsAlive || shownEnemies >= 5)
                 {
@@ -386,20 +428,20 @@ namespace OOPGames
         }
 
         private static void AddEntityHitbox(
-            Canvas canvas, double centerX, double centerY, double size)
+            Canvas canvas, Rect hitbox, double left, double top)
         {
-            Ellipse hitbox = new Ellipse
+            Rectangle outline = new Rectangle
             {
-                Width = size,
-                Height = size,
+                Width = hitbox.Width,
+                Height = hitbox.Height,
                 Fill = HitboxFillBrush,
                 Stroke = HitboxStrokeBrush,
                 StrokeThickness = 2,
                 IsHitTestVisible = false
             };
-            Canvas.SetLeft(hitbox, centerX - size / 2);
-            Canvas.SetTop(hitbox, centerY - size / 2);
-            canvas.Children.Add(hitbox);
+            Canvas.SetLeft(outline, hitbox.X - left);
+            Canvas.SetTop(outline, hitbox.Y - top);
+            canvas.Children.Add(outline);
         }
 
         private static void AddSightRange(
@@ -423,8 +465,41 @@ namespace OOPGames
             canvas.Children.Add(range);
         }
 
+        // Spawn regions of the map: outlined shapes with their names (F4 + B).
+        private static void PaintSpawnRegions(
+            Canvas canvas, ArenaField field, double left, double top)
+        {
+            foreach (ArenaMapRegion region in field.MapRegions)
+            {
+                Rect bounds = region.Bounds;
+                Shape shape = region.Shape == ArenaRegionShape.Circle
+                    ? (Shape)new Ellipse()
+                    : new Rectangle();
+                shape.Width = bounds.Width;
+                shape.Height = bounds.Height;
+                shape.Stroke = RegionStrokeBrush;
+                shape.StrokeThickness = 2;
+                shape.StrokeDashArray = new DoubleCollection { 6, 4 };
+                shape.Fill = RegionFillBrush;
+                shape.IsHitTestVisible = false;
+                Canvas.SetLeft(shape, bounds.X - left);
+                Canvas.SetTop(shape, bounds.Y - top);
+                canvas.Children.Add(shape);
+                TextBlock label = new TextBlock
+                {
+                    Text = region.Name,
+                    Foreground = RegionStrokeBrush,
+                    FontWeight = FontWeights.Bold,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(label, bounds.X - left + 4);
+                Canvas.SetTop(label, bounds.Y - top + 2);
+                canvas.Children.Add(label);
+            }
+        }
+
         private static void AddPlannedEnemyPath(
-            Canvas canvas, PursuerEnemy enemy, ArenaField field, double left, double top)
+            Canvas canvas, NonPlayerCharacter enemy, ArenaField field, double left, double top)
         {
             Point start = new Point(enemy.PositionX - left, enemy.PositionY - top);
             Point destination = enemy.GetPlannedDestination(field);

@@ -16,7 +16,8 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz
         public static List<G1C_NpcCharacter> Create()
         {
-            return new List<G1C_NpcCharacter> { Jana(), Olli(), Mia(), Karl(), Bodo(), Rudi(), Paula() };
+            return new List<G1C_NpcCharacter> { Jana(), Olli(), Mia(), Karl(), Bodo(), Rudi(), Paula(),
+                                                G1C_ArcadeMentor.Create() }; // Patrick Lupierz – 22.11.2026: Patrick in der Spielhalle
         }
 
         // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Bankberater, Wachmann, Radhändler, Spielhallen-Aufsicht.
@@ -25,6 +26,9 @@ namespace OOPGames
         public const string BodoSkin = "pc-201810-C89068-384858-282838-101010-202838";
         public const string RudiSkin = "pc-A06030-E8B890-38A050-404858-603020-F0C030";
         public const string PaulaSkin = "pc-F860D0-F0C8A0-282838-383848-F8F8F8-x";
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Studentin Lea: blond, helle Haut, hellgrün gekleidet (statt der
+        // geteilten Vorlage "dealer_blue" mit Weste und Krawatte); Stadt-Figur und Gesprächsporträt nutzen diese ID.
+        public const string LeaSkin = "student_lea";
 
         private static G1C_NpcCharacter Karl()
         {
@@ -43,7 +47,7 @@ namespace OOPGames
                 "Rechnerisch nie. Beim Roulette verlieren Sie im Schnitt 2,7 % pro Einsatz. Bei uns gewinnen Sie 2 % pro Tag.",
                 "Ich wiederhole mich ungern: nein.")));
             p.Topics.Add(new G1C_DialogueTopic("Was ist mit dem Geldhai draußen?", G1C_DialogueTopic.Cycle(
-                "250 leihen, 300 zurückzahlen: 20 % Aufschlag. Wir nennen so etwas unseriös.",
+                "Er verleiht bis zu 5000 Chips. Offene Schulden wachsen um 50 % pro Tag.",
                 "Wir haben ihn mehrfach gebeten, nicht vor unserer Tür zu stehen. Er steht trotzdem da.")));
             return new G1C_NpcCharacter("Bankberater Karl", KarlSkin, p, 500, 45, 40);
         }

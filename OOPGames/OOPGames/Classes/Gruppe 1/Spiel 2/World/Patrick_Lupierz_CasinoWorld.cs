@@ -37,6 +37,10 @@ namespace OOPGames
         IG1C_WorldMap IG1C_WorldScene.Grid { get { return Map; } }
         public int TileSize { get { return 24; } }
 
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Eduards Stammplatz (linker Automat)
+        public const int EduardMachineX = 2;
+        public const string EduardSkin = "gambler_eduard";
+
         public int PlayerStartX { get { return 9; } }
         public int PlayerStartY { get { return 10; } }
 
@@ -83,10 +87,21 @@ namespace OOPGames
                 "Ein blinkender Spielautomat mit drei Walzen.",
                 "Eine Runde spielen?"
             };
-            for (int x = 2; x <= 5; x++)
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Der linke Automat gehört Eduard: er steht immer
+            // davor und spielt; der Spieler kann ihn nicht benutzen (nur ansehen) und auch nicht davor treten.
+            _objects.Add(new G1C_WorldObject("Spielautomat (besetzt)", "obj_slot_machine", EduardMachineX, 8, 1, 1, true,
+                G1C_InteractionType.Inspect, "Eduard spielt hier. Er lässt niemanden an \"seinen\" Automaten.",
+                "Nimm einen der anderen Automaten."));
+            for (int x = EduardMachineX + 1; x <= 5; x++)
             {
                 _objects.Add(new G1C_WorldObject("Spielautomat", "obj_slot_machine", x, 8, 1, 1, true, G1C_InteractionType.Slots, slotLines));
             }
+            // Änderung durch: Denis Mock – Datum: 19.11.2026 – Eduard steht dauerhaft bei den Automaten
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – vor dem linken Automaten, Blick zum Automaten,
+            // gestreiftes Hemd und schwarze Mütze (Skin "gambler_eduard")
+            _objects.Add(new G1C_Npc("Eduard", EduardSkin, EduardMachineX, 9, G1C_Direction.Up, G1C_InteractionType.Talk,
+                "Ich habe gleich den großen Gewinn. Das hier ist meine letzte Runde.",
+                "Früher oder später muss der Automat doch ausbezahlen."));
             // Änderung durch: Patrick Lupierz – Datum: 15.11.2026 – Der Greifautomat steht jetzt in der Spielhalle
             // (G1C_BuildingInteriorWorld.BuildArcade). Änderung 16.11.2026: Umzugsschild entfernt (SprintPlanning).
 

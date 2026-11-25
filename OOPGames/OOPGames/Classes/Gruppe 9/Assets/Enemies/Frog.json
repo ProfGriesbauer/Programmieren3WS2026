@@ -1,0 +1,1181 @@
+{
+ "frames": {
+  "Frog 0.ase": {
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 1.ase": {
+   "frame": {
+    "x": 20,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 2.ase": {
+   "frame": {
+    "x": 40,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 3.ase": {
+   "frame": {
+    "x": 60,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 4.ase": {
+   "frame": {
+    "x": 80,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 5.ase": {
+   "frame": {
+    "x": 100,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 6.ase": {
+   "frame": {
+    "x": 120,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 7.ase": {
+   "frame": {
+    "x": 140,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 8.ase": {
+   "frame": {
+    "x": 160,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 9.ase": {
+   "frame": {
+    "x": 180,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 10.ase": {
+   "frame": {
+    "x": 200,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 11.ase": {
+   "frame": {
+    "x": 220,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 12.ase": {
+   "frame": {
+    "x": 240,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 13.ase": {
+   "frame": {
+    "x": 260,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 14.ase": {
+   "frame": {
+    "x": 280,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 15.ase": {
+   "frame": {
+    "x": 300,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 16.ase": {
+   "frame": {
+    "x": 320,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 17.ase": {
+   "frame": {
+    "x": 340,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 18.ase": {
+   "frame": {
+    "x": 360,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 19.ase": {
+   "frame": {
+    "x": 380,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 20.ase": {
+   "frame": {
+    "x": 400,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 21.ase": {
+   "frame": {
+    "x": 420,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 22.ase": {
+   "frame": {
+    "x": 440,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 23.ase": {
+   "frame": {
+    "x": 460,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 24.ase": {
+   "frame": {
+    "x": 480,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 25.ase": {
+   "frame": {
+    "x": 500,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 26.ase": {
+   "frame": {
+    "x": 520,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 27.ase": {
+   "frame": {
+    "x": 540,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 28.ase": {
+   "frame": {
+    "x": 560,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 29.ase": {
+   "frame": {
+    "x": 580,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 30.ase": {
+   "frame": {
+    "x": 600,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 31.ase": {
+   "frame": {
+    "x": 620,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 32.ase": {
+   "frame": {
+    "x": 640,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 33.ase": {
+   "frame": {
+    "x": 660,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 34.ase": {
+   "frame": {
+    "x": 680,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 35.ase": {
+   "frame": {
+    "x": 700,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 36.ase": {
+   "frame": {
+    "x": 720,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 37.ase": {
+   "frame": {
+    "x": 740,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 38.ase": {
+   "frame": {
+    "x": 760,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 39.ase": {
+   "frame": {
+    "x": 780,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 40.ase": {
+   "frame": {
+    "x": 800,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 41.ase": {
+   "frame": {
+    "x": 820,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 42.ase": {
+   "frame": {
+    "x": 840,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 43.ase": {
+   "frame": {
+    "x": 860,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 44.ase": {
+   "frame": {
+    "x": 880,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  },
+  "Frog 45.ase": {
+   "frame": {
+    "x": 900,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 20
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 20
+   },
+   "duration": 100
+  }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.3",
+  "image": "C:\\Users\\tillm\\Downloads\\Frog.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 920,
+   "h": 20
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "Idle Front",
+    "from": 0,
+    "to": 0,
+    "direction": "forward"
+   },
+   {
+    "name": "Idle Back",
+    "from": 1,
+    "to": 1,
+    "direction": "forward"
+   },
+   {
+    "name": "Idle Left",
+    "from": 2,
+    "to": 2,
+    "direction": "forward"
+   },
+   {
+    "name": "Idle Right",
+    "from": 3,
+    "to": 3,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Front",
+    "from": 4,
+    "to": 5,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Back",
+    "from": 6,
+    "to": 7,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Right",
+    "from": 8,
+    "to": 9,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Left",
+    "from": 10,
+    "to": 11,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Front Left",
+    "from": 12,
+    "to": 12,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Front",
+    "from": 13,
+    "to": 13,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Front Right",
+    "from": 14,
+    "to": 14,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Front Left",
+    "from": 15,
+    "to": 16,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Front",
+    "from": 17,
+    "to": 18,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Front Right",
+    "from": 19,
+    "to": 20,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Back",
+    "from": 21,
+    "to": 21,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Back",
+    "from": 22,
+    "to": 23,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Back Left",
+    "from": 24,
+    "to": 24,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Back Left",
+    "from": 25,
+    "to": 26,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Back Right",
+    "from": 27,
+    "to": 27,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Back Right",
+    "from": 28,
+    "to": 29,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Right",
+    "from": 30,
+    "to": 30,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Right",
+    "from": 31,
+    "to": 32,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Right Up",
+    "from": 33,
+    "to": 33,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Right Up",
+    "from": 34,
+    "to": 35,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Left Down",
+    "from": 36,
+    "to": 36,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Left Down",
+    "from": 37,
+    "to": 38,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Left",
+    "from": 39,
+    "to": 39,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Left",
+    "from": 40,
+    "to": 41,
+    "direction": "forward"
+   },
+   {
+    "name": "Attack Left Up",
+    "from": 42,
+    "to": 42,
+    "direction": "forward"
+   },
+   {
+    "name": "Walk Attack Left Up",
+    "from": 43,
+    "to": 44,
+    "direction": "forward"
+   },
+   {
+    "name": "NotFound",
+    "from": 45,
+    "to": 45,
+    "direction": "forward"
+   }
+  ],
+  "layers": [
+   {
+    "name": "Layer 1",
+    "opacity": 255,
+    "blendMode": "normal"
+   },
+   {
+    "name": "Layer 2",
+    "opacity": 255,
+    "blendMode": "normal"
+   }
+  ]
+ }
+}

@@ -19,7 +19,8 @@ namespace OOPGames
         Mixed,
         Poison,
         Lightning,
-        Fire
+        Fire,
+        Weakness
     }
 
     public interface ICombatEffect
@@ -45,7 +46,94 @@ namespace OOPGames
 
         public void Apply(Entity source, Entity target)
         {
-            target.TakeDamage(Amount);
+            // A weakened attacker (Blacksteel weakness) deals proportionally less damage.
+            int amount = source == null
+                ? Amount
+                : (int)Math.Round(Amount * source.OutgoingDamageMultiplier);
+            target.TakeDamage(amount);
+        }
+    }
+
+    // Blacksteel: the target deals less damage for a while.
+    public sealed class WeaknessEffect : ICombatEffect
+    {
+        public WeaknessEffect(double damageMultiplier, double durationSeconds)
+        {
+            if (damageMultiplier < 0 || damageMultiplier >= 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(damageMultiplier));
+            }
+            if (durationSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            }
+
+            DamageMultiplier = damageMultiplier;
+            DurationSeconds = durationSeconds;
+        }
+
+        public double DamageMultiplier { get; }
+        public double DurationSeconds { get; }
+        public string Name { get { return "Weakness"; } }
+        public string Description
+        {
+            get
+            {
+                return Math.Round((1 - DamageMultiplier) * 100)
+                    + "% less damage dealt for " + DurationSeconds.ToString("0.0") + " s";
+            }
+        }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Weakness; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            target.ApplyWeakness(DamageMultiplier, DurationSeconds);
+        }
+    }
+
+    // Leach: applies the wrapped effect and heals the attacker by a share of the hit points
+    // the target actually lost.
+    public sealed class LifeStealEffect : ICombatEffect
+    {
+        private readonly ICombatEffect _effect;
+
+        public LifeStealEffect(ICombatEffect effect, double stealFraction)
+        {
+            if (effect == null)
+            {
+                throw new ArgumentNullException(nameof(effect));
+            }
+            if (stealFraction <= 0 || stealFraction > 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(stealFraction));
+            }
+
+            _effect = effect;
+            StealFraction = stealFraction;
+        }
+
+        public double StealFraction { get; }
+        public string Name { get { return "Life steal"; } }
+        public string Description
+        {
+            get
+            {
+                return _effect.Description + " + "
+                    + Math.Round(StealFraction * 100) + "% life steal";
+            }
+        }
+        public CombatEffectKind Kind { get { return _effect.Kind; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            int hitPointsBefore = target.CurrentHitPoints;
+            _effect.Apply(source, target);
+            int lostHitPoints = hitPointsBefore - target.CurrentHitPoints;
+            if (source != null && lostHitPoints > 0)
+            {
+                source.Heal(
+                    Math.Max(1, (int)Math.Round(lostHitPoints * StealFraction)), target);
+            }
         }
     }
 
@@ -105,6 +193,18 @@ namespace OOPGames
         }
         public CombatEffectKind Kind { get { return CombatEffectKind.Slow; } }
 
+        public void Apply(Entity source, Entity target)
+        {
+        }
+    }
+
+    public sealed class MirrorImageSummonEffect : ICombatEffect
+    {
+        public string Name { get { return "Spiegelbild"; } }
+        public string Description { get { return "Beschwört Spiegelbilder"; } }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Mixed; } }
+
+        // ArenaField creates the images when the ability is activated.
         public void Apply(Entity source, Entity target)
         {
         }
@@ -280,6 +380,57 @@ namespace OOPGames
         }
     }
 
+    // Devour (frog tongue): pulls the hit entity to the attacker within PullSeconds and
+    // kills it there at once, past armour. An NPC attacker carries out the pull (see
+    // NonPlayerCharacter.StartDevouring); any other attacker kills at once. Invulnerable
+    // entities (godmode, respawn protection) are not devoured.
+    public sealed class DevourEffect : ICombatEffect
+    {
+        public DevourEffect(double pullSeconds)
+        {
+            if (pullSeconds < 0 || double.IsNaN(pullSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(pullSeconds));
+            }
+            PullSeconds = pullSeconds;
+        }
+
+        public double PullSeconds { get; }
+        public string Name { get { return "Devour"; } }
+        public string Description { get { return "pulls in and devours"; } }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Mixed; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            if (target == null || !target.IsAlive || target.IsInvulnerable)
+            {
+                return;
+            }
+            if (source is NonPlayerCharacter eater && PullSeconds > 0)
+            {
+                eater.StartDevouring(target, PullSeconds);
+            }
+            else
+            {
+                target.TakeFatalDamage();
+            }
+        }
+    }
+
+    // Lethal: every hit entity dies at once, past armour (e.g. the mine turtle's
+    // explosion). Invulnerable entities (godmode, respawn protection) survive.
+    public sealed class LethalEffect : ICombatEffect
+    {
+        public string Name { get { return "Lethal"; } }
+        public string Description { get { return "kills at once"; } }
+        public CombatEffectKind Kind { get { return CombatEffectKind.Damage; } }
+
+        public void Apply(Entity source, Entity target)
+        {
+            target?.TakeFatalDamage();
+        }
+    }
+
     public sealed class CompositeCombatEffect : ICombatEffect
     {
         private readonly IReadOnlyList<ICombatEffect> _effects;
@@ -342,7 +493,6 @@ namespace OOPGames
     public sealed class ActiveDamageOverTimeEffect
     {
         private double _damageRemainder;
-        private double _spreadRemainingSeconds;
 
         internal ActiveDamageOverTimeEffect(
             string id, string name, double damagePerSecond,
@@ -356,7 +506,6 @@ namespace OOPGames
             SpreadRadius = spreadRadius;
             Source = source;
             SourceWeapon = sourceWeapon;
-            _spreadRemainingSeconds = 0;
         }
 
         public string Id { get; }
@@ -376,23 +525,6 @@ namespace OOPGames
             int damage = (int)_damageRemainder;
             _damageRemainder -= damage;
             return damage;
-        }
-
-        internal bool AdvanceSpreadClock(double deltaSeconds)
-        {
-            if (SpreadRadius <= 0 || IsExpired)
-            {
-                return false;
-            }
-
-            _spreadRemainingSeconds -= deltaSeconds;
-            if (_spreadRemainingSeconds > 0)
-            {
-                return false;
-            }
-
-            _spreadRemainingSeconds += 0.8;
-            return true;
         }
     }
 }

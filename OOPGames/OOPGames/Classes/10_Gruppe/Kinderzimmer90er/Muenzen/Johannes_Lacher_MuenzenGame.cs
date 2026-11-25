@@ -89,10 +89,10 @@ namespace OOPGames
 
         static G10_Direction DirectionOf(Key key)
         {
-            if (B5RoomKeys.IsUp(key)) return G10_Direction.Up;
-            if (B5RoomKeys.IsLeft(key)) return G10_Direction.Left;
-            if (B5RoomKeys.IsDown(key)) return G10_Direction.Down;
-            if (B5RoomKeys.IsRight(key)) return G10_Direction.Right;
+            if (G10_RoomKeys.IsUp(key)) return G10_Direction.Up;
+            if (G10_RoomKeys.IsLeft(key)) return G10_Direction.Left;
+            if (G10_RoomKeys.IsDown(key)) return G10_Direction.Down;
+            if (G10_RoomKeys.IsRight(key)) return G10_Direction.Right;
             return G10_Direction.None;
         }
     }
@@ -100,7 +100,7 @@ namespace OOPGames
     // Adapter between the Kinderzimmer hub and the game: reads the keys, saves the highscore
     // and hands the game state to the renderer. The only "Muenzen sammeln" class that knows
     // about keys.
-    public sealed class G10_CoinGame : IB5RoomMiniGame
+    public sealed class G10_CoinGame : IG10_RoomMiniGame
     {
         readonly G10_CoinRenderer _Renderer = new G10_CoinRenderer();
         readonly G10_CoinInputReader _Input = new G10_CoinInputReader(new G10_WpfKeyStateSource());
@@ -127,7 +127,7 @@ namespace OOPGames
             }
             _Session.Update(input);
             // Saved at once, because Esc can leave the game at any time.
-            if (_Session.IsNewHighScore) B5RoomHighscores.Save(Title, _Session.Score);
+            if (_Session.IsNewHighScore) G10_RoomHighscores.Save(Title, _Session.Score);
         }
 
         public void Draw(Canvas canvas)
@@ -137,7 +137,7 @@ namespace OOPGames
 
         void NewSession()
         {
-            _Session = new G10_CoinSession(B5RoomHighscores.Get(Title), Environment.TickCount);
+            _Session = new G10_CoinSession(G10_RoomHighscores.Get(Title), Environment.TickCount);
         }
     }
 }

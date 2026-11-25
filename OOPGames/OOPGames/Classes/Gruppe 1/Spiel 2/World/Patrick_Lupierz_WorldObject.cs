@@ -4,7 +4,7 @@ namespace OOPGames
     public enum G1C_InteractionType
     {
         None, Talk, Bartender, Roulette, Blackjack, Poker, Slots, Claw, Trash, Shop, Vending,
-        Wardrobe, Bed, Bank, LoanShark, FurnitureShop, Furnish,
+        Wardrobe, Bed, Bank, LoanShark, Nurse, FurnitureShop, Furnish,
         Inspect, // Änderung durch: Patrick Lupierz – 15.11.2026 – Schilder, Poster, Sticker: Text aus Lines anzeigen
         Arcade,  // Änderung durch: Patrick Lupierz – 15.11.2026 – Spielautomat der Spielhalle (Name = Automat)
         Bike,    // Änderung durch: Patrick Lupierz – 15.11.2026 – Fahrradständer vor dem Haus (auf-/absteigen)
@@ -75,6 +75,14 @@ namespace OOPGames
 
         public string Skin { get; }
         public G1C_Direction Facing { get; private set; }
+        public void Teleport(int x, int y, G1C_Direction facing)
+        {
+            if (IsMoving) return;
+            SetPosition(x, y);
+            Facing = facing;
+            _movementTicks = 0;
+            _movementDuration = 0;
+        }
         public bool IsMoving { get { return _movementTicks < _movementDuration; } }
         public double VisualX
         {

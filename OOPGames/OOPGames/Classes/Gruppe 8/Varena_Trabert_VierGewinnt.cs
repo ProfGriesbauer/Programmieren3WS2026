@@ -109,7 +109,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class G8_VierGewinntField : I4GWFeld
+    public sealed class G8_VierGewinntField : IG8_VierGewinntField
     {
         private readonly int[,] _cells = new int[G8_VierGewinntLogic.Rows, G8_VierGewinntLogic.Columns];
 
@@ -134,7 +134,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class G8_VierGewinntMove : I4GWMove
+    public sealed class G8_VierGewinntMove : IG8_VierGewinntMove
     {
         public G8_VierGewinntMove(int row, int column, int playerNumber)
         {
@@ -148,7 +148,7 @@ namespace OOPGames
         public int PlayerNumber { get; private set; }
     }
 
-    public sealed class G8_VierGewinntRules : IGameRules2
+    public sealed class G8_VierGewinntRules : IG8_VierGewinntRules
     {
         private G8_VierGewinntField _field = new G8_VierGewinntField();
         private int _nextPlayer = 1;
@@ -204,7 +204,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class G8_VierGewinntPaint : IPaintGame2, IConnectFourPainter
+    public sealed class G8_VierGewinntPaint : IG8_VierGewinntPainter
     {
         private static readonly Brush PlayerOneBrush = new SolidColorBrush(Color.FromRgb(30, 144, 255));
         private static readonly Brush PlayerTwoBrush = new SolidColorBrush(Color.FromRgb(255, 105, 180));
@@ -607,7 +607,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class G8_VierGewinntHumanPlayer : IHumanGamePlayer
+    public sealed class G8_VierGewinntHumanPlayer : IG8_VierGewinntHumanPlayer
     {
         private int _playerNumber;
 
@@ -680,7 +680,7 @@ namespace OOPGames
         }
     }
 
-    public sealed class G8_VierGewinntComputerPlayer : IComputerGamePlayer
+    public sealed class G8_VierGewinntComputerPlayer : IG8_VierGewinntComputerPlayer
     {
         private const int SearchDepth = 6;
         private const int WinScore = 100000;

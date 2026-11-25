@@ -100,10 +100,10 @@ namespace OOPGames
 
         static G10_Direction DirectionOf(Key key)
         {
-            if (B5RoomKeys.IsUp(key)) return G10_Direction.Up;
-            if (B5RoomKeys.IsDown(key)) return G10_Direction.Down;
-            if (B5RoomKeys.IsLeft(key)) return G10_Direction.Left;
-            if (B5RoomKeys.IsRight(key)) return G10_Direction.Right;
+            if (G10_RoomKeys.IsUp(key)) return G10_Direction.Up;
+            if (G10_RoomKeys.IsDown(key)) return G10_Direction.Down;
+            if (G10_RoomKeys.IsLeft(key)) return G10_Direction.Left;
+            if (G10_RoomKeys.IsRight(key)) return G10_Direction.Right;
             return G10_Direction.None;
         }
     }

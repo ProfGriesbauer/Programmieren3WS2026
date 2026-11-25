@@ -4,7 +4,8 @@ namespace OOPGames
 {
     public sealed class Gruppe3DragRaceField : IGruppe3DragRaceField
     {
-        internal const double FinishDistance = 3000;
+        internal const double TrackDistanceScale = 4;
+        internal const double FinishDistance = 1850 * TrackDistanceScale;
 
         public double PlayerOneDistance { get; internal set; }
         public double PlayerTwoDistance { get; internal set; }
@@ -22,6 +23,12 @@ namespace OOPGames
         public int PlayerTwoGear { get; internal set; }
         public double PlayerOneRpm { get; internal set; }
         public double PlayerTwoRpm { get; internal set; }
+        public double? PlayerOneRaceTimeSeconds { get; internal set; }
+        public double? PlayerTwoRaceTimeSeconds { get; internal set; }
+        public double? PlayerOneFinishSpeedKmh { get; internal set; }
+        public double? PlayerTwoFinishSpeedKmh { get; internal set; }
+        public double? PlayerOneReactionTimeMs { get; internal set; }
+        public double? PlayerTwoReactionTimeMs { get; internal set; }
 
         public bool CanBePaintedBy(IPaintGame painter)
         {

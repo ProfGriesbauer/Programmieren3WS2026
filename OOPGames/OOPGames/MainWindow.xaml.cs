@@ -12,6 +12,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
@@ -56,7 +57,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_TrainRunPainter());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
-            OOPGamesManager.Singleton.RegisterPainter(new B5RoomPaint());
+            OOPGamesManager.Singleton.RegisterPainter(new G10_RoomPaint());
             OOPGamesManager.Singleton.RegisterPainter(new G5_FabrikPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G1_VierGewinntPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe3DragRacePainter());
@@ -72,7 +73,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_TrainRunRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
-            OOPGamesManager.Singleton.RegisterRules(new B5RoomRules());
+            OOPGamesManager.Singleton.RegisterRules(new G10_RoomRules());
             OOPGamesManager.Singleton.RegisterRules(new SatisfactoryGameRules());
             OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe3DragRaceRules());
@@ -96,7 +97,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWComputerPlayer());
-            OOPGamesManager.Singleton.RegisterPlayer(new B5RoomHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new G10_RoomHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_FabrikHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntComputerPlayer());
@@ -398,6 +399,11 @@ namespace OOPGames
                 return;
             }
 
+            if (IsTextEntryFocused(Keyboard.FocusedElement as DependencyObject))
+            {
+                return;
+            }
+
             if (_CurrentRules == null) return;
             int winner = _CurrentRules.CheckIfPLayerWon();
             if (winner > 0)
@@ -427,6 +433,25 @@ namespace OOPGames
                     DoComputerMoves();
                 }
             }
+        }
+
+        internal static bool IsTextEntryFocused(DependencyObject focusedElement)
+        {
+            while (focusedElement != null)
+            {
+                if (focusedElement
+                    is System.Windows.Controls.Primitives.TextBoxBase)
+                {
+                    return true;
+                }
+
+                DependencyObject parent =
+                    focusedElement is Visual || focusedElement is Visual3D
+                        ? VisualTreeHelper.GetParent(focusedElement)
+                        : null;
+                focusedElement = parent ?? LogicalTreeHelper.GetParent(focusedElement);
+            }
+            return false;
         }
 
         private void FullscreenButton_Checked(object sender, RoutedEventArgs e)

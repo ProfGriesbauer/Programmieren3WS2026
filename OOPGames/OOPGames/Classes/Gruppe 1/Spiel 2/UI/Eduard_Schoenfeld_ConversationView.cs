@@ -54,7 +54,32 @@ namespace OOPGames
             r.Text(npc.Name, 10, panelY + 96, 10, G1C_UiColors.PanelBorder, 108);
             r.Text(npc.Personality.Role, 10, panelY + 110, 8, G1C_UiColors.Text, 108);
 
-            r.WrappedText(c.Line, OptionX, panelY + 8, 10, G1C_UiColors.Text, optionWidth - 4);
+            r.DrawRect(OptionX - 2, panelY + 6, optionWidth + 2, 48, G1C_UiColors.PanelFill,
+                       G1C_UiColors.PanelInner, 1);
+            r.WrappedText(c.Line, OptionX + 2, panelY + 8, 9, G1C_UiColors.Text, optionWidth - 8);
+
+            if (c.FishScrollMode)
+            {
+                double listY = optionY;
+                int visible = 4;
+                int first = System.Math.Max(0, System.Math.Min(c.FishScrollIndex - visible / 2,
+                    c.FishScroll.Count - visible));
+                for (int i = first; i < c.FishScroll.Count && i < first + visible; i++)
+                {
+                    G1C_CatchInfo fish = c.FishScroll[i];
+                    G1C_Item item = G1C_ItemCatalog.Get(fish.ItemId);
+                    if (item == null) continue;
+                    double y = listY + (i - first) * OptionHeight;
+                    if (i == c.FishScrollIndex)
+                        r.DrawRect(OptionX - 2, y, optionWidth, OptionHeight - 1, SelectedRow, G1C_UiColors.PanelInner, 1);
+                    // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – kleine Fischgrafik links neben dem Namen
+                    r.Sprite("item_" + item.Id, OptionX + 1, y, OptionHeight - 2, OptionHeight - 2);
+                    r.Text(item.Name + "  " + item.SellValue + " Chips", OptionX + OptionHeight + 2, y + 2, 8.5,
+                        G1C_UiColors.Text);
+                }
+                r.Text("[W/S] scrollen  [Q] zurück", OptionX, panelY + 122, 8, G1C_UiColors.Disabled);
+                return;
+            }
 
             for (int i = 0; i < c.Options.Count; i++)
             {

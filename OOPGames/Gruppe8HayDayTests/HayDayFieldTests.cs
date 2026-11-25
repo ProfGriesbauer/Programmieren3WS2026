@@ -1,6 +1,9 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
 using OOPGames;
 
 namespace Gruppe8HayDayTests;
@@ -191,7 +194,7 @@ public sealed class HayDayFieldTests : IDisposable
     }
 
     [Fact]
-    public void CoopRightClick_CollectsReadyEggs()
+    public void CoopMenuClick_CollectsReadyEggs()
     {
         HayDayField field = HayDayField.CreateNewField();
         FarmBuilding coop = Assert.Single(field.Buildings,
@@ -200,7 +203,9 @@ public sealed class HayDayFieldTests : IDisposable
             BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(field, field.ChickenCount);
 
         field.Apply(new HayDayMove(1, HayDayMoveKind.Click,
-            coop.Row, coop.Column, 1, System.Windows.Input.Key.None));
+            coop.Row, coop.Column, 0, System.Windows.Input.Key.None));
+        field.Apply(new HayDayMove(1, HayDayMoveKind.Click,
+            0, 0, 0, System.Windows.Input.Key.None, true, 1));
 
         Assert.Equal(field.ChickenCount, field.Inventory[HayDayField.Eggs]);
         Assert.Equal(0, field.EggReady);
@@ -507,5 +512,118 @@ public sealed class HayDayFieldTests : IDisposable
         Assert.Equal(coins, field.Coins);
         Assert.Contains(field.Buildings,
             building => building.Row == 25 && building.Column == 50);
+    }
+
+    [Fact]
+    public void RightClickBuildingThenLeftClickFreeTile_MovesBuilding()
+    {
+        HayDayField field = HayDayField.CreateNewField();
+        FarmBuilding coop = Assert.Single(field.Buildings,
+            building => building.Kind == "Coop");
+
+        field.Apply(new HayDayMove(1, HayDayMoveKind.Click,
+            coop.Row, coop.Column, 1, System.Windows.Input.Key.None));
+
+        Assert.Equal("Hühnerstall", field.MovingItemName);
+
+        field.Apply(new HayDayMove(2, HayDayMoveKind.Click,
+            35, 60, 0, System.Windows.Input.Key.None));
+
+        Assert.Equal(35, coop.Row);
+        Assert.Equal(60, coop.Column);
+        Assert.Null(field.MovingItemName);
+    }
+
+    [Fact]
+    public void MovingBuildingToOccupiedTile_StaysSelectedUntilEscape()
+    {
+        HayDayField field = HayDayField.CreateNewField();
+        FarmBuilding coop = Assert.Single(field.Buildings,
+            building => building.Kind == "Coop");
+        FarmPlot occupiedPlot = field.Plots[0];
+        int originalRow = coop.Row;
+        int originalColumn = coop.Column;
+
+        field.Apply(new HayDayMove(1, HayDayMoveKind.Click,
+            coop.Row, coop.Column, 1, System.Windows.Input.Key.None));
+        field.Apply(new HayDayMove(2, HayDayMoveKind.Click,
+            occupiedPlot.Row, occupiedPlot.Column, 0, System.Windows.Input.Key.None));
+
+        Assert.Equal(originalRow, coop.Row);
+        Assert.Equal(originalColumn, coop.Column);
+        Assert.Equal("Hühnerstall", field.MovingItemName);
+
+        field.Apply(new HayDayMove(2, HayDayMoveKind.Key, 0, 0, 0,
+            System.Windows.Input.Key.Escape));
+
+        Assert.Null(field.MovingItemName);
+        Assert.Equal(originalRow, coop.Row);
+        Assert.Equal(originalColumn, coop.Column);
+    }
+
+    [Fact]
+    public void BuildingHitTest_RecognizesVisibleRoof()
+    {
+        FarmBuilding? expected = null;
+        FarmBuilding? hit = null;
+        Exception? failure = null;
+
+        Thread uiThread = new Thread(() =>
+        {
+            try
+            {
+                HayDayField field = HayDayField.CreateNewField();
+                expected = Assert.Single(field.Buildings,
+                    building => building.Kind == "Farmhouse");
+
+                Canvas canvas = new Canvas { Width = 800, Height = 600 };
+                canvas.Measure(new Size(800, 600));
+                canvas.Arrange(new Rect(0, 0, 800, 600));
+
+                HayDayPainter painter = new HayDayPainter();
+                painter.PaintGameField(canvas, field);
+
+                double tileWidth = field.TileWidth(canvas.ActualWidth, canvas.ActualHeight);
+                double tileHeight = tileWidth * 0.5;
+                double columnOffset = expected.Column - field.CameraColumn;
+                double rowOffset = expected.Row - field.CameraRow;
+                double groundX = canvas.ActualWidth / 2
+                    + (columnOffset - rowOffset) * tileWidth / 2;
+                double groundY = canvas.ActualHeight / 2
+                    + (columnOffset + rowOffset) * tileHeight / 2;
+                double roofY = groundY + tileHeight * 0.28
+                    - Math.Max(9, tileHeight * 0.9) - Math.Max(6, tileHeight * 0.58);
+
+                hit = painter.BuildingAt((int)groundX, (int)roofY, field);
+
+                HayDayHumanPlayer player = new HayDayHumanPlayer();
+                player.SetPlayerNumber(1);
+                OOPGamesManager.Singleton.RegisterActivePainter(painter);
+                HayDayMove? move = player.GetMove(
+                    new ClickSelection((int)groundX, (int)roofY, 1), field) as HayDayMove;
+                Assert.NotNull(move);
+                Assert.Equal(expected.Row, move.Row);
+                Assert.Equal(expected.Column, move.Column);
+                Assert.Equal(1, move.Button);
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+            finally
+            {
+                OOPGamesManager.Singleton.RegisterActivePainter(null!);
+            }
+        });
+        uiThread.SetApartmentState(ApartmentState.STA);
+        uiThread.Start();
+        uiThread.Join();
+
+        if (failure != null)
+        {
+            throw failure;
+        }
+
+        Assert.Same(expected, hit);
     }
 }
