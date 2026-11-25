@@ -35,9 +35,12 @@ namespace OOPGames
         public const string Fire = "element-fire";
         public const string Freeze = "element-freeze";
         public const string ElementPower = "element-power";
+        public const string ChainLightningUpgrade = "chain-lightning";
         public const string Range = "magic-wand-range";
         public const string Knockback = "magic-wand-knockback";
         public const string StrikeAbility = "magic-wand-strike";
+        public const double BaseStrikeRange = 150;
+        public const string EmptyStaffAnimation = "WizardStaffEmpty";
         public const string AttackCooldown = "magic-wand-attack-cooldown";
         public const double BaseCooldownSeconds = 0.55;
         public const string StrikeCooldown = "strike-cooldown";
@@ -72,11 +75,15 @@ namespace OOPGames
                     Lightning, "Blitz", "Betäubt getroffene Gegner kurzzeitig.",
                     1, 2, ProjectileDamage),
                 new WeaponUpgradeDefinition(
-                    Fire, "Feuer", "Verbrennt Gegner; Feuer kann auf nahe Gegner überspringen.",
+                    Fire, "Feuer", "Verbrennt Gegner; brennende Gegner stecken an, wen sie treffen.",
                     1, 2, ProjectileDamage),
                 new WeaponUpgradeDefinition(
                     Freeze, "Frost", "Friert getroffene Gegner kurzzeitig ein.",
                     1, 2, ProjectileDamage),
+                new WeaponUpgradeDefinition(
+                    ChainLightningUpgrade, "Kettenblitz",
+                    "Der Blitz springt vom getroffenen Gegner auf weitere über: je Rang ein Gegner mehr und ein größerer Sprungradius.",
+                    5, 2, Lightning),
                 new WeaponUpgradeDefinition(
                     ElementPower, "Elementstärke", "Verbessert Stärke und Dauer des Elements.",
                     5, 2, null),
@@ -162,7 +169,9 @@ namespace OOPGames
                 BaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
                     progression.GetWeaponUpgradeRank(AttackCooldown)),
                 WeaponTargetingMode.Opponents, "magic-projectile",
-                knockbackDistance: GetKnockbackDistance(progression));
+                knockbackDistance: GetKnockbackDistance(progression),
+                appearance: GetAppearance(progression),
+                chainLightning: GetChainLightning(progression));
         }
 
         public static Weapon CreateStrikeWeapon(ArenaProgression progression)
@@ -179,7 +188,7 @@ namespace OOPGames
 
             int damage = 8
                 + progression.GetWeaponUpgradeRank(StrikeDamage) * 3;
-            double range = 150 * GetRangeMultiplier(progression);
+            double range = GetStrikeRange(progression);
             return new Weapon(
                 StrikeAbility, "Stabschlag",
                 "Langer, schmaler Hieb in Blickrichtung des Spielers.",
@@ -188,7 +197,100 @@ namespace OOPGames
                 StrikeBaseCooldownSeconds * PlayerAbilityCatalog.GetCooldownMultiplier(
                     progression.GetWeaponUpgradeRank(StrikeCooldown)),
                 WeaponTargetingMode.Opponents, "magic-wand-strike",
-                knockbackDistance: GetKnockbackDistance(progression));
+                knockbackDistance: GetKnockbackDistance(progression),
+                appearance: GetAppearance(progression),
+                trailEffect: CreateElementEffect(progression),
+                trailVisual: GetStrikeTraceVisual(progression.SelectedMagicWandElement),
+                chainLightning: GetChainLightning(progression));
+        }
+
+        // Staff head of the chosen element; the poison frog has its own attack frame.
+        public static WeaponAppearance GetAppearance(ArenaProgression progression)
+        {
+            if (progression == null)
+            {
+                throw new ArgumentNullException(nameof(progression));
+            }
+
+            // The staff reaches as far as the staff strike at the start of a run, also before
+            // it is unlocked; range upgrades keep the size of the sprite.
+            double reach = BaseStrikeRange;
+            // The projectile is the staff's head: after a shot the empty staff is shown until
+            // the cooldown has recharged it.
+            switch (progression.SelectedMagicWandElement)
+            {
+                case WeaponElement.Poison:
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Staff, reach, "WizardStaffFrog", "WizardStaffFrogAttac",
+                        "ProjetilPoisen") { EmptyAnimation = EmptyStaffAnimation };
+                case WeaponElement.Lightning:
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Staff, reach, "WizardStafElektic", null,
+                        "ProjetilLighning") { EmptyAnimation = EmptyStaffAnimation };
+                case WeaponElement.Fire:
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Staff, reach, "WizardStaffFire", null,
+                        "ProjetilFire") { EmptyAnimation = EmptyStaffAnimation };
+                case WeaponElement.Freeze:
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Staff, reach, "WizardStaffIce", null,
+                        "ProjetilIce") { EmptyAnimation = EmptyStaffAnimation };
+                default:
+                    return new WeaponAppearance(
+                        WeaponSpriteKind.Staff, reach, "WizardStaff", null,
+                        "ProjetilPlain") { EmptyAnimation = EmptyStaffAnimation };
+            }
+        }
+
+        // The staff strike leaves traces of its element along its path that pass the element
+        // effect on; without an element the traces are only a visual swoosh.
+        public static string GetStrikeTraceVisual(WeaponElement element)
+        {
+            switch (element)
+            {
+                case WeaponElement.Poison: return "PoisenBubbels";
+                case WeaponElement.Fire: return "FireTrail";
+                case WeaponElement.Freeze: return "IceStrike";
+                case WeaponElement.Lightning: return "ProjetilLighning";
+                default: return "WeaponWoosh";
+            }
+        }
+
+        private static ICombatEffect CreateElementEffect(ArenaProgression progression)
+        {
+            int elementRank = progression.GetWeaponUpgradeRank(ElementPower);
+            switch (progression.SelectedMagicWandElement)
+            {
+                case WeaponElement.Poison:
+                case WeaponElement.Fire:
+                    return WeaponElementEffectFactory.Create(
+                        progression.SelectedMagicWandElement, elementRank,
+                        70 + elementRank * 10);
+                case WeaponElement.Lightning:
+                case WeaponElement.Freeze:
+                    return WeaponElementEffectFactory.Create(
+                        progression.SelectedMagicWandElement, elementRank, 0);
+                default:
+                    return null;
+            }
+        }
+
+        public static ChainLightning GetChainLightning(ArenaProgression progression)
+        {
+            return progression.SelectedMagicWandElement == WeaponElement.Lightning
+                ? ChainLightning.ForRank(
+                    progression.GetWeaponUpgradeRank(ChainLightningUpgrade),
+                    progression.GetWeaponUpgradeRank(ElementPower))
+                : null;
+        }
+
+        public static double GetStrikeRange(ArenaProgression progression)
+        {
+            if (progression == null)
+            {
+                throw new ArgumentNullException(nameof(progression));
+            }
+            return BaseStrikeRange * GetRangeMultiplier(progression);
         }
 
         private static double GetRangeMultiplier(ArenaProgression progression)

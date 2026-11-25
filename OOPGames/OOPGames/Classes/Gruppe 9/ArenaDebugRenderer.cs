@@ -68,21 +68,39 @@ namespace OOPGames
                 PaintWeaponRange(canvas, field.Player.EquippedWeapon,
                     field.Player.PositionX - left, field.Player.PositionY - top,
                     field.AimDirectionX, field.AimDirectionY);
-                AddEntityHitbox(canvas, field.Player.PositionX - left,
-                    field.Player.PositionY - top, field.Player.Size);
+                AddEntityHitbox(canvas, field.Player.Hitbox, left, top);
                 foreach (PursuerEnemy enemy in field.Enemies)
                 {
                     if (enemy.IsAlive)
                     {
-                        AddEntityHitbox(canvas, enemy.PositionX - left,
-                            enemy.PositionY - top, enemy.Size);
+                        AddEntityHitbox(canvas, enemy.Hitbox, left, top);
                     }
                 }
             }
 
+            // In normal play the weapons, projectiles and particles show the attacks; their
+            // exact damage areas are only drawn in the debug view.
+            if (!field.ShowDamageRanges)
+            {
+                return;
+            }
             foreach (AttackVisualState visual in field.ActiveAttackVisuals)
             {
+                if (visual.HasBlade)
+                {
+                    AddBladeHitArea(canvas, visual, left, top);
+                    continue;
+                }
                 PaintActiveAttack(canvas, visual, left, top);
+            }
+            foreach (ArenaGroundEffect groundEffect in field.GroundEffects)
+            {
+                if (groundEffect.Effect != null)
+                {
+                    AddDamageRange(canvas, FireEffectBrush,
+                        groundEffect.CenterX - left, groundEffect.CenterY - top,
+                        groundEffect.Radius);
+                }
             }
         }
 
@@ -125,6 +143,23 @@ namespace OOPGames
                         centerX, centerY, pattern.DebugRadius);
                     break;
             }
+        }
+
+        private static void AddBladeHitArea(
+            Canvas canvas, AttackVisualState visual, double left, double top)
+        {
+            canvas.Children.Add(new Line
+            {
+                X1 = visual.BladeStartX - left,
+                Y1 = visual.BladeStartY - top,
+                X2 = visual.BladeEndX - left,
+                Y2 = visual.BladeEndY - top,
+                Stroke = PlayerAttackBrush,
+                StrokeThickness = visual.BladeHalfWidth * 2,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            });
         }
 
         private static void PaintActiveAttack(
@@ -179,8 +214,9 @@ namespace OOPGames
             }
             if (visual.VisualKind == AttackVisualKind.Burst)
             {
+                // Radius already grows with the wave.
                 AddOutlinedRange(canvas, fill, stroke,
-                    centerX, centerY, visual.Radius, visual.Progress);
+                    centerX, centerY, visual.Radius, 1);
                 return;
             }
 
@@ -386,20 +422,20 @@ namespace OOPGames
         }
 
         private static void AddEntityHitbox(
-            Canvas canvas, double centerX, double centerY, double size)
+            Canvas canvas, Rect hitbox, double left, double top)
         {
-            Ellipse hitbox = new Ellipse
+            Rectangle outline = new Rectangle
             {
-                Width = size,
-                Height = size,
+                Width = hitbox.Width,
+                Height = hitbox.Height,
                 Fill = HitboxFillBrush,
                 Stroke = HitboxStrokeBrush,
                 StrokeThickness = 2,
                 IsHitTestVisible = false
             };
-            Canvas.SetLeft(hitbox, centerX - size / 2);
-            Canvas.SetTop(hitbox, centerY - size / 2);
-            canvas.Children.Add(hitbox);
+            Canvas.SetLeft(outline, hitbox.X - left);
+            Canvas.SetTop(outline, hitbox.Y - top);
+            canvas.Children.Add(outline);
         }
 
         private static void AddSightRange(

@@ -105,6 +105,28 @@ namespace OOPGames
             throw new InvalidDataException("The sprite-sheet animation has no playable frames.");
         }
 
+        public int GetFrameCount(string animationName)
+        {
+            return animationName != null
+                && _clips.TryGetValue(animationName, out AnimationClip clip)
+                    ? clip.Frames.Count
+                    : 0;
+        }
+
+        // Returns one frame of a clip by index without touching the playback clock, so
+        // callers can drive the frame from game state; the index is clamped to the clip.
+        public BitmapSource GetClipFrame(string animationName, int frameIndex)
+        {
+            if (animationName == null
+                || !_clips.TryGetValue(animationName, out AnimationClip clip))
+            {
+                return null;
+            }
+
+            int index = Math.Max(0, Math.Min(clip.Frames.Count - 1, frameIndex));
+            return clip.Frames[index].Image;
+        }
+
         private static BitmapImage LoadSheet(string path)
         {
             BitmapImage sheet = new BitmapImage();

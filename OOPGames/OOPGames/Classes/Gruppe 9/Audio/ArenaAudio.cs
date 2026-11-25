@@ -11,10 +11,10 @@ namespace OOPGames
     public sealed class ArenaAudio
     {
         private const string SoundFolder = "Sounds";
-        // The race-car engine runs while the player moves: quieter when walking, full volume
-        // when sprinting. Stopping plays the brake, turning plays the pass-by "neeow".
+        // The race-car sounds belong to sprinting only: the engine runs while the player
+        // sprints, ending the sprint plays the brake, turning while sprinting plays the
+        // pass-by "neeow". Walking only has footsteps.
         private const string EngineLoopPattern = "sprint_loop_*.wav";
-        private const double WalkEngineVolume = 0.45;
         private const double SprintEngineVolume = 1.0;
 
         // Pattern, volume, minimum seconds between two plays, voices per file.
@@ -41,17 +41,42 @@ namespace OOPGames
             new SoundGroupDefinition("sprint_stop_brake*.wav", 0.8, 0, 1);
         private static readonly SoundGroupDefinition MenuClick =
             new SoundGroupDefinition("ui_menu_click*.wav", 0.7, 0, 2);
+        // Footsteps while walking; sprinting has the engine loop instead.
+        private static readonly SoundGroupDefinition Footstep =
+            new SoundGroupDefinition("playerFootstep_*.wav", 0.6, 0, 2);
+        // Electric shock (lightning stun) on anyone, on top of the damage sound: one of the
+        // long variants, or the short 04 when shocks follow each other quickly.
+        private static readonly SoundGroupDefinition ElectricDamage =
+            new SoundGroupDefinition("electricDamage_*.wav", 0.7, 0.05, 1, "electricDamage_04");
+        private static readonly SoundGroupDefinition ElectricDamageShort =
+            new SoundGroupDefinition("electricDamage_04*.wav", 0.7, 0.05, 2);
+        private const double RapidShockSeconds = 0.6;
+        // Plays on every healing pulse; a second voice lets quick pulses overlap.
+        private static readonly SoundGroupDefinition PlayerHeal =
+            new SoundGroupDefinition("playerHeal*.wav", 0.8, 0, 2);
+        private static readonly SoundGroupDefinition PowerBlast =
+            new SoundGroupDefinition("powerBlast*.wav", 0.8, 0, 2);
         private static readonly SoundGroupDefinition[] AllGroups =
         {
             PlayerDamage, PlayerDeath, PlayerLowHealth, NonPlayerEntityDamage,
-            EntityDeath, SwordSwing, PaySkill, Turn, Brake, MenuClick
+            EntityDeath, SwordSwing, PaySkill, Turn, Brake, MenuClick, Footstep,
+            ElectricDamage, ElectricDamageShort, PlayerHeal, PowerBlast
         };
+        private double _lastShockSeconds = double.NegativeInfinity;
+        // The death sound follows the lethal hit's damage sound a moment later, so it does not
+        // cover it.
+        private const double DeathSoundDelaySeconds = 0.15;
+        private readonly List<double> _pendingDeathSounds = new List<double>();
+        // Weapon wheel state of the previous frame: opening and moving to another segment
+        // click, choosing a different weapon confirms with the purchase sound.
+        private bool _wheelWasOpen;
+        private int _wheelSelection = -1;
+        private string _weaponBeforeWheel;
 
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private readonly Dictionary<SoundGroupDefinition, ArenaSoundGroup> _groups =
             new Dictionary<SoundGroupDefinition, ArenaSoundGroup>();
         private ArenaField _field;
-        private ArenaLoopingSound _walkEngine;
         private ArenaLoopingSound _sprintEngine;
 
         // Follows the field shown by the painter; switching fields moves the subscriptions.
@@ -71,6 +96,10 @@ namespace OOPGames
                 _field.NonPlayerEntityDied -= OnNonPlayerEntityDied;
                 _field.PlayerSwordSwung -= OnPlayerSwordSwung;
                 _field.PlayerTurned -= OnPlayerTurned;
+                _field.PlayerFootstep -= OnPlayerFootstep;
+                _field.EntityStatusApplied -= OnEntityStatusApplied;
+                _field.PlayerHealingPulse -= OnPlayerHealingPulse;
+                _field.PlayerPowerBlast -= OnPlayerPowerBlast;
                 _field.Progression.UpgradePurchased -= OnUpgradePurchased;
             }
 
@@ -84,40 +113,43 @@ namespace OOPGames
                 _field.NonPlayerEntityDied += OnNonPlayerEntityDied;
                 _field.PlayerSwordSwung += OnPlayerSwordSwung;
                 _field.PlayerTurned += OnPlayerTurned;
+                _field.PlayerFootstep += OnPlayerFootstep;
+                _field.EntityStatusApplied += OnEntityStatusApplied;
+                _field.PlayerHealingPulse += OnPlayerHealingPulse;
+                _field.PlayerPowerBlast += OnPlayerPowerBlast;
                 _field.Progression.UpgradePurchased += OnUpgradePurchased;
             }
         }
 
         // Called every painted frame: keeps the engine loop in step with the game state.
-        // It runs only during active gameplay and switches between the walk and sprint level
-        // when the sprint toggle changes. Stopping to move plays the brake, while pausing or
+        // It runs only while the player sprints during active gameplay. Ending the sprint
+        // (stopping, or switching sprint off while walking) plays the brake, while pausing or
         // dying just silences the engine.
         public void Update()
         {
+            PlayDueDeathSounds();
             if (_field == null)
             {
                 return;
             }
+            UpdateWeaponWheelSounds();
 
             bool gameRunning = _field.IsGameStarted && _field.Player.IsAlive;
-            ArenaLoopingSound wanted = null;
-            if (gameRunning && _field.IsPlayerInMotion)
-            {
-                wanted = _field.IsSprintEnabled ? GetSprintEngine() : GetWalkEngine();
-            }
-
-            ArenaLoopingSound playing = GetPlayingEngine();
-            if (ReferenceEquals(wanted, playing))
+            bool wanted = gameRunning && _field.IsPlayerSprinting;
+            ArenaLoopingSound engine = GetSprintEngine();
+            if (wanted == engine.IsPlaying)
             {
                 return;
             }
 
-            playing?.Stop();
-            if (wanted != null)
+            if (wanted)
             {
-                wanted.Start();
+                engine.Start();
+                return;
             }
-            else if (gameRunning)
+
+            engine.Stop();
+            if (gameRunning)
             {
                 Play(Brake);
             }
@@ -130,7 +162,6 @@ namespace OOPGames
             {
                 GetGroup(definition);
             }
-            GetWalkEngine();
             GetSprintEngine();
         }
 
@@ -160,14 +191,58 @@ namespace OOPGames
             Play(PlayerLowHealth);
         }
 
+        // Every hit is heard, also the lethal one: it is never merged into an earlier hit.
         private void OnNonPlayerEntityDamaged(Entity entity, int lostHitPoints)
         {
-            Play(NonPlayerEntityDamage);
+            GetGroup(NonPlayerEntityDamage).Play(
+                _clock.Elapsed.TotalSeconds, !entity.IsAlive);
         }
 
         private void OnNonPlayerEntityDied(Entity entity)
         {
-            Play(EntityDeath);
+            _pendingDeathSounds.Add(_clock.Elapsed.TotalSeconds + DeathSoundDelaySeconds);
+        }
+
+        private void UpdateWeaponWheelSounds()
+        {
+            bool isOpen = _field.IsWeaponWheelOpen;
+            if (isOpen)
+            {
+                int selection = _field.WeaponWheelSelectionIndex;
+                if (!_wheelWasOpen)
+                {
+                    _weaponBeforeWheel = _field.SelectedPlayerWeapon.Id;
+                    Play(MenuClick);
+                }
+                else if (selection != _wheelSelection)
+                {
+                    Play(MenuClick);
+                }
+                _wheelSelection = selection;
+            }
+            else if (_wheelWasOpen)
+            {
+                // Escape or releasing on the current weapon changes nothing and stays silent.
+                if (_field.SelectedPlayerWeapon.Id != _weaponBeforeWheel)
+                {
+                    Play(PaySkill);
+                }
+                _wheelSelection = -1;
+            }
+            _wheelWasOpen = isOpen;
+        }
+
+        private void PlayDueDeathSounds()
+        {
+            double now = _clock.Elapsed.TotalSeconds;
+            for (int i = _pendingDeathSounds.Count - 1; i >= 0; i--)
+            {
+                if (_pendingDeathSounds[i] <= now)
+                {
+                    _pendingDeathSounds.RemoveAt(i);
+                    Play(EntityDeath);
+                }
+            }
         }
 
         private void OnPlayerSwordSwung()
@@ -177,7 +252,40 @@ namespace OOPGames
 
         private void OnPlayerTurned()
         {
-            Play(Turn);
+            if (_field.IsPlayerSprinting)
+            {
+                Play(Turn);
+            }
+        }
+
+        private void OnPlayerFootstep()
+        {
+            Play(Footstep);
+        }
+
+        private void OnEntityStatusApplied(Entity entity, string statusId)
+        {
+            if (statusId != "stun")
+            {
+                return;
+            }
+
+            double now = _clock.Elapsed.TotalSeconds;
+            Play(now - _lastShockSeconds < RapidShockSeconds
+                ? ElectricDamageShort
+                : ElectricDamage);
+            _lastShockSeconds = now;
+        }
+
+        // Tied to releasing the pulse, so it also plays at full health.
+        private void OnPlayerHealingPulse()
+        {
+            Play(PlayerHeal);
+        }
+
+        private void OnPlayerPowerBlast()
+        {
+            Play(PowerBlast);
         }
 
         private void OnUpgradePurchased()
@@ -197,6 +305,12 @@ namespace OOPGames
                 List<IArenaSoundEffect> variants = new List<IArenaSoundEffect>();
                 foreach (string file in FindSoundFiles(definition.FilePattern))
                 {
+                    if (definition.ExcludedFileName != null
+                        && Path.GetFileName(file).StartsWith(
+                            definition.ExcludedFileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
                     variants.Add(new ArenaSoundEffect(
                         file, definition.Volume, definition.VoicesPerFile));
                 }
@@ -204,16 +318,6 @@ namespace OOPGames
                 _groups.Add(definition, group);
             }
             return group;
-        }
-
-        private ArenaLoopingSound GetWalkEngine()
-        {
-            if (_walkEngine == null)
-            {
-                _walkEngine = new ArenaLoopingSound(
-                    FindSoundFiles(EngineLoopPattern), WalkEngineVolume);
-            }
-            return _walkEngine;
         }
 
         private ArenaLoopingSound GetSprintEngine()
@@ -226,22 +330,8 @@ namespace OOPGames
             return _sprintEngine;
         }
 
-        private ArenaLoopingSound GetPlayingEngine()
-        {
-            if (_walkEngine != null && _walkEngine.IsPlaying)
-            {
-                return _walkEngine;
-            }
-            if (_sprintEngine != null && _sprintEngine.IsPlaying)
-            {
-                return _sprintEngine;
-            }
-            return null;
-        }
-
         private void StopEngine()
         {
-            _walkEngine?.Stop();
             _sprintEngine?.Stop();
         }
 
@@ -266,13 +356,17 @@ namespace OOPGames
         {
             public SoundGroupDefinition(
                 string filePattern, double volume, double minimumIntervalSeconds,
-                int voicesPerFile)
+                int voicesPerFile, string excludedFileName = null)
             {
                 FilePattern = filePattern;
                 Volume = volume;
                 MinimumIntervalSeconds = minimumIntervalSeconds;
                 VoicesPerFile = voicesPerFile;
+                ExcludedFileName = excludedFileName;
             }
+
+            // Files whose name starts with this are left out (e.g. the short variant).
+            public string ExcludedFileName { get; }
 
             public string FilePattern { get; }
             public double Volume { get; }

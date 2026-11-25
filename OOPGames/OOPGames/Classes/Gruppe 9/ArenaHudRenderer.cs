@@ -118,21 +118,35 @@ namespace OOPGames
         public void PaintStatusPlaceholder(
             Canvas canvas, Entity entity, double centerX, double centerY)
         {
-            if (entity.ActiveStatusEffects.Count == 0)
+            // Freezing is shown by ice crystals around the entity (ArenaParticleRenderer), so
+            // it gets no ring; the other movement statuses (slow, stun) keep theirs.
+            bool hasRingStatus = false;
+            bool isStunned = false;
+            foreach (ActiveStatusEffect effect in entity.ActiveStatusEffects)
             {
+                if (effect.Id == "freeze")
+                {
+                    continue;
+                }
+                hasRingStatus = true;
+                if (effect.SpeedMultiplier == 0)
+                {
+                    isStunned = true;
+                }
+            }
+
+            // Weakness (Blacksteel) has its own ring even without a movement status.
+            if (!hasRingStatus)
+            {
+                if (entity.IsWeakened)
+                {
+                    AddStatusRing(canvas, entity, centerX, centerY, Brushes.DarkViolet, false);
+                }
                 return;
             }
 
-            bool isFrozen = false;
             bool isBurning = false;
             bool isPoisoned = false;
-            foreach (ActiveStatusEffect effect in entity.ActiveStatusEffects)
-            {
-                if (effect.SpeedMultiplier == 0)
-                {
-                    isFrozen = true;
-                }
-            }
             foreach (ActiveDamageOverTimeEffect effect
                 in entity.ActiveDamageOverTimeEffects)
             {
@@ -146,17 +160,27 @@ namespace OOPGames
                 }
             }
 
+            AddStatusRing(canvas, entity, centerX, centerY,
+                isStunned ? Brushes.LightCyan
+                    : isBurning ? Brushes.OrangeRed
+                    : isPoisoned ? Brushes.GreenYellow
+                    : entity.IsWeakened ? Brushes.DarkViolet : Brushes.Plum,
+                isStunned);
+        }
+
+        private static void AddStatusRing(
+            Canvas canvas, Entity entity, double centerX, double centerY,
+            Brush stroke, bool isSolid)
+        {
             double diameter = entity.Size + 12;
             Ellipse indicator = new Ellipse
             {
                 Width = diameter,
                 Height = diameter,
                 Fill = Brushes.Transparent,
-                Stroke = isFrozen ? Brushes.LightCyan
-                    : isBurning ? Brushes.OrangeRed
-                    : isPoisoned ? Brushes.GreenYellow : Brushes.Plum,
+                Stroke = stroke,
                 StrokeThickness = 3,
-                StrokeDashArray = isFrozen ? null : new DoubleCollection { 2, 2 },
+                StrokeDashArray = isSolid ? null : new DoubleCollection { 2, 2 },
                 IsHitTestVisible = false
             };
             Canvas.SetLeft(indicator, centerX - diameter / 2);
