@@ -1981,8 +1981,9 @@ namespace OOPGames
         {
             List<IMoveSelection> attempts = new List<IMoveSelection>();
             for (int k = 0; k < 9; k++) { attempts.Add(new KeySelection(Key.D1 + k)); attempts.Add(new KeySelection(Key.NumPad1 + k)); }
-            for (int y = 20; y < G1C_GuestGameHost.CanvasH; y += 30)
-                for (int x = 10; x < G1C_GuestGameHost.CanvasW; x += 20) attempts.Add(new ClickSelection(x, y, (int)MouseButton.Left));
+            // Änderung durch: Patrick Lupierz – 25.11.2026 – Zeichenfläche ist jetzt 960x640: Raster mitskaliert (gleich viele Versuche)
+            for (int y = G1C_GuestGameHost.CanvasH / 16; y < G1C_GuestGameHost.CanvasH; y += G1C_GuestGameHost.CanvasH / 11)
+                for (int x = G1C_GuestGameHost.CanvasW / 48; x < G1C_GuestGameHost.CanvasW; x += G1C_GuestGameHost.CanvasW / 24) attempts.Add(new ClickSelection(x, y, (int)MouseButton.Left));
             for (int move = 0; move < 120 && host.Running; move++)
             {
                 // wie im Spiel: Ticks laufen weiter (Animationen, KI-Zug), bis der Mensch dran ist
