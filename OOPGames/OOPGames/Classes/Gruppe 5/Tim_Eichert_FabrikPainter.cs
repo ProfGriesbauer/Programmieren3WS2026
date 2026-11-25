@@ -50,6 +50,8 @@ namespace OOPGames
         private static readonly ImageSource SpielerBild = ErzeugeSpielerBild();
         private static readonly IReadOnlyList<G5_Recipe> Handwerksrezepte =
             G5_StarterRecipes.CreateManualCraftingRecipes();
+        private static readonly Dictionary<(string Text, FontWeight Gewicht), double> KostenTextBreiten =
+            new Dictionary<(string, FontWeight), double>();
 
         private readonly G5_WieseHintergrund _wieseHintergrund = new G5_WieseHintergrund();
         private IG5_WeltSpielfeld _hintergrundWelt;
@@ -1321,15 +1323,14 @@ namespace OOPGames
                         FontSize = 11,
                         FontWeight = FontWeights.Bold
                     });
-                    rowContent.Children.Add(new TextBlock
-                    {
-                        Text = FormatCost(cost),
-                        Foreground = affordable
+                    rowContent.Children.Add(ErzeugeKostenanzeige(
+                        FormatCost(cost),
+                        affordable
                             ? new SolidColorBrush(Color.FromRgb(161, 220, 137))
                             : new SolidColorBrush(Color.FromRgb(202, 177, 152)),
-                        FontFamily = new FontFamily("Segoe UI"),
-                        FontSize = 9
-                    });
+                        FontWeights.Normal,
+                        width - 26,
+                        false));
                     Border row = new Border
                     {
                         Height = 33,
@@ -1500,6 +1501,8 @@ namespace OOPGames
                     FormatCost(gebaeude.UpgradeKosten);
                 double upgradeTop = height - 78;
                 Border upgrade = CreateMenuButton(upgradeLabel, HoverAccentBrush, width - 34);
+                upgrade.Child = ErzeugeKostenanzeige(
+                    upgradeLabel, Brushes.White, FontWeights.Bold, width - 46, true);
                 Canvas.SetLeft(upgrade, 0);
                 Canvas.SetTop(upgrade, upgradeTop);
                 content.Children.Add(upgrade);
@@ -1735,6 +1738,65 @@ namespace OOPGames
                 },
                 IsHitTestVisible = false
             };
+        }
+
+        private static Canvas ErzeugeKostenanzeige(
+            string text, Brush farbe, FontWeight gewicht, double breite, bool zentriert)
+        {
+            TextBlock block = new TextBlock
+            {
+                Text = text,
+                Foreground = farbe,
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 9,
+                FontWeight = gewicht,
+                TextWrapping = TextWrapping.NoWrap,
+                IsHitTestVisible = false
+            };
+            var schluessel = (text, gewicht);
+            if (!KostenTextBreiten.TryGetValue(schluessel, out double textBreite))
+            {
+                block.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                textBreite = block.DesiredSize.Width;
+                KostenTextBreiten.Add(schluessel, textBreite);
+            }
+
+            Canvas ausschnitt = new Canvas
+            {
+                Width = breite,
+                Height = 14,
+                ClipToBounds = true,
+                IsHitTestVisible = false
+            };
+            double versatz = zentriert ? Math.Max(0, (breite - textBreite) / 2) : 0;
+            if (textBreite > breite)
+            {
+                const double geschwindigkeit = 30;
+                const double pause = 1;
+                double strecke = textBreite - breite + 1;
+                double laufzeit = strecke / geschwindigkeit;
+                double phase = Environment.TickCount64 / 1000.0 % (2 * (pause + laufzeit));
+                if (phase < pause)
+                {
+                    versatz = 0;
+                }
+                else if (phase < pause + laufzeit)
+                {
+                    versatz = -(phase - pause) * geschwindigkeit;
+                }
+                else if (phase < 2 * pause + laufzeit)
+                {
+                    versatz = -strecke;
+                }
+                else
+                {
+                    versatz = -strecke + (phase - 2 * pause - laufzeit) * geschwindigkeit;
+                }
+            }
+
+            Canvas.SetLeft(block, versatz);
+            ausschnitt.Children.Add(block);
+            return ausschnitt;
         }
 
         private static string FormatCost(IReadOnlyDictionary<G5_Item, int> cost)

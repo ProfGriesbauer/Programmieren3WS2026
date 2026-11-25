@@ -53,18 +53,19 @@ Vorkommen stehen. Gebäude und Vorkommen belegen jeweils ein Rasterfeld.
 ## Gebäude und Kosten
 
 Die Kosten werden im Baumenü angezeigt. Sie werden aus dem Spielerinventar und
-den Lagern bezahlt. Im Inventar kannst du aus Erzen Barren, aus Eisenbarren
+den Lagern bezahlt. Lange Kostenangaben laufen seitlich durch, damit alle
+benötigten Ressourcen lesbar sind. Im Inventar kannst du aus Erzen Barren, aus Eisenbarren
 Platten und Stangen sowie aus Kalkstein Beton herstellen. Zutaten für das
 Handwerk müssen im Rucksack liegen:
 
 - Förderer: 8 Eisenerz, 5 Holz
-- Schmelze: 5 Eisenbarren, 3 Eisenplatten, 3 Beton, 4 Holz
-- Förderband: 2 Eisenbarren, 1 Eisenplatte, 1 Beton
+- Schmelze: 3 Eisenbarren, 2 Beton, 3 Holz
+- Förderband: 1 Eisenbarren, 1 Eisenplatte, 1 Beton
 - Konstruktor: 6 Eisenbarren, 3 Eisenplatten, 2 Eisenstangen, 3 Beton
 - Montagewerk: 10 Eisenbarren, 6 Eisenplatten, 4 Eisenstangen, 6 Beton
 - Kohlekraftwerk: 6 Eisenbarren, 3 Eisenplatten, 2 Beton, 4 Kohle, 4 Holz
 - Strommast: 1 Eisenplatte, 1 Eisenstange, 1 Beton, 2 Holz
-- Lager: 3 Eisenplatten, 2 Eisenstangen, 4 Beton, 6 Holz
+- Lager: 2 Eisenplatten, 1 Eisenstange, 2 Beton, 4 Holz
 - Rakete: 40 Eisenplatten, 30 Beton, 20 Rotoren
 
 Ein Klick auf ein Gebäude öffnet seine Details. Dort kannst du – abhängig von
