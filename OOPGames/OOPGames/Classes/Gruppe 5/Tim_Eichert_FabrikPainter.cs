@@ -98,15 +98,14 @@ namespace OOPGames
             PaintWeltField(canvas, welt);
             if (currentField is SatisfactoryFieldView mentorField)
             {
-                if (mentorField.Mentor.IsActive &&
-                    mentorField.Spielfeld.Spielphase == G5_Spielphase.Fabrik &&
-                    !mentorField.Spielfeld.StatistikGeoeffnet)
+                if (mentorField.Mentor.IsActive)
                 {
                     mentorField.Mentor.Paint(
                         mentorField.MentorOverlay,
                         canvas.ActualWidth,
                         canvas.ActualHeight,
-                        mentorField);
+                        mentorField,
+                        mentorField.Spielfeld.StatistikGeoeffnet);
                     if (!canvas.Children.Contains(mentorField.MentorOverlay))
                     {
                         canvas.Children.Add(mentorField.MentorOverlay);
