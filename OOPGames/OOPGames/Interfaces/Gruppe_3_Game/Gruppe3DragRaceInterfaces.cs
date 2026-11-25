@@ -21,6 +21,12 @@ namespace OOPGames
         int PlayerTwoGear { get; }
         double PlayerOneRpm { get; }
         double PlayerTwoRpm { get; }
+        double? PlayerOneRaceTimeSeconds { get; }
+        double? PlayerTwoRaceTimeSeconds { get; }
+        double? PlayerOneFinishSpeedKmh { get; }
+        double? PlayerTwoFinishSpeedKmh { get; }
+        double? PlayerOneReactionTimeMs { get; }
+        double? PlayerTwoReactionTimeMs { get; }
     }
 
     public interface IGruppe3DragRaceMove : IPlayMove
