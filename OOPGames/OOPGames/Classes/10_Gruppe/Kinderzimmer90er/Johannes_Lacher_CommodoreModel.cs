@@ -5,7 +5,7 @@ namespace OOPGames
 {
     // 3D model of the home computer on the desk: CRT monitor, keyboard, disk drive and the cable between them.
     // The desk surface is at y = 1.6; every part is placed so that it rests exactly on its support.
-    public static class B5CommodoreModel
+    public static class G10_CommodoreModel
     {
         const double DeskTop = 1.6;
         const double MonitorX = 3.3, MonitorY = 2.06, FrontZ = -1.975;
@@ -58,7 +58,7 @@ namespace OOPGames
 
         static void Box(Model3DGroup parent, double x, double y, double z, double width, double height, double depth, Color color)
         {
-            B5RoomPaint.AddBox(parent, x, y, z, width, height, depth, color);
+            G10_RoomPaint.AddBox(parent, x, y, z, width, height, depth, color);
         }
 
         static void BuildMonitor(Model3DGroup p)

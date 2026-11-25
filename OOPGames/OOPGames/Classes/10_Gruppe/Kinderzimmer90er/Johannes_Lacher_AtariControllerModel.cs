@@ -6,9 +6,9 @@ namespace OOPGames
 {
     // 3D model of the Atari joystick (CX40 style): black base, red fire button, stick with a round handle.
     // It lies on the shelf next to the console and is connected to it by a short cable.
-    public static class B5AtariControllerModel
+    public static class G10_AtariControllerModel
     {
-        const double ShelfTop = B5AtariConsoleModel.ShelfTop;
+        const double ShelfTop = G10_AtariConsoleModel.ShelfTop;
         const double X = -2.88, Z = -1.65;
         const double BaseHeight = 0.045, PlateHeight = 0.01;
 
@@ -22,8 +22,8 @@ namespace OOPGames
         public static void Build(Model3DGroup parent)
         {
             double top = ShelfTop + BaseHeight + PlateHeight;
-            B5RoomPaint.AddBox(parent, X, ShelfTop + BaseHeight / 2, Z, 0.25, BaseHeight, 0.22, _Base);
-            B5RoomPaint.AddBox(parent, X, ShelfTop + BaseHeight + PlateHeight / 2, Z, 0.23, PlateHeight, 0.20, _Plate);
+            G10_RoomPaint.AddBox(parent, X, ShelfTop + BaseHeight / 2, Z, 0.25, BaseHeight, 0.22, _Base);
+            G10_RoomPaint.AddBox(parent, X, ShelfTop + BaseHeight + PlateHeight / 2, Z, 0.23, PlateHeight, 0.20, _Plate);
 
             // Fire button in the rear left corner of the base.
             AddCylinder(parent, X - 0.07, top, Z - 0.055, 0.026, 0.008, _Base);
@@ -37,7 +37,7 @@ namespace OOPGames
             AddCylinder(parent, stickX, top + 0.182, stickZ, 0.021, 0.012, _Handle);
 
             // Cable from the left side of the base to the console.
-            B5RoomPaint.AddBox(parent, -3.03, ShelfTop + BaseHeight / 2, -1.7, 0.06, 0.014, 0.014, _Cable);
+            G10_RoomPaint.AddBox(parent, -3.03, ShelfTop + BaseHeight / 2, -1.7, 0.06, 0.014, 0.014, _Cable);
         }
 
         // Upright cylinder resting on y = bottom.

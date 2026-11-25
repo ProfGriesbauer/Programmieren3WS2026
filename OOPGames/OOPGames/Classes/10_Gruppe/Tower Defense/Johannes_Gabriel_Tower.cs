@@ -2,7 +2,7 @@ using System;
 
 namespace OOPGames
 {
-    public enum DamageType
+    public enum G10_DamageType
     {
         Physical,
         Fire,
@@ -12,7 +12,7 @@ namespace OOPGames
         Poison,
     }
 
-    public enum TowerEffect
+    public enum G10_TowerEffect
     {
         None,
         Burn,
@@ -22,23 +22,23 @@ namespace OOPGames
         ChainLightning
     }
 
-    public enum AttackMode
+    public enum G10_AttackMode
     {
         SingleTarget,
         AreaDamage
     }
 
-    public class Tower
+    public class G10_Tower
     {
-        public Tower(
+        public G10_Tower(
             string name,
             int damage,
             double attackSpeed,
-            DamageType damageType,
+            G10_DamageType damageType,
             double attackRange,
-            AttackMode attackMode,
+            G10_AttackMode attackMode,
             int cost,
-            TowerEffect effect = TowerEffect.None,
+            G10_TowerEffect effect = G10_TowerEffect.None,
             int effectDamagePerSecond = 0,
             double effectDuration = 0,
             double slowFactor = 1,
@@ -93,8 +93,8 @@ namespace OOPGames
             AttackMode = attackMode;
             Cost = cost;
             UpgradeLevel = 1;
-            MaxTargets = attackMode == AttackMode.AreaDamage ? 3 : 1;
-            SplashRadius = attackMode == AttackMode.AreaDamage ? 1 : 0;
+            MaxTargets = attackMode == G10_AttackMode.AreaDamage ? 3 : 1;
+            SplashRadius = attackMode == G10_AttackMode.AreaDamage ? 1 : 0;
             Effect = effect;
             EffectDamagePerSecond = effectDamagePerSecond;
             EffectDuration = effectDuration;
@@ -112,14 +112,14 @@ namespace OOPGames
         // Number of attacks per second.
         public double AttackSpeed { get; private set; }
 
-        public DamageType DamageType { get; private set; }
+        public G10_DamageType DamageType { get; private set; }
         public double AttackRange { get; private set; }
-        public AttackMode AttackMode { get; private set; }
+        public G10_AttackMode AttackMode { get; private set; }
         public int Cost { get; private set; }
         public int UpgradeLevel { get; private set; }
         public int MaxTargets { get; private set; }
         public double SplashRadius { get; private set; }
-        public TowerEffect Effect { get; private set; }
+        public G10_TowerEffect Effect { get; private set; }
         public int EffectDamagePerSecond { get; private set; }
         public double EffectDuration { get; private set; }
         public double SlowFactor { get; private set; }

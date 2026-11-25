@@ -14,15 +14,15 @@ namespace OOPGames
             _Game = game;
         }
 
-        public int Best { get { return B5RoomHighscores.Get(_Game); } }
+        public int Best { get { return G10_RoomHighscores.Get(_Game); } }
 
         public void Submit(int score)
         {
-            B5RoomHighscores.Save(_Game, score);
+            G10_RoomHighscores.Save(_Game, score);
         }
     }
 
-    public sealed class G10_TetrisGame : IB5RoomMiniGame
+    public sealed class G10_TetrisGame : IG10_RoomMiniGame
     {
         const string GameTitle = "Tetris";
 

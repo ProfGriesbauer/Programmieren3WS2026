@@ -7,9 +7,9 @@ using System.Windows.Media;
 
 namespace OOPGames
 {
-    public sealed class B5RoomGameEntry
+    public sealed class G10_RoomGameEntry
     {
-        public B5RoomGameEntry(string title, Color cartridgeColor, Func<IB5RoomMiniGame> create)
+        public G10_RoomGameEntry(string title, Color cartridgeColor, Func<IG10_RoomMiniGame> create)
         {
             Title = title;
             CartridgeColor = cartridgeColor;
@@ -18,12 +18,12 @@ namespace OOPGames
 
         public string Title { get; private set; }
         public Color CartridgeColor { get; private set; }
-        public Func<IB5RoomMiniGame> Create { get; private set; }
+        public Func<IG10_RoomMiniGame> Create { get; private set; }
     }
 
-    public sealed class B5RoomDevice
+    public sealed class G10_RoomDevice
     {
-        public B5RoomDevice(B5RoomDeviceKind kind, string name, Color trimColor, Color screenColor, IList<B5RoomGameEntry> games)
+        public G10_RoomDevice(G10_RoomDeviceKind kind, string name, Color trimColor, Color screenColor, IList<G10_RoomGameEntry> games)
         {
             Kind = kind;
             Name = name;
@@ -32,59 +32,59 @@ namespace OOPGames
             Games = games;
         }
 
-        public B5RoomDeviceKind Kind { get; private set; }
+        public G10_RoomDeviceKind Kind { get; private set; }
         public string Name { get; private set; }
         public Color TrimColor { get; private set; }
         public Color ScreenColor { get; private set; }
-        public IList<B5RoomGameEntry> Games { get; private set; }
-        public int DisplayWidth { get { return Kind == B5RoomDeviceKind.Gameboy ? 160 : 160; } }
-        public int DisplayHeight { get { return Kind == B5RoomDeviceKind.Gameboy ? 144 : 120; } }
+        public IList<G10_RoomGameEntry> Games { get; private set; }
+        public int DisplayWidth { get { return Kind == G10_RoomDeviceKind.Gameboy ? 160 : 160; } }
+        public int DisplayHeight { get { return Kind == G10_RoomDeviceKind.Gameboy ? 144 : 120; } }
     }
 
-    public static class B5RoomRegistry
+    public static class G10_RoomRegistry
     {
-        static readonly IList<B5RoomDevice> _Devices = new List<B5RoomDevice>
+        static readonly IList<G10_RoomDevice> _Devices = new List<G10_RoomDevice>
         {
-            new B5RoomDevice(B5RoomDeviceKind.Atari, "ATARI-KONSOLE", Color.FromRgb(206, 117, 55), Color.FromRgb(13, 26, 36),
-                new List<B5RoomGameEntry>
+            new G10_RoomDevice(G10_RoomDeviceKind.Atari, "ATARI-KONSOLE", Color.FromRgb(206, 117, 55), Color.FromRgb(13, 26, 36),
+                new List<G10_RoomGameEntry>
                 {
-                    new B5RoomGameEntry("Pac-Man", Color.FromRgb(240, 200, 40), () => new G10_PacManGame())
+                    new G10_RoomGameEntry("Pac-Man", Color.FromRgb(240, 200, 40), () => new G10_PacManGame())
                 }),
-            new B5RoomDevice(B5RoomDeviceKind.Gameboy, "HANDHELD", Color.FromRgb(145, 190, 96), Color.FromRgb(107, 138, 18),
-                new List<B5RoomGameEntry>
+            new G10_RoomDevice(G10_RoomDeviceKind.Gameboy, "HANDHELD", Color.FromRgb(145, 190, 96), Color.FromRgb(107, 138, 18),
+                new List<G10_RoomGameEntry>
                 {
-                    new B5RoomGameEntry("Snake", Color.FromRgb(116, 158, 70), () => new G10_SnakeGame()),
-                    new B5RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new G10_PongGame()),
-                    new B5RoomGameEntry("SolarShooter", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame()),
-                    new B5RoomGameEntry("Tetris", Color.FromRgb(112, 165, 201), () => new G10_TetrisGame())
+                    new G10_RoomGameEntry("Snake", Color.FromRgb(116, 158, 70), () => new G10_SnakeGame()),
+                    new G10_RoomGameEntry("Pong", Color.FromRgb(202, 185, 90), () => new G10_PongGame()),
+                    new G10_RoomGameEntry("SolarShooter", Color.FromRgb(92, 151, 92), () => new G10_SolarShooterGame()),
+                    new G10_RoomGameEntry("Tetris", Color.FromRgb(112, 165, 201), () => new G10_TetrisGame())
                 }),
-            new B5RoomDevice(B5RoomDeviceKind.Commodore, "HEIMCOMPUTER", Color.FromRgb(124, 112, 218), Color.FromRgb(53, 40, 121),
-                new List<B5RoomGameEntry>
+            new G10_RoomDevice(G10_RoomDeviceKind.Commodore, "HEIMCOMPUTER", Color.FromRgb(124, 112, 218), Color.FromRgb(53, 40, 121),
+                new List<G10_RoomGameEntry>
                 {
-                    new B5RoomGameEntry("Tower Defense", Color.FromRgb(82, 105, 190), () => new B5RoomTowerDefenseGame()),
-                    new B5RoomGameEntry("Muenzen sammeln", Color.FromRgb(226, 180, 60), () => new G10_CoinGame()),
-                    new B5RoomGameEntry("Bomberman", Color.FromRgb(159, 78, 68), () => new G10_BombermanGame())
+                    new G10_RoomGameEntry("Tower Defense", Color.FromRgb(82, 105, 190), () => new G10_RoomTowerDefenseGame()),
+                    new G10_RoomGameEntry("Muenzen sammeln", Color.FromRgb(226, 180, 60), () => new G10_CoinGame()),
+                    new G10_RoomGameEntry("Bomberman", Color.FromRgb(159, 78, 68), () => new G10_BombermanGame())
                 })
         };
 
-        public static IList<B5RoomDevice> Devices { get { return _Devices; } }
+        public static IList<G10_RoomDevice> Devices { get { return _Devices; } }
     }
 
-    public sealed class B5RoomField : IGameField
+    public sealed class G10_RoomField : IGameField
     {
         readonly Queue<Key> _Input = new Queue<Key>();
         readonly int[] _InsertedGames = { -1, -1, -1 };
-        readonly IB5RoomMiniGame[] _ActiveGames = new IB5RoomMiniGame[3];
+        readonly IG10_RoomMiniGame[] _ActiveGames = new IG10_RoomMiniGame[3];
         int _SelectedDevice;
         double _TransitionTime;
         bool _ShowTitle;
 
-        public B5RoomField()
+        public G10_RoomField()
         {
             Reset();
         }
 
-        public B5RoomPhase Phase { get; internal set; }
+        public G10_RoomPhase Phase { get; internal set; }
         public int SelectedDevice { get { return _SelectedDevice; } internal set { _SelectedDevice = value; } }
         public int SelectedGame { get; internal set; }
         public int InsertedGame
@@ -94,15 +94,15 @@ namespace OOPGames
         }
         public int GetInsertedGame(int device) { return _InsertedGames[device]; }
         public int PendingGame { get; internal set; }
-        public double TransitionProgress { get { return Math.Min(1.0, _TransitionTime / (Phase == B5RoomPhase.Ejecting ? 0.5 : 1.6)); } }
+        public double TransitionProgress { get { return Math.Min(1.0, _TransitionTime / (Phase == G10_RoomPhase.Ejecting ? 0.5 : 1.6)); } }
         public bool ShowTitle { get { return _ShowTitle; } }
-        public IB5RoomMiniGame ActiveGame
+        public IG10_RoomMiniGame ActiveGame
         {
             get { return _ActiveGames[SelectedDevice]; }
             internal set { _ActiveGames[SelectedDevice] = value; }
         }
-        public B5RoomDevice Device { get { return B5RoomRegistry.Devices[SelectedDevice]; } }
-        public bool CanBePaintedBy(IPaintGame painter) { return painter is B5RoomPaint; }
+        public G10_RoomDevice Device { get { return G10_RoomRegistry.Devices[SelectedDevice]; } }
+        public bool CanBePaintedBy(IPaintGame painter) { return painter is G10_RoomPaint; }
 
         internal void LatchKey(Key key)
         {
@@ -119,7 +119,7 @@ namespace OOPGames
         // Mouse: pointing at a device in the room view selects it, like the arrow keys.
         internal void HoverDevice(int device)
         {
-            if (Phase != B5RoomPhase.Room || device == SelectedDevice) return;
+            if (Phase != G10_RoomPhase.Room || device == SelectedDevice) return;
             SelectedDevice = device;
             SelectedGame = 0;
         }
@@ -127,20 +127,20 @@ namespace OOPGames
         // Mouse: a click on a device (3D or tab) opens it from the room view, or switches to it in the device view.
         internal void OpenDevice(int device)
         {
-            if (Phase != B5RoomPhase.Room && Phase != B5RoomPhase.Device) return;
+            if (Phase != G10_RoomPhase.Room && Phase != G10_RoomPhase.Device) return;
             if (device != SelectedDevice)
             {
                 SelectedDevice = device;
                 SelectedGame = 0;
                 _ShowTitle = false;
             }
-            Phase = B5RoomPhase.Device;
+            Phase = G10_RoomPhase.Device;
         }
 
         // Mouse: pointing at a game in the list selects it, like the up/down keys.
         internal void HoverGame(int index)
         {
-            if (Phase == B5RoomPhase.Device && index >= 0 && index < Device.Games.Count) SelectedGame = index;
+            if (Phase == G10_RoomPhase.Device && index >= 0 && index < Device.Games.Count) SelectedGame = index;
         }
 
         internal void BeginInsert(int gameIndex)
@@ -148,12 +148,12 @@ namespace OOPGames
             PendingGame = gameIndex;
             _TransitionTime = 0;
             _ShowTitle = false;
-            Phase = B5RoomPhase.Inserting;
+            Phase = G10_RoomPhase.Inserting;
         }
 
         internal void Reset()
         {
-            Phase = B5RoomPhase.Room;
+            Phase = G10_RoomPhase.Room;
             SelectedDevice = 0;
             SelectedGame = 0;
             for (int i = 0; i < _InsertedGames.Length; i++)
@@ -172,11 +172,11 @@ namespace OOPGames
             List<Key> keys = DrainInput();
             // + / - change the volume of all games in every phase; the games never see these keys.
             keys.RemoveAll(HandleVolumeKey);
-            if (Phase == B5RoomPhase.Playing)
+            if (Phase == G10_RoomPhase.Playing)
             {
-                if (keys.Any(IsBackKey) && !(ActiveGame is IB5RoomOwnBackKey))
+                if (keys.Any(IsBackKey) && !(ActiveGame is IG10_RoomOwnBackKey))
                 {
-                    Phase = B5RoomPhase.Device;
+                    Phase = G10_RoomPhase.Device;
                     _ShowTitle = false;
                     return;
                 }
@@ -186,25 +186,25 @@ namespace OOPGames
                     ActiveGame.Update(keys);
                     if (ActiveGame.ExitRequested)
                     {
-                        Phase = B5RoomPhase.Device;
+                        Phase = G10_RoomPhase.Device;
                         _ShowTitle = false;
                     }
                 }
                 return;
             }
 
-            if (Phase == B5RoomPhase.Focusing)
+            if (Phase == G10_RoomPhase.Focusing)
             {
                 if (keys.Any(IsBackKey))
                 {
-                    Phase = B5RoomPhase.Device;
+                    Phase = G10_RoomPhase.Device;
                     _ShowTitle = false;
                     return;
                 }
 
                 _TransitionTime += 0.04;
                 if (_TransitionTime >= 0.8)
-                    Phase = B5RoomPhase.Playing;
+                    Phase = G10_RoomPhase.Playing;
                 return;
             }
 
@@ -212,36 +212,36 @@ namespace OOPGames
             {
                 if (IsBackKey(key))
                 {
-                    if (Phase == B5RoomPhase.Device) Phase = B5RoomPhase.Room;
-                    else if (Phase == B5RoomPhase.Inserting || Phase == B5RoomPhase.Ejecting)
+                    if (Phase == G10_RoomPhase.Device) Phase = G10_RoomPhase.Room;
+                    else if (Phase == G10_RoomPhase.Inserting || Phase == G10_RoomPhase.Ejecting)
                     {
-                        Phase = B5RoomPhase.Device;
+                        Phase = G10_RoomPhase.Device;
                         _ShowTitle = false;
                         PendingGame = -1;
                     }
                     continue;
                 }
 
-                if (Phase == B5RoomPhase.Room)
+                if (Phase == G10_RoomPhase.Room)
                 {
-                    if (B5RoomKeys.IsLeft(key) || B5RoomKeys.IsRight(key))
+                    if (G10_RoomKeys.IsLeft(key) || G10_RoomKeys.IsRight(key))
                     {
-                        int direction = B5RoomKeys.IsRight(key) ? 1 : -1;
-                        SelectedDevice = (SelectedDevice + direction + B5RoomRegistry.Devices.Count) % B5RoomRegistry.Devices.Count;
+                        int direction = G10_RoomKeys.IsRight(key) ? 1 : -1;
+                        SelectedDevice = (SelectedDevice + direction + G10_RoomRegistry.Devices.Count) % G10_RoomRegistry.Devices.Count;
                         SelectedGame = 0;
                     }
-                    else if (IsConfirmKey(key)) Phase = B5RoomPhase.Device;
+                    else if (IsConfirmKey(key)) Phase = G10_RoomPhase.Device;
                 }
-                else if (Phase == B5RoomPhase.Device)
+                else if (Phase == G10_RoomPhase.Device)
                 {
                     int gameIndex = GameIndexFromKey(key);
                     if (gameIndex >= 0 && gameIndex < Device.Games.Count)
                     {
                         SelectedGame = gameIndex;
                     }
-                    else if (B5RoomKeys.IsUp(key) || B5RoomKeys.IsLeft(key) || B5RoomKeys.IsDown(key) || B5RoomKeys.IsRight(key))
+                    else if (G10_RoomKeys.IsUp(key) || G10_RoomKeys.IsLeft(key) || G10_RoomKeys.IsDown(key) || G10_RoomKeys.IsRight(key))
                     {
-                        int direction = B5RoomKeys.IsDown(key) || B5RoomKeys.IsRight(key) ? 1 : -1;
+                        int direction = G10_RoomKeys.IsDown(key) || G10_RoomKeys.IsRight(key) ? 1 : -1;
                         int count = Device.Games.Count;
                         SelectedGame = (SelectedGame + direction + count) % count;
                     }
@@ -251,7 +251,7 @@ namespace OOPGames
                         {
                             PendingGame = SelectedGame;
                             _TransitionTime = 0;
-                            Phase = B5RoomPhase.Ejecting;
+                            Phase = G10_RoomPhase.Ejecting;
                         }
                         else if (InsertedGame < 0) BeginInsert(SelectedGame);
                         else StartPlaying();
@@ -259,7 +259,7 @@ namespace OOPGames
                 }
             }
 
-            if (Phase == B5RoomPhase.Inserting)
+            if (Phase == G10_RoomPhase.Inserting)
             {
                 _TransitionTime += 0.04;
                 _ShowTitle = _TransitionTime >= 1.6;
@@ -271,10 +271,10 @@ namespace OOPGames
                     ActiveGame.Start();
                     _ShowTitle = false;
                     _TransitionTime = 0;
-                    Phase = B5RoomPhase.Focusing;
+                    Phase = G10_RoomPhase.Focusing;
                 }
             }
-            else if (Phase == B5RoomPhase.Ejecting)
+            else if (Phase == G10_RoomPhase.Ejecting)
             {
                 _TransitionTime += 0.04;
                 if (_TransitionTime >= 0.5)
@@ -291,7 +291,7 @@ namespace OOPGames
             if (InsertedGame < 0) return;
             ActiveGame = Device.Games[InsertedGame].Create();
             ActiveGame.Start();
-            Phase = B5RoomPhase.Playing;
+            Phase = G10_RoomPhase.Playing;
         }
 
         static bool HandleVolumeKey(Key key)
@@ -313,10 +313,10 @@ namespace OOPGames
         }
     }
 
-    public sealed class B5RoomRules : IGameRules2
+    public sealed class G10_RoomRules : IGameRules2
     {
-        readonly B5RoomField _Field = new B5RoomField();
-        public string Name { get { return "Kinderzimmer (90er) Regeln"; } }
+        readonly G10_RoomField _Field = new G10_RoomField();
+        public string Name { get { return "Gruppe 10 Kinderzimmer (90er) Regeln"; } }
         public IGameField CurrentField { get { return _Field; } }
         public bool MovesPossible { get { return true; } }
         public void DoMove(IPlayMove move) { }
@@ -326,18 +326,18 @@ namespace OOPGames
         public void TickGameCall() { _Field.Tick(); }
     }
 
-    public sealed class B5RoomHumanPlayer : IHumanGamePlayer
+    public sealed class G10_RoomHumanPlayer : IHumanGamePlayer
     {
         int _PlayerNumber;
-        public string Name { get { return "Kinderzimmer Steuerung"; } }
+        public string Name { get { return "Gruppe 10 Kinderzimmer Steuerung"; } }
         public int PlayerNumber { get { return _PlayerNumber; } }
         public void SetPlayerNumber(int playerNumber) { _PlayerNumber = playerNumber; }
-        public bool CanBeRuledBy(IGameRules rules) { return rules is B5RoomRules; }
-        public IGamePlayer Clone() { return new B5RoomHumanPlayer { _PlayerNumber = _PlayerNumber }; }
+        public bool CanBeRuledBy(IGameRules rules) { return rules is G10_RoomRules; }
+        public IGamePlayer Clone() { return new G10_RoomHumanPlayer { _PlayerNumber = _PlayerNumber }; }
 
         public IPlayMove GetMove(IMoveSelection selection, IGameField field)
         {
-            B5RoomField room = field as B5RoomField;
+            G10_RoomField room = field as G10_RoomField;
             IKeySelection keySelection = selection as IKeySelection;
             if (room != null && keySelection != null) room.LatchKey(keySelection.Key);
             return null;

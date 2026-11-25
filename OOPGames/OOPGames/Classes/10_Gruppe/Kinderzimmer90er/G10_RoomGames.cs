@@ -9,11 +9,11 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
-    static class B5RoomDraw
+    static class G10_RoomDraw
     {
         public static void Rect(Canvas canvas, double x, double y, double width, double height, Color color)
         {
-            TowerDefensePixelSurface surface = canvas.Tag as TowerDefensePixelSurface;
+            G10_TowerDefensePixelSurface surface = canvas.Tag as G10_TowerDefensePixelSurface;
             if (surface != null)
             {
                 surface.Rect(x, y, width, height, color);
@@ -28,7 +28,7 @@ namespace OOPGames
 
         public static void Text(Canvas canvas, string text, double x, double y, int size, Color color)
         {
-            TowerDefensePixelSurface surface = canvas.Tag as TowerDefensePixelSurface;
+            G10_TowerDefensePixelSurface surface = canvas.Tag as G10_TowerDefensePixelSurface;
             if (surface != null)
             {
                 surface.Text(text, x, y, size, color);
@@ -55,7 +55,7 @@ namespace OOPGames
     }
 
     // Directions can be steered with the arrow keys or with WASD.
-    static class B5RoomKeys
+    static class G10_RoomKeys
     {
         public static bool IsLeft(Key key) { return key == Key.Left || key == Key.A; }
         public static bool IsRight(Key key) { return key == Key.Right || key == Key.D; }
@@ -63,7 +63,7 @@ namespace OOPGames
         public static bool IsDown(Key key) { return key == Key.Down || key == Key.S; }
     }
 
-    static class B5RoomHighscores
+    static class G10_RoomHighscores
     {
         static readonly string _Path = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

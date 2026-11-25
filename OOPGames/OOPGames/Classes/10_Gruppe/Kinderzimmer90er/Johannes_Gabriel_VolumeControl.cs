@@ -10,7 +10,7 @@ namespace OOPGames
     // Volume panel in the top left corner of the 3D room: speaker icon, ten clickable segments,
     // - / + buttons and the mouse wheel. It controls G10_SoundVolume, i.e. all games of group 10.
     // While a game runs, the panel is hidden and only appears briefly after a change (+ / - keys).
-    sealed class B5VolumeControl
+    sealed class G10_VolumeControl
     {
         const double ShowAfterChangeSeconds = 1.6;
         static readonly Brush EmptySegment = Frozen(Color.FromRgb(36, 44, 78));
@@ -23,15 +23,15 @@ namespace OOPGames
         readonly Path[] _Waves = new Path[3];
         readonly Canvas _MuteCross;
 
-        public B5VolumeControl()
+        public G10_VolumeControl()
         {
             StackPanel row = new StackPanel { Orientation = Orientation.Horizontal };
             row.Children.Add(CreateSpeakerIcon(out _MuteCross));
 
             StackPanel column = new StackPanel { Margin = new Thickness(8, 0, 0, 0) };
             DockPanel header = new DockPanel { LastChildFill = false };
-            header.Children.Add(B5RetroStyle.CreateText("LAUTSTAERKE", 13, B5RetroStyle.Dim));
-            TextBlock keys = B5RetroStyle.CreateText("+ / -", 12, B5RetroStyle.Dim);
+            header.Children.Add(G10_RetroStyle.CreateText("LAUTSTAERKE", 13, G10_RetroStyle.Dim));
+            TextBlock keys = G10_RetroStyle.CreateText("+ / -", 12, G10_RetroStyle.Dim);
             keys.Margin = new Thickness(14, 0, 0, 0);
             DockPanel.SetDock(keys, Dock.Right);
             header.Children.Add(keys);
@@ -47,7 +47,7 @@ namespace OOPGames
                     Width = 5,
                     Height = 18,
                     Margin = new Thickness(0.5, 0, 0.5, 0),
-                    BorderBrush = B5RetroStyle.Frame,
+                    BorderBrush = G10_RetroStyle.Frame,
                     BorderThickness = new Thickness(1),
                     Cursor = Cursors.Hand,
                     VerticalAlignment = VerticalAlignment.Center
@@ -62,7 +62,7 @@ namespace OOPGames
                 bar.Children.Add(segment);
             }
             bar.Children.Add(CreateButton("+", G10_SoundVolume.Increase));
-            _Value = B5RetroStyle.CreateText("", 14, B5RetroStyle.Text);
+            _Value = G10_RetroStyle.CreateText("", 14, G10_RetroStyle.Text);
             _Value.Width = 52;
             _Value.TextAlignment = TextAlignment.Right;
             _Value.VerticalAlignment = VerticalAlignment.Center;
@@ -70,7 +70,7 @@ namespace OOPGames
             column.Children.Add(bar);
             row.Children.Add(column);
 
-            _Element = B5RetroStyle.CreatePanel(row);
+            _Element = G10_RetroStyle.CreatePanel(row);
             _Element.HorizontalAlignment = HorizontalAlignment.Left;
             _Element.VerticalAlignment = VerticalAlignment.Top;
             _Element.Margin = new Thickness(8);
@@ -102,7 +102,7 @@ namespace OOPGames
             for (int i = 0; i < _Segments.Length; i++)
                 _Segments[i].Background = i < level ? SegmentBrush(i) : EmptySegment;
             _Value.Text = level == 0 ? "STUMM" : G10_SoundVolume.Percent + "%";
-            _Value.Foreground = level == 0 ? MuteBrush : B5RetroStyle.Text;
+            _Value.Foreground = level == 0 ? MuteBrush : G10_RetroStyle.Text;
 
             int percent = G10_SoundVolume.Percent;
             int waves = level == 0 ? 0 : percent <= 30 ? 1 : percent <= 70 ? 2 : 3;
@@ -127,7 +127,7 @@ namespace OOPGames
 
         Border CreateButton(string label, Action click)
         {
-            TextBlock text = B5RetroStyle.CreateText(label, 15, B5RetroStyle.Text);
+            TextBlock text = G10_RetroStyle.CreateText(label, 15, G10_RetroStyle.Text);
             text.HorizontalAlignment = HorizontalAlignment.Center;
             text.VerticalAlignment = VerticalAlignment.Center;
             Border button = new Border
@@ -135,7 +135,7 @@ namespace OOPGames
                 Width = 22,
                 Height = 20,
                 Margin = new Thickness(3, 0, 3, 0),
-                BorderBrush = B5RetroStyle.Frame,
+                BorderBrush = G10_RetroStyle.Frame,
                 BorderThickness = new Thickness(1.5),
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand,
@@ -154,11 +154,11 @@ namespace OOPGames
         Canvas CreateSpeakerIcon(out Canvas muteCross)
         {
             Canvas icon = new Canvas { Width = 34, Height = 30, VerticalAlignment = VerticalAlignment.Center };
-            icon.Children.Add(new Rectangle { Width = 7, Height = 10, Fill = B5RetroStyle.Text, Margin = new Thickness(2, 10, 0, 0) });
+            icon.Children.Add(new Rectangle { Width = 7, Height = 10, Fill = G10_RetroStyle.Text, Margin = new Thickness(2, 10, 0, 0) });
             icon.Children.Add(new Polygon
             {
                 Points = new PointCollection { new Point(9, 10), new Point(17, 3), new Point(17, 27), new Point(9, 20) },
-                Fill = B5RetroStyle.Text
+                Fill = G10_RetroStyle.Text
             });
             for (int i = 0; i < _Waves.Length; i++)
             {
@@ -168,7 +168,7 @@ namespace OOPGames
                 _Waves[i] = new Path
                 {
                     Data = new PathGeometry(new[] { arc }),
-                    Stroke = B5RetroStyle.Frame,
+                    Stroke = G10_RetroStyle.Frame,
                     StrokeThickness = 2
                 };
                 icon.Children.Add(_Waves[i]);

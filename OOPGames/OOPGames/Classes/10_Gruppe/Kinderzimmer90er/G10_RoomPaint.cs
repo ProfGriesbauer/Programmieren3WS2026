@@ -12,7 +12,7 @@ using System.Windows.Shapes;
 
 namespace OOPGames
 {
-    public sealed class B5RoomPaint : IPaintGame2
+    public sealed class G10_RoomPaint : IPaintGame2
     {
         Grid _Root;
         Viewport3D _Viewport;
@@ -31,9 +31,9 @@ namespace OOPGames
         Border _Sidebar;
         StackPanel _Cards;
         TextBlock _DeviceTitle;
-        B5ControlBar _ControlBar;
-        B5VolumeControl _VolumeControl;
-        B5MediaAnimation[] _Media;
+        G10_ControlBar _ControlBar;
+        G10_VolumeControl _VolumeControl;
+        G10_MediaAnimation[] _Media;
         readonly List<GeometryModel3D> _Highlights = new List<GeometryModel3D>();
         readonly List<GeometryModel3D> _Screens = new List<GeometryModel3D>();
         readonly List<Border> _CardBorders = new List<Border>();
@@ -52,15 +52,15 @@ namespace OOPGames
         static readonly Material[] HighlightMaterials = CreateHighlightMaterials();
         static readonly Brush FloorShadowBrush = CreateFloorShadowBrush();
         static readonly Material FloorShadowMaterial = CreateFloorShadowMaterial();
-        B5RoomField _LastField;
+        G10_RoomField _LastField;
         int _LastDevice = -1;
         int _LastSelected = -1;
         int _LastHighlightDevice = -1;
         int _LastScreenDevice = -1;
-        B5RoomPhase _LastDrawnPhase = (B5RoomPhase)(-1);
+        G10_RoomPhase _LastDrawnPhase = (G10_RoomPhase)(-1);
         int _LastDrawnDevice = -1;
         int _LastDrawnGame = -1;
-        B5RoomPhase _LastCardPhase = (B5RoomPhase)(-1);
+        G10_RoomPhase _LastCardPhase = (G10_RoomPhase)(-1);
         int _LastCardPending = -1;
         int _LastCardInserted = -1;
         int _LastOverlayDevice = -1;
@@ -78,15 +78,15 @@ namespace OOPGames
         static readonly Brush WallpaperTexture = CreateWallpaperTexture();
         static readonly Brush CarpetTexture = CreateCarpetTexture();
         static readonly Brush CurtainTexture = CreateCurtainTexture();
-        static readonly Brush ArcadePoster = B5WallArt.CreateArcadePoster();
-        static readonly Brush WindowView = B5WallArt.CreateWindowView();
-        static readonly Brush DinoPoster = B5WallArt.CreateDinoPoster();
+        static readonly Brush ArcadePoster = G10_WallArt.CreateArcadePoster();
+        static readonly Brush WindowView = G10_WallArt.CreateWindowView();
+        static readonly Brush DinoPoster = G10_WallArt.CreateDinoPoster();
 
-        public string Name { get { return "Kinderzimmer (90er) 3D"; } }
+        public string Name { get { return "Gruppe 10 Kinderzimmer (90er) 3D"; } }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
         {
-            B5RoomField field = currentField as B5RoomField;
+            G10_RoomField field = currentField as G10_RoomField;
             if (field == null) return;
             EnsureRoot(canvas, field);
             DrawGame(field);
@@ -96,7 +96,7 @@ namespace OOPGames
 
         public void TickPaintGameField(Canvas canvas, IGameField currentField)
         {
-            B5RoomField field = currentField as B5RoomField;
+            G10_RoomField field = currentField as G10_RoomField;
             if (field == null) return;
             EnsureRoot(canvas, field);
             DrawGame(field);
@@ -104,7 +104,7 @@ namespace OOPGames
             UpdateCamera(field, 0.09);
         }
 
-        void EnsureRoot(Canvas canvas, B5RoomField field)
+        void EnsureRoot(Canvas canvas, G10_RoomField field)
         {
             if (_Root == null || !canvas.Children.Contains(_Root))
             {
@@ -138,16 +138,16 @@ namespace OOPGames
                 HookMouse();
                 // Cartridges and disks with their device parts, in device order. Added after the optimisation,
                 // which would freeze the moving parts.
-                _Media = new B5MediaAnimation[3];
-                _Media[(int)B5RoomDeviceKind.Atari] = new B5AtariConsoleAnimation();
-                _Media[(int)B5RoomDeviceKind.Gameboy] = new B5GameBoyCartridgeAnimation();
-                _Media[(int)B5RoomDeviceKind.Commodore] = new B5CommodoreDiskAnimation();
-                foreach (B5MediaAnimation media in _Media) _Scene.Children.Add(media.Model);
-                AddDisplay(B5AtariTelevisionModel.CreateScreenMesh());
-                Point3D gameBoyScreen = B5GameBoyModel.ScreenCenter;
-                AddDisplayQuad(gameBoyScreen.X, gameBoyScreen.Y, gameBoyScreen.Z, B5GameBoyModel.ScreenWidth, B5GameBoyModel.ScreenHeight);
-                Point3D commodoreScreen = B5CommodoreModel.ScreenCenter;
-                AddDisplayQuad(commodoreScreen.X, commodoreScreen.Y, commodoreScreen.Z, B5CommodoreModel.ScreenWidth, B5CommodoreModel.ScreenHeight);
+                _Media = new G10_MediaAnimation[3];
+                _Media[(int)G10_RoomDeviceKind.Atari] = new G10_AtariConsoleAnimation();
+                _Media[(int)G10_RoomDeviceKind.Gameboy] = new G10_GameBoyCartridgeAnimation();
+                _Media[(int)G10_RoomDeviceKind.Commodore] = new G10_CommodoreDiskAnimation();
+                foreach (G10_MediaAnimation media in _Media) _Scene.Children.Add(media.Model);
+                AddDisplay(G10_AtariTelevisionModel.CreateScreenMesh());
+                Point3D gameBoyScreen = G10_GameBoyModel.ScreenCenter;
+                AddDisplayQuad(gameBoyScreen.X, gameBoyScreen.Y, gameBoyScreen.Z, G10_GameBoyModel.ScreenWidth, G10_GameBoyModel.ScreenHeight);
+                Point3D commodoreScreen = G10_CommodoreModel.ScreenCenter;
+                AddDisplayQuad(commodoreScreen.X, commodoreScreen.Y, commodoreScreen.Z, G10_CommodoreModel.ScreenWidth, G10_CommodoreModel.ScreenHeight);
                 canvas.Children.Clear();
                 canvas.Children.Add(_Root);
                 _LastField = field;
@@ -155,7 +155,7 @@ namespace OOPGames
                 _LastSelected = -1;
                 _LastScreenDevice = -1;
                 _LastHighlightDevice = -1;
-                _LastDrawnPhase = (B5RoomPhase)(-1);
+                _LastDrawnPhase = (G10_RoomPhase)(-1);
                 _CameraInitialized = false;
                 _LastWidth = -1;
                 _LastOverlayDevice = -1;
@@ -215,9 +215,9 @@ namespace OOPGames
         }
 
         // Tower Defense is shown on a full-size old monitor instead of inside the small console shell.
-        static bool IsMonitorView(B5RoomField field)
+        static bool IsMonitorView(G10_RoomField field)
         {
-            return field.Phase == B5RoomPhase.Playing && field.ActiveGame is B5RoomTowerDefenseGame;
+            return field.Phase == G10_RoomPhase.Playing && field.ActiveGame is G10_RoomTowerDefenseGame;
         }
 
         void BuildInterface()
@@ -276,14 +276,14 @@ namespace OOPGames
             _Root.Children.Add(_ConsoleShell);
 
             StackPanel panel = new StackPanel();
-            panel.Children.Add(B5RetroStyle.CreateText("Spiele waehlen:", 19, B5RetroStyle.Text));
-            panel.Children.Add(new Border { Height = 2, Background = B5RetroStyle.Frame, Margin = new Thickness(-12, 8, -12, 10) });
-            _DeviceTitle = B5RetroStyle.CreateText("", 17, B5RetroStyle.Text);
+            panel.Children.Add(G10_RetroStyle.CreateText("Spiele waehlen:", 19, G10_RetroStyle.Text));
+            panel.Children.Add(new Border { Height = 2, Background = G10_RetroStyle.Frame, Margin = new Thickness(-12, 8, -12, 10) });
+            _DeviceTitle = G10_RetroStyle.CreateText("", 17, G10_RetroStyle.Text);
             _DeviceTitle.Margin = new Thickness(0, 0, 0, 8);
             panel.Children.Add(_DeviceTitle);
             _Cards = new StackPanel();
             panel.Children.Add(_Cards);
-            _Sidebar = B5RetroStyle.CreatePanel(panel);
+            _Sidebar = G10_RetroStyle.CreatePanel(panel);
             _Sidebar.Width = 250;
             _Sidebar.HorizontalAlignment = HorizontalAlignment.Right;
             _Sidebar.VerticalAlignment = VerticalAlignment.Stretch;
@@ -291,12 +291,12 @@ namespace OOPGames
             _Sidebar.SetValue(Panel.ZIndexProperty, 3);
             _Root.Children.Add(_Sidebar);
 
-            _ControlBar = new B5ControlBar();
+            _ControlBar = new G10_ControlBar();
             _ControlBar.Element.SetValue(Panel.ZIndexProperty, 4);
             _Root.Children.Add(_ControlBar.Element);
 
             // Volume of all games, top left in the room; above the game frame for short hints while playing.
-            _VolumeControl = new B5VolumeControl();
+            _VolumeControl = new G10_VolumeControl();
             _VolumeControl.Element.SetValue(Panel.ZIndexProperty, 5);
             _Root.Children.Add(_VolumeControl.Element);
         }
@@ -363,26 +363,26 @@ namespace OOPGames
             int atariStart = _Scene.Children.Count;
             AddWoodBox(-3.6, 1.0, -1.8, 2, 0.08, 1.1);
             // Lower shelf sits low, so a cartridge fits upright into the console under the table top.
-            AddWoodBox(-3.6, B5AtariConsoleModel.ShelfTop - 0.035, -1.8, 1.8, 0.07, 0.95);
+            AddWoodBox(-3.6, G10_AtariConsoleModel.ShelfTop - 0.035, -1.8, 1.8, 0.07, 0.95);
             AddBox(-4.45, 0.48, -2.25, 0.08, 0.96, 0.08, Color.FromRgb(100, 67, 45));
             AddBox(-2.75, 0.48, -2.25, 0.08, 0.96, 0.08, Color.FromRgb(100, 67, 45));
             AddBox(-4.45, 0.48, -1.35, 0.08, 0.96, 0.08, Color.FromRgb(100, 67, 45));
             AddBox(-2.75, 0.48, -1.35, 0.08, 0.96, 0.08, Color.FromRgb(100, 67, 45));
-            B5AtariTelevisionModel.Build(_Scene);
-            B5AtariConsoleModel.Build(_Scene);
-            _PickBoxes[(int)B5RoomDeviceKind.Atari].Add(BoundsSince(atariStart));
+            G10_AtariTelevisionModel.Build(_Scene);
+            G10_AtariConsoleModel.Build(_Scene);
+            _PickBoxes[(int)G10_RoomDeviceKind.Atari].Add(BoundsSince(atariStart));
             AddBox(-2.4, 0.15, -0.8, 0.12, 0.3, 0.12, Color.FromRgb(35, 35, 39));
 
             int gameBoyStart = _Scene.Children.Count;
-            B5GameBoyModel.Build(_Scene);
-            _PickBoxes[(int)B5RoomDeviceKind.Gameboy].Add(BoundsSince(gameBoyStart));
+            G10_GameBoyModel.Build(_Scene);
+            _PickBoxes[(int)G10_RoomDeviceKind.Gameboy].Add(BoundsSince(gameBoyStart));
 
             int commodoreStart = _Scene.Children.Count;
-            B5CommodoreModel.Build(_Scene);
-            _PickBoxes[(int)B5RoomDeviceKind.Commodore].Add(BoundsSince(commodoreStart));
+            G10_CommodoreModel.Build(_Scene);
+            _PickBoxes[(int)G10_RoomDeviceKind.Commodore].Add(BoundsSince(commodoreStart));
             int controllerStart = _Scene.Children.Count;
-            B5AtariControllerModel.Build(_Scene);
-            _PickBoxes[(int)B5RoomDeviceKind.Atari].Add(BoundsSince(controllerStart));
+            G10_AtariControllerModel.Build(_Scene);
+            _PickBoxes[(int)G10_RoomDeviceKind.Atari].Add(BoundsSince(controllerStart));
             BuildComputerCaseDetails();
             BuildDesktopWear();
 
@@ -411,7 +411,7 @@ namespace OOPGames
             _Highlights.Clear();
             // Selection frames lie flat around each device and are made visible for the selected one.
             _Highlights.Add(AddFrame(-3.6, 0.03, -1.8, 1.9, 1.2, 0.03));
-            _Highlights.Add(AddFrame(0.8, 1.608, B5GameBoyModel.Center.Z, 0.5, 0.28, 0.02));
+            _Highlights.Add(AddFrame(0.8, 1.608, G10_GameBoyModel.Center.Z, 0.5, 0.28, 0.02));
             _Highlights.Add(AddFrame(2.815, 1.608, -2.3225, 2.87, 1.235, 0.03));
         }
 
@@ -456,10 +456,10 @@ namespace OOPGames
         {
             _Viewport.MouseMove += (sender, e) =>
             {
-                B5RoomField field = _LastField;
+                G10_RoomField field = _LastField;
                 if (field == null) return;
                 int device = PickDevice(e.GetPosition(_Viewport));
-                bool clickable = device >= 0 && (field.Phase == B5RoomPhase.Room || field.Phase == B5RoomPhase.Device);
+                bool clickable = device >= 0 && (field.Phase == G10_RoomPhase.Room || field.Phase == G10_RoomPhase.Device);
                 Cursor cursor = clickable ? Cursors.Hand : null;
                 if (_Viewport.Cursor != cursor) _Viewport.Cursor = cursor;
                 if (device >= 0) field.HoverDevice(device);
@@ -468,19 +468,19 @@ namespace OOPGames
             // Not marked as handled: the framework's canvas handler still has to get the click (keyboard focus).
             _Viewport.MouseLeftButtonDown += (sender, e) =>
             {
-                B5RoomField field = _LastField;
+                G10_RoomField field = _LastField;
                 if (field == null) return;
                 int device = PickDevice(e.GetPosition(_Viewport));
                 if (device < 0) return;
                 // A click on the open device inserts or starts the selected game, like Enter.
-                if (field.Phase == B5RoomPhase.Device && device == field.SelectedDevice) field.LatchKey(Key.Enter);
+                if (field.Phase == G10_RoomPhase.Device && device == field.SelectedDevice) field.LatchKey(Key.Enter);
                 else field.OpenDevice(device);
             };
             // Right click = back. Not while a game runs: games use the right button themselves (Tower Defense).
             _Root.MouseRightButtonDown += (sender, e) =>
             {
-                B5RoomField field = _LastField;
-                if (field != null && field.Phase != B5RoomPhase.Playing) field.LatchKey(Key.Escape);
+                G10_RoomField field = _LastField;
+                if (field != null && field.Phase != G10_RoomPhase.Playing) field.LatchKey(Key.Escape);
             };
             _ControlBar.TabClicked += device =>
             {
@@ -777,7 +777,7 @@ namespace OOPGames
                 context.DrawText(authorText, new Point(4, 438));
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
 
@@ -800,7 +800,7 @@ namespace OOPGames
                 context.DrawText(text, new Point((64 - text.Width) / 2, (64 - text.Height) / 2));
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
 
@@ -1019,7 +1019,7 @@ namespace OOPGames
             DrawingGroup drawing = new DrawingGroup();
             drawing.Children.Add(new GeometryDrawing(gradient, null, new EllipseGeometry(new Rect(0, 0, 1, 1))));
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
 
@@ -1035,17 +1035,17 @@ namespace OOPGames
             Material[,] materials = new Material[3, 2];
             for (int i = 0; i < 3; i++)
             {
-                Color dark = i == (int)B5RoomDeviceKind.Gameboy ? Color.FromRgb(32, 43, 24) :
-                    i == (int)B5RoomDeviceKind.Commodore ? Color.FromRgb(22, 18, 35) : Color.FromRgb(16, 15, 15);
-                Color lit = i == (int)B5RoomDeviceKind.Gameboy ? Color.FromRgb(118, 139, 54) :
-                    i == (int)B5RoomDeviceKind.Commodore ? Color.FromRgb(62, 48, 123) : Color.FromRgb(174, 87, 43);
+                Color dark = i == (int)G10_RoomDeviceKind.Gameboy ? Color.FromRgb(32, 43, 24) :
+                    i == (int)G10_RoomDeviceKind.Commodore ? Color.FromRgb(22, 18, 35) : Color.FromRgb(16, 15, 15);
+                Color lit = i == (int)G10_RoomDeviceKind.Gameboy ? Color.FromRgb(118, 139, 54) :
+                    i == (int)G10_RoomDeviceKind.Commodore ? Color.FromRgb(62, 48, 123) : Color.FromRgb(174, 87, 43);
                 materials[i, 0] = CreateFrozenMaterial(dark, null);
                 materials[i, 1] = CreateFrozenMaterial(lit, lit);
             }
             // The Atari TV has a glass tube: reflective when off, an attract screen when on.
-            int atari = (int)B5RoomDeviceKind.Atari;
-            materials[atari, 0] = B5AtariTelevisionModel.CreateScreenOffMaterial();
-            materials[atari, 1] = B5AtariTelevisionModel.CreateScreenOnMaterial(B5RoomRegistry.Devices[atari].ScreenColor);
+            int atari = (int)G10_RoomDeviceKind.Atari;
+            materials[atari, 0] = G10_AtariTelevisionModel.CreateScreenOffMaterial();
+            materials[atari, 1] = G10_AtariTelevisionModel.CreateScreenOnMaterial(G10_RoomRegistry.Devices[atari].ScreenColor);
             return materials;
         }
 
@@ -1169,7 +1169,7 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.38, 0.62),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
 
@@ -1200,7 +1200,7 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.06, 0.12),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
 
@@ -1229,7 +1229,7 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.18, 0.18),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
 
@@ -1253,7 +1253,7 @@ namespace OOPGames
                 Viewport = new Rect(0, 0, 0.7, 0.45),
                 ViewportUnits = BrushMappingMode.RelativeToBoundingBox
             };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
 
@@ -1370,11 +1370,11 @@ namespace OOPGames
             _Screens.Add(model);
         }
 
-        void UpdateInterface(B5RoomField field)
+        void UpdateInterface(G10_RoomField field)
         {
-            bool deviceView = field.Phase != B5RoomPhase.Room;
-            bool focusing = field.Phase == B5RoomPhase.Focusing;
-            bool playing = field.Phase == B5RoomPhase.Playing;
+            bool deviceView = field.Phase != G10_RoomPhase.Room;
+            bool focusing = field.Phase == G10_RoomPhase.Focusing;
+            bool playing = field.Phase == G10_RoomPhase.Playing;
             _ControlBar.Update(field);
             _VolumeControl.Update(!focusing && !playing);
             Visibility sidebarVisibility = deviceView && !focusing && !playing ? Visibility.Visible : Visibility.Collapsed;
@@ -1401,16 +1401,16 @@ namespace OOPGames
             if (rebuildCards)
             {
                 _LastDevice = field.SelectedDevice;
-                B5RoomDevice device = field.Device;
+                G10_RoomDevice device = field.Device;
                 _DeviceTitle.Text = device.Name;
                 _Cards.Children.Clear();
                 _CardBorders.Clear();
                 _CardTitles.Clear();
                 for (int i = 0; i < device.Games.Count; i++)
                 {
-                    B5RoomGameEntry game = device.Games[i];
+                    G10_RoomGameEntry game = device.Games[i];
                     int index = i;
-                    TextBlock title = B5RetroStyle.CreateText(game.Title, 16, B5RetroStyle.Text);
+                    TextBlock title = G10_RetroStyle.CreateText(game.Title, 16, G10_RetroStyle.Text);
                     title.TextWrapping = TextWrapping.Wrap;
                     title.VerticalAlignment = VerticalAlignment.Center;
                     DockPanel row = new DockPanel();
@@ -1418,7 +1418,7 @@ namespace OOPGames
                     DockPanel.SetDock(colorMark, Dock.Left);
                     row.Children.Add(colorMark);
                     row.Children.Add(title);
-                    Border card = B5RetroStyle.CreateSelectable(row);
+                    Border card = G10_RetroStyle.CreateSelectable(row);
                     card.Margin = new Thickness(0, 2, 0, 2);
                     // Mouse: pointing selects the game, a click inserts or starts it (like Enter).
                     card.Cursor = Cursors.Hand;
@@ -1445,16 +1445,16 @@ namespace OOPGames
             {
                 for (int i = 0; i < _CardBorders.Count; i++)
                 {
-                    B5RetroStyle.SetSelected(_CardBorders[i], i == field.SelectedGame);
-                    if (field.Phase == B5RoomPhase.Inserting && i == field.PendingGame)
+                    G10_RetroStyle.SetSelected(_CardBorders[i], i == field.SelectedGame);
+                    if (field.Phase == G10_RoomPhase.Inserting && i == field.PendingGame)
                     {
                         _CardBorders[i].Background = Brushes.Transparent;
-                        _CardBorders[i].BorderBrush = B5RetroStyle.Frame;
+                        _CardBorders[i].BorderBrush = G10_RetroStyle.Frame;
                         _CardTitles[i].Text = "  . . .";
                     }
                     else
                     {
-                        _CardTitles[i].Text = B5RoomRegistry.Devices[field.SelectedDevice].Games[i].Title +
+                        _CardTitles[i].Text = G10_RoomRegistry.Devices[field.SelectedDevice].Games[i].Title +
                             (i == field.InsertedGame ? "  [EINGELEGT]" : "");
                     }
                 }
@@ -1476,7 +1476,7 @@ namespace OOPGames
             }
         }
 
-        void ConfigureGameOverlay(B5RoomField field)
+        void ConfigureGameOverlay(G10_RoomField field)
         {
             bool monitor = IsMonitorView(field);
             if (_LastOverlayDevice == field.SelectedDevice && _LastOverlayMonitor == monitor) return;
@@ -1498,7 +1498,7 @@ namespace OOPGames
 
             switch (field.Device.Kind)
             {
-                case B5RoomDeviceKind.Atari:
+                case G10_RoomDeviceKind.Atari:
                     // Wooden TV cabinet like the KOSMOS set in the room, black picture tube surround.
                     StyleConsole(new Thickness(30, 28, 30, 54), 18,
                         Color.FromRgb(132, 86, 55), Color.FromRgb(84, 51, 32), Color.FromRgb(52, 31, 19), 3, new CornerRadius(22),
@@ -1506,7 +1506,7 @@ namespace OOPGames
                         "KOSMOS  COLOR 17", 16, Color.FromRgb(238, 212, 160), "POWER", Color.FromRgb(238, 212, 160),
                         Color.FromRgb(74, 52, 40), Color.FromRgb(18, 13, 11));
                     break;
-                case B5RoomDeviceKind.Gameboy:
+                case G10_RoomDeviceKind.Gameboy:
                     // Light grey handheld with the rounded lower right corner and a dark grey screen surround.
                     StyleConsole(new Thickness(34, 30, 34, 70), 18,
                         Color.FromRgb(220, 218, 210), Color.FromRgb(182, 180, 172), Color.FromRgb(132, 130, 124), 3,
@@ -1516,7 +1516,7 @@ namespace OOPGames
                         Color.FromRgb(58, 70, 50), Color.FromRgb(12, 16, 12));
                     _ConsoleShellTitle.FontStyle = FontStyles.Italic;
                     break;
-                case B5RoomDeviceKind.Commodore:
+                case G10_RoomDeviceKind.Commodore:
                     // Beige monitor case.
                     StyleConsole(new Thickness(26, 26, 26, 50), 18,
                         Color.FromRgb(216, 208, 186), Color.FromRgb(182, 174, 152), Color.FromRgb(128, 120, 102), 3, new CornerRadius(14),
@@ -1587,7 +1587,7 @@ namespace OOPGames
         // Screen and housing are sized together, so the whole console fits the canvas and sits in its middle.
         // The monitor view (Tower Defense) is capped at the game's own size (1920x1080 when there is enough
         // room); the consoles scale up freely.
-        void SizeGameFrame(B5RoomField field, int gameWidth, int gameHeight)
+        void SizeGameFrame(G10_RoomField field, int gameWidth, int gameHeight)
         {
             bool monitor = IsMonitorView(field);
             Thickness bezel = _ConsoleBezel;
@@ -1599,7 +1599,7 @@ namespace OOPGames
             double availableHeight = rootHeight - _ConsoleOuterMargin * 2 - bezel.Top - bezel.Bottom - verticalBorder;
             double scale = Math.Min(availableWidth / gameWidth, availableHeight / gameHeight);
             if (monitor) scale = Math.Max(0.05, Math.Min(1.0, scale));
-            else if (field.ActiveGame is B5RoomTowerDefenseGame && scale >= 1) scale = Math.Floor(scale);
+            else if (field.ActiveGame is G10_RoomTowerDefenseGame && scale >= 1) scale = Math.Floor(scale);
             else scale = Math.Max(0.1, scale);
 
             double frameWidth = gameWidth * scale + border;
@@ -1621,7 +1621,7 @@ namespace OOPGames
             if (_ConsoleShell.Margin != shellMargin) _ConsoleShell.Margin = shellMargin;
         }
 
-        void UpdateScreenLighting(B5RoomField field)
+        void UpdateScreenLighting(G10_RoomField field)
         {
             if (_LastScreenDevice == field.SelectedDevice) return;
             _LastScreenDevice = field.SelectedDevice;
@@ -1634,16 +1634,16 @@ namespace OOPGames
         }
 
         // Every device animates its own 3D medium (cartridge or disk) and its moving parts.
-        void UpdateMedia(B5RoomField field)
+        void UpdateMedia(G10_RoomField field)
         {
-            foreach (B5MediaAnimation media in _Media) media.Update(field);
+            foreach (G10_MediaAnimation media in _Media) media.Update(field);
         }
 
-        void DrawGame(B5RoomField field)
+        void DrawGame(G10_RoomField field)
         {
-            if (field.Phase == B5RoomPhase.Playing && field.ActiveGame != null)
+            if (field.Phase == G10_RoomPhase.Playing && field.ActiveGame != null)
             {
-                if (!(field.ActiveGame is B5RoomTowerDefenseGame) && _GameCanvas.Tag != null)
+                if (!(field.ActiveGame is G10_RoomTowerDefenseGame) && _GameCanvas.Tag != null)
                     _GameCanvas.Tag = null;
                 field.ActiveGame.Draw(_GameCanvas);
                 _LastDrawnPhase = field.Phase;
@@ -1657,13 +1657,13 @@ namespace OOPGames
                 ClearGameCanvas();
                 Color background = field.Device.ScreenColor;
                 _GameCanvas.Background = GetFrozenBrush(background);
-                AddScreenText(field.Device.Kind == B5RoomDeviceKind.Commodore ? "READY." : field.Device.Kind == B5RoomDeviceKind.Atari ? "INSERT COIN" : "POCKET PLAY", 8, 16, 15, Colors.White);
+                AddScreenText(field.Device.Kind == G10_RoomDeviceKind.Commodore ? "READY." : field.Device.Kind == G10_RoomDeviceKind.Atari ? "INSERT COIN" : "POCKET PLAY", 8, 16, 15, Colors.White);
                 AddScreenText(field.Device.Games[field.PendingGame].Title, 8, 45, 13, Color.FromRgb(255, 221, 110));
-                if (field.Device.Kind == B5RoomDeviceKind.Atari)
+                if (field.Device.Kind == G10_RoomDeviceKind.Atari)
                 {
-                    B5RoomDraw.Rect(_GameCanvas, 8, 78, 42, 8, Color.FromRgb(232, 78, 60));
-                    B5RoomDraw.Rect(_GameCanvas, 58, 78, 42, 8, Color.FromRgb(74, 145, 221));
-                    B5RoomDraw.Rect(_GameCanvas, 108, 78, 42, 8, Color.FromRgb(240, 178, 72));
+                    G10_RoomDraw.Rect(_GameCanvas, 8, 78, 42, 8, Color.FromRgb(232, 78, 60));
+                    G10_RoomDraw.Rect(_GameCanvas, 58, 78, 42, 8, Color.FromRgb(74, 145, 221));
+                    G10_RoomDraw.Rect(_GameCanvas, 108, 78, 42, 8, Color.FromRgb(240, 178, 72));
                 }
                 else AddScreenText("PRESS START", 8, 88, 10, Colors.White);
                 _LastDrawnPhase = field.Phase;
@@ -1681,7 +1681,7 @@ namespace OOPGames
             }
         }
 
-        // Tower Defense keeps its pixel surface in the canvas Tag, and B5RoomDraw draws into that surface while it is
+        // Tower Defense keeps its pixel surface in the canvas Tag, and G10_RoomDraw draws into that surface while it is
         // set. Once its image is removed the surface must go too, or the title screen would draw into a surface that
         // is not drawing (crash). Tower Defense creates a new surface when it is shown again.
         void ClearGameCanvas()
@@ -1692,36 +1692,36 @@ namespace OOPGames
 
         void AddScreenText(string text, double x, double y, int size, Color color)
         {
-            B5RoomDraw.Text(_GameCanvas, text, x, y, size, color);
+            G10_RoomDraw.Text(_GameCanvas, text, x, y, size, color);
         }
 
-        void UpdateCamera(B5RoomField field, double amount)
+        void UpdateCamera(G10_RoomField field, double amount)
         {
-            if (field.Phase == B5RoomPhase.Playing) return;
+            if (field.Phase == G10_RoomPhase.Playing) return;
 
-            bool focusScreen = field.Phase == B5RoomPhase.Focusing;
+            bool focusScreen = field.Phase == G10_RoomPhase.Focusing;
             Point3D target;
             double distance, azimuth, polar;
-            if (field.Phase == B5RoomPhase.Room)
+            if (field.Phase == G10_RoomPhase.Room)
             {
                 target = new Point3D(0, 1.7, -1);
                 distance = 10.5; azimuth = 0.6; polar = 1.2;
             }
-            else if (field.Phase == B5RoomPhase.Inserting || field.Phase == B5RoomPhase.Ejecting)
+            else if (field.Phase == G10_RoomPhase.Inserting || field.Phase == G10_RoomPhase.Ejecting)
             {
                 // Each device has its own close view of the slot while a medium goes in or comes out.
-                B5CameraView view = _Media[(int)field.Device.Kind].InsertView;
+                G10_CameraView view = _Media[(int)field.Device.Kind].InsertView;
                 target = view.Target;
                 distance = view.Distance; azimuth = view.Azimuth; polar = view.Polar;
             }
-            else if (field.Device.Kind == B5RoomDeviceKind.Atari)
+            else if (field.Device.Kind == G10_RoomDeviceKind.Atari)
             {
-                target = focusScreen ? B5AtariTelevisionModel.ScreenCenter : new Point3D(-3.6, 1.1, -1.8);
+                target = focusScreen ? G10_AtariTelevisionModel.ScreenCenter : new Point3D(-3.6, 1.1, -1.8);
                 distance = focusScreen ? 1.9 : 4.6; azimuth = 0.5; polar = 1.3;
             }
-            else if (field.Device.Kind == B5RoomDeviceKind.Gameboy)
+            else if (field.Device.Kind == G10_RoomDeviceKind.Gameboy)
             {
-                target = focusScreen ? B5GameBoyModel.ScreenCenter : B5GameBoyModel.Center;
+                target = focusScreen ? G10_GameBoyModel.ScreenCenter : G10_GameBoyModel.Center;
                 distance = focusScreen ? 0.8 : 1.05; azimuth = 0.2; polar = 1.4;
             }
             else
@@ -1787,7 +1787,7 @@ namespace OOPGames
         }
     }
 
-    static class B5RoomTextures
+    static class G10_RoomTextures
     {
         const int TextureSize = 512;
 

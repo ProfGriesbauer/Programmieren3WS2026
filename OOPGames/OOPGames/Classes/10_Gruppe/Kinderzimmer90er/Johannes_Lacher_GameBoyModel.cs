@@ -10,7 +10,7 @@ namespace OOPGames
     // 3D model of the Game Boy (DMG-01) standing on the shelf.
     // All measurements are millimetres of the real device (90 x 148 x 32 mm), taken from the top-left
     // corner of the front face: x to the right, y downwards, z out of the front face.
-    public static class B5GameBoyModel
+    public static class G10_GameBoyModel
     {
         const double Scale = 0.0042;
         const double BodyWidth = 90, BodyHeight = 148, BodyDepth = 32;
@@ -241,7 +241,7 @@ namespace OOPGames
             foreach (Point corner in corners) AddVertex(mesh, corner, anchor, new Vector3D(0, 0, 1));
 
             DrawingBrush brush = new DrawingBrush(new GeometryDrawing(new SolidColorBrush(color), null, geometry));
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             parent.Children.Add(new GeometryModel3D(mesh, new DiffuseMaterial(texture)));
         }
     }

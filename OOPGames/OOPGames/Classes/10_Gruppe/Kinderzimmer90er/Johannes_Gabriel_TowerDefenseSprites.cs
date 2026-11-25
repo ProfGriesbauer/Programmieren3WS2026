@@ -11,7 +11,7 @@ namespace OOPGames
     // Location of "Classes/10_Gruppe/Tower Defense/Assets". The PNGs are plain files in our group folder (no
     // Resource entry in OOPGames.csproj, which belongs to all groups). The compiler puts the path of this source
     // file into sourceFile, so the folder is found next to it. Fallback: search upwards from the program folder.
-    static class TowerDefenseAssets
+    static class G10_TowerDefenseAssets
     {
         public static readonly string Folder = FindFolder();
 
@@ -42,16 +42,16 @@ namespace OOPGames
     }
 
     // One PNG with cached sub images. Coordinates are image pixels.
-    sealed class TowerDefenseImage
+    sealed class G10_TowerDefenseImage
     {
         readonly BitmapImage _Image;
         readonly Dictionary<Int32Rect, BitmapSource> _Regions = new Dictionary<Int32Rect, BitmapSource>();
 
-        public TowerDefenseImage(string relativePath)
+        public G10_TowerDefenseImage(string relativePath)
         {
             BitmapImage image = new BitmapImage();
             image.BeginInit();
-            image.UriSource = new Uri(TowerDefenseAssets.PathOf(relativePath), UriKind.Absolute);
+            image.UriSource = new Uri(G10_TowerDefenseAssets.PathOf(relativePath), UriKind.Absolute);
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.EndInit();
             image.Freeze();
@@ -77,7 +77,7 @@ namespace OOPGames
         }
     }
 
-    sealed class TowerDefenseAnimation
+    sealed class G10_TowerDefenseAnimation
     {
         public int Row;
         public int Frames;
@@ -88,12 +88,12 @@ namespace OOPGames
     }
 
     // A sprite sheet from sprites.json: rows = animations, columns = frames. All values in 1080p pixels.
-    sealed class TowerDefenseSprite
+    sealed class G10_TowerDefenseSprite
     {
-        readonly Dictionary<string, TowerDefenseAnimation> _Animations = new Dictionary<string, TowerDefenseAnimation>();
-        TowerDefenseImage _Sheet;
+        readonly Dictionary<string, G10_TowerDefenseAnimation> _Animations = new Dictionary<string, G10_TowerDefenseAnimation>();
+        G10_TowerDefenseImage _Sheet;
 
-        public TowerDefenseSprite(string key, string file, int frameWidth, int frameHeight, Point pivot, Point? muzzle)
+        public G10_TowerDefenseSprite(string key, string file, int frameWidth, int frameHeight, Point pivot, Point? muzzle)
         {
             Key = key;
             File = file;
@@ -112,13 +112,13 @@ namespace OOPGames
         // Towers only: where projectiles leave the sprite (inside a frame).
         public Point? Muzzle { get; private set; }
 
-        public void AddAnimation(string name, TowerDefenseAnimation animation) { _Animations[name] = animation; }
+        public void AddAnimation(string name, G10_TowerDefenseAnimation animation) { _Animations[name] = animation; }
 
         public bool HasAnimation(string name) { return _Animations.ContainsKey(name); }
 
-        public TowerDefenseAnimation Animation(string name)
+        public G10_TowerDefenseAnimation Animation(string name)
         {
-            TowerDefenseAnimation animation;
+            G10_TowerDefenseAnimation animation;
             if (!_Animations.TryGetValue(name, out animation))
                 throw new ArgumentException("Sprite " + Key + " has no animation " + name + ".", nameof(name));
             return animation;
@@ -126,8 +126,8 @@ namespace OOPGames
 
         public BitmapSource Frame(string animation, int frame)
         {
-            TowerDefenseAnimation a = Animation(animation);
-            if (_Sheet == null) _Sheet = new TowerDefenseImage(File);
+            G10_TowerDefenseAnimation a = Animation(animation);
+            if (_Sheet == null) _Sheet = new G10_TowerDefenseImage(File);
             int column = Math.Max(0, Math.Min(a.Frames - 1, frame));
             return _Sheet.Region(column * FrameWidth, a.Row * FrameHeight, FrameWidth, FrameHeight);
         }
@@ -135,28 +135,28 @@ namespace OOPGames
         // Frame of an animation after `seconds`: loops wrap around, other animations stop on their last frame.
         public BitmapSource FrameAt(string animation, double seconds)
         {
-            TowerDefenseAnimation a = Animation(animation);
+            G10_TowerDefenseAnimation a = Animation(animation);
             int frame = (int)Math.Floor(Math.Max(0, seconds) * a.Fps);
             frame = a.Loop ? frame % a.Frames : Math.Min(a.Frames - 1, frame);
             return Frame(animation, frame);
         }
     }
 
-    enum TowerDefenseIcon
+    enum G10_TowerDefenseIcon
     {
         Coin, Heart, Wave, Skull, Physical, Fire, Ice, Earth, Storm, Poison,
         Upgrade, Sell, Cursor, Star, Sword, Range, Speed, Lock
     }
 
     // Central access to the sprites in Tower Defense/Assets (described by sprites.json, see LIESMICH_Sprites.txt).
-    static class TowerDefenseSprites
+    static class G10_TowerDefenseSprites
     {
         // Device pixels per logical UI unit: the game draws 320x180 UI units on a 1920x1080 surface.
         public const double PixelsPerUnit = 6;
 
-        static readonly Dictionary<string, TowerDefenseSprite> _Sprites = LoadSprites();
-        static readonly TowerDefenseImage _Icons = new TowerDefenseImage("ui_icons.png");
-        static readonly Dictionary<string, TowerDefenseImage> _MapLayers = new Dictionary<string, TowerDefenseImage>();
+        static readonly Dictionary<string, G10_TowerDefenseSprite> _Sprites = LoadSprites();
+        static readonly G10_TowerDefenseImage _Icons = new G10_TowerDefenseImage("ui_icons.png");
+        static readonly Dictionary<string, G10_TowerDefenseImage> _MapLayers = new Dictionary<string, G10_TowerDefenseImage>();
 
         // Game names (Tower.Name / Enemy.Name) to sprite keys.
         static readonly Dictionary<string, string> _Keys = new Dictionary<string, string>
@@ -184,15 +184,15 @@ namespace OOPGames
             { "Elder Dragon", "bosse/elder_dragon" }
         };
 
-        public static TowerDefenseSprite Get(string key)
+        public static G10_TowerDefenseSprite Get(string key)
         {
-            TowerDefenseSprite sprite;
+            G10_TowerDefenseSprite sprite;
             if (!_Sprites.TryGetValue(key, out sprite)) throw new ArgumentException("Unknown sprite: " + key, nameof(key));
             return sprite;
         }
 
         // Tower, enemy, mini boss or boss by its name in the game.
-        public static TowerDefenseSprite ForName(string name)
+        public static G10_TowerDefenseSprite ForName(string name)
         {
             string key;
             if (!_Keys.TryGetValue(name, out key)) throw new ArgumentException("No sprite is configured for " + name + ".", nameof(name));
@@ -205,7 +205,7 @@ namespace OOPGames
             return _Keys.TryGetValue(name, out key) && (key.StartsWith("bosse/") || key.StartsWith("minibosse/"));
         }
 
-        public static TowerDefenseSprite Castle { get { return Get("hauptgebaeude/schloss"); } }
+        public static G10_TowerDefenseSprite Castle { get { return Get("hauptgebaeude/schloss"); } }
 
         // intakt > 66 %, beschaedigt 33 - 66 %, ruine below.
         public static string CastleAnimation(int healthPercent)
@@ -213,7 +213,7 @@ namespace OOPGames
             return healthPercent > 66 ? "intakt" : healthPercent > 33 ? "beschaedigt" : "ruine";
         }
 
-        public static TowerDefenseSprite Effect(string name) { return Get("effekte/" + name); }
+        public static G10_TowerDefenseSprite Effect(string name) { return Get("effekte/" + name); }
 
         // Map layer of a map from Assets/karten: "boden", "deko", "bruecken" or "komplett" (1920x1056 each).
         public static BitmapSource MapLayer(string mapId, string layer)
@@ -226,33 +226,33 @@ namespace OOPGames
             return MapImage(mapId, layer).Region(x, y, width, height);
         }
 
-        static TowerDefenseImage MapImage(string mapId, string layer)
+        static G10_TowerDefenseImage MapImage(string mapId, string layer)
         {
             string file = Path.Combine("karten", mapId + "_" + layer + ".png");
-            TowerDefenseImage image;
+            G10_TowerDefenseImage image;
             if (!_MapLayers.TryGetValue(file, out image))
             {
-                image = new TowerDefenseImage(file);
+                image = new G10_TowerDefenseImage(file);
                 _MapLayers.Add(file, image);
             }
             return image;
         }
 
         // UI icons (16x16 pixel art stored with a 4x scale, 64x64 image pixels per icon).
-        public static BitmapSource Icon(TowerDefenseIcon icon)
+        public static BitmapSource Icon(G10_TowerDefenseIcon icon)
         {
             return _Icons.Region((int)icon * 64, 0, 64, 64);
         }
 
-        public static BitmapSource DamageIcon(DamageType damageType)
+        public static BitmapSource DamageIcon(G10_DamageType damageType)
         {
-            return Icon(TowerDefenseIcon.Physical + (int)damageType);
+            return Icon(G10_TowerDefenseIcon.Physical + (int)damageType);
         }
 
-        static Dictionary<string, TowerDefenseSprite> LoadSprites()
+        static Dictionary<string, G10_TowerDefenseSprite> LoadSprites()
         {
-            Dictionary<string, TowerDefenseSprite> sprites = new Dictionary<string, TowerDefenseSprite>();
-            using (JsonDocument document = JsonDocument.Parse(System.IO.File.ReadAllText(TowerDefenseAssets.PathOf("sprites.json"))))
+            Dictionary<string, G10_TowerDefenseSprite> sprites = new Dictionary<string, G10_TowerDefenseSprite>();
+            using (JsonDocument document = JsonDocument.Parse(System.IO.File.ReadAllText(G10_TowerDefenseAssets.PathOf("sprites.json"))))
             {
                 foreach (JsonProperty entry in document.RootElement.GetProperty("sprites").EnumerateObject())
                 {
@@ -262,12 +262,12 @@ namespace OOPGames
                     JsonElement origin;
                     if (s.TryGetProperty("schuss_ursprung", out origin))
                         muzzle = new Point(origin[0].GetDouble(), origin[1].GetDouble());
-                    TowerDefenseSprite sprite = new TowerDefenseSprite(entry.Name, s.GetProperty("file").GetString(),
+                    G10_TowerDefenseSprite sprite = new G10_TowerDefenseSprite(entry.Name, s.GetProperty("file").GetString(),
                         s.GetProperty("frame_w").GetInt32(), s.GetProperty("frame_h").GetInt32(),
                         new Point(pivot[0].GetDouble(), pivot[1].GetDouble()), muzzle);
                     foreach (JsonProperty animation in s.GetProperty("animations").EnumerateObject())
                     {
-                        sprite.AddAnimation(animation.Name, new TowerDefenseAnimation
+                        sprite.AddAnimation(animation.Name, new G10_TowerDefenseAnimation
                         {
                             Row = animation.Value.GetProperty("row").GetInt32(),
                             Frames = animation.Value.GetProperty("frames").GetInt32(),

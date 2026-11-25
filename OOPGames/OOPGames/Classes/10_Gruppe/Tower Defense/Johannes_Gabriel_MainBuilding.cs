@@ -2,15 +2,15 @@ using System;
 
 namespace OOPGames
 {
-    public class MainBuilding : Tower
+    public class G10_MainBuilding : G10_Tower
     {
-        public MainBuilding(
+        public G10_MainBuilding(
             string name,
             int damage,
             double attackSpeed,
             double attackRange,
             int health)
-            : base(name, damage, attackSpeed, DamageType.Physical, attackRange, AttackMode.SingleTarget, 0)
+            : base(name, damage, attackSpeed, G10_DamageType.Physical, attackRange, G10_AttackMode.SingleTarget, 0)
         {
             if (health <= 0)
             {

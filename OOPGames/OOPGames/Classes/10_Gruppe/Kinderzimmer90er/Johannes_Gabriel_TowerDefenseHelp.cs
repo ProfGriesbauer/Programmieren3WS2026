@@ -8,7 +8,7 @@ namespace OOPGames
 {
     // In-game manual: explains the game, the interface and the controls with pictures built
     // from the real map and sprite sheets. Opened from the Esc menu or the main menu.
-    public sealed partial class B5RoomTowerDefenseGame
+    public sealed partial class G10_RoomTowerDefenseGame
     {
         static readonly string[] HelpTitles =
         {
@@ -45,8 +45,8 @@ namespace OOPGames
         void HandleHelpKey(Key key)
         {
             if (key == Key.Escape || key == Key.X || key == Key.Back) CloseHelp();
-            else if (B5RoomKeys.IsLeft(key) || B5RoomKeys.IsUp(key)) TurnHelpPage(-1);
-            else if (B5RoomKeys.IsRight(key) || B5RoomKeys.IsDown(key)) TurnHelpPage(1);
+            else if (G10_RoomKeys.IsLeft(key) || G10_RoomKeys.IsUp(key)) TurnHelpPage(-1);
+            else if (G10_RoomKeys.IsRight(key) || G10_RoomKeys.IsDown(key)) TurnHelpPage(1);
             else if (key == Key.Enter || key == Key.Z)
             {
                 if (_HelpPage == HelpTitles.Length - 1) CloseHelp();
@@ -154,8 +154,8 @@ namespace OOPGames
 
         void HelpEnemy(string name, double x, double y, double health, bool flip = false)
         {
-            TowerDefenseSprite sprite = TowerDefenseSprites.ForName(name);
-            bool boss = TowerDefenseSprites.IsBoss(name);
+            G10_TowerDefenseSprite sprite = G10_TowerDefenseSprites.ForName(name);
+            bool boss = G10_TowerDefenseSprites.IsBoss(name);
             DrawSprite(sprite, sprite.FrameAt("walk", ClockSeconds + x * 0.01), x, y, flip);
             if (health >= 1 && !boss) return;
             double barWidth = boss ? 28 : 12;
@@ -167,17 +167,17 @@ namespace OOPGames
 
         // Draws a 900x660 px part of a map at native size into the picture area. The returned functions
         // convert map pixels to logical units inside the picture.
-        void HelpMapCrop(TowerDefenseMapDefinition map, int cropX, int cropY, out Func<double, double> hx, out Func<double, double> hy)
+        void HelpMapCrop(G10_TowerDefenseMapDefinition map, int cropX, int cropY, out Func<double, double> hx, out Func<double, double> hy)
         {
-            Surface.Sprite(TowerDefenseSprites.MapRegion(map.Id, "komplett", cropX, cropY, (int)(ImageWidth * Px), (int)(ImageHeight * Px)),
+            Surface.Sprite(G10_TowerDefenseSprites.MapRegion(map.Id, "komplett", cropX, cropY, (int)(ImageWidth * Px), (int)(ImageHeight * Px)),
                 ImageX, ImageY, ImageWidth, ImageHeight);
             hx = mx => ImageX + (mx - cropX) / Px;
             hy = my => ImageY + (my - cropY) / Px;
         }
 
-        void HelpTower(string name, double x, double y, TowerUpgrades upgrades)
+        void HelpTower(string name, double x, double y, G10_TowerUpgrades upgrades)
         {
-            DrawTowerSprite(CreateTower(name), upgrades ?? new TowerUpgrades(), x, y);
+            DrawTowerSprite(CreateTower(name), upgrades ?? new G10_TowerUpgrades(), x, y);
         }
 
         void HelpCircle(double cx, double cy, double radius)
@@ -200,7 +200,7 @@ namespace OOPGames
         void DrawHelpGoal()
         {
             // Right part of map 1: the last bends of the route, a pedestal and the castle.
-            TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[0];
+            G10_TowerDefenseMapDefinition map = G10_TowerDefenseMaps.Maps[0];
             Func<double, double> hx, hy;
             BeginHelpImage();
             HelpMapCrop(map, 1020, 120, out hx, out hy);
@@ -209,7 +209,7 @@ namespace OOPGames
             HelpEnemy("Orc", hx(1296), hy(640), 0.6);
             HelpEnemy("Goblin", hx(1680), hy(760), 0.3);
             HelpTower("Fire Mage", hx(1584), hy(633), null);
-            TowerDefenseSprite fireball = TowerDefenseSprites.Effect("fireball");
+            G10_TowerDefenseSprite fireball = G10_TowerDefenseSprites.Effect("fireball");
             DrawCentered(fireball, fireball.FrameAt("play", ClockSeconds), hx(1640), hy(612), 0);
             Callout(1, hx(1150) - 4, hy(528) - 24);
             Callout(2, hx(1584) - 15, hy(633) - 30);
@@ -239,13 +239,13 @@ namespace OOPGames
         {
             const double hudY = 36;
             Surface.Rect(10, hudY - 3, 300, 23, StoneDark);
-            DrawHudCell(12, TowerDefenseIcon.Coin, "GOLD", "860", hudY);
-            DrawHudCell(71, TowerDefenseIcon.Heart, "LEBEN", "94%", hudY);
-            DrawHudCell(130, TowerDefenseIcon.Wave, "WELLE", "12/50", hudY);
-            DrawHudCell(189, TowerDefenseIcon.Skull, "FEINDE", "14", hudY);
+            DrawHudCell(12, G10_TowerDefenseIcon.Coin, "GOLD", "860", hudY);
+            DrawHudCell(71, G10_TowerDefenseIcon.Heart, "LEBEN", "94%", hudY);
+            DrawHudCell(130, G10_TowerDefenseIcon.Wave, "WELLE", "12/50", hudY);
+            DrawHudCell(189, G10_TowerDefenseIcon.Skull, "FEINDE", "14", hudY);
             Surface.Rect(248, hudY, 60, 17, Outline);
             Surface.Rect(249, hudY + 1, 58, 15, PanelInside);
-            for (int skull = 0; skull < 2; skull++) Icon(TowerDefenseIcon.Skull, 251 + skull * 7, hudY + 2, 6);
+            for (int skull = 0; skull < 2; skull++) Icon(G10_TowerDefenseIcon.Skull, 251 + skull * 7, hudY + 2, 6);
             Surface.Text("NORMAL", 274, hudY + 1, 5, TextDim);
             Surface.Text("WELLE 12 LÄUFT", 251, hudY + 9, 5, TextLight);
             for (int i = 0; i < 5; i++) Callout(i + 1, 36 + i * 59, hudY + 20);
@@ -293,19 +293,19 @@ namespace OOPGames
         void DrawHelpBuilding()
         {
             // Left part of map 1: an ice mage with its range, a poison archer and a free, selected pedestal.
-            TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[0];
+            G10_TowerDefenseMapDefinition map = G10_TowerDefenseMaps.Maps[0];
             Func<double, double> hx, hy;
             BeginHelpImage();
             HelpMapCrop(map, 150, 120, out hx, out hy);
             Point ice = new Point(624, 345), poison = new Point(432, 633), free = new Point(432, 345);
-            Point center = TowerDefenseBattle.RangeCenter(ice);
-            HelpCircle(hx(center.X), hy(center.Y), TowerDefenseBattle.TowerRange(new IceMage(), new TowerUpgrades()) / Px);
+            Point center = G10_TowerDefenseBattle.RangeCenter(ice);
+            HelpCircle(hx(center.X), hy(center.Y), G10_TowerDefenseBattle.TowerRange(new G10_IceMage(), new G10_TowerUpgrades()) / Px);
             HelpTower("Ice Mage", hx(ice.X), hy(ice.Y), null);
             HelpTower("Poison Archer", hx(poison.X), hy(poison.Y), null);
             double px = hx(free.X), py = hy(free.Y);
             Color marker = Color.FromRgb(120, 220, 240);
             DrawSelectionFrame(px, py, 0, marker);
-            Icon(TowerDefenseIcon.Cursor, px - 6, py - 20, 12);
+            Icon(G10_TowerDefenseIcon.Cursor, px - 6, py - 20, 12);
             Callout(1, px - 20, py - 4);
             Callout(2, hx(ice.X) + 9, hy(ice.Y) - 30);
             Callout(3, hx(center.X) + 36, hy(center.Y) + 8);
@@ -337,7 +337,7 @@ namespace OOPGames
             Surface.Rect(ImageX, ImageY, ImageWidth, 62, Color.FromRgb(118, 176, 196));
             Surface.Rect(ImageX, ImageY + 58, ImageWidth, 4, Color.FromRgb(150, 196, 206));
             double spotX = ImageX + 62, spotY = ImageY + 96;
-            DrawTowerSprite(CreateTower("Fire Mage"), new TowerUpgrades(), spotX, spotY, 1, -1, 2);
+            DrawTowerSprite(CreateTower("Fire Mage"), new G10_TowerUpgrades(), spotX, spotY, 1, -1, 2);
             DrawTierStars(spotX, spotY, 3, 2);
 
             // Upgrade bars at double size.
@@ -351,17 +351,17 @@ namespace OOPGames
             EndHelpImage();
 
             HelpLines(TextX, 36, "Jeder Turm hat vier Upgrade-Wege:");
-            Icon(TowerDefenseIcon.Sword, TextX, 47, 8);
-            ShadowText("SCHADEN  +" + Percent(TowerUpgrades.DamagePerLevel) + " % je Stufe, max. " + TowerUpgrades.MaxDamage, TextX + 11, 48, 5, TextLight);
-            Icon(TowerDefenseIcon.Range, TextX, 57, 8);
-            ShadowText("REICHWEITE  +" + Percent(TowerUpgrades.RangePerLevel) + " % je Stufe, max. " + TowerUpgrades.MaxRange, TextX + 11, 58, 5, TextLight);
-            Icon(TowerDefenseIcon.Speed, TextX, 67, 8);
-            ShadowText("TEMPO  +" + Percent(TowerUpgrades.SpeedPerLevel) + " % je Stufe, max. " + TowerUpgrades.MaxSpeed, TextX + 11, 68, 5, TextLight);
-            Icon(TowerDefenseIcon.Star, TextX, 77, 8);
+            Icon(G10_TowerDefenseIcon.Sword, TextX, 47, 8);
+            ShadowText("SCHADEN  +" + Percent(G10_TowerUpgrades.DamagePerLevel) + " % je Stufe, max. " + G10_TowerUpgrades.MaxDamage, TextX + 11, 48, 5, TextLight);
+            Icon(G10_TowerDefenseIcon.Range, TextX, 57, 8);
+            ShadowText("REICHWEITE  +" + Percent(G10_TowerUpgrades.RangePerLevel) + " % je Stufe, max. " + G10_TowerUpgrades.MaxRange, TextX + 11, 58, 5, TextLight);
+            Icon(G10_TowerDefenseIcon.Speed, TextX, 67, 8);
+            ShadowText("TEMPO  +" + Percent(G10_TowerUpgrades.SpeedPerLevel) + " % je Stufe, max. " + G10_TowerUpgrades.MaxSpeed, TextX + 11, 68, 5, TextLight);
+            Icon(G10_TowerDefenseIcon.Star, TextX, 77, 8);
             ShadowText("TURMSTUFE II / III: hebt alle", TextX + 11, 78, 5, TextLight);
             ShadowText("Basiswerte an", TextX + 11, 86, 5, TextLight);
             ShadowText("MEISTER (alles gekauft): je Stufe", TextX + 11, 96, 5, MasteryColor);
-            ShadowText("+" + Percent(TowerUpgrades.MasteryDamagePerLevel) + " % Schaden, +" + Percent(TowerUpgrades.MasterySpeedPerLevel) +
+            ShadowText("+" + Percent(G10_TowerUpgrades.MasteryDamagePerLevel) + " % Schaden, +" + Percent(G10_TowerUpgrades.MasterySpeedPerLevel) +
                 " % Tempo, endlos", TextX + 11, 104, 5, MasteryColor);
             HelpLines(TextX, 114,
                 "1  Sterne: Turmstufe (2 Silber = II,",
@@ -375,7 +375,7 @@ namespace OOPGames
         void DrawHelpEnemies()
         {
             // Start of the route on map 2 with walking enemies, a boss and the wave preview.
-            TowerDefenseMapDefinition map = TowerDefenseMaps.Maps[1];
+            G10_TowerDefenseMapDefinition map = G10_TowerDefenseMaps.Maps[1];
             Func<double, double> hx, hy;
             BeginHelpImage();
             HelpMapCrop(map, 0, 0, out hx, out hy);
@@ -433,7 +433,7 @@ namespace OOPGames
             for (int i = 0; i < names.Length; i++)
             {
                 double x = 14 + (i % 2) * 150, y = 36 + (i / 2) * 17;
-                Icon(TowerDefenseSprites.DamageIcon((DamageType)i), x, y, 16);
+                Icon(G10_TowerDefenseSprites.DamageIcon((G10_DamageType)i), x, y, 16);
                 ShadowText(names[i], x + 19, y + 1, 6, TitleGold);
                 ShadowText(towers[i].ToUpperInvariant(), x + 19, y + 9, 5, TextLight);
             }
@@ -450,17 +450,17 @@ namespace OOPGames
 
         void DrawWeaknessCard(string enemyName, double x, double y)
         {
-            Enemy enemy = TowerDefenseWaves.CreateEnemy(enemyName, 1);
+            G10_Enemy enemy = G10_TowerDefenseWaves.CreateEnemy(enemyName, 1);
             Surface.Rect(x, y, 156, 24, Outline);
             Surface.Rect(x + 1, y + 1, 154, 22, PanelInsideDark);
             DrawSpriteIcon(enemyName, x + 3, y + 4, 16);
             ShadowText(enemyName.ToUpperInvariant(), x + 22, y + 2, 5, TitleGold);
             ShadowText("SCHWACH", x + 22, y + 12, 5, Color.FromRgb(120, 220, 90));
             double ix = x + 52;
-            foreach (DamageType type in enemy.WeakAgainst) { Icon(TowerDefenseSprites.DamageIcon(type), ix, y + 11, 9); ix += 10; }
+            foreach (G10_DamageType type in enemy.WeakAgainst) { Icon(G10_TowerDefenseSprites.DamageIcon(type), ix, y + 11, 9); ix += 10; }
             ShadowText("RESIST.", x + 92, y + 12, 5, Color.FromRgb(222, 96, 64));
             ix = x + 122;
-            foreach (DamageType type in enemy.ResistantDamageTypes) { Icon(TowerDefenseSprites.DamageIcon(type), ix, y + 11, 9); ix += 10; }
+            foreach (G10_DamageType type in enemy.ResistantDamageTypes) { Icon(G10_TowerDefenseSprites.DamageIcon(type), ix, y + 11, 9); ix += 10; }
         }
 
         // Keyboard and mouse side by side.
@@ -531,7 +531,7 @@ namespace OOPGames
             double by = ImageY + 42;
             Surface.Rect(cx, by, 104, 11, Outline);
             Surface.Rect(cx + 1, by + 1, 102, 9, Selection);
-            Icon(TowerDefenseIcon.Wave, cx + 2, by + 1, 8);
+            Icon(G10_TowerDefenseIcon.Wave, cx + 2, by + 1, 8);
             Surface.Text("GESPEICHERT: WELLE 12", cx + 12, by + 1, 5, TitleGold);
 
             double wy = ImageY + 62;

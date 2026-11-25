@@ -6,9 +6,9 @@ namespace OOPGames
 {
     // Position and rotation of a game medium (cartridge or disk) in the millimetre space of its device.
     // Tilt turns around x, Turn around y (degrees); Position is the origin of the medium model.
-    public struct B5MediaPose
+    public struct G10_MediaPose
     {
-        public B5MediaPose(double x, double y, double z, double tilt, double turn)
+        public G10_MediaPose(double x, double y, double z, double tilt, double turn)
         {
             Position = new Vector3D(x, y, z);
             Tilt = tilt;
@@ -20,10 +20,10 @@ namespace OOPGames
         public double Turn { get; private set; }
     }
 
-    // Orbit camera around a target, in the same terms as B5RoomPaint.UpdateCamera.
-    public struct B5CameraView
+    // Orbit camera around a target, in the same terms as G10_RoomPaint.UpdateCamera.
+    public struct G10_CameraView
     {
-        public B5CameraView(Point3D target, double distance, double azimuth, double polar)
+        public G10_CameraView(Point3D target, double distance, double azimuth, double polar)
         {
             Target = target;
             Distance = distance;
@@ -42,7 +42,7 @@ namespace OOPGames
     // in front of the slot, is pushed in to Seated, clicks, then the device switches on. Ejecting plays this
     // backwards and faster. While a game is inserted its medium stays in the slot.
     // Subclasses provide the poses, the medium model, the camera view and the device's moving parts.
-    public abstract class B5MediaAnimation
+    public abstract class G10_MediaAnimation
     {
         readonly int _Device;
         readonly Model3DGroup _Root = new Model3DGroup();
@@ -50,10 +50,10 @@ namespace OOPGames
         readonly AxisAngleRotation3D _Tilt = new AxisAngleRotation3D(new Vector3D(1, 0, 0), 0);
         readonly AxisAngleRotation3D _Turn = new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0);
         readonly TranslateTransform3D _Position = new TranslateTransform3D();
-        readonly Dictionary<B5RoomGameEntry, Model3DGroup> _Models = new Dictionary<B5RoomGameEntry, Model3DGroup>();
-        B5RoomGameEntry _Shown;
+        readonly Dictionary<G10_RoomGameEntry, Model3DGroup> _Models = new Dictionary<G10_RoomGameEntry, Model3DGroup>();
+        G10_RoomGameEntry _Shown;
 
-        protected B5MediaAnimation(B5RoomDeviceKind device, Matrix3D placement)
+        protected G10_MediaAnimation(G10_RoomDeviceKind device, Matrix3D placement)
         {
             _Device = (int)device;
             Transform3DGroup transform = new Transform3DGroup();
@@ -68,18 +68,18 @@ namespace OOPGames
         public Model3D Model { get { return _Root; } }
 
         // Camera while the medium goes in or comes out.
-        public abstract B5CameraView InsertView { get; }
+        public abstract G10_CameraView InsertView { get; }
 
         // Moving parts of the device (switches, lights, flaps) are added here by the subclasses.
         protected Model3DGroup Parts { get { return _Root; } }
 
-        protected abstract B5MediaPose Start { get; }
-        protected abstract B5MediaPose Hover { get; }
-        protected abstract B5MediaPose Seated { get; }
+        protected abstract G10_MediaPose Start { get; }
+        protected abstract G10_MediaPose Hover { get; }
+        protected abstract G10_MediaPose Seated { get; }
         protected virtual double FlightArc { get { return 18; } }
         protected virtual double ClickDepth { get { return 2.5; } }
 
-        protected abstract Model3DGroup CreateMedium(B5RoomGameEntry game);
+        protected abstract Model3DGroup CreateMedium(G10_RoomGameEntry game);
 
         // 0 = device off, 1 = on (power switch, latch, lights).
         protected abstract void SetPower(double on);
@@ -87,14 +87,14 @@ namespace OOPGames
         // 0 = medium in front of the slot or away, 1 = fully inserted (flaps and similar parts follow it).
         protected virtual void SetInsertDepth(double depth) { }
 
-        public void Update(B5RoomField field)
+        public void Update(G10_RoomField field)
         {
-            IList<B5RoomGameEntry> games = B5RoomRegistry.Devices[_Device].Games;
+            IList<G10_RoomGameEntry> games = G10_RoomRegistry.Devices[_Device].Games;
             bool selected = field.SelectedDevice == _Device;
             int inserted = field.GetInsertedGame(_Device);
             double progress = field.TransitionProgress;
 
-            if (selected && field.Phase == B5RoomPhase.Inserting && field.PendingGame >= 0)
+            if (selected && field.Phase == G10_RoomPhase.Inserting && field.PendingGame >= 0)
             {
                 // The flight starts once the camera has mostly arrived; until then the medium is not shown.
                 double fly = Ease(Section(progress, 0.18, 0.55));
@@ -104,7 +104,7 @@ namespace OOPGames
                 else Push(push, Math.Sin(Math.PI * Section(progress, 0.76, 0.84)));
                 SetPower(Ease(Section(progress, 0.88, 0.95)));
             }
-            else if (selected && field.Phase == B5RoomPhase.Ejecting && inserted >= 0)
+            else if (selected && field.Phase == G10_RoomPhase.Ejecting && inserted >= 0)
             {
                 double fly = 1 - Ease(Section(progress, 0.5, 1));
                 Show(fly > 0 ? games[inserted] : null);
@@ -159,7 +159,7 @@ namespace OOPGames
             if (_Turn.Angle != turn) _Turn.Angle = turn;
         }
 
-        void Show(B5RoomGameEntry game)
+        void Show(G10_RoomGameEntry game)
         {
             if (_Shown == game) return;
             _Shown = game;

@@ -61,8 +61,8 @@ namespace OOPGames
                 if (key == Key.D1 || key == Key.NumPad1) modeKey = 1;
                 else if (key == Key.D2 || key == Key.NumPad2) modeKey = 2;
                 if (_HeldBefore.Contains(key)) continue;
-                if (B5RoomKeys.IsUp(key)) menuStep = -1;
-                else if (B5RoomKeys.IsDown(key)) menuStep = 1;
+                if (G10_RoomKeys.IsUp(key)) menuStep = -1;
+                else if (G10_RoomKeys.IsDown(key)) menuStep = 1;
                 else if (key == Key.Enter || key == Key.Z || key == Key.Space || key == Key.P) confirm = true;
             }
 
@@ -95,7 +95,7 @@ namespace OOPGames
 
     // Adapter between the Kinderzimmer hub and the game: reads the keys, saves the best rally
     // and hands the game state to the renderer. The only Pong class that knows about keys.
-    public sealed class G10_PongGame : IB5RoomMiniGame
+    public sealed class G10_PongGame : IG10_RoomMiniGame
     {
         readonly G10_PongRenderer _Renderer = new G10_PongRenderer();
         readonly G10_PongInputReader _Input = new G10_PongInputReader(new G10_WpfKeyStateSource());
@@ -109,7 +109,7 @@ namespace OOPGames
         public void Start()
         {
             _Input.Reset();
-            _Session = new G10_PongSession(B5RoomHighscores.Get(Title), Environment.TickCount);
+            _Session = new G10_PongSession(G10_RoomHighscores.Get(Title), Environment.TickCount);
         }
 
         public void Update(IReadOnlyCollection<Key> keys)
@@ -117,7 +117,7 @@ namespace OOPGames
             bool twoPlayers = _Session.Phase != G10_PongPhase.Menu && _Session.Mode == G10_PongMode.TwoPlayers;
             _Session.Update(_Input.Read(keys, twoPlayers));
             // Saved at once, because Esc can leave the game at any time.
-            if (_Session.IsNewBestRally) B5RoomHighscores.Save(Title, _Session.BestRally);
+            if (_Session.IsNewBestRally) G10_RoomHighscores.Save(Title, _Session.BestRally);
         }
 
         public void Draw(Canvas canvas)

@@ -37,10 +37,10 @@ namespace OOPGames
         public void Draw(Canvas canvas, IG10_CoinView game)
         {
             canvas.Children.Clear();
-            B5RoomDraw.Rect(canvas, 0, 0, ScreenWidth, ScreenHeight, Blue);
+            G10_RoomDraw.Rect(canvas, 0, 0, ScreenWidth, ScreenHeight, Blue);
             DrawHud(canvas, game);
-            B5RoomDraw.Rect(canvas, FieldX - 1, FieldY - 1, game.Columns * Cell + 2, game.Rows * Cell + 2, LightBlue);
-            B5RoomDraw.Rect(canvas, FieldX, FieldY, game.Columns * Cell, game.Rows * Cell, Blue);
+            G10_RoomDraw.Rect(canvas, FieldX - 1, FieldY - 1, game.Columns * Cell + 2, game.Rows * Cell + 2, LightBlue);
+            G10_RoomDraw.Rect(canvas, FieldX, FieldY, game.Columns * Cell, game.Rows * Cell, Blue);
 
             for (int row = 0; row < game.Rows; row++)
                 for (int col = 0; col < game.Columns; col++)
@@ -60,15 +60,15 @@ namespace OOPGames
 
         void DrawHud(Canvas canvas, IG10_CoinView game)
         {
-            B5RoomDraw.Text(canvas, "SC " + game.Score.ToString("D6"), 3, 1, 7, LightBlue);
+            G10_RoomDraw.Text(canvas, "SC " + game.Score.ToString("D6"), 3, 1, 7, LightBlue);
             DrawCoinIcon(canvas, 44, 3);
-            B5RoomDraw.Text(canvas, game.CoinsCollected.ToString("D2") + "/" + game.CoinsNeeded.ToString("D2"), 51, 1, 7, White);
-            B5RoomDraw.Text(canvas, "LV" + game.Level, 76, 1, 7, LightBlue);
+            G10_RoomDraw.Text(canvas, game.CoinsCollected.ToString("D2") + "/" + game.CoinsNeeded.ToString("D2"), 51, 1, 7, White);
+            G10_RoomDraw.Text(canvas, "LV" + game.Level, 76, 1, 7, LightBlue);
 
             int seconds = (game.TicksLeft + G10_CoinConfig.TicksPerSecond - 1) / G10_CoinConfig.TicksPerSecond;
             bool hurry = seconds <= WarningSeconds && game.Phase == G10_CoinPhase.Playing;
             if (!hurry || game.PhaseTicks / 6 % 2 == 0)
-                B5RoomDraw.Text(canvas, "TIME " + seconds.ToString("D2"), 95, 1, 7, hurry ? LightRed : White);
+                G10_RoomDraw.Text(canvas, "TIME " + seconds.ToString("D2"), 95, 1, 7, hurry ? LightRed : White);
 
             for (int i = 0; i < game.Lives; i++) DrawHeart(canvas, 132 + i * 8, 3);
         }
@@ -85,11 +85,11 @@ namespace OOPGames
             double x = FieldX + col * Cell;
             double y = FieldY + row * Cell;
             Color color = BlockColors[(col * 3 + row) % BlockColors.Length];
-            B5RoomDraw.Rect(canvas, x, y, Cell, Cell, Black);
-            B5RoomDraw.Rect(canvas, x, y, Cell - 1, Cell - 1, color);
-            B5RoomDraw.Rect(canvas, x, y, Cell - 1, 1, Lighten(color));
-            B5RoomDraw.Rect(canvas, x, y, 1, Cell - 1, Lighten(color));
-            B5RoomDraw.Rect(canvas, x + 3, y + 3, 1, 1, Lighten(color));
+            G10_RoomDraw.Rect(canvas, x, y, Cell, Cell, Black);
+            G10_RoomDraw.Rect(canvas, x, y, Cell - 1, Cell - 1, color);
+            G10_RoomDraw.Rect(canvas, x, y, Cell - 1, 1, Lighten(color));
+            G10_RoomDraw.Rect(canvas, x, y, 1, Cell - 1, Lighten(color));
+            G10_RoomDraw.Rect(canvas, x + 3, y + 3, 1, 1, Lighten(color));
         }
 
         // The coin spins: it gets narrower and wider again.
@@ -99,22 +99,22 @@ namespace OOPGames
             int width = widths[(ticks / 4 + tile.Col + tile.Row) % widths.Length];
             double x = FieldX + tile.Col * Cell + (Cell - width) / 2.0;
             double y = FieldY + tile.Row * Cell;
-            B5RoomDraw.Rect(canvas, x, y + 2, width, 4, Yellow);
-            if (width > 2) B5RoomDraw.Rect(canvas, x + 1, y + 1, width - 2, 6, Yellow);
+            G10_RoomDraw.Rect(canvas, x, y + 2, width, 4, Yellow);
+            if (width > 2) G10_RoomDraw.Rect(canvas, x + 1, y + 1, width - 2, 6, Yellow);
             if (width < 4) return;
-            B5RoomDraw.Rect(canvas, x + width - 1, y + 2, 1, 4, Orange);
-            B5RoomDraw.Rect(canvas, x + 1, y + 2, 1, 1, White);
+            G10_RoomDraw.Rect(canvas, x + width - 1, y + 2, 1, 4, Orange);
+            G10_RoomDraw.Rect(canvas, x + 1, y + 2, 1, 1, White);
         }
 
         void DrawDiamond(Canvas canvas, G10_Tile tile, int ticks)
         {
             double x = FieldX + tile.Col * Cell;
             double y = FieldY + tile.Row * Cell;
-            B5RoomDraw.Rect(canvas, x + 1, y + 2, 6, 2, Cyan);
-            B5RoomDraw.Rect(canvas, x + 2, y + 4, 4, 1, Cyan);
-            B5RoomDraw.Rect(canvas, x + 3, y + 5, 2, 1, Cyan);
-            B5RoomDraw.Rect(canvas, x + 2, y + 1, 4, 1, White);
-            if (ticks / 6 % 3 == 0) B5RoomDraw.Rect(canvas, x + 6, y, 1, 1, White);
+            G10_RoomDraw.Rect(canvas, x + 1, y + 2, 6, 2, Cyan);
+            G10_RoomDraw.Rect(canvas, x + 2, y + 4, 4, 1, Cyan);
+            G10_RoomDraw.Rect(canvas, x + 3, y + 5, 2, 1, Cyan);
+            G10_RoomDraw.Rect(canvas, x + 2, y + 1, 4, 1, White);
+            if (ticks / 6 % 3 == 0) G10_RoomDraw.Rect(canvas, x + 6, y, 1, 1, White);
         }
 
         // A fluffy grey dust bunny whose tufts wobble.
@@ -123,13 +123,13 @@ namespace OOPGames
             double x = FieldX + tile.Col * Cell;
             double y = FieldY + tile.Row * Cell;
             bool wobble = ticks / 5 % 2 == 0;
-            B5RoomDraw.Rect(canvas, x + 1, y + 2, 6, 5, LightGrey);
-            B5RoomDraw.Rect(canvas, x + 2, y + 1, 4, 7, LightGrey);
-            B5RoomDraw.Rect(canvas, x + 2, y + 6, 4, 1, Grey);
-            B5RoomDraw.Rect(canvas, wobble ? x : x + 7, y + 3, 1, 2, LightGrey);
-            B5RoomDraw.Rect(canvas, wobble ? x + 5 : x + 2, y, 1, 1, LightGrey);
-            B5RoomDraw.Rect(canvas, x + 2, y + 3, 1, 1, Black);
-            B5RoomDraw.Rect(canvas, x + 5, y + 3, 1, 1, Black);
+            G10_RoomDraw.Rect(canvas, x + 1, y + 2, 6, 5, LightGrey);
+            G10_RoomDraw.Rect(canvas, x + 2, y + 1, 4, 7, LightGrey);
+            G10_RoomDraw.Rect(canvas, x + 2, y + 6, 4, 1, Grey);
+            G10_RoomDraw.Rect(canvas, wobble ? x : x + 7, y + 3, 1, 2, LightGrey);
+            G10_RoomDraw.Rect(canvas, wobble ? x + 5 : x + 2, y, 1, 1, LightGrey);
+            G10_RoomDraw.Rect(canvas, x + 2, y + 3, 1, 1, Black);
+            G10_RoomDraw.Rect(canvas, x + 5, y + 3, 1, 1, Black);
         }
 
         // A child with a red cap.
@@ -138,39 +138,39 @@ namespace OOPGames
             double x = FieldX + player.Tile.Col * Cell;
             double y = FieldY + player.Tile.Row * Cell;
             G10_Direction facing = player.Facing;
-            B5RoomDraw.Rect(canvas, x + 2, y, 4, 2, Red);
-            if (facing == G10_Direction.Right) B5RoomDraw.Rect(canvas, x + 6, y + 1, 2, 1, Red);
-            else if (facing == G10_Direction.Left) B5RoomDraw.Rect(canvas, x, y + 1, 2, 1, Red);
+            G10_RoomDraw.Rect(canvas, x + 2, y, 4, 2, Red);
+            if (facing == G10_Direction.Right) G10_RoomDraw.Rect(canvas, x + 6, y + 1, 2, 1, Red);
+            else if (facing == G10_Direction.Left) G10_RoomDraw.Rect(canvas, x, y + 1, 2, 1, Red);
 
-            B5RoomDraw.Rect(canvas, x + 2, y + 2, 4, 2, facing == G10_Direction.Up ? Brown : LightRed);
+            G10_RoomDraw.Rect(canvas, x + 2, y + 2, 4, 2, facing == G10_Direction.Up ? Brown : LightRed);
             if (facing == G10_Direction.Down)
             {
-                B5RoomDraw.Rect(canvas, x + 2.5, y + 2, 1, 1, Black);
-                B5RoomDraw.Rect(canvas, x + 4.5, y + 2, 1, 1, Black);
+                G10_RoomDraw.Rect(canvas, x + 2.5, y + 2, 1, 1, Black);
+                G10_RoomDraw.Rect(canvas, x + 4.5, y + 2, 1, 1, Black);
             }
-            else if (facing == G10_Direction.Left) B5RoomDraw.Rect(canvas, x + 2, y + 2, 1, 1, Black);
-            else if (facing == G10_Direction.Right) B5RoomDraw.Rect(canvas, x + 5, y + 2, 1, 1, Black);
+            else if (facing == G10_Direction.Left) G10_RoomDraw.Rect(canvas, x + 2, y + 2, 1, 1, Black);
+            else if (facing == G10_Direction.Right) G10_RoomDraw.Rect(canvas, x + 5, y + 2, 1, 1, Black);
 
-            B5RoomDraw.Rect(canvas, x + 1, y + 4, 6, 2, Green);
+            G10_RoomDraw.Rect(canvas, x + 1, y + 4, 6, 2, Green);
             bool step = player.Steps % 2 == 0;
-            B5RoomDraw.Rect(canvas, x + 2, y + 6, 1, step ? 2 : 1, DarkGrey);
-            B5RoomDraw.Rect(canvas, x + 5, y + 6, 1, step ? 1 : 2, DarkGrey);
+            G10_RoomDraw.Rect(canvas, x + 2, y + 6, 1, step ? 2 : 1, DarkGrey);
+            G10_RoomDraw.Rect(canvas, x + 5, y + 6, 1, step ? 1 : 2, DarkGrey);
         }
 
         void DrawCoinIcon(Canvas canvas, double x, double y)
         {
-            B5RoomDraw.Rect(canvas, x, y + 1, 5, 3, Yellow);
-            B5RoomDraw.Rect(canvas, x + 1, y, 3, 5, Yellow);
-            B5RoomDraw.Rect(canvas, x + 4, y + 1, 1, 3, Orange);
+            G10_RoomDraw.Rect(canvas, x, y + 1, 5, 3, Yellow);
+            G10_RoomDraw.Rect(canvas, x + 1, y, 3, 5, Yellow);
+            G10_RoomDraw.Rect(canvas, x + 4, y + 1, 1, 3, Orange);
         }
 
         void DrawHeart(Canvas canvas, double x, double y)
         {
-            B5RoomDraw.Rect(canvas, x, y + 1, 5, 2, LightRed);
-            B5RoomDraw.Rect(canvas, x + 0.5, y, 1.5, 1, LightRed);
-            B5RoomDraw.Rect(canvas, x + 3, y, 1.5, 1, LightRed);
-            B5RoomDraw.Rect(canvas, x + 1, y + 3, 3, 1, LightRed);
-            B5RoomDraw.Rect(canvas, x + 2, y + 4, 1, 1, LightRed);
+            G10_RoomDraw.Rect(canvas, x, y + 1, 5, 2, LightRed);
+            G10_RoomDraw.Rect(canvas, x + 0.5, y, 1.5, 1, LightRed);
+            G10_RoomDraw.Rect(canvas, x + 3, y, 1.5, 1, LightRed);
+            G10_RoomDraw.Rect(canvas, x + 1, y + 3, 3, 1, LightRed);
+            G10_RoomDraw.Rect(canvas, x + 2, y + 4, 1, 1, LightRed);
         }
 
         void DrawOverlay(Canvas canvas, IG10_CoinView game)
@@ -179,42 +179,42 @@ namespace OOPGames
             {
                 case G10_CoinPhase.Ready:
                     Panel(canvas, 34, 46);
-                    B5RoomDraw.Text(canvas, "READY.", 22, 36, 7, LightBlue);
-                    B5RoomDraw.TextCentered(canvas, "LEVEL " + game.Level, Center, 44, 11, White);
-                    B5RoomDraw.TextCentered(canvas, "COLLECT " + game.CoinsNeeded + " COINS", Center, 58, 7, Yellow);
-                    B5RoomDraw.TextCentered(canvas, "MIND THE DUST BUNNIES", Center, 67, 7, LightGrey);
+                    G10_RoomDraw.Text(canvas, "READY.", 22, 36, 7, LightBlue);
+                    G10_RoomDraw.TextCentered(canvas, "LEVEL " + game.Level, Center, 44, 11, White);
+                    G10_RoomDraw.TextCentered(canvas, "COLLECT " + game.CoinsNeeded + " COINS", Center, 58, 7, Yellow);
+                    G10_RoomDraw.TextCentered(canvas, "MIND THE DUST BUNNIES", Center, 67, 7, LightGrey);
                     break;
                 case G10_CoinPhase.Paused:
                     Panel(canvas, 44, 28);
-                    B5RoomDraw.TextCentered(canvas, "PAUSE", Center, 46, 11, White);
-                    B5RoomDraw.TextCentered(canvas, "ENTER TO GO ON", Center, 60, 7, LightBlue);
+                    G10_RoomDraw.TextCentered(canvas, "PAUSE", Center, 46, 11, White);
+                    G10_RoomDraw.TextCentered(canvas, "ENTER TO GO ON", Center, 60, 7, LightBlue);
                     break;
                 case G10_CoinPhase.Hit:
                     Panel(canvas, 48, 20);
-                    B5RoomDraw.TextCentered(canvas, game.TimeRanOut ? "TIME UP!" : "OUCH!", Center, 50, 11, LightRed);
+                    G10_RoomDraw.TextCentered(canvas, game.TimeRanOut ? "TIME UP!" : "OUCH!", Center, 50, 11, LightRed);
                     break;
                 case G10_CoinPhase.LevelCleared:
                     Panel(canvas, 40, 34);
-                    B5RoomDraw.TextCentered(canvas, "LEVEL CLEAR!", Center, 42, 11, Yellow);
-                    B5RoomDraw.TextCentered(canvas, "TIME BONUS +" + game.TimeBonus, Center, 59, 7, White);
+                    G10_RoomDraw.TextCentered(canvas, "LEVEL CLEAR!", Center, 42, 11, Yellow);
+                    G10_RoomDraw.TextCentered(canvas, "TIME BONUS +" + game.TimeBonus, Center, 59, 7, White);
                     break;
                 case G10_CoinPhase.GameOver:
                     Panel(canvas, 30, 58);
-                    B5RoomDraw.TextCentered(canvas, "GAME OVER", Center, 32, 11, LightRed);
-                    if (game.TimeRanOut) B5RoomDraw.TextCentered(canvas, "THE TIME RAN OUT", Center, 46, 7, LightGrey);
-                    B5RoomDraw.TextCentered(canvas, "SCORE " + game.Score + "  LEVEL " + game.Level, Center, 56, 7, White);
-                    if (game.IsNewHighScore) B5RoomDraw.TextCentered(canvas, "NEW HIGHSCORE!", Center, 65, 7, Yellow);
-                    else B5RoomDraw.TextCentered(canvas, "HI " + game.HighScore, Center, 65, 7, LightBlue);
+                    G10_RoomDraw.TextCentered(canvas, "GAME OVER", Center, 32, 11, LightRed);
+                    if (game.TimeRanOut) G10_RoomDraw.TextCentered(canvas, "THE TIME RAN OUT", Center, 46, 7, LightGrey);
+                    G10_RoomDraw.TextCentered(canvas, "SCORE " + game.Score + "  LEVEL " + game.Level, Center, 56, 7, White);
+                    if (game.IsNewHighScore) G10_RoomDraw.TextCentered(canvas, "NEW HIGHSCORE!", Center, 65, 7, Yellow);
+                    else G10_RoomDraw.TextCentered(canvas, "HI " + game.HighScore, Center, 65, 7, LightBlue);
                     if (game.PhaseTicks / 10 % 2 == 0)
-                        B5RoomDraw.TextCentered(canvas, "ENTER: NEW GAME", Center, 76, 7, White);
+                        G10_RoomDraw.TextCentered(canvas, "ENTER: NEW GAME", Center, 76, 7, White);
                     break;
             }
         }
 
         void Panel(Canvas canvas, double y, double height)
         {
-            B5RoomDraw.Rect(canvas, 18, y, ScreenWidth - 36, height, LightBlue);
-            B5RoomDraw.Rect(canvas, 19, y + 1, ScreenWidth - 38, height - 2, Blue);
+            G10_RoomDraw.Rect(canvas, 18, y, ScreenWidth - 36, height, LightBlue);
+            G10_RoomDraw.Rect(canvas, 19, y + 1, ScreenWidth - 38, height - 2, Blue);
         }
 
         static Color Lighten(Color color)

@@ -8,9 +8,9 @@ using System.Windows.Media.Imaging;
 
 namespace OOPGames
 {
-    struct TowerDefenseClick
+    struct G10_TowerDefenseClick
     {
-        public TowerDefenseClick(Point position, bool right)
+        public G10_TowerDefenseClick(Point position, bool right)
         {
             Position = position;
             Right = right;
@@ -20,14 +20,14 @@ namespace OOPGames
         public bool Right { get; private set; }
     }
 
-    sealed class TowerDefensePixelSurface
+    sealed class G10_TowerDefensePixelSurface
     {
         readonly DrawingGroup _Drawing = new DrawingGroup();
         readonly Dictionary<int, SolidColorBrush> _Brushes = new Dictionary<int, SolidColorBrush>();
         readonly int _PixelScale;
         DrawingContext _Context;
 
-        public TowerDefensePixelSurface(int logicalWidth, int logicalHeight, int pixelScale)
+        public G10_TowerDefensePixelSurface(int logicalWidth, int logicalHeight, int pixelScale)
         {
             if (logicalWidth <= 0) throw new ArgumentOutOfRangeException(nameof(logicalWidth));
             if (logicalHeight <= 0) throw new ArgumentOutOfRangeException(nameof(logicalHeight));
@@ -59,19 +59,19 @@ namespace OOPGames
                 Point position = ToLogical(e.GetPosition(Image));
                 MousePosition = position;
                 if (e.ChangedButton == System.Windows.Input.MouseButton.Left || e.ChangedButton == System.Windows.Input.MouseButton.Right)
-                    _Clicks.Enqueue(new TowerDefenseClick(position, e.ChangedButton == System.Windows.Input.MouseButton.Right));
+                    _Clicks.Enqueue(new G10_TowerDefenseClick(position, e.ChangedButton == System.Windows.Input.MouseButton.Right));
             };
         }
 
         readonly Rect _Bounds;
-        readonly Queue<TowerDefenseClick> _Clicks = new Queue<TowerDefenseClick>();
+        readonly Queue<G10_TowerDefenseClick> _Clicks = new Queue<G10_TowerDefenseClick>();
 
         // Mouse position in logical pixels, null while the mouse is outside of the game.
         public Point? MousePosition { get; private set; }
 
-        public List<TowerDefenseClick> DrainClicks()
+        public List<G10_TowerDefenseClick> DrainClicks()
         {
-            List<TowerDefenseClick> clicks = new List<TowerDefenseClick>(_Clicks);
+            List<G10_TowerDefenseClick> clicks = new List<G10_TowerDefenseClick>(_Clicks);
             _Clicks.Clear();
             return clicks;
         }

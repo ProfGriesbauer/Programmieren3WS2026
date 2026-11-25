@@ -10,7 +10,7 @@ namespace OOPGames
     // Measurements are millimetres of the real console (340 x 230 mm): x to the right from the centre,
     // y up from the shelf, d backwards from the front edge. Wedge body with a wood-grain front, ribbed top,
     // six metal switches and a raised cartridge slot with two spring flaps.
-    public static class B5AtariConsoleModel
+    public static class G10_AtariConsoleModel
     {
         internal const double Scale = 0.0032;
         internal const double ShelfTop = 0.235;
@@ -62,14 +62,14 @@ namespace OOPGames
 
         static void BuildBody(Model3DGroup p)
         {
-            Material body = B5AtariMesh.Plastic(_Body);
-            B5AtariMesh.Extrude(p, _Place, new[] { P(0, 3), P(Depth, 3), P(Depth, TopAt(Depth)), P(32, TopAt(32)), P(0, 18) },
+            Material body = G10_AtariMesh.Plastic(_Body);
+            G10_AtariMesh.Extrude(p, _Place, new[] { P(0, 3), P(Depth, 3), P(Depth, TopAt(Depth)), P(32, TopAt(32)), P(0, 18) },
                 -Width / 2, Width / 2, true, body);
 
             // Rubber feet lift the body a little off the shelf.
             foreach (double x in new[] { -140.0, 140.0 })
                 foreach (double d in new[] { 22.0, 208.0 })
-                    B5AtariMesh.Box(p, _Place, x, 1.5, -d, 22, 3, 14, B5AtariMesh.Plastic(_Rubber));
+                    G10_AtariMesh.Box(p, _Place, x, 1.5, -d, 22, 3, 14, G10_AtariMesh.Plastic(_Rubber));
 
             // Wood-grain front panel on the slope, with a thin chrome strip along its upper edge.
             Vector3D up = new Vector3D(0, 36, -32);
@@ -77,38 +77,38 @@ namespace OOPGames
             Vector3D outward = new Vector3D(0, 32, 36);
             outward.Normalize();
             Point3D middle = new Point3D(0, 36, -16) + outward * 0.4;
-            B5AtariMesh.Quad(p, _Place, middle, new Vector3D(1, 0, 0), up, Width - 2, Math.Sqrt(32 * 32 + 36 * 36) - 2,
-                B5AtariMesh.Textured(WoodGrain));
-            B5AtariMesh.Box(p, _Place, 0, TopAt(32) - 0.4, -32.5, Width - 4, 1.6, 2.2, B5AtariMesh.Metal(_Silver));
-            B5AtariMesh.Box(p, _Place, 0, 17.5, 0.2, Width - 4, 1.2, 1.2, B5AtariMesh.Metal(_Silver));
+            G10_AtariMesh.Quad(p, _Place, middle, new Vector3D(1, 0, 0), up, Width - 2, Math.Sqrt(32 * 32 + 36 * 36) - 2,
+                G10_AtariMesh.Textured(WoodGrain));
+            G10_AtariMesh.Box(p, _Place, 0, TopAt(32) - 0.4, -32.5, Width - 4, 1.6, 2.2, G10_AtariMesh.Metal(_Silver));
+            G10_AtariMesh.Box(p, _Place, 0, 17.5, 0.2, Width - 4, 1.2, 1.2, G10_AtariMesh.Metal(_Silver));
         }
 
         // Raised housing in the middle of the top. It is built around the slot opening so the slot is a real hole.
         static void BuildSlotHousing(Model3DGroup p)
         {
-            Material body = B5AtariMesh.Plastic(_Body);
-            Material edge = B5AtariMesh.Plastic(_BodyEdge);
+            Material body = G10_AtariMesh.Plastic(_Body);
+            Material edge = G10_AtariMesh.Plastic(_BodyEdge);
             const double halfWidth = 64;
-            B5AtariMesh.Extrude(p, _Place, new[] { P(56, 50), P(SlotFront, 50), P(SlotFront, SlotTop), P(88, SlotTop), P(56, 60) },
+            G10_AtariMesh.Extrude(p, _Place, new[] { P(56, 50), P(SlotFront, 50), P(SlotFront, SlotTop), P(88, SlotTop), P(56, 60) },
                 -halfWidth, halfWidth, true, body);
-            B5AtariMesh.Extrude(p, _Place, new[] { P(SlotBack, 50), P(176, 50), P(176, SlotTop), P(SlotBack, SlotTop) },
+            G10_AtariMesh.Extrude(p, _Place, new[] { P(SlotBack, 50), P(176, 50), P(176, SlotTop), P(SlotBack, SlotTop) },
                 -halfWidth, halfWidth, true, body);
             foreach (int side in new[] { -1, 1 })
             {
-                B5AtariMesh.Box(p, _Place, side * (SlotHalfWidth + halfWidth) / 2, (50 + SlotTop) / 2, -SlotCenter,
+                G10_AtariMesh.Box(p, _Place, side * (SlotHalfWidth + halfWidth) / 2, (50 + SlotTop) / 2, -SlotCenter,
                     halfWidth - SlotHalfWidth, SlotTop - 50, SlotBack - SlotFront, body);
             }
 
             // Dark lining inside the slot and a slightly lighter rim around it.
             double floor = TopAt(SlotCenter) + 0.3;
-            B5AtariMesh.Box(p, _Place, 0, floor, -SlotCenter, SlotHalfWidth * 2, 0.4, SlotBack - SlotFront, B5AtariMesh.Plastic(_Hole));
-            B5AtariMesh.Box(p, _Place, 0, (floor + SlotTop) / 2, -SlotFront - 0.3, SlotHalfWidth * 2, SlotTop - floor, 0.4, B5AtariMesh.Plastic(_Hole));
-            B5AtariMesh.Box(p, _Place, 0, (floor + SlotTop) / 2, -SlotBack + 0.3, SlotHalfWidth * 2, SlotTop - floor, 0.4, B5AtariMesh.Plastic(_Hole));
+            G10_AtariMesh.Box(p, _Place, 0, floor, -SlotCenter, SlotHalfWidth * 2, 0.4, SlotBack - SlotFront, G10_AtariMesh.Plastic(_Hole));
+            G10_AtariMesh.Box(p, _Place, 0, (floor + SlotTop) / 2, -SlotFront - 0.3, SlotHalfWidth * 2, SlotTop - floor, 0.4, G10_AtariMesh.Plastic(_Hole));
+            G10_AtariMesh.Box(p, _Place, 0, (floor + SlotTop) / 2, -SlotBack + 0.3, SlotHalfWidth * 2, SlotTop - floor, 0.4, G10_AtariMesh.Plastic(_Hole));
             const double rim = 3;
-            B5AtariMesh.Box(p, _Place, 0, SlotTop + 0.4, -SlotFront + rim / 2, SlotHalfWidth * 2 + rim * 2, 0.8, rim, edge);
-            B5AtariMesh.Box(p, _Place, 0, SlotTop + 0.4, -SlotBack - rim / 2, SlotHalfWidth * 2 + rim * 2, 0.8, rim, edge);
-            B5AtariMesh.Box(p, _Place, -SlotHalfWidth - rim / 2, SlotTop + 0.4, -SlotCenter, rim, 0.8, SlotBack - SlotFront, edge);
-            B5AtariMesh.Box(p, _Place, SlotHalfWidth + rim / 2, SlotTop + 0.4, -SlotCenter, rim, 0.8, SlotBack - SlotFront, edge);
+            G10_AtariMesh.Box(p, _Place, 0, SlotTop + 0.4, -SlotFront + rim / 2, SlotHalfWidth * 2 + rim * 2, 0.8, rim, edge);
+            G10_AtariMesh.Box(p, _Place, 0, SlotTop + 0.4, -SlotBack - rim / 2, SlotHalfWidth * 2 + rim * 2, 0.8, rim, edge);
+            G10_AtariMesh.Box(p, _Place, -SlotHalfWidth - rim / 2, SlotTop + 0.4, -SlotCenter, rim, 0.8, SlotBack - SlotFront, edge);
+            G10_AtariMesh.Box(p, _Place, SlotHalfWidth + rim / 2, SlotTop + 0.4, -SlotCenter, rim, 0.8, SlotBack - SlotFront, edge);
 
             // Logo on the sloped front of the housing.
             Vector3D up = new Vector3D(0, 16, -32);
@@ -116,19 +116,19 @@ namespace OOPGames
             Vector3D outward = new Vector3D(0, 32, 16);
             outward.Normalize();
             Point3D logo = new Point3D(0, 60 + 16 * 0.62, -(56 + 32 * 0.62)) + outward * 0.3;
-            B5AtariMesh.Text(p, _Place, "ATARI", _Silver, logo, new Vector3D(1, 0, 0), up, 9);
+            G10_AtariMesh.Text(p, _Place, "ATARI", _Silver, logo, new Vector3D(1, 0, 0), up, 9);
             Point3D subtitle = new Point3D(0, 60 + 16 * 0.22, -(56 + 32 * 0.22)) + outward * 0.3;
-            B5AtariMesh.Text(p, _Place, "VIDEO COMPUTER SYSTEM", _Print, subtitle, new Vector3D(1, 0, 0), up, 3.2);
+            G10_AtariMesh.Text(p, _Place, "VIDEO COMPUTER SYSTEM", _Print, subtitle, new Vector3D(1, 0, 0), up, 3.2);
         }
 
         // Ridges across the top left and right of the housing, like the moulded ribs of the real case.
         static void BuildTopRibs(Model3DGroup p)
         {
-            Material rib = B5AtariMesh.Plastic(_BodyEdge);
+            Material rib = G10_AtariMesh.Plastic(_BodyEdge);
             for (double d = 66; d <= 222; d += 7)
             {
                 foreach (int side in new[] { -1, 1 })
-                    B5AtariMesh.Box(p, _Place, side * 116, TopAt(d) + 0.6, -d, 94, 1.4, 2.6, rib);
+                    G10_AtariMesh.Box(p, _Place, side * 116, TopAt(d) + 0.6, -d, 94, 1.4, 2.6, rib);
             }
         }
 
@@ -140,9 +140,9 @@ namespace OOPGames
             {
                 double x = SwitchX[i];
                 double top = TopAt(SwitchD);
-                B5AtariMesh.Box(p, _Place, x, top + 0.5, -SwitchD - 1, 16, 1.0, 16, B5AtariMesh.Plastic(_BodyEdge));
-                B5AtariMesh.Box(p, _Place, x, top + 1.05, -SwitchD - 1, 5, 0.2, 11, B5AtariMesh.Plastic(_Hole));
-                B5AtariMesh.Text(p, _Place, SwitchLabels[i], _Print, new Point3D(x, TopAt(36.2) + 0.1, -36.2),
+                G10_AtariMesh.Box(p, _Place, x, top + 0.5, -SwitchD - 1, 16, 1.0, 16, G10_AtariMesh.Plastic(_BodyEdge));
+                G10_AtariMesh.Box(p, _Place, x, top + 1.05, -SwitchD - 1, 5, 0.2, 11, G10_AtariMesh.Plastic(_Hole));
+                G10_AtariMesh.Text(p, _Place, SwitchLabels[i], _Print, new Point3D(x, TopAt(36.2) + 0.1, -36.2),
                     new Vector3D(1, 0, 0), flatUp, 3.0);
                 if (i > 0) AddLever(p, _Place, x, SwitchAngles[i]);
             }
@@ -155,9 +155,9 @@ namespace OOPGames
             tilt.Rotate(new Quaternion(new Vector3D(1, 0, 0), angle));
             tilt.Translate(new Vector3D(x, TopAt(SwitchD) + 1, -SwitchD));
             Matrix3D lever = tilt * place;
-            Material metal = B5AtariMesh.Metal(_Silver);
-            B5AtariMesh.Box(parent, lever, 0, 9, 0, 3.4, 18, 3.4, metal);
-            B5AtariMesh.Box(parent, lever, 0, 19, 0, 6, 5, 6, metal);
+            Material metal = G10_AtariMesh.Metal(_Silver);
+            G10_AtariMesh.Box(parent, lever, 0, 9, 0, 3.4, 18, 3.4, metal);
+            G10_AtariMesh.Box(parent, lever, 0, 19, 0, 6, 5, 6, metal);
         }
 
         // Lever of the power switch as its own model so it can be flipped; it pivots in its switch.
@@ -181,8 +181,8 @@ namespace OOPGames
             double hinge = front ? SlotFront : SlotBack;
             double length = (SlotBack - SlotFront) / 2 - 0.4;
             double centerD = front ? hinge + length / 2 : hinge - length / 2;
-            B5AtariMesh.Box(flap, Matrix3D.Identity, 0, SlotTop - 1.2, -centerD, SlotHalfWidth * 2 - 1, 1.2, length,
-                B5AtariMesh.Plastic(Color.FromRgb(38, 37, 36)));
+            G10_AtariMesh.Box(flap, Matrix3D.Identity, 0, SlotTop - 1.2, -centerD, SlotHalfWidth * 2 - 1, 1.2, length,
+                G10_AtariMesh.Plastic(Color.FromRgb(38, 37, 36)));
             rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), 0);
             Transform3DGroup transform = new Transform3DGroup();
             transform.Children.Add(new RotateTransform3D(rotation, new Point3D(0, SlotTop - 0.6, -hinge)));
@@ -194,9 +194,9 @@ namespace OOPGames
         static void BuildCables(Model3DGroup p)
         {
             // TV cable out of the back, over the rear edge of the shelf and down to the floor.
-            Material cable = B5AtariMesh.Plastic(Color.FromRgb(26, 26, 28));
-            B5AtariMesh.Box(p, _Place, 60, 12, -(Depth + 285) / 2, 5, 5, 285 - Depth, cable);
-            B5AtariMesh.Box(p, _Place, 60, (12 - ShelfTop / Scale) / 2, -287, 5, 12 + ShelfTop / Scale, 5, cable);
+            Material cable = G10_AtariMesh.Plastic(Color.FromRgb(26, 26, 28));
+            G10_AtariMesh.Box(p, _Place, 60, 12, -(Depth + 285) / 2, 5, 5, 285 - Depth, cable);
+            G10_AtariMesh.Box(p, _Place, 60, (12 - ShelfTop / Scale) / 2, -287, 5, 12 + ShelfTop / Scale, 5, cable);
         }
 
         static Matrix3D CreatePlacement()
@@ -231,7 +231,7 @@ namespace OOPGames
                 }
             }
             DrawingBrush brush = new DrawingBrush(drawing) { Stretch = Stretch.Fill };
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             return texture;
         }
     }

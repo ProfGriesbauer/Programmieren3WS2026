@@ -5,7 +5,7 @@ using System.Text;
 
 namespace OOPGames
 {
-    public enum TowerDefenseWaveform
+    public enum G10_TowerDefenseWaveform
     {
         Pulse,
         Triangle,
@@ -19,9 +19,9 @@ namespace OOPGames
 
     // Sound of one voice: wave form, ADSR envelope (seconds, sustain 0..1), delayed vibrato and a
     // low-pass filter that softens the raw wave (the "16-bit" warmth compared with raw 8-bit tones).
-    public sealed class TowerDefenseInstrument
+    public sealed class G10_TowerDefenseInstrument
     {
-        public TowerDefenseWaveform Wave = TowerDefenseWaveform.Pulse;
+        public G10_TowerDefenseWaveform Wave = G10_TowerDefenseWaveform.Pulse;
         public double Duty = 0.5;
         public double Attack = 0.005, Decay = 0.1, Sustain = 0.7, Release = 0.05;
         public double VibratoDepth, VibratoRate = 5.5, VibratoDelay = 0.2;
@@ -41,13 +41,13 @@ namespace OOPGames
     //
     // Every voice must fill exactly Bars x 16 sixteenths. Notes and echoes that ring past the end of
     // the loop continue at its start, so the loop repeats without a seam.
-    public sealed class TowerDefenseSong
+    public sealed class G10_TowerDefenseSong
     {
         public const int SampleRate = G10_SoundClip.SampleRate;
 
         sealed class Voice
         {
-            public TowerDefenseInstrument Instrument;
+            public G10_TowerDefenseInstrument Instrument;
             public string Pattern;
             public double Gain;
             public bool Drums;
@@ -57,7 +57,7 @@ namespace OOPGames
 
         readonly List<Voice> _Voices = new List<Voice>();
 
-        public TowerDefenseSong(string name, double bpm, int bars)
+        public G10_TowerDefenseSong(string name, double bpm, int bars)
         {
             Name = name;
             Bpm = bpm;
@@ -70,13 +70,13 @@ namespace OOPGames
         public double SixteenthSeconds { get { return 60.0 / Bpm / 4; } }
         public double Seconds { get { return Bars * 16 * SixteenthSeconds; } }
 
-        public TowerDefenseSong Add(TowerDefenseInstrument instrument, double gain, string pattern, int echoSixteenths = 0, double echoFeedback = 0)
+        public G10_TowerDefenseSong Add(G10_TowerDefenseInstrument instrument, double gain, string pattern, int echoSixteenths = 0, double echoFeedback = 0)
         {
             _Voices.Add(new Voice { Instrument = instrument, Gain = gain, Pattern = pattern, EchoSixteenths = echoSixteenths, EchoFeedback = echoFeedback });
             return this;
         }
 
-        public TowerDefenseSong AddDrums(double gain, string pattern)
+        public G10_TowerDefenseSong AddDrums(double gain, string pattern)
         {
             _Voices.Add(new Voice { Gain = gain, Pattern = pattern, Drums = true });
             return this;
@@ -177,7 +177,7 @@ namespace OOPGames
 
         // ---------------- synthesis ----------------
 
-        static void Tone(float[] buffer, TowerDefenseInstrument ins, double hz, double start, double length)
+        static void Tone(float[] buffer, G10_TowerDefenseInstrument ins, double hz, double start, double length)
         {
             int first = (int)Math.Round(start * SampleRate);
             double ring = length + ins.Release;
@@ -202,7 +202,7 @@ namespace OOPGames
             }
         }
 
-        static double Envelope(TowerDefenseInstrument ins, double t)
+        static double Envelope(G10_TowerDefenseInstrument ins, double t)
         {
             if (t < ins.Attack) return t / ins.Attack;
             t -= ins.Attack;
@@ -210,18 +210,18 @@ namespace OOPGames
             return ins.Sustain;
         }
 
-        static double Oscillator(TowerDefenseInstrument ins, double phase, double t)
+        static double Oscillator(G10_TowerDefenseInstrument ins, double phase, double t)
         {
             double cycle = phase - Math.Floor(phase);
             double angle = 2 * Math.PI * phase;
             switch (ins.Wave)
             {
-                case TowerDefenseWaveform.Pulse: return (cycle < ins.Duty ? 1 : -1) - (2 * ins.Duty - 1);
-                case TowerDefenseWaveform.Triangle: return cycle < 0.5 ? 4 * cycle - 1 : 3 - 4 * cycle;
-                case TowerDefenseWaveform.Saw: return 2 * cycle - 1;
-                case TowerDefenseWaveform.Organ:
+                case G10_TowerDefenseWaveform.Pulse: return (cycle < ins.Duty ? 1 : -1) - (2 * ins.Duty - 1);
+                case G10_TowerDefenseWaveform.Triangle: return cycle < 0.5 ? 4 * cycle - 1 : 3 - 4 * cycle;
+                case G10_TowerDefenseWaveform.Saw: return 2 * cycle - 1;
+                case G10_TowerDefenseWaveform.Organ:
                     return 0.6 * Math.Sin(angle) + 0.3 * Math.Sin(2 * angle) + 0.15 * Math.Sin(3 * angle) + 0.08 * Math.Sin(4 * angle);
-                case TowerDefenseWaveform.Bell:
+                case G10_TowerDefenseWaveform.Bell:
                     return Math.Sin(angle) + 0.45 * Math.Sin(2.76 * angle) * Math.Exp(-t * 7) + 0.25 * Math.Sin(5.4 * angle) * Math.Exp(-t * 12);
                 default: return Math.Sin(angle);
             }
@@ -330,7 +330,7 @@ namespace OOPGames
     // Builds pattern strings from chord symbols, so accompaniments do not have to be written note by note.
     // Chords are given per bar, separated by spaces ("G Em C D"); "C,D" splits a bar into two halves.
     // Chord symbols: root (C, F#, Bb ...) plus "", m, 7, maj7, m7, dim, sus2, sus4, 5.
-    public static class TowerDefenseChords
+    public static class G10_TowerDefenseChords
     {
         static readonly Dictionary<string, int[]> Qualities = new Dictionary<string, int[]>
         {
@@ -352,7 +352,7 @@ namespace OOPGames
         public static int[] Tones(string chord, int octave)
         {
             int length = chord.Length > 1 && (chord[1] == '#' || chord[1] == 'b') ? 2 : 1;
-            int root = TowerDefenseSong.NoteToMidi(chord.Substring(0, length).ToLowerInvariant() + octave);
+            int root = G10_TowerDefenseSong.NoteToMidi(chord.Substring(0, length).ToLowerInvariant() + octave);
             int[] intervals = Qualities[chord.Substring(length)];
             int[] tones = new int[intervals.Length];
             for (int i = 0; i < intervals.Length; i++) tones[i] = root + intervals[i];

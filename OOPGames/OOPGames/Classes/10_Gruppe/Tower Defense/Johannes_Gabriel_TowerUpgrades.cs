@@ -2,7 +2,7 @@ using System;
 
 namespace OOPGames
 {
-    public enum TowerUpgradePath
+    public enum G10_TowerUpgradePath
     {
         Damage,
         Range,
@@ -15,7 +15,7 @@ namespace OOPGames
     // Upgrade state of one built tower. Damage, range and speed upgrades add a percentage of the
     // tower's base value per level; the tier (I, II, III) raises all base values at once. When everything
     // is bought, the mastery levels (no limit, rising price) keep raising damage and attack speed.
-    public sealed class TowerUpgrades
+    public sealed class G10_TowerUpgrades
     {
         public const int MaxTier = 3;
         public const int MaxDamage = 8;
@@ -53,81 +53,81 @@ namespace OOPGames
             get { return Damage >= MaxDamage && Range >= MaxRange && Speed >= MaxSpeed && Tier >= MaxTier; }
         }
 
-        public int Level(TowerUpgradePath path)
+        public int Level(G10_TowerUpgradePath path)
         {
             switch (path)
             {
-                case TowerUpgradePath.Damage: return Damage;
-                case TowerUpgradePath.Range: return Range;
-                case TowerUpgradePath.Speed: return Speed;
-                case TowerUpgradePath.Mastery: return Mastery;
+                case G10_TowerUpgradePath.Damage: return Damage;
+                case G10_TowerUpgradePath.Range: return Range;
+                case G10_TowerUpgradePath.Speed: return Speed;
+                case G10_TowerUpgradePath.Mastery: return Mastery;
                 default: return Tier;
             }
         }
 
-        public static int MaxLevel(TowerUpgradePath path)
+        public static int MaxLevel(G10_TowerUpgradePath path)
         {
             switch (path)
             {
-                case TowerUpgradePath.Damage: return MaxDamage;
-                case TowerUpgradePath.Range: return MaxRange;
-                case TowerUpgradePath.Speed: return MaxSpeed;
-                case TowerUpgradePath.Mastery: return int.MaxValue;
+                case G10_TowerUpgradePath.Damage: return MaxDamage;
+                case G10_TowerUpgradePath.Range: return MaxRange;
+                case G10_TowerUpgradePath.Speed: return MaxSpeed;
+                case G10_TowerUpgradePath.Mastery: return int.MaxValue;
                 default: return MaxTier;
             }
         }
 
-        public bool IsMaxed(TowerUpgradePath path)
+        public bool IsMaxed(G10_TowerUpgradePath path)
         {
             return Level(path) >= MaxLevel(path);
         }
 
         // Whether the next level of this path can be bought at all (gold aside).
-        public bool CanBuy(TowerUpgradePath path)
+        public bool CanBuy(G10_TowerUpgradePath path)
         {
-            return path == TowerUpgradePath.Mastery ? IsComplete : !IsMaxed(path);
+            return path == G10_TowerUpgradePath.Mastery ? IsComplete : !IsMaxed(path);
         }
 
-        public int Cost(Tower tower, TowerUpgradePath path)
+        public int Cost(G10_Tower tower, G10_TowerUpgradePath path)
         {
             return CostAt(tower, path, Level(path));
         }
 
         // Price to go from `level` to `level + 1` on the given path.
-        static int CostAt(Tower tower, TowerUpgradePath path, int level)
+        static int CostAt(G10_Tower tower, G10_TowerUpgradePath path, int level)
         {
             switch (path)
             {
-                case TowerUpgradePath.Damage: return (int)Math.Round(tower.Cost * 0.40 * (level + 1));
-                case TowerUpgradePath.Range: return (int)Math.Round(tower.Cost * 0.35 * (level + 1));
-                case TowerUpgradePath.Speed: return (int)Math.Round(tower.Cost * 0.40 * (level + 1));
-                case TowerUpgradePath.Mastery: return (int)Math.Round(tower.Cost * MasteryBaseCost * Math.Pow(MasteryCostGrowth, level));
+                case G10_TowerUpgradePath.Damage: return (int)Math.Round(tower.Cost * 0.40 * (level + 1));
+                case G10_TowerUpgradePath.Range: return (int)Math.Round(tower.Cost * 0.35 * (level + 1));
+                case G10_TowerUpgradePath.Speed: return (int)Math.Round(tower.Cost * 0.40 * (level + 1));
+                case G10_TowerUpgradePath.Mastery: return (int)Math.Round(tower.Cost * MasteryBaseCost * Math.Pow(MasteryCostGrowth, level));
                 default: return (int)Math.Round(tower.Cost * TierCostFactor[level - 1]);
             }
         }
 
-        public void Apply(TowerUpgradePath path)
+        public void Apply(G10_TowerUpgradePath path)
         {
             if (!CanBuy(path)) throw new InvalidOperationException("This upgrade cannot be bought.");
             switch (path)
             {
-                case TowerUpgradePath.Damage: Damage++; break;
-                case TowerUpgradePath.Range: Range++; break;
-                case TowerUpgradePath.Speed: Speed++; break;
-                case TowerUpgradePath.Mastery: Mastery++; break;
+                case G10_TowerUpgradePath.Damage: Damage++; break;
+                case G10_TowerUpgradePath.Range: Range++; break;
+                case G10_TowerUpgradePath.Speed: Speed++; break;
+                case G10_TowerUpgradePath.Mastery: Mastery++; break;
                 default: Tier++; break;
             }
         }
 
         // Everything spent on this tower including the build cost.
-        public int Invested(Tower tower)
+        public int Invested(G10_Tower tower)
         {
             int total = tower.Cost;
-            for (int l = 0; l < Damage; l++) total += CostAt(tower, TowerUpgradePath.Damage, l);
-            for (int l = 0; l < Range; l++) total += CostAt(tower, TowerUpgradePath.Range, l);
-            for (int l = 0; l < Speed; l++) total += CostAt(tower, TowerUpgradePath.Speed, l);
-            for (int t = 1; t < Tier; t++) total += CostAt(tower, TowerUpgradePath.Tier, t);
-            for (int m = 0; m < Mastery; m++) total += CostAt(tower, TowerUpgradePath.Mastery, m);
+            for (int l = 0; l < Damage; l++) total += CostAt(tower, G10_TowerUpgradePath.Damage, l);
+            for (int l = 0; l < Range; l++) total += CostAt(tower, G10_TowerUpgradePath.Range, l);
+            for (int l = 0; l < Speed; l++) total += CostAt(tower, G10_TowerUpgradePath.Speed, l);
+            for (int t = 1; t < Tier; t++) total += CostAt(tower, G10_TowerUpgradePath.Tier, t);
+            for (int m = 0; m < Mastery; m++) total += CostAt(tower, G10_TowerUpgradePath.Mastery, m);
             return total;
         }
 
@@ -144,16 +144,16 @@ namespace OOPGames
         public double RangeMultiplier { get { return TierRange[Tier - 1] * (1 + RangePerLevel * Range); } }
 
         // Values after one more level on the given path (for the upgrade preview).
-        public TowerUpgrades Preview(TowerUpgradePath path)
+        public G10_TowerUpgrades Preview(G10_TowerUpgradePath path)
         {
-            TowerUpgrades next = Clone();
+            G10_TowerUpgrades next = Clone();
             if (next.CanBuy(path)) next.Apply(path);
             return next;
         }
 
-        public TowerUpgrades Clone()
+        public G10_TowerUpgrades Clone()
         {
-            return new TowerUpgrades { Tier = Tier, Damage = Damage, Range = Range, Speed = Speed, Mastery = Mastery };
+            return new G10_TowerUpgrades { Tier = Tier, Damage = Damage, Range = Range, Speed = Speed, Mastery = Mastery };
         }
     }
 }

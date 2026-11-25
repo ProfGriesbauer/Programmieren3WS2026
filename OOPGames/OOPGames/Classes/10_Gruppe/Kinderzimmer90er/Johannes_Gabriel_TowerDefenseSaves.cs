@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace OOPGames
 {
     // State of a started map. Enemies are not stored: a resumed map restarts the saved wave.
-    public sealed class TowerDefenseRunState
+    public sealed class G10_TowerDefenseRunState
     {
         public int Difficulty { get; set; }
         public int Wave { get; set; } = 1;
@@ -28,26 +28,26 @@ namespace OOPGames
         // Seed of the random endless waves, so a resumed endless run gets the same waves again.
         public int EndlessSeed { get; set; }
 
-        public TowerUpgrades GetUpgrades(int spot)
+        public G10_TowerUpgrades GetUpgrades(int spot)
         {
-            TowerUpgrades upgrades = new TowerUpgrades();
+            G10_TowerUpgrades upgrades = new G10_TowerUpgrades();
             if (spot < TowerTiers.Length)
             {
-                upgrades.Tier = Clamp(TowerTiers[spot], 1, TowerUpgrades.MaxTier);
-                upgrades.Damage = Clamp(At(DamageLevels, spot), 0, TowerUpgrades.MaxDamage);
-                upgrades.Range = Clamp(At(RangeLevels, spot), 0, TowerUpgrades.MaxRange);
-                upgrades.Speed = Clamp(At(SpeedLevels, spot), 0, TowerUpgrades.MaxSpeed);
+                upgrades.Tier = Clamp(TowerTiers[spot], 1, G10_TowerUpgrades.MaxTier);
+                upgrades.Damage = Clamp(At(DamageLevels, spot), 0, G10_TowerUpgrades.MaxDamage);
+                upgrades.Range = Clamp(At(RangeLevels, spot), 0, G10_TowerUpgrades.MaxRange);
+                upgrades.Speed = Clamp(At(SpeedLevels, spot), 0, G10_TowerUpgrades.MaxSpeed);
                 // Mastery only counts while everything else is maxed.
                 if (upgrades.IsComplete) upgrades.Mastery = Math.Max(0, At(MasteryLevels, spot));
             }
             else if (TowerLevels != null && spot < TowerLevels.Length)
             {
-                upgrades.Damage = Clamp(TowerLevels[spot] - 1, 0, TowerUpgrades.MaxDamage);
+                upgrades.Damage = Clamp(TowerLevels[spot] - 1, 0, G10_TowerUpgrades.MaxDamage);
             }
             return upgrades;
         }
 
-        public void SetUpgrades(TowerUpgrades[] upgrades)
+        public void SetUpgrades(G10_TowerUpgrades[] upgrades)
         {
             TowerLevels = null;
             TowerTiers = new int[upgrades.Length];
@@ -70,11 +70,11 @@ namespace OOPGames
         static int Clamp(int value, int min, int max) { return Math.Max(min, Math.Min(max, value)); }
     }
 
-    public sealed class TowerDefenseSaveSlot
+    public sealed class G10_TowerDefenseSaveSlot
     {
         public int UnlockedMaps { get; set; } = 1;
         // Key = map index.
-        public Dictionary<int, TowerDefenseRunState> Runs { get; set; } = new Dictionary<int, TowerDefenseRunState>();
+        public Dictionary<int, G10_TowerDefenseRunState> Runs { get; set; } = new Dictionary<int, G10_TowerDefenseRunState>();
         public DateTime? LastPlayed { get; set; }
         // Map that was played last, -1 if none.
         public int LastMap { get; set; } = -1;
@@ -113,26 +113,26 @@ namespace OOPGames
             return mapIndex >= 0 && mapIndex < UnlockedMaps;
         }
 
-        public TowerDefenseRunState GetRun(int mapIndex)
+        public G10_TowerDefenseRunState GetRun(int mapIndex)
         {
-            TowerDefenseRunState run;
+            G10_TowerDefenseRunState run;
             return Runs.TryGetValue(mapIndex, out run) ? run : null;
         }
     }
 
     // Three independent save slots, stored next to the Kinderzimmer highscores.
-    static class TowerDefenseSaves
+    static class G10_TowerDefenseSaves
     {
         public const int SlotCount = 3;
         static readonly string _Folder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Programmieren3WS2026", "Kinderzimmer90er");
-        static TowerDefenseSaveSlot[] _Slots;
+        static G10_TowerDefenseSaveSlot[] _Slots;
 
         // Can be redirected (e.g. for tests) before the first access to Slots.
         internal static string FilePath { get; set; } = Path.Combine(_Folder, "towerdefense_saves.json");
 
-        public static IList<TowerDefenseSaveSlot> Slots
+        public static IList<G10_TowerDefenseSaveSlot> Slots
         {
             get
             {
@@ -149,7 +149,7 @@ namespace OOPGames
 
         public static void Delete(int slotIndex)
         {
-            Slots[slotIndex] = new TowerDefenseSaveSlot();
+            Slots[slotIndex] = new G10_TowerDefenseSaveSlot();
             Save();
         }
 
@@ -158,13 +158,13 @@ namespace OOPGames
         // Normal or harder); returns true if a new map was unlocked.
         public static bool CompleteMap(int slotIndex, int mapIndex, int difficulty, bool unlocksNext)
         {
-            TowerDefenseSaveSlot slot = Slots[slotIndex];
+            G10_TowerDefenseSaveSlot slot = Slots[slotIndex];
             slot.Runs.Remove(mapIndex);
             if (slot.CompletedDifficulties == null) slot.CompletedDifficulties = new Dictionary<int, int>();
             int mask;
             slot.CompletedDifficulties.TryGetValue(mapIndex, out mask);
             slot.CompletedDifficulties[mapIndex] = mask | (1 << difficulty);
-            int unlocked = unlocksNext ? Math.Min(TowerDefenseMaps.Maps.Count, mapIndex + 2) : slot.UnlockedMaps;
+            int unlocked = unlocksNext ? Math.Min(G10_TowerDefenseMaps.Maps.Count, mapIndex + 2) : slot.UnlockedMaps;
             bool newMap = unlocked > slot.UnlockedMaps;
             if (newMap) slot.UnlockedMaps = unlocked;
             Touch(slot, mapIndex);
@@ -172,9 +172,9 @@ namespace OOPGames
             return newMap;
         }
 
-        public static void StoreRun(int slotIndex, int mapIndex, TowerDefenseRunState run)
+        public static void StoreRun(int slotIndex, int mapIndex, G10_TowerDefenseRunState run)
         {
-            TowerDefenseSaveSlot slot = Slots[slotIndex];
+            G10_TowerDefenseSaveSlot slot = Slots[slotIndex];
             slot.Runs[mapIndex] = run;
             Touch(slot, mapIndex);
             Save();
@@ -183,7 +183,7 @@ namespace OOPGames
         // Stores a beaten endless wave if it is a new record (saved together with the next Save()).
         public static bool RecordEndlessWave(int slotIndex, int mapIndex, int wave)
         {
-            TowerDefenseSaveSlot slot = Slots[slotIndex];
+            G10_TowerDefenseSaveSlot slot = Slots[slotIndex];
             if (slot.EndlessRecords == null) slot.EndlessRecords = new Dictionary<int, int>();
             if (wave <= slot.EndlessRecord(mapIndex)) return false;
             slot.EndlessRecords[mapIndex] = wave;
@@ -196,27 +196,27 @@ namespace OOPGames
             Save();
         }
 
-        static void Touch(TowerDefenseSaveSlot slot, int mapIndex)
+        static void Touch(G10_TowerDefenseSaveSlot slot, int mapIndex)
         {
             slot.LastPlayed = DateTime.Now;
             slot.LastMap = mapIndex;
         }
 
-        static TowerDefenseSaveSlot[] Load()
+        static G10_TowerDefenseSaveSlot[] Load()
         {
-            TowerDefenseSaveSlot[] slots = new TowerDefenseSaveSlot[SlotCount];
-            for (int i = 0; i < SlotCount; i++) slots[i] = new TowerDefenseSaveSlot();
+            G10_TowerDefenseSaveSlot[] slots = new G10_TowerDefenseSaveSlot[SlotCount];
+            for (int i = 0; i < SlotCount; i++) slots[i] = new G10_TowerDefenseSaveSlot();
 
             if (File.Exists(FilePath))
             {
-                TowerDefenseSaveSlot[] stored = JsonSerializer.Deserialize<TowerDefenseSaveSlot[]>(File.ReadAllText(FilePath));
+                G10_TowerDefenseSaveSlot[] stored = JsonSerializer.Deserialize<G10_TowerDefenseSaveSlot[]>(File.ReadAllText(FilePath));
                 if (stored == null || stored.Length != SlotCount)
                     throw new InvalidDataException("Die Tower-Defense-Spielstände sind ungültig: " + FilePath);
                 for (int i = 0; i < SlotCount; i++)
                 {
                     if (stored[i] == null) continue;
-                    if (stored[i].Runs == null) stored[i].Runs = new Dictionary<int, TowerDefenseRunState>();
-                    stored[i].UnlockedMaps = Math.Max(1, Math.Min(TowerDefenseMaps.Maps.Count, stored[i].UnlockedMaps));
+                    if (stored[i].Runs == null) stored[i].Runs = new Dictionary<int, G10_TowerDefenseRunState>();
+                    stored[i].UnlockedMaps = Math.Max(1, Math.Min(G10_TowerDefenseMaps.Maps.Count, stored[i].UnlockedMaps));
                     slots[i] = stored[i];
                 }
                 return slots;
@@ -230,7 +230,7 @@ namespace OOPGames
                 int unlocked;
                 if (data != null && data.TryGetValue("UnlockedMaps", out unlocked))
                 {
-                    slots[0].UnlockedMaps = Math.Max(1, Math.Min(TowerDefenseMaps.Maps.Count, unlocked));
+                    slots[0].UnlockedMaps = Math.Max(1, Math.Min(G10_TowerDefenseMaps.Maps.Count, unlocked));
                     slots[0].LastPlayed = File.GetLastWriteTime(oldProgress);
                 }
             }

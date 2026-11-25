@@ -15,7 +15,7 @@ namespace OOPGames
     // - Volume = master volume (G10_SoundVolume) x MusicLevel; menus and dialogs dim it further.
     // - If the game stops calling Update (device left, game closed), the music pauses by itself after
     //   a moment and continues when the game runs again.
-    public static class TowerDefenseMusic
+    public static class G10_TowerDefenseMusic
     {
         // Quiet background music: share of the master volume.
         const double MusicLevel = 0.25;
@@ -23,15 +23,15 @@ namespace OOPGames
         const double DimFactor = 0.45;
         const int SilenceMilliseconds = 400;
 
-        static readonly Dictionary<TowerDefenseTrack, string> _Files = new Dictionary<TowerDefenseTrack, string>();
-        static readonly Dictionary<TowerDefenseTrack, MediaPlayer> _Players = new Dictionary<TowerDefenseTrack, MediaPlayer>();
-        static TowerDefenseTrack _Playing = TowerDefenseTrack.None;
+        static readonly Dictionary<G10_TowerDefenseTrack, string> _Files = new Dictionary<G10_TowerDefenseTrack, string>();
+        static readonly Dictionary<G10_TowerDefenseTrack, MediaPlayer> _Players = new Dictionary<G10_TowerDefenseTrack, MediaPlayer>();
+        static G10_TowerDefenseTrack _Playing = G10_TowerDefenseTrack.None;
         static bool _Rendering, _Suspended, _Dimmed;
         static int _LastUpdate;
         static DispatcherTimer _Watchdog;
 
         // Called by the game every tick on the UI thread.
-        public static void Update(TowerDefenseTrack wanted, bool dimmed)
+        public static void Update(G10_TowerDefenseTrack wanted, bool dimmed)
         {
             _LastUpdate = Environment.TickCount;
             _Dimmed = dimmed;
@@ -46,7 +46,7 @@ namespace OOPGames
                 player.Play();
                 _Playing = wanted;
             }
-            else if (_Suspended && _Playing != TowerDefenseTrack.None)
+            else if (_Suspended && _Playing != G10_TowerDefenseTrack.None)
             {
                 _Players[_Playing].Play();
             }
@@ -56,12 +56,12 @@ namespace OOPGames
 
         public static void Stop()
         {
-            if (_Playing != TowerDefenseTrack.None) _Players[_Playing].Stop();
-            _Playing = TowerDefenseTrack.None;
+            if (_Playing != G10_TowerDefenseTrack.None) _Players[_Playing].Stop();
+            _Playing = G10_TowerDefenseTrack.None;
             _Suspended = false;
         }
 
-        static MediaPlayer PlayerFor(TowerDefenseTrack track)
+        static MediaPlayer PlayerFor(G10_TowerDefenseTrack track)
         {
             MediaPlayer player;
             if (_Players.TryGetValue(track, out player)) return player;
@@ -82,7 +82,7 @@ namespace OOPGames
 
         static void ApplyVolume()
         {
-            if (_Playing == TowerDefenseTrack.None) return;
+            if (_Playing == G10_TowerDefenseTrack.None) return;
             _Players[_Playing].Volume = G10_SoundVolume.Volume * MusicLevel * (_Dimmed ? DimFactor : 1);
         }
 
@@ -101,9 +101,9 @@ namespace OOPGames
                 try
                 {
                     Directory.CreateDirectory(folder);
-                    foreach (TowerDefenseTrack track in Enum.GetValues(typeof(TowerDefenseTrack)))
+                    foreach (G10_TowerDefenseTrack track in Enum.GetValues(typeof(G10_TowerDefenseTrack)))
                     {
-                        TowerDefenseSong song = TowerDefenseSongs.Create(track);
+                        G10_TowerDefenseSong song = G10_TowerDefenseSongs.Create(track);
                         if (song == null) continue;
                         string path = WriteSong(folder, song);
                         lock (_Files) _Files[track] = path;
@@ -116,7 +116,7 @@ namespace OOPGames
 
         // The file name contains a hash of the content: a changed song gets a new file, and a file that
         // a player still has open is never overwritten.
-        static string WriteSong(string folder, TowerDefenseSong song)
+        static string WriteSong(string folder, G10_TowerDefenseSong song)
         {
             byte[] wav = new G10_SoundClip(song.Name, song.Render()).ToWav();
             uint hash = 2166136261;
@@ -129,7 +129,7 @@ namespace OOPGames
         // Pauses the music when the game has not been updated for a while (it is no longer on screen).
         static void CheckSilence()
         {
-            if (_Suspended || _Playing == TowerDefenseTrack.None) return;
+            if (_Suspended || _Playing == G10_TowerDefenseTrack.None) return;
             if (unchecked(Environment.TickCount - _LastUpdate) < SilenceMilliseconds) return;
             _Players[_Playing].Pause();
             _Suspended = true;

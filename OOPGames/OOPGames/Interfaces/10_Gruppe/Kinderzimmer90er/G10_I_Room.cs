@@ -3,7 +3,7 @@ using System.Windows.Input;
 
 namespace OOPGames
 {
-    public enum B5RoomPhase
+    public enum G10_RoomPhase
     {
         Room,
         Device,
@@ -13,14 +13,14 @@ namespace OOPGames
         Playing
     }
 
-    public enum B5RoomDeviceKind
+    public enum G10_RoomDeviceKind
     {
         Atari,
         Gameboy,
         Commodore
     }
 
-    public interface IB5RoomMiniGame
+    public interface IG10_RoomMiniGame
     {
         string Title { get; }
         int Width { get; }
@@ -33,7 +33,7 @@ namespace OOPGames
 
     // Mini games with their own pause menu: Esc / X are passed to Update instead of closing
     // the game. Such a game leaves through ExitRequested.
-    public interface IB5RoomOwnBackKey : IB5RoomMiniGame
+    public interface IG10_RoomOwnBackKey : IG10_RoomMiniGame
     {
     }
 }

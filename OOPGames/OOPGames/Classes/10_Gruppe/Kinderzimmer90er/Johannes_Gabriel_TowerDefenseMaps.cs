@@ -8,9 +8,9 @@ namespace OOPGames
 {
     // A path crossing with a bridge deck: enemies inside Area that move along the bridge direction are drawn
     // on top of the bridge, all others underneath (see karten/LIESMICH_Karten.txt).
-    public sealed class TowerDefenseCrossing
+    public sealed class G10_TowerDefenseCrossing
     {
-        public TowerDefenseCrossing(Rect area, bool horizontal)
+        public G10_TowerDefenseCrossing(Rect area, bool horizontal)
         {
             Area = area;
             Horizontal = horizontal;
@@ -27,10 +27,10 @@ namespace OOPGames
     }
 
     // One map from Assets/karten/<Id>.json. All coordinates are pixels of the 1920x1056 map images.
-    public sealed class TowerDefenseMapDefinition
+    public sealed class G10_TowerDefenseMapDefinition
     {
-        public TowerDefenseMapDefinition(string id, string name, string difficulty, Point mainBuilding,
-            IList<Point> towerSpots, IList<IList<Point>> routes, IList<int> routeTiles, IList<TowerDefenseCrossing> crossings)
+        public G10_TowerDefenseMapDefinition(string id, string name, string difficulty, Point mainBuilding,
+            IList<Point> towerSpots, IList<IList<Point>> routes, IList<int> routeTiles, IList<G10_TowerDefenseCrossing> crossings)
         {
             Id = id;
             Name = name;
@@ -54,26 +54,26 @@ namespace OOPGames
         // One waypoint list per spawn.
         public IList<IList<Point>> Routes { get; private set; }
         public IList<int> RouteTiles { get; private set; }
-        public IList<TowerDefenseCrossing> Crossings { get; private set; }
+        public IList<G10_TowerDefenseCrossing> Crossings { get; private set; }
 
         public bool IsOnBridge(double x, double y, double directionX, double directionY)
         {
-            foreach (TowerDefenseCrossing crossing in Crossings)
+            foreach (G10_TowerDefenseCrossing crossing in Crossings)
                 if (crossing.IsOnBridge(x, y, directionX, directionY)) return true;
             return false;
         }
     }
 
-    public static class TowerDefenseMaps
+    public static class G10_TowerDefenseMaps
     {
         public const int MapWidth = 1920;
         public const int MapHeight = 1056;
         public const int TileSize = 96;
 
         // Unlock order = file order (map1 ... map5): the routes get shorter and more spawns appear.
-        static readonly IList<TowerDefenseMapDefinition> _Maps = Load();
+        static readonly IList<G10_TowerDefenseMapDefinition> _Maps = Load();
 
-        public static IList<TowerDefenseMapDefinition> Maps { get { return _Maps; } }
+        public static IList<G10_TowerDefenseMapDefinition> Maps { get { return _Maps; } }
 
         // Extra enemy strength per map (multiplies the difficulty multiplier). Tuned with the balancing bot so the
         // maps get harder in order. Retuned after the pedestals were moved next to the paths (closer = stronger towers).
@@ -84,18 +84,18 @@ namespace OOPGames
             return mapIndex >= 0 && mapIndex < _Strength.Length ? _Strength[mapIndex] : 1.0;
         }
 
-        static IList<TowerDefenseMapDefinition> Load()
+        static IList<G10_TowerDefenseMapDefinition> Load()
         {
-            string folder = Path.Combine(TowerDefenseAssets.Folder, "karten");
+            string folder = Path.Combine(G10_TowerDefenseAssets.Folder, "karten");
             string[] files = Directory.Exists(folder) ? Directory.GetFiles(folder, "map*.json") : new string[0];
             Array.Sort(files, StringComparer.OrdinalIgnoreCase);
-            List<TowerDefenseMapDefinition> maps = new List<TowerDefenseMapDefinition>();
+            List<G10_TowerDefenseMapDefinition> maps = new List<G10_TowerDefenseMapDefinition>();
             foreach (string file in files) maps.Add(Parse(file));
             if (maps.Count == 0) throw new FileNotFoundException("No Tower Defense maps found in " + folder);
             return maps;
         }
 
-        static TowerDefenseMapDefinition Parse(string file)
+        static G10_TowerDefenseMapDefinition Parse(string file)
         {
             using (JsonDocument document = JsonDocument.Parse(File.ReadAllText(file)))
             {
@@ -110,11 +110,11 @@ namespace OOPGames
                     tiles.Add(route.GetProperty("kacheln").GetInt32());
                 }
 
-                List<TowerDefenseCrossing> crossings = new List<TowerDefenseCrossing>();
+                List<G10_TowerDefenseCrossing> crossings = new List<G10_TowerDefenseCrossing>();
                 foreach (JsonElement crossing in root.GetProperty("kreuzungen").EnumerateArray())
                 {
                     JsonElement area = crossing.GetProperty("bereich");
-                    crossings.Add(new TowerDefenseCrossing(
+                    crossings.Add(new G10_TowerDefenseCrossing(
                         new Rect(new Point(area[0].GetDouble(), area[1].GetDouble()), new Point(area[2].GetDouble(), area[3].GetDouble())),
                         crossing.GetProperty("oben").GetString() == "horizontal"));
                 }
@@ -122,7 +122,7 @@ namespace OOPGames
                 List<Point> spots = new List<Point>();
                 foreach (JsonElement spot in root.GetProperty("podeste").EnumerateArray()) spots.Add(ToPoint(spot.GetProperty("turm_pivot")));
 
-                return new TowerDefenseMapDefinition(
+                return new G10_TowerDefenseMapDefinition(
                     root.GetProperty("id").GetString(), root.GetProperty("name").GetString(),
                     root.GetProperty("schwierigkeit").GetString(),
                     ToPoint(root.GetProperty("schloss").GetProperty("pivot")), spots, routes, tiles, crossings);

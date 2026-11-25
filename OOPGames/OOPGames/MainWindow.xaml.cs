@@ -57,7 +57,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe2_TrainRunPainter());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe1_ConnectFourPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G5_4GWPainter());
-            OOPGamesManager.Singleton.RegisterPainter(new B5RoomPaint());
+            OOPGamesManager.Singleton.RegisterPainter(new G10_RoomPaint());
             OOPGamesManager.Singleton.RegisterPainter(new G5_FabrikPainter());
             OOPGamesManager.Singleton.RegisterPainter(new G1_VierGewinntPaint());
             OOPGamesManager.Singleton.RegisterPainter(new Gruppe3DragRacePainter());
@@ -73,7 +73,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterRules(new Gruppe2_TrainRunRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe1_ConnectFourRules());
             OOPGamesManager.Singleton.RegisterRules(new G5_4GWRules());
-            OOPGamesManager.Singleton.RegisterRules(new B5RoomRules());
+            OOPGamesManager.Singleton.RegisterRules(new G10_RoomRules());
             OOPGamesManager.Singleton.RegisterRules(new SatisfactoryGameRules());
             OOPGamesManager.Singleton.RegisterRules(new G1_VierGewinntRules());
             OOPGamesManager.Singleton.RegisterRules(new Gruppe3DragRaceRules());
@@ -97,7 +97,7 @@ namespace OOPGames
             OOPGamesManager.Singleton.RegisterPlayer(new Gruppe1_ConnectFourComputerPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_4GWComputerPlayer());
-            OOPGamesManager.Singleton.RegisterPlayer(new B5RoomHumanPlayer());
+            OOPGamesManager.Singleton.RegisterPlayer(new G10_RoomHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G5_FabrikHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntHumanPlayer());
             OOPGamesManager.Singleton.RegisterPlayer(new G1_VierGewinntComputerPlayer());

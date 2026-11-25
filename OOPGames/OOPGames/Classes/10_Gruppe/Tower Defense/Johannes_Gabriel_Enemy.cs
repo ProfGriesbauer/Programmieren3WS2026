@@ -3,16 +3,16 @@ using System.Collections.Generic;
 
 namespace OOPGames
 {
-    public class Enemy
+    public class G10_Enemy
     {
-        public Enemy(
+        public G10_Enemy(
             string name,
             double moveSpeed,
             int health,
             int armor,
             int damageOnMainBuilding,
-            IEnumerable<DamageType> resistantDamageTypes,
-            IEnumerable<DamageType> weakAgainst,
+            IEnumerable<G10_DamageType> resistantDamageTypes,
+            IEnumerable<G10_DamageType> weakAgainst,
             int reward)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -53,8 +53,8 @@ namespace OOPGames
             CurrentArmor = armor;
             Armor = armor;
             DamageOnMainBuilding = damageOnMainBuilding;
-            ResistantDamageTypes = new HashSet<DamageType>(resistantDamageTypes ?? Array.Empty<DamageType>());
-            WeakAgainst = new HashSet<DamageType>(weakAgainst ?? Array.Empty<DamageType>());
+            ResistantDamageTypes = new HashSet<G10_DamageType>(resistantDamageTypes ?? Array.Empty<G10_DamageType>());
+            WeakAgainst = new HashSet<G10_DamageType>(weakAgainst ?? Array.Empty<G10_DamageType>());
             Reward = reward;
         }
 
@@ -66,8 +66,8 @@ namespace OOPGames
         public int Armor { get; private set; }
         public int CurrentArmor { get; private set; }
         public int DamageOnMainBuilding { get; private set; }
-        public ISet<DamageType> ResistantDamageTypes { get; private set; }
-        public ISet<DamageType> WeakAgainst { get; private set; }
+        public ISet<G10_DamageType> ResistantDamageTypes { get; private set; }
+        public ISet<G10_DamageType> WeakAgainst { get; private set; }
         public int Reward { get; private set; }
         public bool IsDefeated { get { return CurrentHealth <= 0; } }
         public int BurnDamagePerSecond { get; private set; }
@@ -91,7 +91,7 @@ namespace OOPGames
 
         double _EffectDamageCarry;
 
-        public double DamageFactor(DamageType damageType, bool useArmor)
+        public double DamageFactor(G10_DamageType damageType, bool useArmor)
         {
             double factor = IncomingDamageFactor;
             if (ResistantDamageTypes.Contains(damageType)) factor *= 0.5;
@@ -101,7 +101,7 @@ namespace OOPGames
         }
 
         // Direct hit: weakness +50 %, resistance -50 %, then armor. Every hit deals at least 1.
-        public int TakeDamage(int damage, DamageType damageType)
+        public int TakeDamage(int damage, G10_DamageType damageType)
         {
             if (damage < 0)
             {
@@ -119,7 +119,7 @@ namespace OOPGames
             return appliedDamage;
         }
 
-        public void ApplyEffect(Tower tower)
+        public void ApplyEffect(G10_Tower tower)
         {
             if (tower == null)
             {
@@ -130,19 +130,19 @@ namespace OOPGames
             // ends EffectDuration seconds after the last hit of that effect.
             switch (tower.Effect)
             {
-                case TowerEffect.Burn:
+                case G10_TowerEffect.Burn:
                     BurnDamagePerSecond = tower.EffectDamagePerSecond;
                     BurnTimeRemaining = tower.EffectDuration;
                     break;
-                case TowerEffect.PoisonDamageOverTime:
+                case G10_TowerEffect.PoisonDamageOverTime:
                     PoisonDamagePerSecond = tower.EffectDamagePerSecond;
                     PoisonTimeRemaining = tower.EffectDuration;
                     break;
-                case TowerEffect.Slow:
+                case G10_TowerEffect.Slow:
                     CurrentMoveSpeed = MoveSpeed * tower.SlowFactor;
                     SlowTimeRemaining = tower.EffectDuration;
                     break;
-                case TowerEffect.ArmorBreak:
+                case G10_TowerEffect.ArmorBreak:
                     CurrentArmor = Math.Max(0, Armor - tower.EffectStrength);
                     ArmorBreakTimeRemaining = tower.EffectDuration;
                     break;
@@ -163,8 +163,8 @@ namespace OOPGames
             {
                 double burnSeconds = Math.Min(seconds, BurnTimeRemaining);
                 double poisonSeconds = Math.Min(seconds, PoisonTimeRemaining);
-                _EffectDamageCarry += BurnDamagePerSecond * burnSeconds * DamageFactor(DamageType.Fire, false)
-                    + PoisonDamagePerSecond * poisonSeconds * DamageFactor(DamageType.Poison, false);
+                _EffectDamageCarry += BurnDamagePerSecond * burnSeconds * DamageFactor(G10_DamageType.Fire, false)
+                    + PoisonDamagePerSecond * poisonSeconds * DamageFactor(G10_DamageType.Poison, false);
                 int whole = (int)Math.Floor(_EffectDamageCarry);
                 _EffectDamageCarry -= whole;
                 appliedDamage = Math.Min(whole, CurrentHealth);

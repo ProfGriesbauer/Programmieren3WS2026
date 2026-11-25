@@ -8,15 +8,15 @@ using System.Windows.Media.Media3D;
 namespace OOPGames
 {
     // Mesh helpers for the Atari console and its cartridges. Shapes are given in millimetres and baked
-    // into room coordinates with a placement matrix, so static parts can still be merged by B5RoomPaint.
-    internal static class B5AtariMesh
+    // into room coordinates with a placement matrix, so static parts can still be merged by G10_RoomPaint.
+    internal static class G10_AtariMesh
     {
         static readonly Dictionary<Color, Material> MetalCache = new Dictionary<Color, Material>();
         static readonly Typeface LabelFont = new Typeface(new FontFamily("Arial"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
 
         internal static Material Plastic(Color color)
         {
-            return B5RoomPaint.GetBoxMaterial(color);
+            return G10_RoomPaint.GetBoxMaterial(color);
         }
 
         internal static Material Metal(Color color)
@@ -155,7 +155,7 @@ namespace OOPGames
             Geometry geometry = formatted.BuildGeometry(new Point(0, 0));
             Rect bounds = geometry.Bounds;
             DrawingBrush brush = new DrawingBrush(new GeometryDrawing(new SolidColorBrush(color), null, geometry));
-            Brush texture = B5RoomTextures.ToBitmap(brush);
+            Brush texture = G10_RoomTextures.ToBitmap(brush);
             DiffuseMaterial material = new DiffuseMaterial(texture);
             material.Freeze();
             Quad(parent, place, center, right, up, height * bounds.Width / bounds.Height, height, material);

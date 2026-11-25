@@ -22,7 +22,7 @@ namespace OOPGames
 
     // Adapter between the Kinderzimmer hub and the game: translates keys, saves the highscore
     // and hands the game state to the renderer. The only Snake class that knows about keys.
-    public sealed class G10_SnakeGame : IB5RoomMiniGame
+    public sealed class G10_SnakeGame : IG10_RoomMiniGame
     {
         readonly G10_SnakeRenderer _Renderer = new G10_SnakeRenderer();
         G10_SnakeSession _Session;
@@ -48,7 +48,7 @@ namespace OOPGames
             }
             _Session.Update(input);
             // Saved at once, because Esc can leave the game at any time.
-            if (_Session.IsNewHighScore) B5RoomHighscores.Save(Title, _Session.Score);
+            if (_Session.IsNewHighScore) G10_RoomHighscores.Save(Title, _Session.Score);
         }
 
         public void Draw(Canvas canvas)
@@ -58,7 +58,7 @@ namespace OOPGames
 
         void NewSession()
         {
-            _Session = new G10_SnakeSession(B5RoomHighscores.Get(Title), Environment.TickCount);
+            _Session = new G10_SnakeSession(G10_RoomHighscores.Get(Title), Environment.TickCount);
         }
 
         static G10_SnakeInput ReadInput(IReadOnlyCollection<Key> keys)
@@ -67,10 +67,10 @@ namespace OOPGames
             bool confirm = false;
             foreach (Key key in keys)
             {
-                if (B5RoomKeys.IsUp(key)) turns.Add(G10_Direction.Up);
-                else if (B5RoomKeys.IsRight(key)) turns.Add(G10_Direction.Right);
-                else if (B5RoomKeys.IsDown(key)) turns.Add(G10_Direction.Down);
-                else if (B5RoomKeys.IsLeft(key)) turns.Add(G10_Direction.Left);
+                if (G10_RoomKeys.IsUp(key)) turns.Add(G10_Direction.Up);
+                else if (G10_RoomKeys.IsRight(key)) turns.Add(G10_Direction.Right);
+                else if (G10_RoomKeys.IsDown(key)) turns.Add(G10_Direction.Down);
+                else if (G10_RoomKeys.IsLeft(key)) turns.Add(G10_Direction.Left);
                 else if (key == Key.Enter || key == Key.Z || key == Key.Space || key == Key.P) confirm = true;
             }
             return new G10_SnakeInput(turns, confirm);

@@ -1,6 +1,6 @@
 # Pac-Man (Atari-Kassette im Kinderzimmer)
 
-Pac-Man läuft als Minispiel `G10_PacManGame` (`IB5RoomMiniGame`) auf der Atari-Konsole des
+Pac-Man läuft als Minispiel `G10_PacManGame` (`IG10_RoomMiniGame`) auf der Atari-Konsole des
 Kinderzimmers. Plan und Entwurfsentscheidungen:
 `Plans/2026-11-19_Johannes_Lacher_PacMan.md` (englisch: `..._PacMan_EN.md`).
 

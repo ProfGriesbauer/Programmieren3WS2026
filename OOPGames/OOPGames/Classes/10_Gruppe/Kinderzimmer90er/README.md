@@ -1,6 +1,6 @@
 # Kinderzimmer (90er)
 
-Das Spiel ist ueber `B5RoomPaint`, `B5RoomRules` und `B5RoomHumanPlayer` in
+Das Spiel ist ueber `G10_RoomPaint`, `G10_RoomRules` und `G10_RoomHumanPlayer` in
 `MainWindow.xaml.cs` registriert. Die unveraenderten Framework-Interfaces laufen
 ueber `IGameRules2`; Eingaben werden im Spieler gepuffert und im 40-ms-Tick verarbeitet.
 
@@ -40,8 +40,8 @@ Wiederverwendete Farbpinsel und Nearest-Neighbor-Skalierung reduzieren dabei
 unnoetige Frame-Allocations.
 Die gesamte Tower-Defense-Grafik stammt aus dem 1080p-Sprite-Paket in
 `Tower Defense/Assets` (animierte Tower, Gegner, Bosse, Burg, Effekte, fuenf Karten).
-`B5_TowerDefenseSprites.cs` liest `sprites.json` und schneidet die Frames zu,
-`B5_TowerDefenseMaps.cs` laedt die Karten-JSONs; die Pixel-Oberflaeche zeichnet in
+`Johannes_Gabriel_TowerDefenseSprites.cs` liest `sprites.json` und schneidet die Frames zu,
+`Johannes_Gabriel_TowerDefenseMaps.cs` laedt die Karten-JSONs; die Pixel-Oberflaeche zeichnet in
 1920x1080 mit Nearest-Neighbor-Skalierung. Details stehen in `Tower Defense/README.md`.
 
 Die Szene verwendet prozedural erzeugte WPF-Materialien und Geometrie, keine
@@ -76,7 +76,7 @@ erhalten.
 - Im Zimmer: Pfeiltasten links/rechts oder A/D waehlen ein Geraet, Enter oder Z oeffnet es.
 - In der Geraeteansicht: 1-9 oder die Pfeiltasten waehlen ein Spiel, Enter oder Z startet es.
 - Im Spiel: Pfeiltasten oder WASD steuern; Esc oder X geht zur Geraeteansicht zurueck.
-  Ausnahme: Spiele mit `IB5RoomOwnBackKey` (Tower Defense) erhalten Esc/X selbst und
+  Ausnahme: Spiele mit `IG10_RoomOwnBackKey` (Tower Defense) erhalten Esc/X selbst und
   oeffnen damit ein eigenes Menue; sie werden ueber `ExitRequested` verlassen.
 - SolarShooter: Pfeiltasten oder WASD bewegen das Schiff; Z oder Leertaste feuert.
   Nach Game Over oder dem Sieg startet Enter oder Z eine neue Runde. Dauerfeuer
@@ -146,7 +146,7 @@ SolarStriker-Sprites, -Level oder -Bossmuster.
 ## Lautstaerke
 
 Oben links im 3D-Raum (Raum- und Geraeteansicht) sitzt ein Lautstaerkeregler fuer alle Spiele
-der Gruppe 10 (`B5_VolumeControl.cs`). Bedienung: Segmente anklicken (ein erneuter Klick auf das
+der Gruppe 10 (`Johannes_Gabriel_VolumeControl.cs`). Bedienung: Segmente anklicken (ein erneuter Klick auf das
 einzige leuchtende Segment schaltet stumm), Buttons `-` / `+`, Mausrad ueber dem Regler oder die
 Tasten `+` / `-` (auch Ziffernblock). Die Tasten wirken in jeder Phase, auch waehrend eines
 Spiels; die Spiele selbst erhalten sie nicht. Nach einer Aenderung im Spiel wird der Regler kurz
