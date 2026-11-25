@@ -544,6 +544,9 @@ namespace OOPGames
         internal Canvas MentorOverlay { get; }
         internal bool GebaeuderegisterGeoeffnet => _field.GebaeuderegisterGeoeffnet;
         internal bool InventarGeoeffnet => _inventarGeoeffnet;
+        internal G5_Recipe LaufendesHandwerk => _field.LaufendesHandwerk;
+        internal int OffeneHandwerkAnzahl => _field.OffeneHandwerkAnzahl;
+        internal int VerbleibendeHandwerkTicks => _field.VerbleibendeHandwerkTicks;
         internal IG5_GebaeudeInfo AusgewaehltesGebaeude =>
             ((IG5_FabrikSpielInfo)_field).AusgewaehltesGebaeude;
         internal IReadOnlyDictionary<G5_Item, int> SpielerInventar =>

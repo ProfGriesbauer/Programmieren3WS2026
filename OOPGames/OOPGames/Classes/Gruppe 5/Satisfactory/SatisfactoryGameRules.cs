@@ -95,7 +95,7 @@ namespace OOPGames
                     SellSelectedBuilding();
                     break;
                 case G5_FabrikAktionstyp.GegenstandAbholen:
-                    CollectSelectedMinerOutput(action.Wert);
+                    CollectSelectedBuildingOutput(action.Wert);
                     break;
                 case G5_FabrikAktionstyp.ManuellHerstellen:
                     CraftManually(action.Wert);
@@ -174,6 +174,13 @@ namespace OOPGames
                 return;
             }
 
+            if (_fieldView.TryConsumePendingConveyorLine(
+                out G5_GridPosition lineStart,
+                out G5_GridPosition lineEnd))
+            {
+                PlaceConveyorLine(lineStart, lineEnd);
+            }
+
             if (_fieldView.TryConsumePendingBuild(
                 out G5_Bauwerkzeug droppedTool,
                 out G5_GridPosition dropPosition))
@@ -187,10 +194,12 @@ namespace OOPGames
             G5_Recipe abgeschlossenesHandwerk = _field.TickManuellesHandwerk();
             if (abgeschlossenesHandwerk != null)
             {
+                int offen = _field.OffeneHandwerkAnzahl;
                 _field.SetStatusMeldung(
                     abgeschlossenesHandwerk.OutputAmount + " " +
                     G5_FabrikBezeichnungen.Gegenstand(abgeschlossenesHandwerk.Output) +
-                    " hergestellt.");
+                    " hergestellt." +
+                    (offen > 0 ? " Noch " + offen + " in Arbeit." : ""));
             }
 
             List<G5_Miner> miners = _field.InterneGebaeude.OfType<G5_Miner>().ToList();
@@ -417,6 +426,156 @@ namespace OOPGames
             _field.SetStatusMeldung(building.Name + " gebaut. Kosten: " + FormatCost(cost) + ".");
         }
 
+        private void PlaceConveyorLine(G5_GridPosition start, G5_GridPosition end)
+        {
+            G5_Building source = FindBuildingAt(start);
+            G5_Building destination = FindBuildingAt(end);
+            if (!IsProductionSource(source) || !TryGetProducedItem(source, out G5_Item item))
+            {
+                _field.SetStatusMeldung(
+                    "Ziehe das Förderband vom Ausgang eines Förderers oder Produktionsgebäudes.");
+                return;
+            }
+
+            if (!(destination is G5_Storage) &&
+                (!(destination is G5_ProductionBuilding productionDestination) ||
+                    productionDestination.SelectedRecipe == null ||
+                    !productionDestination.SelectedRecipe.Ingredients.ContainsKey(item)))
+            {
+                _field.SetStatusMeldung(
+                    "Ziehe das Förderband zum passenden Eingang eines Produktionsgebäudes oder Lagers.");
+                return;
+            }
+
+            IReadOnlyList<G5_GridPosition> route = CreateConveyorLinePath(start, end);
+            if (route.Count <= 2)
+            {
+                _field.SetStatusMeldung(
+                    "Zwischen Ausgang und Eingang ist kein Feld für ein Förderband frei.");
+                return;
+            }
+
+            List<G5_GridPosition> newBeltPositions = new List<G5_GridPosition>();
+            List<G5_GridPosition> blockedPositions = new List<G5_GridPosition>();
+            foreach (G5_GridPosition position in route.Skip(1).Take(route.Count - 2))
+            {
+                G5_Building existing = FindBuildingAt(position);
+                if (existing is G5_Conveyor)
+                {
+                    continue;
+                }
+
+                newBeltPositions.Add(position);
+                if (existing != null ||
+                    !IsBuildableArea(position.X, position.Y, BuildingWidth, BuildingHeight, null))
+                {
+                    blockedPositions.Add(position);
+                }
+            }
+
+            Dictionary<G5_Item, int> cost = new Dictionary<G5_Item, int>();
+            IReadOnlyDictionary<G5_Item, int> costPerBelt =
+                G5_FabrikKosten.Baupreis(G5_Bauwerkzeug.Foerderband);
+            foreach (G5_GridPosition _ in newBeltPositions)
+            {
+                AddCost(cost, costPerBelt);
+            }
+
+            if (blockedPositions.Count > 0)
+            {
+                G5_GridPosition blocked = blockedPositions[0];
+                string costText = cost.Count == 0
+                    ? "Keine zusätzlichen Förderbandsegmente erforderlich"
+                    : "Kosten für die geplante Linie mit " + newBeltPositions.Count +
+                        " Segmenten: " + FormatCost(cost);
+                _field.SetStatusMeldung(
+                    "Förderbandlinie nicht gebaut: Feld " + blocked.X + ", " + blocked.Y +
+                    " ist blockiert. " + costText + ".");
+                return;
+            }
+
+            if (newBeltPositions.Count == 0)
+            {
+                RefreshConveyorConnections();
+                _field.SetStatusMeldung("Die Förderbandlinie besteht bereits; Verbindungen aktualisiert.");
+                return;
+            }
+
+            if (!_field.HatRessourcen(cost))
+            {
+                string available = string.Join(", ", cost.Select(entry =>
+                    _field.Gesamtmenge(entry.Key) + " " +
+                    G5_FabrikBezeichnungen.Gegenstand(entry.Key)));
+                _field.SetStatusMeldung(
+                    "Förderbandlinie nicht gebaut (" + newBeltPositions.Count +
+                    " Segmente). Benötigt: " + FormatCost(cost) +
+                    ". Vorhanden: " + available + ".");
+                return;
+            }
+
+            List<G5_Conveyor> placedBelts = new List<G5_Conveyor>();
+            foreach (G5_GridPosition position in newBeltPositions)
+            {
+                G5_Conveyor conveyor = new G5_Conveyor(
+                    position,
+                    bufferCapacity: 10,
+                    itemsPerTick: 1);
+                _field.AddGebaeude(conveyor);
+                _buildingInvestments.Add(
+                    conveyor,
+                    new Dictionary<G5_Item, int>(costPerBelt));
+                placedBelts.Add(conveyor);
+            }
+
+            if (!_field.TryVerbraucheRessourcen(cost))
+            {
+                foreach (G5_Conveyor conveyor in placedBelts)
+                {
+                    _buildingInvestments.Remove(conveyor);
+                    _field.RemoveGebaeude(conveyor);
+                }
+
+                RefreshConveyorConnections();
+                throw new InvalidOperationException(
+                    "Förderbandkosten haben sich während des Linienbaus geändert.");
+            }
+
+            RefreshConveyorConnections();
+            _field.SetStatusMeldung(
+                newBeltPositions.Count + " Förderbandsegmente gebaut. Kosten: " +
+                FormatCost(cost) + ".");
+        }
+
+        internal static IReadOnlyList<G5_GridPosition> CreateConveyorLinePath(
+            G5_GridPosition start,
+            G5_GridPosition end)
+        {
+            List<G5_GridPosition> positions = new List<G5_GridPosition> { start };
+            int x = start.X;
+            int y = start.Y;
+            int xStep = Math.Sign(end.X - x);
+            while (x != end.X)
+            {
+                x += xStep;
+                positions.Add(new G5_GridPosition(x, y));
+            }
+
+            int yStep = Math.Sign(end.Y - y);
+            while (y != end.Y)
+            {
+                y += yStep;
+                positions.Add(new G5_GridPosition(x, y));
+            }
+
+            return positions.AsReadOnly();
+        }
+
+        private G5_Building FindBuildingAt(G5_GridPosition position)
+        {
+            return _field.InterneGebaeude.FirstOrDefault(building =>
+                building.Position == position);
+        }
+
         private void SelectRecipe(string recipeName)
         {
             if (!(_field.AusgewaehltesInternesGebaeude is G5_ProductionBuilding production))
@@ -558,17 +717,25 @@ namespace OOPGames
             _field.SetStatusMeldung("Gebäude verkauft: 50 % der Bau- und Verbesserungskosten wurden erstattet.");
         }
 
-        private void CollectSelectedMinerOutput(string amountText)
+        private void CollectSelectedBuildingOutput(string amountText)
         {
-            if (!(_field.AusgewaehltesInternesGebaeude is G5_Miner miner))
+            G5_Building building = _field.AusgewaehltesInternesGebaeude;
+            if (!(building is G5_Miner) && !(building is G5_ProductionBuilding))
             {
-                _field.SetStatusMeldung("Wähle einen Förderer aus, um seine Ausgabe abzuholen.");
+                _field.SetStatusMeldung(
+                    "Wähle einen Förderer oder ein Produktionsgebäude aus, um die Ausgabe abzuholen.");
                 return;
             }
 
-            if (miner.CountOf(miner.Resource) <= 0)
+            IReadOnlyDictionary<G5_Item, int> outputContents =
+                building is G5_Miner miner
+                    ? miner.OutputContents
+                    : ((G5_ProductionBuilding)building).OutputContents;
+            KeyValuePair<G5_Item, int> output = outputContents
+                .FirstOrDefault(entry => entry.Value > 0);
+            if (output.Value <= 0)
             {
-                _field.SetStatusMeldung("Der Förderer hat noch nichts zum Abholen.");
+                _field.SetStatusMeldung("Das Gebäude hat noch nichts zum Abholen.");
                 return;
             }
 
@@ -578,14 +745,19 @@ namespace OOPGames
                 return;
             }
 
-            if (!_field.TryCollectMinerOutput(miner, requestedAmount, out int amount))
+            if (!_field.TryCollectBuildingOutput(
+                building,
+                output.Key,
+                requestedAmount,
+                out int amount))
             {
                 _field.SetStatusMeldung("Rucksack und Lager sind voll. Schaffe Platz zum Abholen.");
                 return;
             }
 
-            _field.SetStatusMeldung(amount + " " + G5_FabrikBezeichnungen.Gegenstand(miner.Resource) +
-                " vom Förderer abgeholt.");
+            _field.SetStatusMeldung(
+                amount + " " + G5_FabrikBezeichnungen.Gegenstand(output.Key) +
+                " aus " + building.Name + " abgeholt.");
             _field.BestaetigeMengeEingabe();
         }
 
@@ -611,15 +783,38 @@ namespace OOPGames
                 return;
             }
 
-            if (!_field.TryStarteManuellesHandwerk(recipe))
+            if (!int.TryParse(_field.MengeEingabe, out int anzahl) || anzahl <= 0)
+            {
+                _field.SetStatusMeldung("Gib eine Anzahl größer als null ein.");
+                return;
+            }
+
+            int maximal = _field.MaxHerstellbar(recipe);
+            if (maximal < anzahl)
+            {
+                string fehlend = string.Join(", ", recipe.Ingredients
+                    .Where(ingredient => _field.Menge(ingredient.Key) < ingredient.Value * anzahl)
+                    .Select(ingredient =>
+                        (ingredient.Value * anzahl - _field.Menge(ingredient.Key)) + " " +
+                        G5_FabrikBezeichnungen.Gegenstand(ingredient.Key)));
+                _field.SetStatusMeldung(
+                    "Für " + anzahl + "× " + G5_FabrikBezeichnungen.Gegenstand(output) +
+                    " reicht es nicht (möglich: " + maximal + ")" +
+                    (fehlend.Length > 0 ? ". Es fehlen: " + fehlend + "." : ". Der Rucksack ist zu voll."));
+                return;
+            }
+
+            if (!_field.TryStarteManuellesHandwerk(recipe, anzahl))
             {
                 _field.SetStatusMeldung(
                     "Für " + recipe.Name + " fehlen Zutaten im Rucksack oder freier Platz.");
                 return;
             }
 
+            _field.BestaetigeMengeEingabe();
             _field.SetStatusMeldung(
-                recipe.Name + " gestartet. Die Herstellung dauert zwei Sekunden.");
+                anzahl + "× " + G5_FabrikBezeichnungen.Gegenstand(output) +
+                " gestartet. Jedes Stück dauert zwei Sekunden (gesamt " + (anzahl * 2) + " s).");
         }
 
         private void SelectInventoryItemForDrop(string itemName)
@@ -631,7 +826,9 @@ namespace OOPGames
                 return;
             }
 
-            if (_field.Menge(item) == 0)
+            bool herstellbar = G5_StarterRecipes.CreateManualCraftingRecipes()
+                .Any(candidate => candidate.Output == item);
+            if (_field.Menge(item) == 0 && !herstellbar)
             {
                 _field.SetStatusMeldung("Von diesem Gegenstand hast du nichts im Rucksack.");
                 return;
@@ -640,7 +837,8 @@ namespace OOPGames
             _field.WaehleAbwurfGegenstand(item);
             _field.SetStatusMeldung(
                 G5_FabrikBezeichnungen.Gegenstand(item) +
-                " ausgewählt. Gib die gewünschte Anzahl mit den Zahlentasten ein.");
+                " ausgewählt. Anzahl mit den Zahlentasten eingeben" +
+                (herstellbar ? ", dann Herstellen (H) oder Ablegen (Enter)." : ", dann Ablegen (Enter)."));
         }
 
         private void DropSelectedInventoryItem()
@@ -931,11 +1129,6 @@ namespace OOPGames
                     continue;
                 }
 
-                if (!_beltConnectedSources.Contains(production))
-                {
-                    TransferOutputs(production);
-                }
-
                 foreach (KeyValuePair<G5_Item, int> ingredient in recipe.Ingredients)
                 {
                     if (_beltConnectedInputs.Contains((production, ingredient.Key)))
@@ -995,29 +1188,6 @@ namespace OOPGames
                         _field.AddInventar(G5_Item.Kohle, 1);
                         break;
                     }
-                }
-            }
-        }
-
-        private void TransferOutputs(G5_Building source)
-        {
-            foreach (KeyValuePair<G5_Item, int> item in source.TransferableContents.ToArray())
-            {
-                foreach (G5_Storage storage in _field.InterneGebaeude.OfType<G5_Storage>())
-                {
-                    if (source.CountOf(item.Key) == 0)
-                    {
-                        break;
-                    }
-
-                    G5_ItemTransfer.Transfer(source, storage, item.Key, source.CountOf(item.Key));
-                }
-
-                int remaining = source.CountOf(item.Key);
-                int amountToTransfer = Math.Min(remaining, _field.FreieAufnahmekapazitaet());
-                if (amountToTransfer > 0 && source.TryExtract(item.Key, amountToTransfer))
-                {
-                    _field.AddInventar(item.Key, amountToTransfer);
                 }
             }
         }

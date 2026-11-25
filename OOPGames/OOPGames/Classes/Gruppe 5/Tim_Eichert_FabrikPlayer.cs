@@ -39,9 +39,22 @@ namespace OOPGames
                     bool inventarGegenstandAusgewaehlt =
                         inventarAnsicht.InventarGeoeffnet &&
                         inventarAnsicht.AusgewaehlterAbwurfGegenstand.HasValue;
-                    bool foerdererAusgewaehlt =
-                        inventarAnsicht.AusgewaehltesGebaeude?.Typ == G5_FabrikGebaeudeTyp.Foerderer;
-                    if (inventarGegenstandAusgewaehlt || foerdererAusgewaehlt)
+
+                    // H stellt die eingegebene Anzahl des ausgewählten Gegenstands her.
+                    if (inventarGegenstandAusgewaehlt && keySelection.Key == Key.H)
+                    {
+                        return G5_FabrikAktion.ManuellHerstellen(
+                            _playerNumber,
+                            inventarAnsicht.AusgewaehlterAbwurfGegenstand.Value.ToString());
+                    }
+                    G5_FabrikGebaeudeTyp? gebaeudeTyp =
+                        inventarAnsicht.AusgewaehltesGebaeude?.Typ;
+                    bool ausgabeGebaeudeAusgewaehlt =
+                        gebaeudeTyp == G5_FabrikGebaeudeTyp.Foerderer ||
+                        gebaeudeTyp == G5_FabrikGebaeudeTyp.Schmelze ||
+                        gebaeudeTyp == G5_FabrikGebaeudeTyp.Konstruktor ||
+                        gebaeudeTyp == G5_FabrikGebaeudeTyp.Assembler;
+                    if (inventarGegenstandAusgewaehlt || ausgabeGebaeudeAusgewaehlt)
                     {
                         if (TryGetDigit(keySelection.Key, out char digit))
                         {

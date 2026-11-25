@@ -360,6 +360,15 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 
 - **Ergebnisvermerk:** Fördererausgaben müssen nun manuell abgeholt werden; manuelles Herstellen von Barren, Platten, Stangen und Beton wurde ergänzt. Gebäudekosten enthalten verarbeitete Materialien. Alle 7 gezielten Gameplay-Tests bestanden.
 
+### 2026-11-25, 09:58 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> füge den letzten prompt in die prompt datei hinzu
+
+- **Ergebnisvermerk:** Der vorherige Wunsch zu manueller Ausgabeabholung, Handwerk und verarbeiteten Gebäudekosten wurde im Promptprotokoll dokumentiert.
+
 ### 2026-11-25, 10:05 Uhr (Europe/Berlin, UTC+01:00)
 
 - **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
@@ -368,3 +377,77 @@ Für neue Prompts zu diesem Spiel werden Datum, lokale Uhrzeit (Europe/Berlin), 
 > füge hinzu, dass man eingeben kann, wie viele bauteile man raus nehmen kann. Außerdem vergrößere das Inventar und dass man sachen aus dem invenar raustun kann und das ddie dann an der stelle liegen bleiben für 2 min. Außerdem braucht es ein knopf um das ganze wieder aufzunehmen. Das inventar soll 50 plätze haben
 
 - **Ergebnisvermerk:** Die Rucksackkapazität beträgt nun 50 Gegenstände. Abhol- und Ablegemengen lassen sich per Zahlentasten eingeben; abgelegte Gegenstände bleiben zwei Minuten am Spielerstandort liegen und können dort über **Aufnehmen** zurückgeholt werden.
+
+### 2026-11-25, 10:19 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> warum funktioniert der build nicht, kannst du das fixen
+
+- **Ergebnisvermerk:** Die laufende `OOPGames.exe` sperrte die Dateien im normalen Debug-Ausgabeordner. Der isolierte Build war erfolgreich mit 0 Warnungen und 0 Fehlern; die laufende Anwendung blieb auf Wunsch des Nutzers geöffnet.
+
+### 2026-11-25, 10:32 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> wofür ist das lager handwerk und wenn man manuell was herstellt soll er immer nur eins herstellen und nicht danach immer weiter machen. Außerdem soll das manuelle herstellen pro item auch eine gewisse zeit dauern. Man könnte auch wieder 2sekunden machen
+
+- **Ergebnisvermerk:** Die Lagerbestände werden von den Lagergebäuden bereitgestellt und können für Baukosten sowie automatische Maschinenversorgung genutzt werden. Manuelles Handwerk startet nun genau ein Produkt, dauert etwa zwei Sekunden und wiederholt sich nicht automatisch. Alle 11 Gruppe-5-Tests bestanden.
+
+### 2026-11-25, 10:47 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> pushe den code
+
+- **Ergebnisvermerk:** Der Gruppe-5-Code wurde als Commit `354b23e` nach `origin/master` gepusht. Alle 11 Gruppe-5-Tests bestanden; generierte und temporäre Dateien blieben uncommittet.
+
+### 2026-11-25, 11:00 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> Füge hinzu, dass man einen reiter für inventar und einen für herstellen hat und das man beim herstellen auch sieht was man dafür braucht. Außerdem ändere das förderband system so, dasas man durch ziehen des förderband vom startpunkt zum endpunkt das förderband baut und dass man sieht wie viele resourcen benötigt werden, wenn dies nicht funktioniert. außerdem sollte es möglich sein aus den anderen gebäuden wie der schmelze die bauteilen rauszunehmen
+
+- **Ergebnisvermerk:** Inventar und manuelles Handwerk sind getrennte Reiter; im Handwerksreiter werden Zutaten und Rucksackbestände angezeigt. Förderbandlinien lassen sich zwischen passenden Gebäuden ziehen, werden ohne Teilbau auf Ressourcen und Hindernisse geprüft und zeigen Kosten beziehungsweise Bestände in der Statusmeldung. Ausgaben aus Produktionsgebäuden bleiben ohne Förderbandverbindung im Gebäude und können manuell abgeholt werden.
+
+### 2026-11-25, 11:04 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** GitHub Copilot SDK in VS Code; der Modellname wird in dieser Sitzung nicht angezeigt.
+- **Prompt im Wortlaut:**
+
+> füge alle letzten prompts wieder hinzu. es fehlen noch welche von vorher
+
+- **Ergebnisvermerk:** Die fehlenden jüngsten Prompts zu Promptprotokoll, Build, einmaligem Handwerk und Push wurden chronologisch ergänzt.
+
+### 2026-11-25, 11:29 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> wir sollen in programmieren 3 ein spiel erstellen. Wir sind in gruppe 5 und machen etwas ähnliches wie satisfactory/factorio. Aus diesem grund darfst du nur datein in unserem ordnersturktur ändern. Die ganzen prompts müssen dokumentiert werden. Mache das bitte automatisch in der datei tim eichert prompt. Mache einfach genauso weiter woe zuvor und schreibe das jeweilige modell dazu.
+>
+> (Anhang: Projektanforderungen_OOPGames_Kurzfassung.pdf)
+
+- **Ergebnisvermerk:** Wechsel von GitHub Copilot zu Claude Code. Ab jetzt wird jeder Prompt automatisch im bisherigen Format mit Datum, Uhrzeit, Wortlaut, Werkzeug/Modell und Ergebnisvermerk in dieser Datei protokolliert. Änderungen erfolgen nur in `Classes/Gruppe 5/` und `Interfaces/Gruppe 5/` (Ausnahme: Registrierungsblock in `MainWindow.xaml.cs`).
+
+### 2026-11-25, 11:49 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> füge das inventar und de herstellen reiter wieder zu einem zusammen, sodass man sieht um welches teil es sich handelt, dass man sieht was man braucht um das herzustellen und dass man ein knopf hat zum herstellen und dass man ne anzahl eingeben kann, wie viel man herstellen möchte
+
+- **Ergebnisvermerk:** Die Reiter „Inventar“ und „Herstellen“ wurden zu einer Ansicht zusammengeführt. Herstellbare Gegenstände sind in der Liste mit ⚒ markiert. Unter der Liste zeigt ein Detailbereich zum ausgewählten Gegenstand den Namen, den Rucksackbestand, die Zutaten pro Stück mit ✓/✗ und die maximal mögliche Anzahl. Dazu gibt es ein Anzahlfeld (Zahlentasten) und die Knöpfe **Herstellen ×N** (auch Taste `H`), **Ablegen** und **Aufnehmen**. Das Spielfeld stellt jetzt N Stück nacheinander her (je 2 s, mit Fortschrittsanzeige). Die Aktion `InventarReiterWaehlen` wurde entfernt und die Anleitung angepasst. Ein neuer Test für die Mengenherstellung kam hinzu. Build: 0 Warnungen, 0 Fehler; alle 14 Gruppe-5-Tests bestanden.
+
+### 2026-11-25, 15:59 Uhr (Europe/Berlin, UTC+01:00)
+
+- **Werkzeug/Modell:** Claude Code (VS Code-Erweiterung), Modell Claude Opus 5.5 (`claude-opus-5-5`).
+- **Prompt im Wortlaut:**
+
+> pushe die änderungen
+
+- **Ergebnisvermerk:** Nur die Gruppe-5-Dateien wurden committet (Inventar-/Herstellen-Zusammenführung, Herstellen mit Anzahl, Anleitung, Test, Promptprotokoll), mit dem Remote-Stand abgeglichen, gebaut und auf `origin/master` gepusht. Generierte `obj`-Dateien und die temporäre `wpftmp.csproj` blieben außen vor.
