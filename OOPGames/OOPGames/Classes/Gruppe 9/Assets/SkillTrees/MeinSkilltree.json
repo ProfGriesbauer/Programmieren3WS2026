@@ -1,0 +1,47 @@
+{
+  "Name": "MeinSkilltree",
+  "Nodes": [
+    {
+      "SkillId": "__tree_start__",
+      "X": 100,
+      "Y": 300,
+      "IsFork": false,
+      "ForceDecision": false
+    },
+    {
+      "SkillId": "power-blast",
+      "X": 658.4000000000001,
+      "Y": 326.95666666666665,
+      "IsFork": false,
+      "ForceDecision": false
+    },
+    {
+      "SkillId": "healing-pulse",
+      "X": 669.6000000000001,
+      "Y": 555.7566666666667,
+      "IsFork": false,
+      "ForceDecision": false
+    },
+    {
+      "SkillId": "mirror-image",
+      "X": 476,
+      "Y": 81.35666666666665,
+      "IsFork": false,
+      "ForceDecision": false
+    }
+  ],
+  "Connections": [
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "power-blast"
+    },
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "healing-pulse"
+    },
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "mirror-image"
+    }
+  ]
+}

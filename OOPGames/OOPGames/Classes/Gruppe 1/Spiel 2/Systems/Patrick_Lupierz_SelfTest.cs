@@ -106,6 +106,20 @@ namespace OOPGames
             run("Bank", "Einzahlen und Abheben", BankDepositWithdraw);
             run("Bank", "2 % Zinsen pro Spieltag, kein Doppelzins", BankInterest);
             run("Bank", "Zinsen beim Tageswechsel im laufenden Spiel genau einmal", BankInterestInGame);
+            run("Geldhai", "5000-Chips-Kredit, 50 % Zinsen pro Tag, Teil- und Vollrückzahlung", LoanSharkDailyRules);
+            run("Angler", "Angler-NPC und vorhandene Fischdaten aus Inventory/Fishing verwenden", AnglerFishData);
+            run("Angler", "Fischliste ist dynamisch und enthält alle Angelarten", AnglerFishScrollData);
+            run("Eduard", "Eduard steht bei den Spielautomaten und besitzt spielsüchtige Dialoge", EduardSlotNpc);
+            run("Eduard", "Eduard spielt am linken Automaten, blockiert ihn, gestreiftes Hemd/Mütze, viele Sprüche", EduardBlocksLeftMachine); // Patrick Lupierz – 22.11.2026
+            run("NPC", "Studentin Lea: eigenes Aussehen (blond, hellgrün, keine Krawatte), nicht mehr die geteilte Vorlage", LeaOwnLook); // Patrick Lupierz – 23.11.2026
+            run("Angler", "Denis: 'Wofuer sind die Fische?' antwortet (Spaß, verkaufen), nur 'Welche Fische gibt es?' öffnet das Lexikon", AnglerFishQuestions); // Patrick Lupierz – 23.11.2026
+            run("Spielhalle", "Gast-Automat: Gruppe aus dem Klassennamen auch ohne Unterstrich (Drag Race, Hay Day)", ArcadeGuestGroupNames); // Patrick Lupierz – 23.11.2026
+            run("Spielhalle", "Gast-Automat ohne Obergrenze: mehr als 9 registrierte Spiele erscheinen alle, eigene Automaten bleiben bei 9", ArcadeGuestNoCap); // Patrick Lupierz – 23.11.2026
+            run("Fenster", "Welt füllt jede Fenstergröße, Minispiele mittig im festen 480x320-Rahmen", WindowScaling); // Patrick Lupierz – 22.11.2026
+            run("NPC", "Duell: NPC ansprechen, herausfordern, Pong spielen; Einsatz, Geldbeutel und Duell-Gedächtnis", NpcDuel); // Patrick Lupierz – 23.11.2026
+            run("NPC", "Duell: Spielauswahl Pong/Poker/Blackjack, Poker und Blackjack gegen den NPC werden ausgewertet", NpcDuelGameChoice); // Patrick Lupierz – 23.11.2026
+            run("Spielhalle", "Patrick: am mittleren Automaten, Aussehen, täglicher Tipp, 300 Chips einmalig für den Schlangen-Rekord", ArcadeMentorPatrick); // Patrick Lupierz – 22.11.2026
+            run("Geldhai", "Haustür-Begegnung wird nur beim Verlassen ausgelöst", LoanHouseExitEncounter);
 
             // ---- Spielzustände
             run("Zustände", "Inventar und Handy öffnen und schließen", StatesMenus);
@@ -683,6 +697,325 @@ namespace OOPGames
             Equal(510, loaded.Finance.Savings, "Konto nach Speichern/Laden am selben Tag");
         }
 
+        private static void LoanSharkDailyRules()
+        {
+            G1C_MoneyManager money = new G1C_MoneyManager(3000);
+            G1C_FinanceManager finance = new G1C_FinanceManager();
+            finance.Borrow(money, 1000, 1);
+            Equal(1000, finance.LoanOwed, "Kreditbetrag");
+            Equal(500, finance.ApplyLoanInterest(2), "Zinsen Tag 2");
+            Equal(1500, finance.LoanOwed, "Schuld nach 50 % Zinsen");
+            Equal(750, finance.ApplyLoanInterest(3), "Zinsen Tag 3");
+            Equal(2250, finance.LoanOwed, "Schuld nach Zinseszins");
+            Equal(0, finance.ApplyLoanInterest(3), "kein zweiter Zinslauf am selben Tag");
+            finance.Repay(money, 250);
+            Equal(2000, finance.LoanOwed, "Teilrueckzahlung");
+            finance.Repay(money, 2000);
+            Equal(0, finance.LoanOwed, "Vollrueckzahlung");
+        }
+
+        private static void AnglerFishData()
+        {
+            G1C_GameManager game = RunningGame();
+            Check(game.Exterior.TownNpcs.Any(n => n.Name == "Denis der Angler"), "Angler-NPC fehlt");
+            G1C_NpcCharacter angler = game.Npcs.Find("Denis der Angler");
+            Check(angler != null, "Angler-Profil fehlt");
+            Check(angler.Personality.Topics.Any(t => t.Question.Contains("Angelspiel")), "Angel-Tutorial-Thema fehlt");
+            Check(angler.Personality.Topics.Any(t => t.Question.Contains("Fische")), "Fischliste-Thema fehlt");
+            foreach (G1C_CatchInfo fish in G1C_FishingGame.Catches.Where(c => c.IsFish))
+            {
+                G1C_Item item = G1C_ItemCatalog.Get(fish.ItemId);
+                Check(item != null && item.Category == G1C_ItemCategory.Fisch, "Fischdaten fehlen fuer " + fish.Name);
+            }
+        }
+
+        private static void AnglerFishScrollData()
+        {
+            int count = G1C_FishingGame.Catches.Count(c => c.IsFish);
+            Check(count > 0, "Fischdaten sind leer");
+            G1C_GameManager game = RunningGame();
+            G1C_NpcCharacter angler = game.Npcs.Find("Denis der Angler");
+            Check(angler != null, "Angler-Profil fuer die Scrollliste fehlt");
+            foreach (G1C_CatchInfo fish in G1C_FishingGame.Catches.Where(c => c.IsFish))
+                Check(G1C_ItemCatalog.Get(fish.ItemId) != null, "Fisch fehlt in der dynamischen Quelle: " + fish.Name);
+        }
+
+        private static void EduardSlotNpc()
+        {
+            G1C_GameManager game = RunningGame();
+            G1C_NpcCharacter eduard = game.Npcs.Find("Eduard");
+            Check(eduard != null, "Eduard-Profil fehlt");
+            Check(eduard.Personality.Topics.Count >= 3, "Eduard hat zu wenige Themen");
+            G1C_Npc worldEduard = game.World.Objects.OfType<G1C_Npc>().FirstOrDefault(n => n.Name == "Eduard");
+            Check(worldEduard != null, "Eduard steht nicht im Casino");
+            if (worldEduard != null)
+                Check(worldEduard.X >= 2 && worldEduard.X <= 6 && worldEduard.Y >= 8 && worldEduard.Y <= 9, "Eduard steht nicht bei den Spielautomaten"); // Patrick Lupierz – 22.11.2026: steht jetzt davor (Y 9)
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 22.11.2026
+        // Aufgabe: Eduard steht vor dem linken Automaten (Blick zum Automaten), dieser ist für den Spieler gesperrt,
+        //          die übrigen Automaten bleiben spielbar; eigenes Aussehen und genug Sprechblasen-Sprüche.
+        private static void EduardBlocksLeftMachine()
+        {
+            G1C_GameManager game = RunningGame();
+            G1C_Npc eduard = game.World.Objects.OfType<G1C_Npc>().FirstOrDefault(n => n.Name == "Eduard");
+            Check(eduard != null, "Eduard fehlt");
+            int machineX = game.World.Objects.Where(o => o.SpriteId == "obj_slot_machine").Min(o => o.X);
+            Equal(G1C_CasinoWorld.EduardMachineX, machineX, "linker Automat");
+            Check(eduard.X == machineX && eduard.Y == 9 && eduard.Facing == G1C_Direction.Up, "Eduard steht nicht vor dem linken Automaten: " + eduard.X + "/" + eduard.Y + " " + eduard.Facing);
+            Check(eduard.Solid, "Eduard ist kein Hindernis");
+            G1C_WorldObject left = game.World.Objects.First(o => o.SpriteId == "obj_slot_machine" && o.X == machineX);
+            Check(left.Interaction != G1C_InteractionType.Slots, "Linker Automat ist für den Spieler nicht gesperrt");
+            Check(game.World.Objects.Count(o => o.Interaction == G1C_InteractionType.Slots) >= 3, "zu wenige freie Automaten");
+            Equal(G1C_CasinoWorld.EduardSkin, eduard.Skin, "Eduards Aussehen");
+            Check(G1C_BuiltInSprites.Create(G1C_CasinoWorld.EduardSkin + "_down_0") != null, "Grafik für Eduard fehlt");
+            G1C_NpcCharacter profile = game.Npcs.Find("Eduard");
+            Check(profile.Personality.GeneralMonologues.Length >= 15, "zu wenige Sprüche: " + profile.Personality.GeneralMonologues.Length);
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Echter Ablauf eines NPC-Duells: Gast Lena im Casino ansprechen, "Zum Duell herausfordern!" wählen,
+        //          Pong starten (Einsatz 20), gewinnen bzw. verlieren, Ergebnis prüfen (Chips, Geldbeutel, Gedächtnis).
+        //          Außerdem: jeder nicht feindliche Gesprächspartner bietet das Duell an (Optionsgrenze 4 beachtet).
+        private static void NpcDuel()
+        {
+            for (int round = 0; round < 2; round++)
+            {
+                bool win = round == 0;
+                G1C_GameManager game = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+                G1C_NpcCharacter lena = game.Npcs.Find("Gast Lena");
+                int purse = lena.Purse, balance = game.Money.Balance;
+                game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                Equal(G1C_GameState.Conversation, game.State, "Gespräch mit Lena");
+                int index = game.Npcs.Conversation.Options.ToList().FindIndex(o => o.Text == "Zum Duell herausfordern!");
+                Check(index >= 0, "Keine Duell-Option: " + string.Join(" | ", game.Npcs.Conversation.Options.Select(o => o.Text)));
+                game.HandleInput(G1C_InputEvent.FromKey(Key.D1 + index));
+                Check(game.Npcs.Conversation.Options.Any(o => o.Text.StartsWith("Pong")), "Keine Spielauswahl im Duell");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.D1));   // Pong
+                G1C_PongDuel duel = game.ActiveGame as G1C_PongDuel;
+                Check(duel != null && duel.IsDuel && duel.DuelOpponent == "Gast Lena", "Duell startet nicht (Zustand " + game.State + ")");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                Equal(balance - G1C_PongDuel.DuelStake, game.Money.Balance, "Einsatz abgebucht");
+                for (int i = 0; i < G1C_PongDuel.WinningScore; i++) { duel.DebugShoot(win); duel.MoveBall(); }
+                Check(duel.IsOver && duel.PlayerWon == win, "Duell nicht entschieden");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+                Equal(G1C_GameState.Result, game.State, "Ergebnisanzeige");
+                Equal(balance + (win ? 1 : -1) * G1C_PongDuel.DuelStake, game.Money.Balance, "Chips nach dem Duell");
+                Equal(purse - (win ? 1 : -1) * G1C_PongDuel.DuelStake, lena.Purse, "Lenas Geldbeutel");
+                Equal(win ? 1 : 0, lena.Memory.DuelsWonByPlayer, "Siege gemerkt");
+                Equal(win ? 0 : 1, lena.Memory.DuelsLostByPlayer, "Niederlagen gemerkt");
+                Check(!game.ArcadeHighscores.Keys.Any(k => k.StartsWith("Duell")), "Duell landet auf der Highscore-Tafel");
+            }
+
+            // Duell ohne Start verlassen: kein Einsatz, kein Ergebnis
+            G1C_GameManager quit = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+            int before = quit.Money.Balance;
+            quit.StartDuel(quit.Npcs.Find("Gast Lena"));
+            quit.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+            Check(quit.ActiveGame == null && quit.State == G1C_GameState.MainGame && quit.Money.Balance == before, "Abbruch vor dem Start kostet etwas");
+            Equal(0, quit.Npcs.Find("Gast Lena").Memory.DuelsTotal, "Abbruch zählt als Duell");
+
+            // Alle nicht feindlichen NPCs ohne Dienst bieten das Duell an – nur Mutter und Oma nie
+            G1C_GameManager all = RunningGame();
+            int familyChecked = 0;
+            foreach (G1C_NpcCharacter c in all.Npcs.Characters)
+            {
+                all.Npcs.Conversation.Open(c, null);
+                if (G1C_NpcRelationship.IsHostile(c.Relationship.Status)) continue;
+                bool offers = all.Npcs.Conversation.Options.Any(o => o.Text == "Zum Duell herausfordern!");
+                if (c.Personality.IsFamily) Check(!offers, c.Name + " (Familie) darf nicht herausgefordert werden");
+                else Check(offers, c.Name + " bietet kein Duell an");
+                familyChecked += c.Personality.IsFamily ? 1 : 0;
+                all.Npcs.Conversation.Close();
+            }
+            Check(familyChecked >= 2, "Mutter und Oma wurden nicht geprüft");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Denis' Fischfragen im echten Gespräch. "Wofuer sind die Fische?" gibt eine Antwort (Angeln zum Spaß,
+        //          Fische verkaufen) und öffnet kein Lexikon; "Welche Fische gibt es?" öffnet das Lexikon.
+        private static void AnglerFishQuestions()
+        {
+            foreach (bool lexicon in new[] { false, true })
+            {
+                G1C_GameManager game = RunningGame();
+                G1C_Conversation c = game.Npcs.Conversation;
+                c.Open(game.Npcs.Find("Denis der Angler"), null);
+                int ask = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Ich hab da eine Frage"));
+                Check(ask >= 0, "Keine Fragen-Option bei Denis");
+                c.Choose(ask);
+                string wanted = lexicon ? "Welche Fische gibt es?" : "Wofuer sind die Fische?";
+                for (int page = 0; page < 4 && !c.Options.Any(o => o.Text == wanted); page++)
+                {
+                    int more = c.Options.ToList().FindIndex(o => o.Text.StartsWith("Weitere Fragen"));
+                    Check(more >= 0, "Frage nicht gefunden: " + wanted);
+                    c.Choose(more);
+                }
+                c.Choose(c.Options.ToList().FindIndex(o => o.Text == wanted));
+                if (lexicon) Check(c.FishScrollMode, "Lexikon öffnet sich nicht");
+                else
+                {
+                    Check(!c.FishScrollMode, "Lexikon überdeckt die Antwort");
+                    Check(c.Line.Contains("Spaß") && c.Line.Contains("verkaufen"), "Antwort nennt Spaß/Verkaufen nicht: " + c.Line);
+                }
+            }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Studentin Lea hat ihr eigenes Aussehen in Stadt, Casino-Besuch und Gespräch (Porträt), ohne goldene Krawatte.
+        private static void LeaOwnLook()
+        {
+            G1C_GameManager game = RunningGame();
+            Equal(G1C_ShopNpcRoster.LeaSkin, game.Npcs.Find("Studentin Lea").Skin, "Skin im Profil");
+            G1C_Npc town = game.Exterior.TownNpcs.First(n => n.Name == "Studentin Lea");
+            Equal(G1C_ShopNpcRoster.LeaSkin, town.Skin, "Skin in der Stadt");
+            Check(G1C_ShopNpcRoster.LeaSkin != "dealer_blue", "Lea nutzt noch die geteilte Vorlage");
+            System.Windows.Media.Imaging.BitmapSource lea = G1C_BuiltInSprites.Create(G1C_ShopNpcRoster.LeaSkin + "_down_0");
+            Check(lea != null, "Grafik für Lea fehlt");
+            int[] pixels = new int[lea.PixelWidth * lea.PixelHeight];
+            System.Windows.Media.Imaging.BitmapSource bgra = new System.Windows.Media.Imaging.FormatConvertedBitmap(lea, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+            bgra.CopyPixels(pixels, lea.PixelWidth * 4, 0);
+            Check(!pixels.Contains(unchecked((int)0xFFD8A848)), "Goldene Krawatte noch sichtbar");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Spielauswahl im Duell. Über das Gespräch Poker bzw. Blackjack gegen Lena wählen, das richtige Spiel
+        //          mit Lenas Namen läuft; Ergebnis: Poker bewegt Chips zwischen Spieler und Lenas Geldbeutel, Blackjack
+        //          vergleicht die Gewinne gegen den Dealer. "Doch nicht." führt zurück ohne Spiel.
+        private static void NpcDuelGameChoice()
+        {
+            string[] titles = { "Pong", "Poker", "Blackjack" };
+            for (int pick = 1; pick <= 2; pick++)
+            {
+                G1C_GameManager game = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+                G1C_NpcCharacter lena = game.Npcs.Find("Gast Lena");
+                int purse = lena.Purse, balance = game.Money.Balance;
+                game.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                int index = game.Npcs.Conversation.Options.ToList().FindIndex(o => o.Text == "Zum Duell herausfordern!");
+                game.HandleInput(G1C_InputEvent.FromKey(Key.D1 + index));
+                List<string> options = game.Npcs.Conversation.Options.Select(o => o.Text).ToList();
+                Check(options.Count == 4 && titles.All(t => options.Any(o => o.StartsWith(t))) && options.Contains("Doch nicht."),
+                      "Spielauswahl unvollständig: " + string.Join(" | ", options));
+                game.HandleInput(G1C_InputEvent.FromKey(Key.D1 + pick));
+                IG1C_NpcDuelGame duel = game.ActiveGame as IG1C_NpcDuelGame;
+                Check(duel != null && duel.DuelOpponent == "Gast Lena", titles[pick] + "-Duell startet nicht (Zustand " + game.State + ")");
+                Equal(pick == 1 ? G1C_GameState.Poker : G1C_GameState.Blackjack, game.State, "Spielzustand");
+                Check(pick == 1 ? game.ActiveGame is G1C_Poker : game.ActiveGame is G1C_Blackjack, "falsches Spiel");
+                Check(game.ActiveGame.Name.Contains("Gast Lena"), "Name des Gegners fehlt: " + game.ActiveGame.Name);
+                game.Money.Deposit(100);   // Spieler hat 100 Chips gewonnen
+                game.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+                Equal(G1C_GameState.Result, game.State, "Ergebnisanzeige nach " + titles[pick]);
+                Equal(1, lena.Memory.DuelsWonByPlayer, "Sieg gemerkt (" + titles[pick] + ")");
+                Equal(pick == 1 ? purse - 100 : purse, lena.Purse, "Lenas Geldbeutel nach " + titles[pick]);
+                Equal(balance + 100, game.Money.Balance, "Chips des Spielers");
+            }
+
+            // Poker-Duell: alle Meldungen nennen nur den Duellanten, nie "Max" (ganze Hände bis zum Showdown/Fold)
+            G1C_Poker poker = new G1C_Poker(new G1C_MoneyManager(1000), new Random(11));
+            poker.ConfigureDuel("Gast Lena");
+            List<string> seen = new List<string>();
+            for (int hand = 0; hand < 6; hand++)
+            {
+                poker.HandleInput(G1C_InputEvent.FromKey(Key.E));
+                for (int step = 0; step < 400; step++)
+                {
+                    poker.Update();
+                    poker.HandleInput(G1C_InputEvent.FromKey(Key.D1));   // Check/Call
+                    if (!seen.Contains(poker.StatusMessage)) seen.Add(poker.StatusMessage);
+                }
+            }
+            Check(!seen.Any(m => m.Contains("Max")), "Poker-Duell nennt Max: " + seen.FirstOrDefault(m => m.Contains("Max")));
+            Check(seen.Any(m => m.Contains("Gast Lena")), "Duellant wird nie genannt: " + string.Join(" | ", seen.Take(5)));
+
+            // "Doch nicht." – zurück zum Gespräch, kein Spiel
+            G1C_GameManager back = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+            back.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            int i = back.Npcs.Conversation.Options.ToList().FindIndex(o => o.Text == "Zum Duell herausfordern!");
+            back.HandleInput(G1C_InputEvent.FromKey(Key.D1 + i));
+            back.HandleInput(G1C_InputEvent.FromKey(Key.D4));
+            Check(back.ActiveGame == null && back.State == G1C_GameState.Conversation, "Doch nicht. startet trotzdem ein Spiel");
+
+            // Ohne Ergebnis verlassen (Poker nie ausgeteilt): zählt nicht
+            G1C_GameManager quit = GameAt(G1C_WorldLocation.Casino, 11, 8, G1C_Direction.Up);
+            quit.StartDuel(quit.Npcs.Find("Gast Lena"), G1C_DuelGame.Poker);
+            quit.HandleInput(G1C_InputEvent.FromKey(Key.Q));
+            Check(quit.ActiveGame == null && quit.State == G1C_GameState.MainGame, "Leeres Poker-Duell nicht beendet");
+            Equal(0, quit.Npcs.Find("Gast Lena").Memory.DuelsTotal, "Leeres Duell gezählt");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 22.11.2026
+        // Aufgabe: NPC Patrick in der Spielhalle. Steht neben dem mittleren Automaten (Front frei), blond/schwarzes
+        //          T-Shirt/blaue Hose/weiße Schuhe, jeden Tag ein anderer Tipp, Rekord weder zu leicht noch unerreichbar,
+        //          300 Chips genau einmal, erst wenn der Rekord übertroffen ist.
+        private static void ArcadeMentorPatrick()
+        {
+            G1C_GameManager game = RunningGame();
+            G1C_Npc patrick = game.Arcade.Objects.OfType<G1C_Npc>().FirstOrDefault(n => n.Name == G1C_ArcadeMentor.NpcName);
+            Check(patrick != null, "Patrick steht nicht in der Spielhalle");
+            G1C_ArcadeCabinet middle = G1C_ArcadeCatalog.Cabinets.First(c => c.IsGuestCabinet);
+            Check(Math.Abs(patrick.X - middle.X) + Math.Abs(patrick.Y - middle.Y) == 1, "Patrick steht nicht am mittleren Automaten");
+            Check(game.Arcade.ObjectAt(middle.X, middle.Y + 1) == null && game.Arcade.Map.IsWalkable(middle.X, middle.Y + 1), "Vorderseite des Automaten blockiert");
+            Equal("pc-F0D060-F0C8A0-181818-2848A8-F8F8F8-x", patrick.Skin, "Aussehen (blond, schwarz, blau, weiß)");
+            Check(G1C_BuiltInSprites.Create(patrick.Skin + "_down_0") != null, "Grafik fehlt");
+            G1C_NpcCharacter profile = game.Npcs.Find(G1C_ArcadeMentor.NpcName);
+            Check(profile != null && profile.Personality.BaseMood == G1C_NpcMood.Happy, "Profil fehlt oder nicht optimistisch");
+            Check(game.Npcs.ArcadeHighscores != null, "Rekorde nicht ans NPC-System angebunden");
+
+            Check(G1C_ArcadeMentor.TipFor(1) != G1C_ArcadeMentor.TipFor(2), "Tipp wechselt nicht täglich");
+            Equal(G1C_ArcadeMentor.TipFor(3), G1C_ArcadeMentor.TipFor(3), "Tipp innerhalb eines Tages gleich");
+            Equal(576, G1C_ArcadeMentor.SnakeRecord, "Patricks Rekord");
+            Check(game.HighscoreText().Contains("Schlange: 576 Punkte – Patrick"), "Rekord fehlt auf der Tafel: " + game.HighscoreText());
+            game.ArcadeHighscores["Schlange"] = 600;
+            Check(game.HighscoreText().Contains("Schlange: 600 Punkte – Du") && !game.HighscoreText().Contains("576"), "Gebrochener Rekord nicht auf der Tafel: " + game.HighscoreText());
+            game.ArcadeHighscores.Remove("Schlange");
+
+            G1C_MoneyManager money = new G1C_MoneyManager(100);
+            G1C_NpcMemory memory = new G1C_NpcMemory();
+            Dictionary<string, int> scores = new Dictionary<string, int> { { "Schlange", G1C_ArcadeMentor.SnakeRecord } };
+            G1C_TopicContext c = new G1C_TopicContext { Money = money, Memory = memory, Highscores = scores };
+            G1C_ArcadeMentor.RecordAnswer(c);
+            Equal(100, money.Balance, "Gleichstand zahlt nichts aus");
+            scores["Schlange"] = G1C_ArcadeMentor.SnakeRecord + 10;
+            G1C_ArcadeMentor.RecordAnswer(c);
+            Equal(400, money.Balance, "300 Chips für den gebrochenen Rekord");
+            G1C_ArcadeMentor.RecordAnswer(c);
+            Equal(400, money.Balance, "Belohnung nur einmal");
+            Check(memory.RecordRewardPaid, "Auszahlung nicht im (gespeicherten) Gedächtnis");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 22.11.2026
+        // Aufgabe: Fensteranpassung. Ein hohes Fenster (960x1100): die Welt nutzt die volle Höhe (kein Rand, kein
+        //          Versatz); Minispiele liegen exakt mittig im 480x320-Rahmen, das Fenster reicht darüber hinaus.
+        private static void WindowScaling()
+        {
+            System.Windows.Controls.Canvas canvas = new System.Windows.Controls.Canvas();
+            canvas.Measure(new System.Windows.Size(960, 1100));
+            canvas.Arrange(new System.Windows.Rect(0, 0, 960, 1100));
+            G1C_Renderer r = new G1C_Renderer(new G1C_SpriteLibrary());
+            r.BeginFrame(canvas);
+            Equal(2.0, r.Viewport.Scale, "Skalierung");
+            Equal(0.0, r.Viewport.OffsetY, "Welt ohne Versatz");
+            Equal(480.0, G1C_Renderer.ScreenWidth, "Weltbreite");
+            Equal(550.0, G1C_Renderer.ScreenHeight, "Welt nutzt die ganze Höhe");
+            r.UseFixedFrame();
+            Equal(320.0, G1C_Renderer.ScreenHeight, "Minispiel-Rahmen");
+            Equal(230.0, r.Viewport.OffsetY, "Rahmen mittig");
+            Equal(435.0, G1C_Renderer.WindowBottom, "Fensterunterkante im Rahmen");
+            Equal(-115.0, G1C_Renderer.WindowTop, "Fensteroberkante im Rahmen");
+            Equal(240.0, r.Viewport.ToVirtualY(230 + 480), "Mausumrechnung im Rahmen");
+            Equal(172.0, G1C_Poker.PlayerHandTop, "Pokerhand im Rahmen");
+            r.BeginFrame(canvas);   // zurück, damit andere Tests die Weltmaße sehen
+        }
+
+        private static void LoanHouseExitEncounter()
+        {
+            G1C_GameManager game = RunningGame();
+            game.Finance.Borrow(game.Money, 5000, game.Clock.Day);
+            Check(!game.Finance.LoanBonesBroken, "Knochenbruch geschieht sofort beim Kredit");
+            game.Finance.RestoreLoanState(game.Clock.Day, game.Clock.Day, game.Clock.Day - 1, 5, game.Clock.Day);
+            Check(game.CurrentLocation == G1C_WorldLocation.Home, "Test startet nicht zuhause");
+        }
+
         // ------------------------------------------------------------------ Zustände
 
         private static void StatesMenus()
@@ -720,7 +1053,7 @@ namespace OOPGames
         {
             G1C_ExteriorWorld city = new G1C_ExteriorWorld();
             G1C_CollisionManager collision = new G1C_CollisionManager(city);
-            List<G1C_WorldObject> pavilions = city.Objects.Where(o => o.SpriteId == "building_pavilion").ToList();
+            List<G1C_WorldObject> pavilions = city.Objects.Where(o => o.SpriteId == "building_pavilion_back").ToList();
             Check(pavilions.Count == 2, "Anzahl Pavillons: " + pavilions.Count);
             foreach (G1C_WorldObject p in pavilions)
             {
@@ -939,6 +1272,39 @@ namespace OOPGames
         {
             public IPlayMove GetMove(IGameField field) { return new FakeMove(PlayerNumber); }
             public override IGamePlayer Clone() { return new FakeComputer(); }
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Gast-Automat ohne Limit. 14 registrierte Spiele (mehr als die frühere Grenze von 9) werden alle angeboten.
+        private static void ArcadeGuestNoCap()
+        {
+            List<IGameRules> rules = new List<IGameRules>();
+            for (int i = 0; i < 14; i++) rules.Add(new FakeRules());
+            List<G1C_GuestGameEntry> found = G1C_GuestGameCatalog.Discover(rules,
+                new IPaintGame[] { new FakePainter() }, new IGamePlayer[] { new FakeHuman(), new FakeComputer() });
+            Equal(14, found.Count, "Spiele im Gast-Automaten");
+            Check(found.Count > G1C_ArcadeCatalog.MaxGamesPerCabinet, "Gast-Automat noch begrenzt");
+            Check(G1C_ArcadeCatalog.Cabinets.Where(c => !c.IsGuestCabinet).All(c => c.Games.Count <= G1C_ArcadeCatalog.MaxGamesPerCabinet), "Eigener Automat über der Grenze");
+
+            // die Liste im Spiel zeigt alle (scrollbar)
+            G1C_GameManager game = RunningGame();
+            game.GuestGameSource = () => found;
+            G1C_ArcadeCabinet cabinet = G1C_ArcadeCatalog.Cabinets.First(c => c.IsGuestCabinet);
+            G1C_GameManager at = GameAt(G1C_WorldLocation.Arcade, cabinet.X, cabinet.Y + 1, G1C_Direction.Up);
+            at.GuestGameSource = () => found;
+            at.HandleInput(G1C_InputEvent.FromKey(Key.E));
+            Equal(14, at.ListMenu.Rows.Count, "Zeilen in der Spielauswahl");
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 23.11.2026
+        // Aufgabe: Gruppenerkennung auch ohne "_" im Klassennamen (siehe G1C_GuestGameCatalog.GroupOf).
+        private static void ArcadeGuestGroupNames()
+        {
+            Equal("Gruppe3", G1C_GuestGameCatalog.GroupOf(new Gruppe3DragRaceRules()), "Gruppe3 Rules");
+            Equal("Gruppe3", G1C_GuestGameCatalog.GroupOf(new Gruppe3DragRacePainter()), "Gruppe3 Painter");
+            Equal(G1C_GuestGameCatalog.GroupOf(new HayDayRules()), G1C_GuestGameCatalog.GroupOf(new HayDayPainter()), "HayDay Rules/Painter");
+            Equal("G5", G1C_GuestGameCatalog.GroupOf(new G5_4GWRules()), "G5 mit Unterstrich");
+            Equal("Gruppe1", G1C_GuestGameCatalog.GroupOf(new Gruppe1_ConnectFourRules()), "Gruppe1 mit Unterstrich");
         }
 
         private static void ArcadeGuestGame()
@@ -1239,7 +1605,8 @@ namespace OOPGames
             G1C_GameManager shop = GameAt(G1C_WorldLocation.Exterior, game.Exterior.Map.DoorX(G1C_WorldLocation.Market),
                                           game.Exterior.Map.DoorY(G1C_WorldLocation.Market) + 1, G1C_Direction.Up);
             shop.HandleInput(G1C_InputEvent.FromKey(Key.E));
-            Equal("door", shop.Sound.LastEffect, "Türgeräusch");
+            // Änderung durch: Patrick Lupierz – Datum: 25.11.2026 – kein Türgeräusch mehr (kam beim Hinausgehen verzögert)
+            Check(shop.Sound.LastEffect != "door" && G1C_SoundCatalog.Find("door") == null, "Türgeräusch ist entfernt");
             shop.Update();
             Equal("shop", shop.Sound.CurrentMusic, "Ladenmusik");
             Equal("Ton aus.", shop.Sound.ToggleMute(), "Stummschalten");
@@ -1250,7 +1617,7 @@ namespace OOPGames
             Check(G1C_SoundSystem.Resolve("Soundeffekte", "gibt_es_nicht") == null, "Fehlende Datei wird als vorhanden gemeldet");
 
             foreach (string name in new[] { "music_town", "music_home", "music_shop", "music_casino", "music_arcade", "music_fishing", "music_title",
-                                            "sfx_win", "sfx_jackpot", "sfx_lose", "sfx_coin", "sfx_door", "sfx_meow", "sfx_woof", "sfx_splash", "sfx_catch" })
+                                            "sfx_win", "sfx_jackpot", "sfx_lose", "sfx_coin", "sfx_meow", "sfx_woof", "sfx_splash", "sfx_catch" })
             {
                 byte[] wav = G1C_ChipTune.Render(name);
                 Check(wav.Length > 2000 && wav[0] == 'R' && wav[1] == 'I' && wav[8] == 'W', "WAV ungültig: " + name);
@@ -1500,9 +1867,11 @@ namespace OOPGames
 
         private static void CasinoPokerFan()
         {
-            // Änderung durch: Patrick Lupierz – 18.11.2026 – Skalierung wird im Team angepasst (jetzt 1,5); geprüft wird nur "größer"
-            Check(G1C_Poker.PlayerHandScale > 1.0, "Eigene Hand nicht vergrößert: " + G1C_Poker.PlayerHandScale);
+            // Änderung durch: Patrick Lupierz – 22.11.2026 – Hand 1,5-fach, in jeder Fenstergröße gleich, nicht unter dem Meldungsfeld
+            Equal(1.5, G1C_Poker.NormalHandScale, "Eigene Hand vergrößert");
+            Check(G1C_Poker.FullscreenHandScale < G1C_Poker.NormalHandScale, "Hand im Vollbild nicht kleiner");
             Check(G1C_Poker.PlayerHandTop > 166, "Hand nicht tiefer als vorher (166)");
+            Check(G1C_Poker.PlayerHandTop + G1C_CardView.CardHeight * G1C_Poker.NormalHandScale <= G1C_Renderer.BaseScreenHeight - 58, "Hand liegt unter dem Meldungsfeld");
             Check(G1C_CardView.FanAngle(0, 2) < 0 && G1C_CardView.FanAngle(1, 2) > 0 &&
                   Math.Abs(G1C_CardView.FanAngle(0, 2) + G1C_CardView.FanAngle(1, 2)) < 0.001, "Fächer nicht symmetrisch");
             Equal(0.0, G1C_CardView.FanAngle(2, 5), "Mittlere Karte gerade");
@@ -1595,7 +1964,10 @@ namespace OOPGames
                     int rulesWinner = host.Rules.CheckIfPLayerWon();
                     if (!host.Finished || host.Running) problems.Add(entry.Name + ": nicht beendet");
                     if ((rulesWinner > 0 ? (int?)rulesWinner : null) != host.Winner) problems.Add(entry.Name + ": Ergebnis weicht von den Regeln ab");
-                    if (host.MovesMade < 4) problems.Add(entry.Name + ": zu wenige Züge (" + host.MovesMade + ")");
+                    // Änderung durch: Patrick Lupierz – 23.11.2026 – Brettspiele (4 gewinnt) brauchen mehrere Züge; Echtzeitspiele
+                    // mit KI (z. B. Drag Race) enden nach wenigen Eingaben
+                    bool board = entry.Name.ToLower().Contains("gewinnt") || entry.Name.ToLower().Contains("connect") || entry.Name.ToLower().Contains("4g");
+                    if (host.MovesMade < (board ? 4 : 1)) problems.Add(entry.Name + ": zu wenige Züge (" + host.MovesMade + ")");
                     played++;
                 }
                 host.Leave();
@@ -1824,7 +2196,7 @@ namespace OOPGames
             }
             foreach (string id in new[] { "step_grass", "step_path", "step_bridge", "step_indoor", "bicycle", "meow", "woof", "bird", "frog", "slot_lever",
                 "slots_spin", "slot_win_small", "slot_win_big", "jackpot", "jackpot_alarm", "coins_small", "coins_mid", "coins_big", "win", "poker_win",
-                "shuffle", "chip", "bet", "lose", "coin", "buff", "furniture_open", "trash_open", "door", "click", "splash", "catch",
+                "shuffle", "chip", "bet", "lose", "coin", "buff", "furniture_open", "trash_open", "click", "splash", "catch",
                 "music_town", "music_title", "music_casino", "music_arcade", "music_home", "music_shop", "music_fishing" })
                 Check(G1C_SoundCatalog.Find(id) != null, "Im Spiel benutzter Sound fehlt im Katalog: " + id);
 

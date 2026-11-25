@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
@@ -22,10 +23,23 @@ namespace OOPGames
             new ArenaProgressionMenuRenderer();
         private readonly ArenaWeaponWheelRenderer _weaponWheelRenderer =
             new ArenaWeaponWheelRenderer();
+        private readonly ArenaWeaponRenderer _weaponRenderer = new ArenaWeaponRenderer();
+        private readonly ArenaParticleRenderer _particleRenderer;
+
+        public PainterG9()
+        {
+            _particleRenderer = new ArenaParticleRenderer(_weaponRenderer);
+            _progressionMenuRenderer.PlayMenuClick = () =>
+            {
+                if (ReferenceEquals(OOPGamesManager.Singleton.ActivePainter, this))
+                {
+                    _audio.PlayMenuClick();
+                }
+            };
+        }
         private Window _zoomInputWindow;
         private ArenaField _zoomInputField;
         private Canvas _zoomInputCanvas;
-        private BitmapSource _arenaBackground;
 
         // Reusable brushes avoid creating new colors for every frame.
         private static readonly Brush FloorBrush = new SolidColorBrush(Color.FromRgb(55, 93, 65));
@@ -52,6 +66,9 @@ namespace OOPGames
         private AnimationProfile _selectedAnimationProfile = BoxingKnightProfile;
         private SpriteSheetAnimator _playerAnimator;
         private AnimationProfile _playerAnimatorProfile;
+        private readonly Dictionary<MirrorImage, SpriteSheetAnimator>
+            _mirrorImageAnimators = new Dictionary<MirrorImage, SpriteSheetAnimator>();
+        private AnimationProfile _mirrorImageAnimatorProfile;
         private SpriteSheetAnimator _enemyAnimator;
         private readonly ArenaAudio _audio = new ArenaAudio();
         private Canvas _menuClickCanvas;
@@ -63,14 +80,24 @@ namespace OOPGames
         private bool _lastGameStarted;
         private double _pauseMenuCanvasWidth;
         private double _pauseMenuCanvasHeight;
+        private Canvas _fullScreenMenuCanvas;
+        private Border _fullScreenMenuPanel;
 
         public string Name { get { return "Arena Survival"; } }
 
         internal void ResetAnimationProfile()
         {
-            _selectedAnimationProfile = BoxingKnightProfile;
+            ResetAnimationProfile(null);
+        }
+
+        // Starts with the character of the loaded run (Kurt or BoxingKnight).
+        internal void ResetAnimationProfile(string profileName)
+        {
+            _selectedAnimationProfile = GetAnimationProfile(profileName);
             _playerAnimator = null;
             _playerAnimatorProfile = null;
+            _mirrorImageAnimators.Clear();
+            _mirrorImageAnimatorProfile = null;
             _enemyAnimator = null;
             _menuPage = MenuPage.Main;
             _menuPageBeforeWeaponUpgrades = MenuPage.Main;
@@ -130,6 +157,7 @@ namespace OOPGames
                 }
             }
 
+            DetachFullScreenMenu();
             AttachZoomInput(canvas, field);
 
             // Remove the previous frame and clip drawings to the visible viewport.
@@ -155,35 +183,38 @@ namespace OOPGames
             AddRectangle(worldCanvas, FloorBrush,
                 mapLeft + ArenaField.WallThickness,
                 mapTop + ArenaField.WallThickness,
-                ArenaField.MapWidth - 2 * ArenaField.WallThickness,
-                ArenaField.MapHeight - 2 * ArenaField.WallThickness);
-            if (_arenaBackground == null)
-            {
-                _arenaBackground = LoadArenaBackground();
-            }
+                field.WorldWidth - 2 * ArenaField.WallThickness,
+                field.WorldHeight - 2 * ArenaField.WallThickness);
             Image backgroundImage = new Image
             {
-                Source = _arenaBackground,
-                Width = ArenaField.MapWidth - 2 * ArenaField.WallThickness,
-                Height = ArenaField.MapHeight - 2 * ArenaField.WallThickness,
+                Source = field.MapImage,
+                Width = field.WorldWidth,
+                Height = field.WorldHeight,
                 Stretch = Stretch.Fill,
                 IsHitTestVisible = false
             };
-            Canvas.SetLeft(backgroundImage, mapLeft + ArenaField.WallThickness);
-            Canvas.SetTop(backgroundImage, mapTop + ArenaField.WallThickness);
+            Canvas.SetLeft(backgroundImage, mapLeft);
+            Canvas.SetTop(backgroundImage, mapTop);
             worldCanvas.Children.Add(backgroundImage);
 
             // Draw the four wall segments over the floor to frame the playable area.
-            AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop, ArenaField.MapWidth, ArenaField.WallThickness);
-            AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop + ArenaField.MapHeight - ArenaField.WallThickness,
-                ArenaField.MapWidth, ArenaField.WallThickness);
+            AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop,
+                field.WorldWidth, ArenaField.WallThickness);
+            AddRectangle(worldCanvas, WallBrush,
+                mapLeft, mapTop + field.WorldHeight - ArenaField.WallThickness,
+                field.WorldWidth, ArenaField.WallThickness);
             AddRectangle(worldCanvas, WallBrush, mapLeft, mapTop + ArenaField.WallThickness,
-                ArenaField.WallThickness, ArenaField.MapHeight - 2 * ArenaField.WallThickness);
-            AddRectangle(worldCanvas, WallBrush, mapLeft + ArenaField.MapWidth - ArenaField.WallThickness,
+                ArenaField.WallThickness, field.WorldHeight - 2 * ArenaField.WallThickness);
+            AddRectangle(worldCanvas, WallBrush,
+                mapLeft + field.WorldWidth - ArenaField.WallThickness,
                 mapTop + ArenaField.WallThickness, ArenaField.WallThickness,
-                ArenaField.MapHeight - 2 * ArenaField.WallThickness);
+                field.WorldHeight - 2 * ArenaField.WallThickness);
 
             _debugRenderer.PaintWorldOverlays(worldCanvas, field, left, top);
+            // Particles run on game time; blood stains and ground traces lie under everyone.
+            _particleRenderer.Attach(field);
+            _particleRenderer.Update(field);
+            _particleRenderer.PaintGround(worldCanvas, field, left, top);
 
             string animationName = field.IsPlayerSpinning
                 ? GetSpinAnimationName(field.PlayerSpinFacing)
@@ -196,27 +227,42 @@ namespace OOPGames
                 _playerAnimator = CreateAnimator(_selectedAnimationProfile);
                 _playerAnimatorProfile = _selectedAnimationProfile;
             }
+            if (_playerAnimator.GetFrameCount(animationName) == 0)
+            {
+                // Characters without attack clips (BoxingKnight) show the idle or walk view of
+                // the strike direction instead of the NotFound frame.
+                animationName = GetPlayerAnimationName(
+                    field.Player.AttackFacing, field.Player.IsMoving, false,
+                    field.Player.AttackFacing);
+            }
             BitmapSource sprite = _playerAnimator.GetFrame(
                 animationName, field.PlayerTimeScale);
             double spriteHeight = field.Player.Size * 2 * PlayerSpriteScale;
             double spriteWidth = spriteHeight * sprite.PixelWidth / sprite.PixelHeight;
+            // Weapon frames use the 128-pixel grid of the character frames.
+            double unitsPerFramePixel = spriteHeight / ArenaWeaponRenderer.FramePixelSize;
+            _weaponRenderer.PaintEntityWeapon(
+                worldCanvas, field, field.Player, width / 2, height / 2,
+                unitsPerFramePixel, true);
             Image player = new Image
             {
                 Source = sprite,
                 Width = spriteWidth,
                 Height = spriteHeight,
                 Stretch = Stretch.Uniform,
-                Effect = GetDamageFlashEffect(field.Player),
                 IsHitTestVisible = false
             };
             Canvas.SetLeft(player, width / 2 - spriteWidth / 2);
             Canvas.SetTop(player, height / 2 - spriteHeight / 2);
             worldCanvas.Children.Add(player);
-            PaintDamageFlash(
-                worldCanvas, field.Player, width / 2, height / 2,
-                spriteWidth, spriteHeight);
+            AddDamageFlashOverlay(worldCanvas, field.Player, player);
+            _weaponRenderer.PaintEntityWeapon(
+                worldCanvas, field, field.Player, width / 2, height / 2,
+                unitsPerFramePixel, false);
             _hudRenderer.PaintStatusPlaceholder(
                 worldCanvas, field.Player, width / 2, height / 2);
+
+            PaintMirrorImages(worldCanvas, field, left, top);
 
             foreach (PursuerEnemy enemy in field.Enemies)
             {
@@ -242,7 +288,6 @@ namespace OOPGames
                     Width = enemyWidth,
                     Height = enemyHeight,
                     Stretch = Stretch.Uniform,
-                    Effect = GetDamageFlashEffect(enemy),
                     RenderTransformOrigin = new Point(0.5, 0.5),
                     RenderTransform = new ScaleTransform(
                         enemy.Facing == PlayerFacing.Right && !enemy.IsMoving
@@ -256,15 +301,16 @@ namespace OOPGames
                 Canvas.SetTop(enemyImage,
                     enemy.PositionY - top - enemyHeight / 2);
                 worldCanvas.Children.Add(enemyImage);
-                PaintDamageFlash(
-                    worldCanvas, enemy, enemy.PositionX - left,
-                    enemy.PositionY - top, enemyWidth, enemyHeight);
+                AddDamageFlashOverlay(worldCanvas, enemy, enemyImage);
 
                 _hudRenderer.PaintStatusPlaceholder(
                     worldCanvas, enemy, enemy.PositionX - left, enemy.PositionY - top);
                 _hudRenderer.PaintEntityHealth(worldCanvas, enemy,
                     enemy.PositionX - left, enemy.PositionY - top - enemyHeight / 2 - 10);
             }
+
+            _weaponRenderer.PaintProjectiles(worldCanvas, field, left, top);
+            _particleRenderer.PaintAir(worldCanvas, field, left, top);
 
             canvas.Children.Add(worldCanvas);
             if (field.IsSlowMotionActive)
@@ -307,6 +353,12 @@ namespace OOPGames
                 _menuStateField = field;
             }
             _lastGameStarted = field.IsGameStarted;
+            
+            // Update player's animation profile name for correct hand positioning
+            if (field.Player != null)
+            {
+                field.Player.AnimationProfileName = _selectedAnimationProfile.Name;
+            }
         }
 
         private static string GetEnemyAnimationName(PursuerEnemy enemy)
@@ -321,6 +373,79 @@ namespace OOPGames
                     return enemy.IsMoving ? "WalkRight" : "idleLeft";
                 default:
                     return enemy.IsMoving ? "WalkForward" : "IdleFront";
+            }
+        }
+
+        private void PaintMirrorImages(
+            Canvas canvas, ArenaField field, double left, double top)
+        {
+            if (!ReferenceEquals(
+                _mirrorImageAnimatorProfile, _selectedAnimationProfile))
+            {
+                _mirrorImageAnimators.Clear();
+                _mirrorImageAnimatorProfile = _selectedAnimationProfile;
+            }
+
+            HashSet<MirrorImage> activeImages =
+                new HashSet<MirrorImage>(field.MirrorImages);
+            List<MirrorImage> removedImages = new List<MirrorImage>();
+            foreach (MirrorImage mirrorImage in _mirrorImageAnimators.Keys)
+            {
+                if (!activeImages.Contains(mirrorImage))
+                {
+                    removedImages.Add(mirrorImage);
+                }
+            }
+            foreach (MirrorImage mirrorImage in removedImages)
+            {
+                _mirrorImageAnimators.Remove(mirrorImage);
+            }
+
+            foreach (MirrorImage mirrorImage in field.MirrorImages)
+            {
+                if (!mirrorImage.IsAlive)
+                {
+                    continue;
+                }
+
+                if (!_mirrorImageAnimators.TryGetValue(
+                    mirrorImage, out SpriteSheetAnimator animator))
+                {
+                    animator = CreateAnimator(_selectedAnimationProfile);
+                    _mirrorImageAnimators.Add(mirrorImage, animator);
+                }
+
+                string animationName = GetPlayerAnimationName(
+                    mirrorImage.Facing, mirrorImage.IsMoving,
+                    false, mirrorImage.Facing);
+                if (animator.GetFrameCount(animationName) == 0)
+                {
+                    animationName = GetPlayerAnimationName(
+                        mirrorImage.Facing, false, false, mirrorImage.Facing);
+                }
+
+                BitmapSource sprite = animator.GetFrame(
+                    animationName, field.GameTimeScale);
+                double spriteHeight = mirrorImage.Size * 2 * PlayerSpriteScale;
+                double spriteWidth = spriteHeight
+                    * sprite.PixelWidth / sprite.PixelHeight;
+                Image image = new Image
+                {
+                    Source = sprite,
+                    Width = spriteWidth,
+                    Height = spriteHeight,
+                    Stretch = Stretch.Uniform,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(image,
+                    mirrorImage.PositionX - left - spriteWidth / 2);
+                Canvas.SetTop(image,
+                    mirrorImage.PositionY - top - spriteHeight / 2);
+                canvas.Children.Add(image);
+                AddDamageFlashOverlay(canvas, mirrorImage, image);
+                _hudRenderer.PaintStatusPlaceholder(
+                    canvas, mirrorImage, mirrorImage.PositionX - left,
+                    mirrorImage.PositionY - top);
             }
         }
 
@@ -455,7 +580,8 @@ namespace OOPGames
 
             double aimX = clickPosition.X - _zoomInputCanvas.ActualWidth / 2;
             double aimY = clickPosition.Y - _zoomInputCanvas.ActualHeight / 2;
-            _zoomInputField.SetAimDirection(aimX, aimY);
+            _zoomInputField.SetAimTarget(
+                aimX / _zoomInputField.ZoomLevel, aimY / _zoomInputField.ZoomLevel);
             _zoomInputField.HandleMouseDown(e.ChangedButton);
         }
 
@@ -475,13 +601,24 @@ namespace OOPGames
                 return;
             }
 
-            _zoomInputField.SetAimDirection(
-                mousePosition.X - _zoomInputCanvas.ActualWidth / 2,
-                mousePosition.Y - _zoomInputCanvas.ActualHeight / 2);
+            // The camera centers the player; dividing by the zoom gives world units.
+            _zoomInputField.SetAimTarget(
+                (mousePosition.X - _zoomInputCanvas.ActualWidth / 2) / _zoomInputField.ZoomLevel,
+                (mousePosition.Y - _zoomInputCanvas.ActualHeight / 2) / _zoomInputField.ZoomLevel);
         }
 
         private void OnZoomKeyDown(object sender, KeyEventArgs e)
         {
+            if (_menuPage == MenuPage.DevTools)
+            {
+                return;
+            }
+
+            if (IsTextEntryFocused())
+            {
+                return;
+            }
+
             if (!e.IsRepeat)
             {
                 if (_keyBindingCaptureAction.HasValue
@@ -536,6 +673,11 @@ namespace OOPGames
 
         private void OnZoomMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            if (_menuPage == MenuPage.DevTools)
+            {
+                return;
+            }
+
             if (_zoomInputField != null && _zoomInputField.HandleGameSpeedWheel(e.Delta))
             {
                 e.Handled = true;
@@ -555,6 +697,15 @@ namespace OOPGames
 
         private void OnZoomKeyUp(object sender, KeyEventArgs e)
         {
+            if (_menuPage == MenuPage.DevTools)
+            {
+                return;
+            }
+
+            if (IsTextEntryFocused())
+            {
+                return;
+            }
             if (_zoomInputField != null
                 && _zoomInputField.HandleKeyUp(e.Key))
             {
@@ -566,8 +717,31 @@ namespace OOPGames
             }
         }
 
+        private static bool IsTextEntryFocused()
+        {
+            DependencyObject focusedElement =
+                Keyboard.FocusedElement as DependencyObject;
+            while (focusedElement != null)
+            {
+                if (focusedElement
+                    is System.Windows.Controls.Primitives.TextBoxBase)
+                {
+                    return true;
+                }
+
+                DependencyObject parent =
+                    focusedElement is Visual || focusedElement is Visual3D
+                        ? VisualTreeHelper.GetParent(focusedElement)
+                        : null;
+                focusedElement = parent ?? LogicalTreeHelper.GetParent(focusedElement);
+            }
+            return false;
+        }
+
         private void OnZoomWindowClosed(object sender, EventArgs e)
         {
+            // Closing the program saves the running game.
+            _zoomInputField?.SaveNow();
             if (_zoomInputCanvas != null)
             {
                 _zoomInputCanvas.PreviewMouseDown -= OnAttackMouseDown;
@@ -664,18 +838,6 @@ namespace OOPGames
                 FindAssetPath(profile.AnimationMetadataPath));
         }
 
-        private static BitmapSource LoadArenaBackground()
-        {
-            BitmapImage background = new BitmapImage();
-            background.BeginInit();
-            background.UriSource = new Uri(
-                FindAssetPath("Background", "Background1.png"), UriKind.Absolute);
-            background.CacheOption = BitmapCacheOption.OnLoad;
-            background.EndInit();
-            background.Freeze();
-            return background;
-        }
-
         // Locate project assets both when launched from the project and from its build output.
         internal static string FindAssetPath(params string[] relativePath)
         {
@@ -770,18 +932,36 @@ namespace OOPGames
                 Background = new SolidColorBrush(Color.FromRgb(27, 38, 52))
             };
             StackPanel contents = new StackPanel();
+            if (_menuPage == MenuPage.DevTools)
+            {
+                DrawStartMenuFullScreen(canvas,
+                    new ArenaDevToolsControl(field, () =>
+                    {
+                        _menuPage = MenuPage.Main;
+                        canvas.Tag = null;
+                    }),
+                    width, height);
+                return;
+            }
+
             if (_menuPage == MenuPage.SkillTree)
             {
-                contents.Children.Add(_progressionMenuRenderer.CreateSkillTree(
-                    field, () => canvas.Tag = null));
-                contents.Children.Add(CreateMenuButton("Back",
+                Grid skillTreePage = new Grid();
+                skillTreePage.RowDefinitions.Add(
+                    new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                skillTreePage.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                skillTreePage.Children.Add(_progressionMenuRenderer.CreateSkillTree(
+                    field, () => canvas.Tag = null,
+                    Math.Max(0, width - 48), Math.Max(0, height - 48)));
+                Button backButton = CreateMenuButton("Back",
                     () =>
                     {
                         _menuPage = MenuPage.Main;
                         canvas.Tag = null;
-                    }));
-                panel.Child = contents;
-                DrawStartMenuPanel(canvas, panel, width, height);
+                    });
+                Grid.SetRow(backButton, 1);
+                skillTreePage.Children.Add(backButton);
+                DrawStartMenuFullScreen(canvas, skillTreePage, width, height);
                 return;
             }
 
@@ -795,6 +975,22 @@ namespace OOPGames
                         _menuPage = _menuPageBeforeWeaponUpgrades;
                         canvas.Tag = null;
                     }));
+                panel.Child = contents;
+                DrawStartMenuPanel(canvas, panel, width, height);
+                return;
+            }
+
+            if (_menuPage == MenuPage.SaveGames)
+            {
+                AddSaveGamePage(canvas, field, contents);
+                panel.Child = contents;
+                DrawStartMenuPanel(canvas, panel, width, height);
+                return;
+            }
+
+            if (_menuPage == MenuPage.HighScores)
+            {
+                AddHighScorePage(canvas, field, contents);
                 panel.Child = contents;
                 DrawStartMenuPanel(canvas, panel, width, height);
                 return;
@@ -945,7 +1141,7 @@ namespace OOPGames
             contents.Children.Add(new TextBlock
             {
                 Text = isGameOver
-                    ? "Your run has ended"
+                    ? "Du bist gestorben (Tode: " + field.Deaths + ")"
                     : field.HasActiveGame ? "Your game is paused" : "Choose equipment and start",
                 FontSize = 15,
                 Foreground = new SolidColorBrush(Color.FromRgb(183, 197, 212)),
@@ -954,13 +1150,14 @@ namespace OOPGames
             });
             contents.Children.Add(CreateMenuButton(
                 isGameOver
-                    ? "Erneut spielen"
+                    ? "Respawnen (−" + ArenaField.DeathSkillPointPenalty + " Skill-, −"
+                        + ArenaField.DeathWeaponPointPenalty + " Waffenpunkte)"
                     : field.HasActiveGame ? "Spiel fortsetzen" : "Spiel starten",
                 () =>
                 {
                     if (isGameOver)
                     {
-                        field.RestartGame();
+                        field.Respawn();
                     }
                     else if (field.HasActiveGame && !field.ContinueGame())
                     {
@@ -971,6 +1168,17 @@ namespace OOPGames
                     {
                         field.StartNewGame();
                     }
+                }));
+            if (isGameOver)
+            {
+                contents.Children.Add(CreateMenuButton("Neuer Run",
+                    () => field.RestartGame()));
+            }
+            contents.Children.Add(CreateMenuButton("Spielstände",
+                () =>
+                {
+                    _menuPage = MenuPage.SaveGames;
+                    canvas.Tag = null;
                 }));
             contents.Children.Add(CreateMenuButton("How to Play",
                 () => ShowNotImplemented("How to Play")));
@@ -984,6 +1192,12 @@ namespace OOPGames
                 () =>
                 {
                     _menuPage = MenuPage.Animation;
+                    canvas.Tag = null;
+                }));
+            contents.Children.Add(CreateMenuButton("Dev Tool",
+                () =>
+                {
+                    _menuPage = MenuPage.DevTools;
                     canvas.Tag = null;
                 }));
             if (field.HasActiveGame && !field.IsGameOver)
@@ -1030,13 +1244,7 @@ namespace OOPGames
                         _menuPage = MenuPage.SkillTree;
                         canvas.Tag = null;
                     }));
-                contents.Children.Add(CreateMenuButton("Waffen verbessern",
-                    () =>
-                    {
-                        _menuPageBeforeWeaponUpgrades = MenuPage.Main;
-                        _menuPage = MenuPage.WeaponUpgrades;
-                        canvas.Tag = null;
-                    }));
+                // Weapon trees are reached from the equipment selection (tree button per weapon).
             }
             contents.Children.Add(CreateMenuButton("Tastenbelegung",
                 () =>
@@ -1045,58 +1253,99 @@ namespace OOPGames
                     canvas.Tag = null;
                 }));
             contents.Children.Add(CreateMenuButton("High Scores",
-                () => ShowNotImplemented("High Scores")));
+                () =>
+                {
+                    _menuPage = MenuPage.HighScores;
+                    canvas.Tag = null;
+                }));
             panel.Child = contents;
 
             DrawStartMenuPanel(canvas, panel, width, height);
         }
 
-        private static Effect GetDamageFlashEffect(Entity entity)
-        {
-            if (entity.DamageFlashIntensity <= 0)
-            {
-                return null;
-            }
+        // A hit entity lights up itself: a white copy of its own sprite, shaped by the
+        // sprite's alpha, lies on top of it and fades out with the damage flash.
+        private const double MaximumDamageFlashOpacity = 0.85;
 
-            return new DropShadowEffect
-            {
-                Color = Colors.White,
-                BlurRadius = 20,
-                ShadowDepth = 0,
-                Opacity = entity.DamageFlashIntensity
-            };
-        }
-
-        private static void PaintDamageFlash(
-            Canvas canvas, Entity entity, double centerX, double centerY,
-            double width, double height)
+        private static void AddDamageFlashOverlay(Canvas canvas, Entity entity, Image sprite)
         {
             double intensity = entity.DamageFlashIntensity;
-            if (intensity <= 0)
+            if (intensity <= 0 || sprite.Source == null)
             {
                 return;
             }
 
-            Ellipse flash = new Ellipse
+            Rectangle glow = new Rectangle
             {
-                Width = width * 0.7,
-                Height = height * 0.7,
-                Fill = new SolidColorBrush(Color.FromArgb(
-                    (byte)(100 * intensity), 255, 255, 255)),
+                Width = sprite.Width,
+                Height = sprite.Height,
+                Fill = Brushes.White,
+                OpacityMask = new ImageBrush(sprite.Source) { Stretch = sprite.Stretch },
+                Opacity = intensity * MaximumDamageFlashOpacity,
+                RenderTransformOrigin = sprite.RenderTransformOrigin,
+                RenderTransform = sprite.RenderTransform,
                 IsHitTestVisible = false
             };
-            Canvas.SetLeft(flash, centerX - flash.Width / 2);
-            Canvas.SetTop(flash, centerY - flash.Height / 2);
-            canvas.Children.Add(flash);
+            RenderOptions.SetBitmapScalingMode(glow, BitmapScalingMode.NearestNeighbor);
+            Canvas.SetLeft(glow, Canvas.GetLeft(sprite));
+            Canvas.SetTop(glow, Canvas.GetTop(sprite));
+            canvas.Children.Add(glow);
         }
 
-        private static void DrawStartMenuPanel(Canvas canvas, Border panel, double width, double height)
+        private void DrawStartMenuPanel(Canvas canvas, Border panel, double width, double height)
         {
+            DetachFullScreenMenu();
             panel.Measure(new Size(width, height));
             Canvas.SetLeft(panel, (width - panel.DesiredSize.Width) / 2);
             Canvas.SetTop(panel, (height - panel.DesiredSize.Height) / 2);
             canvas.Children.Add(panel);
             canvas.Tag = StartMenuTag;
+        }
+
+        private void DrawStartMenuFullScreen(
+            Canvas canvas, UIElement content, double width, double height)
+        {
+            DetachFullScreenMenu();
+            Border panel = new Border
+            {
+                Width = Math.Max(0, width - 24),
+                Height = Math.Max(0, height - 24),
+                Padding = new Thickness(12),
+                CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(77, 94, 113)),
+                Background = new SolidColorBrush(Color.FromRgb(27, 38, 52)),
+                Child = content
+            };
+            Canvas.SetLeft(panel, 12);
+            Canvas.SetTop(panel, 12);
+            canvas.Children.Add(panel);
+            _fullScreenMenuCanvas = canvas;
+            _fullScreenMenuPanel = panel;
+            canvas.SizeChanged += OnFullScreenMenuCanvasSizeChanged;
+            canvas.Tag = StartMenuTag;
+        }
+
+        private void OnFullScreenMenuCanvasSizeChanged(
+            object sender, SizeChangedEventArgs e)
+        {
+            if (!ReferenceEquals(sender, _fullScreenMenuCanvas)
+                || _fullScreenMenuPanel == null)
+            {
+                return;
+            }
+            _fullScreenMenuPanel.Width = Math.Max(0, e.NewSize.Width - 24);
+            _fullScreenMenuPanel.Height = Math.Max(0, e.NewSize.Height - 24);
+        }
+
+        private void DetachFullScreenMenu()
+        {
+            if (_fullScreenMenuCanvas != null)
+            {
+                _fullScreenMenuCanvas.SizeChanged -= OnFullScreenMenuCanvasSizeChanged;
+            }
+            _fullScreenMenuCanvas = null;
+            _fullScreenMenuPanel = null;
         }
 
         private bool IsSelectedAnimationProfile(AnimationProfile profile)
@@ -1111,6 +1360,8 @@ namespace OOPGames
                 _selectedAnimationProfile = profile;
                 _playerAnimator = null;
                 _playerAnimatorProfile = null;
+                _mirrorImageAnimators.Clear();
+                _mirrorImageAnimatorProfile = null;
             }
             canvas.Tag = null;
         }
@@ -1143,14 +1394,203 @@ namespace OOPGames
             canvas.Tag = null;
         }
 
+        private static readonly Brush MenuTextBrush =
+            new SolidColorBrush(Color.FromRgb(183, 197, 212));
+        private static readonly Brush HighlightTextBrush =
+            new SolidColorBrush(Color.FromRgb(255, 214, 102));
+
+        private static TextBlock CreateMenuText(
+            string text, double fontSize, Brush foreground, bool bold = false)
+        {
+            return new TextBlock
+            {
+                Text = text,
+                FontSize = fontSize,
+                FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
+                Foreground = foreground,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+        }
+
+        // Five save slots: a used slot can be loaded or deleted, an empty one starts a new run.
+        private void AddSaveGamePage(Canvas canvas, ArenaField field, StackPanel contents)
+        {
+            contents.Children.Add(CreateMenuText("SPIELSTÄNDE", 24, Brushes.White, true));
+            contents.Children.Add(CreateMenuText(
+                "Das laufende Spiel speichert sich automatisch (Pause, Menü, Beenden, alle "
+                    + (int)ArenaField.AutosaveIntervalSeconds + " s).",
+                13, MenuTextBrush));
+            if (field.SaveGames == null)
+            {
+                contents.Children.Add(CreateMenuText(
+                    "Speichern ist hier nicht verfügbar.", 14, MenuTextBrush));
+            }
+            else
+            {
+                if (field.IsRunUnsaved)
+                {
+                    contents.Children.Add(CreateMenuText(
+                        "Alle Slots sind belegt: Der laufende Run wird erst gespeichert, "
+                            + "wenn du einen Spielstand löschst.",
+                        13, HighlightTextBrush));
+                }
+                for (int slot = 0; slot < ArenaSaveGameRepository.SlotCount; slot++)
+                {
+                    AddSaveSlotRow(canvas, field, contents, slot);
+                }
+            }
+            contents.Children.Add(CreateMenuButton("Back",
+                () =>
+                {
+                    _menuPage = MenuPage.Main;
+                    canvas.Tag = null;
+                }));
+        }
+
+        private void AddSaveSlotRow(
+            Canvas canvas, ArenaField field, StackPanel contents, int slot)
+        {
+            ArenaSaveGame game = field.SaveGames.Load(slot);
+            bool isActive = field.HasActiveGame && field.ActiveSaveSlot == slot;
+            string title = ArenaSaveGameRepository.GetSlotName(slot)
+                + (isActive ? " (aktuelles Spiel)" : string.Empty);
+            string details = game == null
+                ? "leer"
+                : "Score " + ArenaScoreboard.GetScore(game.Score, game.Deaths)
+                    + " | " + game.Score + " Kills | " + game.Deaths + " Tode | "
+                    + GetWeaponName(game.SelectedWeaponId) + " | "
+                    + game.SavedAt.ToString("dd.MM. HH:mm")
+                    + (game.Player != null && game.Player.HitPoints <= 0 ? " | tot" : string.Empty);
+            contents.Children.Add(CreateMenuText(
+                title, 15, isActive ? HighlightTextBrush : Brushes.White, true));
+            contents.Children.Add(CreateMenuText(details, 13, MenuTextBrush));
+
+            if (game == null)
+            {
+                contents.Children.Add(CreateMenuButton("Neues Spiel in " + title,
+                    () =>
+                    {
+                        // The running game is saved first, then the new run takes this slot.
+                        field.SaveNow();
+                        field.StartNewGameInSlot(slot);
+                        _menuPage = MenuPage.Main;
+                        canvas.Tag = null;
+                    }));
+                return;
+            }
+
+            ArenaUiButton load = new ArenaUiButton("Laden",
+                () =>
+                {
+                    if (field.ActiveSaveSlot != slot)
+                    {
+                        field.SaveNow();
+                    }
+                    if (field.LoadSlot(slot))
+                    {
+                        ResetAnimationProfile(field.Player.AnimationProfileName);
+                    }
+                    _menuPage = MenuPage.Main;
+                    canvas.Tag = null;
+                },
+                ArenaUiButtonShape.SplitLong)
+            {
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold
+            };
+            System.Windows.Automation.AutomationProperties.SetName(
+                load, "Laden " + ArenaSaveGameRepository.GetSlotName(slot));
+            ArenaUiButton delete = new ArenaUiButton("Löschen",
+                () =>
+                {
+                    if (MessageBox.Show(
+                        ArenaSaveGameRepository.GetSlotName(slot) + " wirklich löschen?",
+                        "Spielstand löschen", MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                    {
+                        field.DeleteSaveSlot(slot);
+                    }
+                    canvas.Tag = null;
+                },
+                ArenaUiButtonShape.SplitShort)
+            {
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold
+            };
+            System.Windows.Automation.AutomationProperties.SetName(
+                delete, "Löschen " + ArenaSaveGameRepository.GetSlotName(slot));
+            contents.Children.Add(ArenaUiButton.CreateSplitRow(
+                load, delete, MenuButtonWidth, MenuButtonHeight));
+        }
+
+        // Best runs by score (kills minus a penalty per death); the running run is highlighted.
+        private void AddHighScorePage(Canvas canvas, ArenaField field, StackPanel contents)
+        {
+            contents.Children.Add(CreateMenuText("HIGH SCORES", 24, Brushes.White, true));
+            contents.Children.Add(CreateMenuText(
+                "Score = Kills − " + ArenaScoreboard.DeathPenalty
+                    + " je Tod. Runs im Godmode zählen nicht.",
+                13, MenuTextBrush));
+            IReadOnlyList<ArenaScoreEntry> entries = field.Scoreboard == null
+                ? new List<ArenaScoreEntry>()
+                : field.Scoreboard.Entries;
+            if (entries.Count == 0)
+            {
+                contents.Children.Add(CreateMenuText("Noch keine Einträge.", 14, MenuTextBrush));
+            }
+            bool currentListed = false;
+            for (int index = 0; index < entries.Count; index++)
+            {
+                ArenaScoreEntry entry = entries[index];
+                bool isCurrent = field.HasActiveGame && entry.RunId == field.RunId;
+                currentListed |= isCurrent;
+                contents.Children.Add(CreateMenuText(
+                    (index + 1) + ". " + entry.Score + " Punkte — " + entry.Label
+                        + (isCurrent ? " (aktuell)" : string.Empty)
+                        + "\n    " + entry.Kills + " Kills, " + entry.Deaths + " Tode, "
+                        + entry.Date.ToString("dd.MM.yy HH:mm"),
+                    14, isCurrent ? HighlightTextBrush : Brushes.White, isCurrent));
+            }
+            if (field.HasActiveGame && !currentListed)
+            {
+                contents.Children.Add(CreateMenuText(
+                    "Aktueller Run: " + field.TotalScore + " Punkte ("
+                        + field.Score + " Kills, " + field.Deaths + " Tode)"
+                        + (field.IsGodMode ? " — Godmode, zählt nicht" : string.Empty),
+                    14, HighlightTextBrush));
+            }
+            contents.Children.Add(CreateMenuButton("Back",
+                () =>
+                {
+                    _menuPage = MenuPage.Main;
+                    canvas.Tag = null;
+                }));
+        }
+
+        private static string GetWeaponName(string weaponId)
+        {
+            if (weaponId == WeaponCatalog.MagicWand.Id) return WeaponCatalog.MagicWand.Name;
+            if (weaponId == WeaponCatalog.Bow.Id) return WeaponCatalog.Bow.Name;
+            return WeaponCatalog.Sword.Name;
+        }
+
+        private static AnimationProfile GetAnimationProfile(string profileName)
+        {
+            return profileName == KurtProfile.Name ? KurtProfile : BoxingKnightProfile;
+        }
+
         private enum MenuPage
         {
             Main,
             Equipment,
             Animation,
             SkillTree,
+            DevTools,
             WeaponUpgrades,
-            KeyBindings
+            KeyBindings,
+            SaveGames,
+            HighScores
         }
 
         private sealed class AnimationProfile

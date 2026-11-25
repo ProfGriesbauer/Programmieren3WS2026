@@ -67,10 +67,12 @@ namespace OOPGames
                     dst[y * w + x] = src[(y / Scale) * BaseSize + x / Scale];
 
             // Farben aus dem Sprite übernehmen: Haut (Wange) und Augenfarbe
-            uint skin = src[6 * BaseSize + 10];
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Haut zwischen den Augen lesen ((10|6) ist Augenweiß)
+            uint skin = src[6 * BaseSize + 12];
             uint eye = src[5 * BaseSize + 9];
+            uint eyeWhite = src[4 * BaseSize + 9];
             uint mouth = Darken(skin, 0.6);
-            DrawExpression(dst, w, h, expression, skin, eye, mouth);
+            DrawExpression(dst, w, h, expression, skin, eye, eyeWhite, mouth);
 
             WriteableBitmap bitmap = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgra32, null);
             bitmap.WritePixels(new Int32Rect(0, 0, w, h), dst, w * 4, 0);
@@ -79,49 +81,64 @@ namespace OOPGames
         }
 
         // Koordinaten in doppelter Auflösung; Ausdrucksdetails liegen auf dem vergrößerten Kopf-Sprite.
-        private static void DrawExpression(uint[] p, int w, int h, G1C_NpcExpression expression, uint skin, uint eye, uint mouth)
+        // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – rechtes Auge liegt 12 Pixel neben dem linken (x 28–33),
+        // alle Ausdrücke sind jetzt an der Gesichtsmitte gespiegelt.
+        private static void DrawExpression(uint[] p, int w, int h, G1C_NpcExpression expression, uint skin, uint eye, uint eyeWhite, uint mouth)
         {
             Action<int, int, uint> set = (x, y, c) => { if (x >= 0 && y >= 0 && x < w && y < h) p[y * w + x] = c; };
             Action clearEyes = () =>
             {
-                for (int y = 10; y <= 14; y++)
-                    for (int x = 18; x <= 20; x++) { set(x, y, skin); set(x + 10, y, skin); }
+                uint sideHair = p[8 * w + 34];   // rechts oben reicht das Haar bis neben das Auge
+                for (int y = 8; y <= 13; y++)
+                    for (int x = 16; x <= 21; x++)
+                    {
+                        set(x, y, skin);
+                        set(x + 12, y, x + 12 >= 32 && y <= 9 ? sideHair : skin);
+                    }
+            };
+            // Braue als Linie am oberen Augenrand, an der Gesichtsmitte gespiegelt (bleibt auch unter Mützen sichtbar)
+            Action<int, int> brow = (outerY, innerY) =>
+            {
+                for (int x = 16; x <= 18; x++) { set(x, outerY, eye); set(49 - x, outerY, eye); }
+                for (int x = 19; x <= 21; x++) { set(x, innerY, eye); set(49 - x, innerY, eye); }
             };
 
             switch (expression)
             {
                 case G1C_NpcExpression.Happy:
                     clearEyes();
-                    foreach (int ox in new[] { 17, 27 }) { set(ox, 13, eye); set(ox + 1, 12, eye); set(ox + 2, 12, eye); set(ox + 3, 13, eye); }
+                    foreach (int ox in new[] { 17, 29 }) { set(ox, 13, eye); set(ox + 1, 12, eye); set(ox + 2, 12, eye); set(ox + 3, 13, eye); }
                     set(21, 20, mouth); set(28, 20, mouth);
                     for (int x = 22; x <= 27; x++) set(x, 22, mouth);
                     break;
 
                 case G1C_NpcExpression.Angry:
-                    set(17, 8, eye); set(19, 9, eye); set(21, 10, eye);
-                    set(27, 10, eye); set(29, 9, eye); set(31, 8, eye);
+                    brow(8, 9);
                     set(21, 23, mouth); set(28, 23, mouth);
                     for (int x = 22; x <= 27; x++) set(x, 22, mouth);
                     break;
 
                 case G1C_NpcExpression.Sad:
-                    set(17, 10, eye); set(19, 9, eye); set(21, 8, eye);
-                    set(27, 8, eye); set(29, 9, eye); set(31, 10, eye);
+                    brow(9, 8);
                     set(17, 15, 0xFF70B8F0); set(17, 16, 0xFF70B8F0);
                     set(22, 23, mouth); set(23, 22, mouth); set(26, 22, mouth); set(27, 23, mouth);
                     break;
 
                 case G1C_NpcExpression.Surprised:
-                    for (int y = 9; y <= 15; y++)
-                        for (int x = 18; x <= 20; x++) { set(x, y, eye); set(x + 10, y, eye); }
-                    set(19, 10, 0xFFF8F8F8); set(29, 10, 0xFFF8F8F8);
+                    for (int y = 9; y <= 13; y++)
+                        for (int x = 18; x <= 20; x++) { set(x, y, eye); set(x + 11, y, eye); }
+                    set(19, 10, 0xFFF8F8F8); set(30, 10, 0xFFF8F8F8);
                     set(24, 21, mouth); set(25, 21, mouth); set(23, 22, mouth); set(26, 22, mouth);
                     set(24, 23, mouth); set(25, 23, mouth);
                     break;
 
                 case G1C_NpcExpression.Thoughtful:
-                    for (int y = 10; y <= 14; y++) { set(18, y, skin); set(28, y, skin); }
-                    set(29, 9, eye); set(30, 8, eye); set(31, 9, eye);
+                    for (int y = 10; y <= 13; y++)   // Blick zur Seite
+                    {
+                        set(18, y, eyeWhite); set(20, y, eye);
+                        set(30, y, eyeWhite); set(32, y, eye);
+                    }
+                    for (int x = 28; x <= 33; x++) set(x, 8, eye);   // eine Braue hochgezogen
                     for (int x = 22; x <= 28; x++) set(x, 22, mouth);
                     break;
 

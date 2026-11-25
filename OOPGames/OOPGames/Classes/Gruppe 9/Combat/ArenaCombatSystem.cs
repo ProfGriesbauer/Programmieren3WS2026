@@ -6,12 +6,46 @@ namespace OOPGames
 {
     public sealed class ArenaCombatSystem
     {
+        private const double CooldownTolerance = 1e-9;
         private readonly Dictionary<Entity, Dictionary<string, double>> _cooldownSeconds =
             new Dictionary<Entity, Dictionary<string, double>>();
         private readonly List<RunningAttack> _runningAttacks =
             new List<RunningAttack>();
+        private readonly List<ArenaGroundEffect> _groundEffects =
+            new List<ArenaGroundEffect>();
+        private readonly Dictionary<Entity, FireTrailState> _fireTrails =
+            new Dictionary<Entity, FireTrailState>();
+
+        // Burning entities drop a patch of fire at their feet every FireTrailDropSeconds while
+        // they move. The trail only shows the fire: entities catch fire solely when a burning
+        // entity hits them, then they burn for at least IgnitionBurnSeconds.
+        public const double FireTrailDropSeconds = 0.2;
+        public const double FireTrailMinimumDistance = 6;
+        public const double FireTrailRadius = 12;
+        public const double FireTrailDurationSeconds = 1.5;
+        public const double IgnitionBurnSeconds = 2;
+        // Staff strike traces: one per StrikeTraceSpacing units of the strike's reach.
+        public const double StrikeTraceSpacing = 22;
+        public const double StrikeTraceRadius = 14;
+        public const double StrikeTraceDurationSeconds = 1.6;
+
+        public IReadOnlyList<ArenaGroundEffect> GroundEffects
+        {
+            get { return _groundEffects.AsReadOnly(); }
+        }
+
+        public void AddGroundEffect(ArenaGroundEffect groundEffect)
+        {
+            if (groundEffect == null)
+            {
+                throw new ArgumentNullException(nameof(groundEffect));
+            }
+            _groundEffects.Add(groundEffect);
+        }
 
         public event Action<Entity, Entity, Weapon> EntityDefeated;
+        // A lightning bolt jumped from the first entity to the second (Kettenblitz).
+        public event Action<Entity, Entity> LightningChained;
 
         public int ActiveAttackCount { get { return _runningAttacks.Count; } }
 
@@ -45,7 +79,8 @@ namespace OOPGames
             {
                 return false;
             }
-            if (GetCooldownRemaining(source, weapon) > 0)
+            if (GetCooldownRemaining(source, weapon) > 0
+                || !IsReadyAfterEquip(source, weapon))
             {
                 return false;
             }
@@ -69,6 +104,7 @@ namespace OOPGames
 
             IAttackInstance instance = weapon.AttackPattern.BeginAttack(
                 source, directionX, directionY, weapon);
+            instance.VisualState.Appearance = weapon.Appearance;
             _runningAttacks.Add(new RunningAttack(source, weapon, instance));
             if (!_cooldownSeconds.TryGetValue(
                 source, out Dictionary<string, double> weaponCooldowns))
@@ -80,6 +116,42 @@ namespace OOPGames
             source.HasActiveAttack = true;
             source.CurrentAttackVisual = instance.VisualState;
             return true;
+        }
+
+        // A freshly equipped weapon with an equip time (the bow being drawn) cannot attack
+        // until that time has passed.
+        private static bool IsReadyAfterEquip(Entity source, Weapon weapon)
+        {
+            return weapon.EquipReadySeconds <= 0
+                || source.EquippedWeapon == null
+                || source.EquippedWeapon.Id != weapon.Id
+                || source.WeaponEquippedSeconds >= weapon.EquipReadySeconds;
+        }
+
+        // All running cooldowns of an entity by weapon id (for save games).
+        public IReadOnlyDictionary<string, double> GetCooldowns(Entity entity)
+        {
+            return _cooldownSeconds.TryGetValue(entity, out Dictionary<string, double> cooldowns)
+                ? new Dictionary<string, double>(cooldowns)
+                : new Dictionary<string, double>();
+        }
+
+        public void SetCooldown(Entity entity, string weaponId, double remainingSeconds)
+        {
+            if (entity == null)
+            {
+                throw new ArgumentNullException(nameof(entity));
+            }
+            if (string.IsNullOrEmpty(weaponId) || remainingSeconds <= CooldownTolerance)
+            {
+                return;
+            }
+            if (!_cooldownSeconds.TryGetValue(entity, out Dictionary<string, double> cooldowns))
+            {
+                cooldowns = new Dictionary<string, double>();
+                _cooldownSeconds.Add(entity, cooldowns);
+            }
+            cooldowns[weaponId] = remainingSeconds;
         }
 
         public double GetCooldownRemaining(Entity entity)
@@ -165,7 +237,9 @@ namespace OOPGames
                 foreach (string weaponId in weaponIds)
                 {
                     double remaining = weaponCooldowns[weaponId] - deltaSeconds;
-                    if (remaining <= 0 || !owner.IsAlive)
+                    // The tolerance lets a cooldown that equals an attack's duration end in the
+                    // same tick as the attack despite rounding.
+                    if (remaining <= CooldownTolerance || !owner.IsAlive)
                     {
                         weaponCooldowns.Remove(weaponId);
                     }
@@ -223,7 +297,10 @@ namespace OOPGames
                     {
                         attack.Source.EffectWeaponContext = null;
                     }
-                    if (target.IsAlive && !target.IsInvulnerable)
+                    SpreadChainLightning(attack, target, entities);
+                    IgniteFromBurningAttacker(attack.Source, target);
+                    // Invulnerability (godmode) only prevents damage; hits still push.
+                    if (target.IsAlive)
                     {
                         ApplyKnockback(
                             attack.Source, target, attack.Weapon.KnockbackDistance,
@@ -239,6 +316,7 @@ namespace OOPGames
                     }
                 }
 
+                PlaceAttackTraces(attack);
                 if (attack.Instance.IsComplete)
                 {
                     CompleteAttack(attack);
@@ -247,7 +325,6 @@ namespace OOPGames
                 }
             }
 
-            List<SpreadRequest> spreadRequests = new List<SpreadRequest>();
             foreach (Entity entity in entities)
             {
                 double deltaSeconds = deltaFor(entity);
@@ -271,40 +348,12 @@ namespace OOPGames
                                 effect.SourceWeapon);
                         }
                     }
-                    if (effect.AdvanceSpreadClock(deltaSeconds))
-                    {
-                        spreadRequests.Add(new SpreadRequest(effect, entity));
-                    }
                 }
                 entity.RemoveExpiredDamageOverTimeEffects();
             }
 
-            foreach (SpreadRequest spread in spreadRequests)
-            {
-                foreach (Entity target in entities)
-                {
-                    if (!target.IsAlive || ReferenceEquals(target, spread.SourceEntity)
-                        || target.Team == CombatTeam.Neutral)
-                    {
-                        continue;
-                    }
-
-                    double offsetX = target.PositionX - spread.SourceEntity.PositionX;
-                    double offsetY = target.PositionY - spread.SourceEntity.PositionY;
-                    double spreadDistance = spread.Effect.SpreadRadius
-                        + target.Size / 2 + spread.SourceEntity.Size / 2;
-                    if (offsetX * offsetX + offsetY * offsetY
-                        <= spreadDistance * spreadDistance)
-                    {
-                        target.ApplyDamageOverTime(
-                            spread.Effect.Id, spread.Effect.Name,
-                            spread.Effect.DamagePerSecond,
-                            spread.Effect.RemainingSeconds,
-                            spread.Effect.SpreadRadius,
-                            spread.Effect.Source, spread.Effect.SourceWeapon);
-                    }
-                }
-            }
+            UpdateFireTrails(entities, deltaFor);
+            UpdateGroundEffects(entities, deltaFor(null));
         }
 
         public void Clear()
@@ -315,6 +364,8 @@ namespace OOPGames
             }
             _runningAttacks.Clear();
             _cooldownSeconds.Clear();
+            _groundEffects.Clear();
+            _fireTrails.Clear();
         }
 
         private static List<Entity> GetTargets(
@@ -359,7 +410,7 @@ namespace OOPGames
             Entity source, Entity target, double distance,
             IReadOnlyList<Entity> entities, Rect? movementBounds)
         {
-            if (distance <= 0 || !target.CanBePushed)
+            if (distance <= 0 || target is MirrorImage || !target.CanBePushed)
             {
                 return;
             }
@@ -382,26 +433,25 @@ namespace OOPGames
                 if (movementBounds.HasValue)
                 {
                     Rect bounds = movementBounds.Value;
-                    double radius = target.Size / 2;
-                    nextX = Math.Max(bounds.Left + radius,
-                        Math.Min(bounds.Right - radius, nextX));
-                    nextY = Math.Max(bounds.Top + radius,
-                        Math.Min(bounds.Bottom - radius, nextY));
+                    Rect hitbox = target.HitboxOffset;
+                    nextX = Math.Max(bounds.Left - hitbox.Left,
+                        Math.Min(bounds.Right - hitbox.Right, nextX));
+                    nextY = Math.Max(bounds.Top - hitbox.Top,
+                        Math.Min(bounds.Bottom - hitbox.Bottom, nextY));
                 }
 
                 bool overlaps = false;
                 foreach (Entity other in entities)
                 {
-                    if (ReferenceEquals(other, target) || !other.IsAlive)
+                    if (ReferenceEquals(other, target)
+                        || other is MirrorImage
+                        || !other.IsAlive)
                     {
                         continue;
                     }
 
-                    double minimumDistance = (target.Size + other.Size) / 2;
-                    double candidateX = nextX - other.PositionX;
-                    double candidateY = nextY - other.PositionY;
-                    if (candidateX * candidateX + candidateY * candidateY
-                        < minimumDistance * minimumDistance)
+                    if (AttackGeometry.RectsOverlap(
+                        target.GetHitboxAt(nextX, nextY), other.Hitbox))
                     {
                         overlaps = true;
                         break;
@@ -425,6 +475,162 @@ namespace OOPGames
             {
                 attack.Source.CurrentAttackVisual = null;
                 attack.Source.HasActiveAttack = false;
+            }
+        }
+
+        // Kettenblitz: from the hit target the bolt jumps to the nearest opponent within the
+        // jump radius, then on from there, applying the lightning effect to each one once.
+        private void SpreadChainLightning(
+            RunningAttack attack, Entity firstTarget, IReadOnlyList<Entity> entities)
+        {
+            ChainLightning chain = attack.Weapon.ChainLightning;
+            if (chain == null)
+            {
+                return;
+            }
+
+            HashSet<Entity> struck = new HashSet<Entity> { firstTarget };
+            Entity current = firstTarget;
+            for (int jump = 0; jump < chain.MaximumJumps; jump++)
+            {
+                Entity next = null;
+                double nextDistance = double.MaxValue;
+                foreach (Entity candidate in entities)
+                {
+                    if (!candidate.IsAlive || struck.Contains(candidate)
+                        || ReferenceEquals(candidate, attack.Source)
+                        || candidate.Team == CombatTeam.Neutral
+                        || candidate.Team == attack.Source.Team)
+                    {
+                        continue;
+                    }
+                    double distance = AttackGeometry.DistanceBetweenRects(
+                        current.Hitbox, candidate.Hitbox);
+                    if (distance <= chain.JumpRadius && distance < nextDistance)
+                    {
+                        next = candidate;
+                        nextDistance = distance;
+                    }
+                }
+                if (next == null)
+                {
+                    return;
+                }
+
+                struck.Add(next);
+                attack.Source.EffectWeaponContext = attack.Weapon;
+                try
+                {
+                    chain.Effect.Apply(attack.Source, next);
+                }
+                finally
+                {
+                    attack.Source.EffectWeaponContext = null;
+                }
+                LightningChained?.Invoke(current, next);
+                current = next;
+            }
+        }
+
+        // Fire spreads only by hits: a burning attacker sets what it hits on fire.
+        private static void IgniteFromBurningAttacker(Entity attacker, Entity target)
+        {
+            if (!target.IsAlive)
+            {
+                return;
+            }
+            foreach (ActiveDamageOverTimeEffect effect in attacker.ActiveDamageOverTimeEffects)
+            {
+                if (effect.Id == "burning" && !effect.IsExpired)
+                {
+                    target.ApplyDamageOverTime(
+                        effect.Id, effect.Name, effect.DamagePerSecond,
+                        Math.Max(IgnitionBurnSeconds, effect.RemainingSeconds), 0,
+                        effect.Source, effect.SourceWeapon);
+                    return;
+                }
+            }
+        }
+
+        // Line attacks with a trail leave traces behind their tip as it advances.
+        private void PlaceAttackTraces(RunningAttack attack)
+        {
+            AttackVisualState visual = attack.Instance.VisualState;
+            if (!attack.Weapon.HasTrail || visual.VisualKind != AttackVisualKind.Cone)
+            {
+                return;
+            }
+
+            int traces = Math.Max(1, (int)Math.Ceiling(visual.Range / StrikeTraceSpacing));
+            int reached = Math.Min(traces, (int)Math.Floor(visual.Progress * traces + 1e-9));
+            while (attack.TracesPlaced < reached)
+            {
+                double along = visual.Range * (attack.TracesPlaced + 0.5) / traces;
+                _groundEffects.Add(new ArenaGroundEffect(
+                    attack.Weapon.TrailVisual,
+                    visual.CenterX + visual.DirectionX * along,
+                    visual.CenterY + visual.DirectionY * along,
+                    StrikeTraceRadius, StrikeTraceDurationSeconds,
+                    attack.Weapon.TrailEffect, attack.Source, attack.Source, false));
+                attack.TracesPlaced++;
+            }
+        }
+
+        private void UpdateFireTrails(
+            IReadOnlyList<Entity> entities, Func<Entity, double> deltaFor)
+        {
+            foreach (Entity entity in entities)
+            {
+                ActiveDamageOverTimeEffect burning = null;
+                foreach (ActiveDamageOverTimeEffect effect in entity.ActiveDamageOverTimeEffects)
+                {
+                    if (effect.Id == "burning" && !effect.IsExpired)
+                    {
+                        burning = effect;
+                    }
+                }
+                if (burning == null || !entity.IsAlive)
+                {
+                    _fireTrails.Remove(entity);
+                    continue;
+                }
+
+                Point feet = new Point(entity.PositionX, entity.Hitbox.Bottom);
+                if (!_fireTrails.TryGetValue(entity, out FireTrailState trail))
+                {
+                    trail = new FireTrailState(feet);
+                    _fireTrails.Add(entity, trail);
+                }
+                trail.SecondsUntilDrop -= deltaFor(entity);
+                if (trail.SecondsUntilDrop > CooldownTolerance
+                    || (feet - trail.LastDrop).Length < FireTrailMinimumDistance)
+                {
+                    continue;
+                }
+
+                trail.SecondsUntilDrop = FireTrailDropSeconds;
+                trail.LastDrop = feet;
+                _groundEffects.Add(new ArenaGroundEffect(
+                    "FireTrail", feet.X, feet.Y, FireTrailRadius, FireTrailDurationSeconds,
+                    null, burning.Source, entity, true));
+            }
+        }
+
+        private void UpdateGroundEffects(IReadOnlyList<Entity> entities, double deltaSeconds)
+        {
+            for (int i = _groundEffects.Count - 1; i >= 0; i--)
+            {
+                ArenaGroundEffect groundEffect = _groundEffects[i];
+                groundEffect.RemainingSeconds -= deltaSeconds;
+                if (groundEffect.IsExpired)
+                {
+                    _groundEffects.RemoveAt(i);
+                    continue;
+                }
+                foreach (Entity entity in entities)
+                {
+                    groundEffect.TryAffect(entity);
+                }
             }
         }
 
@@ -462,19 +668,20 @@ namespace OOPGames
             public Weapon Weapon { get; }
             public IAttackInstance Instance { get; }
             public Dictionary<Entity, int> HitCounts { get; }
+            public int TracesPlaced { get; set; }
         }
 
-        private sealed class SpreadRequest
+        private sealed class FireTrailState
         {
-            public SpreadRequest(
-                ActiveDamageOverTimeEffect effect, Entity sourceEntity)
+            public FireTrailState(Point position)
             {
-                Effect = effect;
-                SourceEntity = sourceEntity;
+                LastDrop = position;
+                // The first patch is dropped as soon as the entity has moved a little.
+                SecondsUntilDrop = 0;
             }
 
-            public ActiveDamageOverTimeEffect Effect { get; }
-            public Entity SourceEntity { get; }
+            public Point LastDrop { get; set; }
+            public double SecondsUntilDrop { get; set; }
         }
     }
 }

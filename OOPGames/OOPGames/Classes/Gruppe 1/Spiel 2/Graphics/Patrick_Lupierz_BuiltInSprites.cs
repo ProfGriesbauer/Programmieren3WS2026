@@ -29,16 +29,23 @@ namespace OOPGames
         {
             public Color Hair, Skin, Shirt, Vest, Pants, Shoes;
             public Color? Hat; // nur Spielfigur
+            public bool NoTie; // Änderung durch: Patrick Lupierz – 23.11.2026 – keine goldene Krawatte (Studentin Lea)
+            public Color? Stripes; // Änderung durch: Patrick Lupierz – 22.11.2026 – quergestreiftes Hemd (Eduard)
         }
 
         private static readonly Dictionary<string, CharacterPalette> Palettes = new Dictionary<string, CharacterPalette>
         {
             { "player",       new CharacterPalette { Hair = Hex(0xD83030), Skin = Hex(0xF8C898), Shirt = Hex(0x3060C8), Vest = Hex(0x3060C8), Pants = Hex(0x383848), Shoes = Hex(0xD83030) } },
+            { "angler_denis", new CharacterPalette { Hair = Hex(0x6A4018), Skin = Hex(0xE8B080), Shirt = Hex(0xE8E0C0), Vest = Hex(0x3A8A48), Pants = Hex(0x3A8A48), Shoes = Hex(0xF0D820) } },
             { "dealer_red",   new CharacterPalette { Hair = Hex(0x2A2A2A), Skin = Hex(0xF0C090), Shirt = White,          Vest = Hex(0xB02030), Pants = Hex(0x202020), Shoes = Hex(0x101010) } },
             { "dealer_green", new CharacterPalette { Hair = Hex(0x8A5020), Skin = Hex(0xE8B080), Shirt = White,          Vest = Hex(0x208040), Pants = Hex(0x202020), Shoes = Hex(0x101010) } },
             { "dealer_blue",  new CharacterPalette { Hair = Hex(0x404040), Skin = Hex(0xC89060), Shirt = White,          Vest = Hex(0x2848A8), Pants = Hex(0x202020), Shoes = Hex(0x101010) } },
             { "bartender",    new CharacterPalette { Hair = Hex(0x7A4A24), Skin = Hex(0xF8C898), Shirt = White,          Vest = Hex(0x202020), Pants = Hex(0x303030), Shoes = Hex(0x101010) } },
             { "guest",        new CharacterPalette { Hair = Hex(0xF0D060), Skin = Hex(0xF8D0A8), Shirt = Hex(0x40A060), Vest = Hex(0x40A060), Pants = Hex(0x6A4A2A), Shoes = Hex(0x402010) } },
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Eduard am Spielautomaten: gestreiftes Hemd, schwarze Mütze
+            { "gambler_eduard", new CharacterPalette { Hair = Hex(0x5A3A20), Skin = Hex(0xF0C090), Shirt = White, Vest = White, Pants = Hex(0x283048), Shoes = Hex(0x181818), Hat = Hex(0x141418), Stripes = Hex(0x203070) } },
+            // Änderung durch: Patrick Lupierz – Datum: 23.11.2026 – Studentin Lea: blond, helle Haut, hellgrün, ohne Krawatte
+            { "student_lea",  new CharacterPalette { Hair = Hex(0xF2D870), Skin = Hex(0xF8D4B0), Shirt = Hex(0xA8E4A0), Vest = Hex(0xA8E4A0), Pants = Hex(0x78B880), Shoes = White, NoTie = true } },
         };
 
         public static BitmapSource Create(string id)
@@ -667,7 +674,7 @@ namespace OOPGames
                 c.FillRect(7, 10, 2, 8, p.Vest);
                 c.FillRect(15, 10, 2, 8, p.Vest);
                 c.FillRect(10, 10, 4, 2, White);
-                c.FillRect(11, 12, 2, 5, GoldColor);
+                if (!p.Stripes.HasValue && !p.NoTie) c.FillRect(11, 12, 2, 5, GoldColor);   // gestreiftes Hemd ohne Krawatte
                 c.Set(9, 15, Darken(p.Vest, 0.75));
                 c.Set(15, 15, Darken(p.Vest, 0.75));
             }
@@ -675,6 +682,15 @@ namespace OOPGames
             {
                 c.FillRect(7, 10, 10, 8, p.Vest == p.Shirt ? p.Shirt : p.Vest);
             }
+
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Querstreifen über Hemd und Ärmel
+            if (p.Stripes.HasValue)
+                for (int y = 11; y < 18; y += 2)
+                {
+                    c.FillRect(7, y, 10, 1, p.Stripes.Value);
+                    c.FillRect(4, y, 3, 1, Darken(p.Stripes.Value, 0.85));
+                    c.FillRect(17, y, 3, 1, Darken(p.Stripes.Value, 0.85));
+                }
 
             // Arme schwingen beim Laufen leicht mit
             int leftHand = frame == 1 ? 18 : 17;
@@ -720,11 +736,18 @@ namespace OOPGames
             c.FillRect(9, 10, 8, 8, p.Shirt);
             c.FillRect(15, 10, 2, 8, p.Vest);
             c.FillRect(11, 10, 4, 2, White);
-            c.FillRect(12, 12, 2, 5, GoldColor);
+            if (!p.Stripes.HasValue && !p.NoTie) c.FillRect(12, 12, 2, 5, GoldColor);
 
             // Arm
             int handX = frame == 1 ? 10 : (frame == 2 ? 13 : 12);
             c.FillRect(8, 11, 2, 5, Darken(p.Shirt, 0.85));
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Querstreifen (Seitenansicht)
+            if (p.Stripes.HasValue)
+                for (int y = 11; y < 18; y += 2)
+                {
+                    c.FillRect(9, y, 8, 1, p.Stripes.Value);
+                    if (y < 16) c.FillRect(8, y, 2, 1, Darken(p.Stripes.Value, 0.85));
+                }
             c.FillRect(handX, 16, 2, 2, p.Skin);
 
             // Beine

@@ -20,6 +20,12 @@ namespace OOPGames
 
         /// <summary>Änderung durch: Patrick Lupierz – 16.11.2026 – Rad wartet vor der Tür des betretenen Gebäudes.</summary>
         public bool ParkedAtDoor { get; private set; }
+        public bool BlockedByShark { get; private set; }
+        public void SetBlockedByShark(bool blocked)
+        {
+            BlockedByShark = blocked;
+            if (blocked && Riding) Dismount();
+        }
 
         // Entwickler: Patrick Lupierz – Datum: 16.11.2026 – beim Betreten eines Gebäudes abstellen (force: beim Laden)
         public void ParkAtDoor(bool force = false)
@@ -40,6 +46,7 @@ namespace OOPGames
         // Entwickler: Patrick Lupierz
         public string TryMount(G1C_Inventory inventory, string bikeId, G1C_WorldLocation location)
         {
+            if (BlockedByShark) return "Viktor hat dir das Fahrradfahren nach dem Knochenbruch verboten.";
             G1C_Item bike = G1C_ItemCatalog.Get(bikeId);
             if (bike == null || bike.Category != G1C_ItemCategory.Fahrzeug) return "Das ist kein Fahrrad.";
             if (inventory == null || !inventory.Has(bikeId)) return "Dieses Fahrrad besitzt du nicht.";
@@ -47,7 +54,18 @@ namespace OOPGames
             Riding = true;
             ParkedAtDoor = false;
             ActiveBikeId = bikeId;
-            return "Du fährst jetzt mit dem " + bike.Name + ". Schneller unterwegs!";
+            return "Du fährst jetzt mit dem " + DativeName(bike.Name) + ". Schneller unterwegs!";
+        }
+
+        // Änderung durch: Patrick Lupierz – Datum: 20.11.2026 – Rechtschreibung: "mit dem roten Fahrrad" statt "mit dem Rotes Fahrrad"
+        // Aufgabe: "Rotes Fahrrad" -> "roten Fahrrad" (Adjektiv nach "dem" endet auf -en und wird klein geschrieben).
+        public static string DativeName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return name;
+            string[] parts = name.Split(' ');
+            if (parts.Length < 2 || !parts[0].EndsWith("es")) return name;
+            parts[0] = char.ToLowerInvariant(parts[0][0]) + parts[0].Substring(1, parts[0].Length - 3) + "en";
+            return string.Join(" ", parts);
         }
 
         public string Dismount()

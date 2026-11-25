@@ -2069,3 +2069,386 @@ Ergebnisvermerk: 49 Dateien umgewandelt (OGG nicht abspielbar, 291 MB zu groß) 
 (Katalog, Einstellungen, Prioritäten, Schleifen, Backend-Trennung); Handy-Web-App mit Server (Menü B → F11, PIN); Schritte nach
 Untergrund, Tiere nur beim Streicheln, Vögel im Radius; Casino-Töne. Selbsttest 80/80, alle Dateien im MediaPlayer geöffnet.
 Nicht möglich: Hörprobe und Bedienung auf einem echten Handy. Kein Commit.
+
+## 19-11-2026
+
+### Prompt 19-11-2026
+
+Werkzeug: Copilot SDK in VS Code
+Modell: GitHub Copilot
+
+`	ext
+## Aufgabe
+Implementiere die folgenden Änderungen und Erweiterungen in unserem bestehenden Casino-Spiel.
+
+**Wichtig:** Arbeite auf Basis der bestehenden Codebasis und Architektur. Analysiere zuerst die vorhandenen Systeme, Klassen, Szenen, UI-Komponenten, NPCs, Interaktionssysteme, Speicherfunktionen, Audioverwaltung und Spielmechaniken. Bestehende Funktionalität darf durch die Änderungen nicht kaputtgehen.
+
+Die Änderungen sollen sich stilistisch und technisch in das bestehende Spiel einfügen.
+
+---
+
+### 15. Parkpavillon – korrekte Grafik-Reihenfolge
+Beim Parkpavillon befinden sich die hinteren beiden Stützen aktuell grafisch **vor dem Spieler**.
+
+Ändere die Rendering-/Layer-Reihenfolge so, dass:
+
+- die beiden hinteren Stützen **hinter dem Spieler** dargestellt werden,
+- der Spieler sich korrekt zwischen den vorderen und hinteren Elementen des Pavillons bewegen kann,
+- die vorderen Elemente des Pavillons weiterhin korrekt vor dem Spieler liegen,
+- keine anderen Objekte der Szene durch die Änderung in ihrer Darstellung beeinflusst werden.
+Falls das Spiel ein Y-Sorting-, Z-Index-, Layer- oder Sprite-Sorting-System verwendet, nutze das bestehende System anstatt eine separate Sonderlösung einzubauen.
+
+---
+
+### 16. Krankenhaus – Hinweiszettel
+Füge im Krankenhaus einen sichtbaren Zettel/Hinweis hinzu.
+
+Auf dem Zettel soll sinngemäß stehen:
+
+> **„Hier werden keine Mitarbeiter benötigt, da man sich im Casino sowieso nicht verletzen kann.“**
+Der Zettel soll:
+
+- optisch zur bestehenden Umgebung passen,
+- an einer plausiblen Stelle im Krankenhaus angebracht sein,
+- gut lesbar sein,
+- sich in das vorhandene Interaktions-/Dialogsystem integrieren, falls ein solches bereits existiert.
+Keine zusätzliche komplexe Mechanik notwendig.
+
+---
+
+### 17. Angler-NPC beim Angel-Spiel
+Füge in der Nähe des Angel-Spiels einen neuen **Angler-NPC** hinzu.
+
+Der NPC soll mit dem Spieler interagieren können und als Tutorial-/Informations-NPC für das Angel-Spiel dienen.
+
+Beim Gespräch soll der Spieler Informationen zu folgenden Punkten erhalten:
+
+#### Angel-Spiel erklären
+Der NPC erklärt verständlich:
+
+- wie das Angel-Spiel gestartet wird,
+- wie man angelt,
+- welche Eingaben benötigt werden,
+- wann ein Fisch angebissen hat,
+- wie man einen Fisch erfolgreich fängt,
+- was bei einem Fehlschlag passiert.
+Dabei soll möglichst die bereits vorhandene Spielmechanik des Angel-Spiels verwendet und erklärt werden.
+
+#### Vorhandene Fischarten
+Der NPC soll alle im Spiel vorhandenen Fischarten kennen und erklären können.
+
+Für jeden Fisch sollen, sofern diese Informationen im Spiel vorhanden sind, angezeigt werden:
+
+- Name des Fisches
+- Seltenheit
+- Verkaufswert bzw. Wert
+- besondere Eigenschaften
+- wofür der Fisch verwendet werden kann
+Wichtig: Die Informationen sollen **nicht doppelt im Code gepflegt werden**, wenn bereits Fisch-Datenstrukturen existieren. Der NPC soll möglichst auf die vorhandenen Daten zugreifen.
+
+#### Verwendung der Fische
+Der NPC soll erklären, wofür die gefangenen Fische verwendet werden können, z. B.:
+
+- Verkauf
+- Quests
+- andere Spielmechaniken
+- sonstige vorhandene Verwendungen
+Falls sich die verfügbaren Fischarten oder deren Eigenschaften später ändern, soll der NPC automatisch die aktuellen Daten verwenden.
+
+#### NPC-Verhalten
+Der Angler soll:
+
+- an einem passenden Platz in der Nähe des Angel-Spiels stehen,
+- optisch als Angler erkennbar sein,
+- über das bestehende Interaktionssystem angesprochen werden können,
+- nicht dauerhaft störend im Weg stehen,
+- sich in die bestehende NPC-/Dialogarchitektur einfügen.
+
+---
+
+### 18. Spiel schließen / Speichern über das Handy
+Die bisherige Funktion, das Spiel mit der **Enter-Taste zu schließen**, soll geändert werden.
+
+Neue Steuerung:
+
+- **E** und **Enter** sollen dieselbe Funktion ausführen.
+- Diese Funktion soll nicht mehr das Spiel direkt schließen.
+- Stattdessen soll der Spieler das Spiel **über das Handy speichern** können.
+- Danach kann das Spielfenster einfach geschlossen werden.
+Das bedeutet insbesondere:
+
+- Entferne die bisherige direkte „Enter = Spiel schließen“-Logik.
+- Enter darf nicht mehr versehentlich das Spiel beenden.
+- E und Enter sollen entsprechend der gewünschten bestehenden Interaktionslogik gleich behandelt werden.
+- Das Speichern muss über das Handy erreichbar sein.
+- Das Speichern soll den vollständigen relevanten Spielstand sichern.
+- Nach dem Speichern soll der Spieler das Fenster ohne zusätzliche „Speichern und Schließen“-Logik schließen können.
+Prüfe dabei insbesondere, ob bereits ein Save-System existiert. Falls ja, dieses erweitern bzw. wiederverwenden und **kein paralleles zweites Save-System erstellen**.
+
+Das Handy soll einen klar erkennbaren Menüpunkt bzw. Button zum Speichern besitzen.
+
+Nach erfolgreichem Speichern soll der Spieler eine eindeutige Rückmeldung erhalten, z. B.:
+
+> **„Spiel gespeichert.“**
+
+---
+
+### 19. Geldhai – größere Kredite, Zinsen, Respekt und SMS
+Erweitere den bestehenden Geldhai deutlich.
+
+Aktuell kann man sich offenbar nur bis zu **250 Chips** leihen. Diese Begrenzung soll entfernt bzw. erweitert werden.
+
+#### Kredit aufnehmen
+Der Spieler soll beim Geldhai:
+
+- frei bzw. innerhalb eines sinnvollen Limits einen höheren Betrag auswählen können,
+- deutlich mehr als 250 Chips leihen können,
+- seine aktuelle Schuld jederzeit nachvollziehen können.
+Die konkrete maximale Kreditsumme soll sich sinnvoll in das bestehende Wirtschaftssystem integrieren.
+
+#### Zinsen
+Der Geldhai verlangt:
+
+**50 % Zinsen pro Tag.**
+
+Die Zinsen werden täglich auf die bestehende Schuld angewendet.
+
+Beispiel:
+
+- Tag 1: 1.000 Chips Schulden
+- nächster Tag: 1.500 Chips
+- danach: 2.250 Chips
+- usw.
+Die Berechnung muss zuverlässig über den bestehenden Tages-/Zeitfortschritt des Spiels erfolgen.
+
+Vermeide Rundungsfehler und stelle sicher, dass die Zinsen nicht mehrfach für denselben Tag berechnet werden.
+
+#### Rückzahlung
+Der Spieler soll seine Schulden beim Geldhai zurückzahlen können.
+
+Dabei soll mindestens möglich sein:
+
+- Teilrückzahlung
+- vollständige Rückzahlung
+Die aktuelle Restschuld muss jederzeit korrekt angezeigt werden.
+
+#### Respektverlust
+Solange der Spieler beim Geldhai Schulden hat, soll er **täglich Respekt beim Geldhai verlieren**.
+
+Dabei soll das bestehende Respekt-/Reputationssystem verwendet werden.
+
+Der Respektverlust soll pro vergangenem Tag angewendet werden und nicht mehrfach für denselben Tag.
+
+Falls bereits ein Respektwert bzw. NPC-Beziehungswert existiert, diesen verwenden und nicht ein paralleles System erstellen.
+
+#### SMS bei ausbleibender Zahlung
+Wenn der Spieler seine Schulden nicht rechtzeitig begleicht, soll der Geldhai eine SMS auf das Handy des Spielers schicken.
+
+Die SMS soll:
+
+- klar machen, dass eine Schuld offen ist,
+- den Spieler zur Zahlung auffordern,
+- den bedrohlichen Charakter des Geldhais widerspiegeln.
+Beispielhafte Tonalität:
+
+> „Du hast immer noch Schulden bei mir. Zahl, bevor ich persönlich vorbeikomme.“
+Die SMS soll über das bereits vorhandene Handy-/SMS-System laufen.
+
+Es soll **keine komplett neue Messaging-Infrastruktur** entstehen, wenn bereits ein SMS-System vorhanden ist.
+
+Die Nachrichten können abhängig von der Dauer der offenen Schuld variieren.
+
+Beispielsweise:
+
+- erster Tag: Erinnerung
+- mehrere Tage: deutlichere Drohung
+- längere Nichtzahlung: stärkere Konsequenzen bzw. härtere Nachricht
+Keine unnötig extreme oder grafische Gewalt darstellen.
+
+---
+
+### 20. Handy – Audioeinstellungen
+Füge im Handy einen Bereich **„Einstellungen“** hinzu.
+
+Dort soll der Spieler die Lautstärke des Spiels verändern können.
+
+Mindestens erforderlich:
+
+- Lautstärkeregler
+- Möglichkeit, das Spiel vollständig zu **muten**
+- sichtbare Anzeige des aktuellen Zustands
+Wenn die bestehende Audioarchitektur verschiedene Lautstärkekategorien unterstützt, können diese sinnvoll getrennt werden, z. B.:
+
+- Musik
+- Soundeffekte
+- Gesamtlautstärke
+Falls aktuell nur eine globale Lautstärke existiert, reicht zunächst eine globale Lautstärkeregelung.
+
+Die Einstellung soll:
+
+- sofort wirksam werden,
+- beim Speichern des Spiels erhalten bleiben,
+- beim nächsten Start wieder geladen werden,
+- mit dem bestehenden Audio-System verbunden sein.
+Der Mute-Zustand soll ebenfalls gespeichert werden.
+
+---
+
+## Technische Anforderungen
+
+### Bestehende Architektur verwenden
+Vor der Implementierung:
+
+1. Analysiere die bestehende Projektstruktur.
+2. Suche nach vorhandenen Systemen für:
+
+- NPCs
+- Dialoge
+- Interaktionen
+- Handy
+- SMS
+- Speichern/Laden
+- Tageswechsel
+- Geld/Chips
+- Respekt/Reputation
+- Audio
+- Angel-Spiel
+- Fischdaten
+- Rendering-/Layer-System
+3. Verwende vorhandene Klassen und Systeme wieder.
+4. Erstelle keine redundanten Systeme, wenn bereits passende Strukturen existieren.
+
+### Datenkonsistenz
+Alle neuen Werte müssen sauber in den bestehenden Spielstand integriert werden.
+
+Insbesondere:
+
+- offene Geldhai-Schuld
+- Zeitpunkt/Tag der letzten Zinsberechnung
+- Respektänderungen
+- Audioeinstellungen
+- Mute-Zustand
+- bereits vorhandene Angel-/Fischdaten
+Beim Laden älterer Spielstände darf es nicht zu Fehlern kommen. Fehlende neue Werte sollen mit sinnvollen Standardwerten initialisiert werden.
+
+### Keine Regressionen
+Bestehende Funktionen dürfen nicht unbeabsichtigt verändert oder entfernt werden.
+
+Insbesondere testen:
+
+- Handy
+- Speichern/Laden
+- Tageswechsel
+- Geldsystem
+- Respektsystem
+- SMS
+- NPC-Interaktionen
+- Angel-Spiel
+- Audio
+- Spielerbewegung
+- Rendering der Umgebung
+
+---
+
+## Abnahmekriterien
+Die Implementierung gilt erst als fertig, wenn folgende Punkte funktionieren:
+
+- Hintere Parkpavillon-Stützen werden hinter dem Spieler gerendert.
+- Krankenhaus besitzt den beschriebenen Hinweiszettel.
+- Angler-NPC steht beim Angel-Spiel.
+- Angler kann angesprochen werden.
+- Angler erklärt die Bedienung des Angel-Spiels.
+- Angler kann die vorhandenen Fischarten und deren Verwendung erklären.
+- Enter beendet das Spiel nicht mehr.
+- E und Enter funktionieren entsprechend der vorgesehenen Interaktion gleich.
+- Speichern ist über das Handy möglich.
+- Nach dem Speichern kann das Fenster einfach geschlossen werden.
+- Geldhai erlaubt höhere Kredite als bisher.
+- Kreditbetrag kann sinnvoll ausgewählt werden.
+- 50 % Zinsen werden einmal pro Tag berechnet.
+- Teil- und Vollrückzahlung funktionieren.
+- Bei offenen Schulden verliert der Spieler täglich Respekt beim Geldhai.
+- Bei ausbleibender Zahlung werden SMS verschickt.
+- SMS werden über das bestehende Handy-/SMS-System angezeigt.
+- Handy besitzt einen Einstellungsbereich.
+- Lautstärke kann verändert werden.
+- Spiel kann komplett gemutet werden.
+- Audioeinstellungen bleiben nach dem Speichern und Laden erhalten.
+- Bestehende Savegames bleiben kompatibel.
+- Keine bestehenden Systeme werden unnötig dupliziert.
+
+## Vorgehensweise
+Implementiere die Änderungen schrittweise.
+
+Nach jeder Änderung:
+
+1. Prüfe die betroffenen bestehenden Systeme.
+2. Implementiere die Änderung möglichst lokal und sauber.
+3. Prüfe auf Seiteneffekte.
+4. Teste die betreffende Funktion.
+5. Erst danach mit dem nächsten Punkt fortfahren.
+Am Ende gib eine kurze Übersicht aus:
+
+- welche Dateien geändert wurden,
+- welche neuen Dateien erstellt wurden,
+- welche Systeme erweitert wurden,
+- welche Tests durchgeführt wurden,
+- ob noch offene Probleme bestehen.
+**Nicht einfach nur beschreiben, wie es umgesetzt werden könnte. Die Änderungen sollen tatsächlich in der bestehenden Codebasis implementiert werden.**
+```
+
+Ergebnisvermerk: �nderungen 15 bis 20 wurden in der bestehenden Casino-Codebasis implementiert und werden validiert. �bernommen von: Patrick Lupierz nach Pr�fung.
+
+### Prompt 22-11-2026 (Claude Code)
+
+```text
+füg zu den shop und home sound die neuste audio datei hinzu / es soll random in den songs starten und auch verschiedene immer sein
+es gibt einen rechschreib fehler ... "Du fährst jetzt mit dem Rotes Fahrrad..."
+fenster automatisch anpassen an die größe auch an alle fenster größen anpassen da dieses auch wieder ruckelt und nicht passt, npc eduard an den ganz linken spiel automat setzen sodass er immer am spielen ist und den automaten auch blockeren für den spieler, er soll auch ein gestreifteshemd haben und eine schwarze mütze und mehr speech bubble sprüche, poker bei vollbild die eigenen karten anpassen sodass diese wieder auf 100% größe sind und an der ursprungsstelle, beim jackpot in slotts soll die animation an boden vom fenster sein
+nur hand im vollbild kleiner
+```
+
+Ergebnisvermerk: Home/Shop-Musik = "AmbientSound house.mp3", Musik startet an zufälliger Stelle, erstes Stück zufällig. Fahrrad-Meldung im Dativ ("dem roten Fahrrad"). Welt/HUD füllen wieder jede Fenstergröße; Minispiele in festem, zentriertem 480x320-Rahmen (G1C_Renderer.UseFixedFrame), Hintergrund/Kopfzeile bis zum Fensterrand. Eduard vor dem linken Automaten (gesperrt), Skin "gambler_eduard" (Streifen, schwarze Mütze), 14 neue Sprüche. Pokerhand 1,5-fach in jeder Fenstergröße gleich groß. Münzregen bis zum unteren Fensterrand. Build 0/0, Selbsttest 87/87, Offscreen-Bilder geprüft; nicht geprüft: Hören, echtes Hauptfenster/Ruckeln. Übernommen von: Patrick Lupierz nach Prüfung.
+
+### Prompt 22-11-2026 (2) (Claude Code)
+
+```text
+in der vollbild ansicht soll es kleiner sein
+füge einen npc patrick hinzu der in in der arcade steht und wenn man mit ihm redet einem täglich tipps zum spielen gibt und 35 coins wenn man seinen rekord in schlange bricht der rekord soll angenehm hoch sein sodas es nicht sofort brechbar ist aber nicht unmöglich er soll blonde haare haben ein schwarzes tshirt blaue hose und weise schuhe und an dem mitleren automaten stehen optimistisch und freundlich
+```
+
+Ergebnisvermerk: Pokerhand im Vollbild (Fenster ohne Rahmen) 1,0-fach, sonst 1,5-fach. NPC Patrick (G1C_ArcadeMentor) neben dem Gast-Automaten, täglicher Tipp nach Spieltag, Schlangen-Rekord 220, einmalig 35 Chips (NpcMemory.RecordRewardPaid, wird mitgespeichert). Build 0/0, Selbsttest 88/88, Spielhallen-Bild geprüft. Übernommen von: Patrick Lupierz nach Prüfung.
+
+### Prompt 23-11-2026 (2) (Claude Code)
+
+```text
+kann man mutter und oma herausfordern das wäre nähmlich nicht gut
+auswahl bei duel was man mit dem npc spielt ob man poker oder pong und co gegen den npc spielen kann
+```
+
+Ergebnisvermerk: Mutter und Oma bieten kein Duell an (plus Sicherung). Nach "Zum Duell herausfordern!" Auswahl: Pong (je 20 Chips), Poker heads-up gegen den NPC (sein Geldbeutel gewinnt/verliert), Blackjack (wer gegen den Dealer mehr gewinnt), "Doch nicht.". Gemeinsame Schnittstelle IG1C_NpcDuelGame, Auswertung in EndMinigame über RecordDuel. Build 0/0, Selbsttest 90/90, Bilder geprüft. Übernommen von: Patrick Lupierz nach Prüfung.
+
+### Prompt 23-11-2026 (3) (Claude Code)
+
+```text
+beim poker duell wird automatisch gegen max gespielt laut ausgabe der dealer soll nur dealer sein und es soll ausschliesßlich ein spiel gegen den duelanten sein
+```
+
+Ergebnisvermerk: Gespielt wurde schon gegen den Duellanten (eigene KI mit dessen Namen), aber sechs Poker-Texte nannten fest "Max" (Showdown, Hand-Info, Setzen, Überlegen, Knopf). Jetzt alle über _ai.Name; im Duell heißt auch die KI-Überlegung nach dem Namen. Test spielt sechs Duell-Hände und prüft, dass nie "Max" erscheint. Build 0/0, Selbsttest 90/90. Übernommen von: Patrick Lupierz nach Prüfung.
+
+### Prompt 23-11-2026 (4) (Claude Code)
+
+```text
+füge in der liste der fische wenn man mit denis redet links neben dem namen eine kleine verson von den fischen sodass man weis welcher fisch wie aussieht
+```
+
+Ergebnisvermerk: In der Fischliste im Gespräch mit Denis (Welche Fische gibt es?) steht links neben jedem Namen die kleine Fischgrafik (dasselbe Sprite wie im Inventar). Nur Darstellung in Eduard Schoenfelds ConversationView geändert. Build 0/0, Selbsttest 90/90, Bild geprüft. Übernommen von: Patrick Lupierz nach Prüfung.
+
+### Prompt 23-11-2026 (5) (Claude Code)
+
+```text
+das rechte auge des npc buggt wenn sie andere emotionen zeigen
+```
+
+Ergebnisvermerk: Die Emotionen zeichneten das rechte Auge 10 statt 12 Pixel neben dem linken, und als Hautfarbe wurde ein Pixel aus dem Augenweiß gelesen. Beides in Eduard Schoenfelds NpcSprites korrigiert, Augen und Brauen sind jetzt gespiegelt. Build 0/0, Selbsttest 94/94, alle sechs Emotionen an vier Figuren als Bild geprüft. Prüfung im echten Spiel durch Patrick Lupierz steht noch aus.
+

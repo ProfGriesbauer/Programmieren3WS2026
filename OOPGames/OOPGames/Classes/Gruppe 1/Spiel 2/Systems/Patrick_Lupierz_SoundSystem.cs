@@ -25,6 +25,13 @@ namespace OOPGames
     {
         /// <summary>Startet eine Datei. Schleife: am Ende wird keepGoing gefragt, sonst endet sie und ended wird gerufen.</summary>
         IG1C_AudioVoice Start(string file, double volume, bool loop, Func<bool> keepGoing, Action ended);
+
+        // Änderung durch: Patrick Lupierz – Datum: 19.11.2026 – Startpunkt (0..1 der Länge) für den nächsten Start (Musik beginnt zufällig mittendrin)
+        double StartFraction { get { return 0; } set { } }
+
+        // Änderung durch: Patrick Lupierz – Datum: 24.11.2026 – Datei vorab laden, damit der Effekt später ohne Öffnungs-Verzögerung
+        // startet (WPF-MediaPlayer braucht pro Öffnen ca. eine Sekunde). Testgeräte brauchen das nicht.
+        void Preload(string file) { }
     }
 
     // =====================================================
@@ -36,12 +43,76 @@ namespace OOPGames
     // =====================================================
     public sealed class G1C_MediaBackend : IG1C_AudioBackend
     {
+        // Änderung durch: Patrick Lupierz – Datum: 24.11.2026 – Spieler-Pool für kurze Effekte (WAV bis 2 MB): Jede Datei wird einmal
+        // geöffnet (Preload) und danach nur zurückgespult und abgespielt. Vorher öffnete jeder Effekt einen neuen MediaPlayer;
+        // das dauerte rund eine Sekunde, Schritte und Türgeräusche kamen deshalb viel zu spät.
+        private const long PoolMaxBytes = 2 * 1024 * 1024;
+        private readonly Dictionary<string, List<PooledPlayer>> _pool = new Dictionary<string, List<PooledPlayer>>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, bool> _poolable = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+        public double StartFraction { get; set; }
+
+        public void Preload(string file)
+        {
+            if (!Poolable(file)) return;
+            List<PooledPlayer> list;
+            if (_pool.TryGetValue(file, out list) && list.Count > 0) return;
+            Create(file);
+        }
+
+        private bool Poolable(string file)
+        {
+            bool known;
+            if (_poolable.TryGetValue(file, out known)) return known;
+            try { known = file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) && new FileInfo(file).Length <= PoolMaxBytes; }
+            catch (Exception) { known = false; }
+            _poolable[file] = known;
+            return known;
+        }
+
+        private PooledPlayer Create(string file)
+        {
+            PooledPlayer player = new PooledPlayer(file);
+            List<PooledPlayer> list;
+            if (!_pool.TryGetValue(file, out list)) _pool[file] = list = new List<PooledPlayer>();
+            list.Add(player);
+            return player;
+        }
+
+        private IG1C_AudioVoice StartPooled(string file, double volume, bool loop, Func<bool> keepGoing, Action ended)
+        {
+            PooledPlayer pooled = null;
+            List<PooledPlayer> list;
+            if (_pool.TryGetValue(file, out list)) pooled = list.FirstOrDefault(p => p.Active == null && !p.Broken);
+            if (pooled == null) pooled = Create(file);   // derselbe Effekt läuft schon (oder Preload fehlte): zusätzlicher Spieler
+            PooledVoice voice = new PooledVoice(pooled, loop, keepGoing, ended);
+            pooled.Active = voice;
+            pooled.Player.Volume = Math.Max(0, Math.Min(1, volume));
+            if (pooled.Ready) pooled.Play();   // sonst startet MediaOpened die Wiedergabe
+            return voice;
+        }
+
         public IG1C_AudioVoice Start(string file, double volume, bool loop, Func<bool> keepGoing, Action ended)
         {
+            if (Poolable(file)) return StartPooled(file, volume, loop, keepGoing, ended);
             MediaVoice voice = new MediaVoice(new MediaPlayer());
             MediaPlayer player = voice.Player;
             player.Open(new Uri(file, UriKind.Absolute));
             player.Volume = Math.Max(0, Math.Min(1, volume));
+            double startFraction = Math.Max(0, Math.Min(0.95, StartFraction));
+            StartFraction = 0;
+            // Änderung durch: Patrick Lupierz – Datum: 24.11.2026 – Mit zufälliger Startstelle wird erst nach dem Öffnen der
+            // Datei gesprungen UND erst dann abgespielt (kein kurzer Anfang vor dem Sprung).
+            bool seekFirst = startFraction > 0;
+            if (seekFirst)
+                player.MediaOpened += (s, e) =>
+                {
+                    if (voice.Stopped) return;
+                    if (player.NaturalDuration.HasTimeSpan)
+                        player.Position = TimeSpan.FromSeconds(player.NaturalDuration.TimeSpan.TotalSeconds * startFraction);
+                    startFraction = 0;   // spätere Wiederholungen beginnen vorn
+                    player.Play();
+                };
             player.MediaEnded += (s, e) =>
             {
                 if (voice.Stopped) return;
@@ -60,7 +131,7 @@ namespace OOPGames
                 voice.Stop();
                 if (ended != null) ended();
             };
-            player.Play();
+            if (!seekFirst) player.Play();   // mit Startstelle startet MediaOpened die Wiedergabe
             return voice;
         }
 
@@ -80,6 +151,80 @@ namespace OOPGames
             public void SetVolume(double volume)
             {
                 if (!Stopped) Player.Volume = Math.Max(0, Math.Min(1, volume));
+            }
+        }
+
+        // Ein dauerhaft geöffneter Spieler für genau eine Datei; die Ereignisse hängen einmal am Spieler und gehören
+        // zur jeweils aktiven Stimme.
+        private sealed class PooledPlayer
+        {
+            public readonly MediaPlayer Player = new MediaPlayer();
+            public PooledVoice Active;
+            public bool Ready, Broken;
+
+            public PooledPlayer(string file)
+            {
+                Player.MediaOpened += (s, e) => { Ready = true; if (Active != null && !Active.Stopped) Play(); };
+                Player.MediaEnded += (s, e) =>
+                {
+                    PooledVoice voice = Active;
+                    if (voice == null || voice.Stopped) return;
+                    if (voice.Loop && (voice.KeepGoing == null || voice.KeepGoing())) { Play(); return; }
+                    voice.Finish();
+                };
+                Player.MediaFailed += (s, e) =>
+                {
+                    Broken = true;
+                    Ready = false;
+                    PooledVoice voice = Active;
+                    if (voice != null && !voice.Stopped) voice.Finish();
+                };
+                Player.Open(new Uri(file, UriKind.Absolute));
+            }
+
+            public void Play()
+            {
+                Player.Position = TimeSpan.Zero;
+                Player.Play();
+            }
+        }
+
+        private sealed class PooledVoice : IG1C_AudioVoice
+        {
+            private readonly PooledPlayer _player;
+            private readonly Action _ended;
+
+            public PooledVoice(PooledPlayer player, bool loop, Func<bool> keepGoing, Action ended)
+            {
+                _player = player; Loop = loop; KeepGoing = keepGoing; _ended = ended;
+            }
+
+            public bool Loop { get; }
+            public Func<bool> KeepGoing { get; }
+            public bool Stopped { get; private set; }
+
+            public void Finish()
+            {
+                if (Stopped) return;
+                Release();
+                if (_ended != null) _ended();
+            }
+
+            public void Stop()
+            {
+                if (!Stopped) Release();
+            }
+
+            private void Release()
+            {
+                Stopped = true;
+                if (_player.Active == this) _player.Active = null;
+                try { _player.Player.Stop(); } catch (Exception) { }
+            }
+
+            public void SetVolume(double volume)
+            {
+                if (!Stopped) _player.Player.Volume = Math.Max(0, Math.Min(1, volume));
             }
         }
     }
@@ -181,8 +326,32 @@ namespace OOPGames
             Backend = new G1C_MediaBackend();
             PersistPath = G1C_SoundSettings.DefaultPath;
             Settings.LoadFrom(PersistPath);
+            SetMuted(Settings.Muted);
             _savedRevision = Settings.Revision;
             _appliedRevision = Settings.Revision;
+            PreloadEffects();
+        }
+
+        // Entwickler: Patrick Lupierz – Datum: 24.11.2026
+        // Aufgabe: Alle kurzen Effekte (Schritte, Tür, Münzen, ...) einmal vorab öffnen, damit sie beim Auslösen sofort
+        //          zu hören sind. Musik wird nicht vorgeladen (große Dateien, startet ohnehin nur beim Ortswechsel).
+        private void PreloadEffects()
+        {
+            try
+            {
+                foreach (G1C_SoundDef def in G1C_SoundCatalog.All)
+                {
+                    if (def.IsMusic) continue;
+                    string[] files = G1C_SoundFiles.For(def);
+                    if (files.Length == 0)
+                    {
+                        if (def.Fallback != null) Backend.Preload(GeneratedFile(def.Fallback));
+                        continue;
+                    }
+                    foreach (string file in files) Backend.Preload(file);
+                }
+            }
+            catch (Exception) { }
         }
 
         // ------------------------------------------------------------------ Lautstärke
@@ -219,6 +388,8 @@ namespace OOPGames
         public void SetMuted(bool muted)
         {
             Muted = muted;
+            Settings.Muted = muted;
+            if (PersistPath != null) Settings.Save(PersistPath);
             RefreshVolumes();
         }
 
@@ -311,6 +482,10 @@ namespace OOPGames
             string startedTheme = CurrentMusic;
             try
             {
+                // Änderung durch: Patrick Lupierz – Datum: 25.11.2026 – Kein Sprung mehr in die Musikdatei: Der Sprung
+                // (Position setzen) in den MP3-Dateien erzeugte bei jedem Raumwechsel ein Piepen. Lieder starten vorn,
+                // zufällig bleibt die Auswahl der Datei (siehe Pick). Die Startstelle bleibt im Backend vorhanden, wird aber nicht gesetzt.
+                Backend.StartFraction = 0;
                 // Einzelne Datei: der Player wiederholt sie selbst; mehrere Dateien: nach dem Ende kommt die nächste
                 bool single = files.Length <= 1;
                 voice.Handle = Backend.Start(file, VolumeFor(def), single, HeartbeatAlive, () =>
@@ -333,7 +508,8 @@ namespace OOPGames
                 return def.Fallback == null ? null : GeneratedFile(def.Fallback);
             int index;
             if (!_variant.TryGetValue(def.Id, out index)) index = -1;
-            if (def.Sequential || files.Length == 1) index = (index + 1) % files.Length;
+            if (index < 0 && !def.Sequential && files.Length > 1) index = Random.Next(files.Length);   // erstes Stück zufällig
+            else if (def.Sequential || files.Length == 1) index = (index + 1) % files.Length;
             else index = (index + 1 + Random.Next(files.Length - 1)) % files.Length;   // nie dieselbe Datei zweimal hintereinander
             _variant[def.Id] = index;
             return files[index];
@@ -574,7 +750,6 @@ namespace OOPGames
             { "sfx_lose", new[] { "G4:2 E4:2 C4:4", "", "220" } },
             { "sfx_coin", new[] { "B5:1 E6:3", "", "420" } },
             { "sfx_catch", new[] { "G5:1 B5:1 D6:1 G6:4", "", "300" } },
-            { "sfx_door", new[] { "C3:2", "", "240" } },
             { "sfx_meow", new[] { "A5:1 F5:1 D5:3", "", "360" } },
             { "sfx_click", new[] { "C6:1", "", "600" } },
         };

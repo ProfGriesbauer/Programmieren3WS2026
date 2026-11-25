@@ -50,7 +50,8 @@ namespace OOPGames
     // Erstellt: 15.11.2026
     // Beschreibung: Die fünf Automaten der Spielhalle (SprintPlanning C11): vier mit eigenen Spielen an der
     //               Rückwand, einer in der Mitte für dynamisch eingebundene Spiele anderer Gruppen
-    //               (G1C_GuestGameCatalog). Maximal neun Spiele pro Automat.
+    //               (G1C_GuestGameCatalog). Maximal neun Spiele pro eigenem Automat; der Gast-Automat hat seit
+    //               23.11.2026 keine Obergrenze (alle registrierten Spiele anderer Gruppen).
     // =====================================================
     public static class G1C_ArcadeCatalog
     {

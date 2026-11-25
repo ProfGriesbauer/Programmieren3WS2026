@@ -9,6 +9,9 @@ Where a group has several numbered variants, play a **random** one each time so 
 |---|---|---|
 | `damage_01.wav` – `damage_18.wav` | Player takes damage | One-shot, random variant |
 | `player_death.wav` | Player dies ("Emotional Damage", 3.2 s) | One-shot. Stop the sprint loop first |
+| `playerFootstep_01.wav` – `playerFootstep_08.wav` | Each footstep while the player **walks** (dirt/gravel, 0.2–0.33 s) | One-shot, random variant (avoid the same one twice in a row). Trigger in sync with the walk animation, or on a timer (~0.35–0.45 s between steps while walking). Not while sprinting (the engine loop replaces them). Optionally vary volume ±10 % |
+| `playerHeal.wav` | Player **heals** (picks up / uses a heal) | One-shot (a long, swelling "huuuu", 2.7 s). Don't restart it if it's already playing; if health goes back above the low-health threshold, also reset the low-health warning |
+| `playerLowHealth.wav` | Player's health drops **below a low-health threshold** (e.g. 25 %) | One-shot (3.1 s), play once when crossing the threshold – not every frame. Optionally repeat every ~8–10 s while health stays low; reset when the player heals above the threshold or dies |
 
 ## Combat
 
@@ -17,6 +20,7 @@ Where a group has several numbered variants, play a **random** one each time so 
 | `sword_swing_01.wav` – `sword_swing_06.wav` | Normal sword attack | One-shot, random variant |
 | `sword_swing_light.wav` | Fast / light attack (optional) | One-shot |
 | `sword_swing_heavy.wav` | Heavy / charged attack (optional) | One-shot |
+| `electricDamage_01.wav` – `electricDamage_04.wav` | Someone takes **electric / shock damage** (player or enemy) | One-shot, random variant (01–03 ≈ 1 s, 04 = short 0.55 s version for rapid or repeated hits). Can play together with the normal damage sound |
 | `hit_impact_01.wav` – `hit_impact_06.wav` | An attack hits something | One-shot, random variant. Can play together with a damage sound |
 
 ## Enemies / non-player entities

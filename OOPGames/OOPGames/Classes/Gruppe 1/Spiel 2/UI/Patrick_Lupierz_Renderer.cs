@@ -55,6 +55,18 @@ namespace OOPGames
         public static double ScreenWidth { get; private set; } = BaseScreenWidth;
         public static double ScreenHeight { get; private set; } = BaseScreenHeight;
 
+        // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – sichtbares Fenster in virtuellen Koordinaten.
+        // Bei der Welt deckt es sich mit ScreenWidth/ScreenHeight; im festen Minispiel-Rahmen ragt es darüber hinaus
+        // (z. B. WindowBottom > 320 bei einem hohen Fenster), damit Hintergrund und Münzregen bis zum Fensterrand reichen.
+        public static double WindowLeft { get; private set; }
+        public static double WindowTop { get; private set; }
+        public static double WindowRight { get; private set; } = BaseScreenWidth;
+        public static double WindowBottom { get; private set; } = BaseScreenHeight;
+        /// <summary>true, wenn das Hauptfenster im Vollbild ist (ohne Rahmen, so schaltet der Vollbild-Knopf um).</summary>
+        public static bool IsFullscreen { get; private set; }   // Patrick Lupierz – 22.11.2026
+        private double _canvasWidth = BaseScreenWidth;
+        private double _canvasHeight = BaseScreenHeight;
+
         private static readonly FontFamily UiFont = new FontFamily("Consolas, Segoe UI Symbol");
         private readonly Dictionary<Color, SolidColorBrush> _brushes = new Dictionary<Color, SolidColorBrush>();
         private Canvas _canvas;
@@ -83,6 +95,13 @@ namespace OOPGames
             }
 
             double scale = Math.Min(cw / BaseScreenWidth, ch / BaseScreenHeight);
+            // Änderung durch: Patrick Lupierz – Datum: 22.11.2026 – Welt, HUD und Menüs füllen wieder das ganze Fenster
+            // (jede Fenstergröße, kein schwarzer Rand, nichts ragt über das HUD). Der feste, zentrierte 480x320-Rahmen
+            // von Denis Mock (19.11.2026) gilt jetzt nur noch für Minispiele: siehe UseFixedFrame().
+            _canvasWidth = cw;
+            _canvasHeight = ch;
+            Window window = Window.GetWindow(canvas);
+            IsFullscreen = window != null && window.WindowStyle == WindowStyle.None;
             ScreenWidth = cw / scale;
             ScreenHeight = ch / scale;
             Viewport = new G1C_Viewport
@@ -91,6 +110,10 @@ namespace OOPGames
                 VirtualWidth = ScreenWidth,
                 VirtualHeight = ScreenHeight
             };
+            WindowLeft = 0;
+            WindowTop = 0;
+            WindowRight = ScreenWidth;
+            WindowBottom = ScreenHeight;
 
             canvas.Children.Clear();
             canvas.Background = Brushes.Black;
@@ -99,6 +122,29 @@ namespace OOPGames
         }
 
         private double S { get { return Viewport.Scale; } }
+
+        // Entwickler: Patrick Lupierz – Datum: 22.11.2026
+        // Aufgabe: Fester 480x320-Rahmen, exakt mittig im Fenster (Minispiele: Karten, Automat und Knöpfe bleiben an
+        //          ihrer ursprünglichen Stelle und Größe). WindowLeft/Top/Right/Bottom beschreiben das ganze Fenster
+        //          in diesen Koordinaten. Vor dem ersten Zeichnen des Bildes aufrufen.
+        public void UseFixedFrame()
+        {
+            double scale = Viewport.Scale;
+            ScreenWidth = BaseScreenWidth;
+            ScreenHeight = BaseScreenHeight;
+            Viewport = new G1C_Viewport
+            {
+                Scale = scale,
+                VirtualWidth = BaseScreenWidth,
+                VirtualHeight = BaseScreenHeight,
+                OffsetX = (_canvasWidth - BaseScreenWidth * scale) / 2,
+                OffsetY = (_canvasHeight - BaseScreenHeight * scale) / 2
+            };
+            WindowLeft = -Viewport.OffsetX / scale;
+            WindowTop = -Viewport.OffsetY / scale;
+            WindowRight = BaseScreenWidth + Viewport.OffsetX / scale;
+            WindowBottom = BaseScreenHeight + Viewport.OffsetY / scale;
+        }
 
         public void ClipToVirtualRect(double x, double y, double width, double height)
         {
