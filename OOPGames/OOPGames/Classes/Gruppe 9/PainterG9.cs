@@ -66,6 +66,8 @@ namespace OOPGames
         private AnimationProfile _selectedAnimationProfile = BoxingKnightProfile;
         private SpriteSheetAnimator _playerAnimator;
         private AnimationProfile _playerAnimatorProfile;
+        private SpriteSheetAnimator _startNodeCharacterAnimator;
+        private AnimationProfile _startNodeCharacterAnimatorProfile;
         private readonly Dictionary<MirrorImage, SpriteSheetAnimator>
             _mirrorImageAnimators = new Dictionary<MirrorImage, SpriteSheetAnimator>();
         private AnimationProfile _mirrorImageAnimatorProfile;
@@ -96,12 +98,36 @@ namespace OOPGames
             _selectedAnimationProfile = GetAnimationProfile(profileName);
             _playerAnimator = null;
             _playerAnimatorProfile = null;
+            _startNodeCharacterAnimator = null;
+            _startNodeCharacterAnimatorProfile = null;
             _mirrorImageAnimators.Clear();
             _mirrorImageAnimatorProfile = null;
             _enemyAnimator = null;
             _menuPage = MenuPage.Main;
             _menuPageBeforeWeaponUpgrades = MenuPage.Main;
             _keyBindingCaptureAction = null;
+        }
+
+        internal BitmapSource GetSelectedCharacterFrontIdleFrame()
+        {
+            if (_startNodeCharacterAnimator == null
+                || !ReferenceEquals(
+                    _startNodeCharacterAnimatorProfile, _selectedAnimationProfile))
+            {
+                _startNodeCharacterAnimator =
+                    CreateAnimator(_selectedAnimationProfile);
+                _startNodeCharacterAnimatorProfile = _selectedAnimationProfile;
+            }
+
+            const string animationName = "Idle Front";
+            if (_startNodeCharacterAnimator.GetFrameCount(animationName) == 0)
+            {
+                throw new InvalidDataException(
+                    "The selected character has no front idle animation.");
+            }
+            return _startNodeCharacterAnimator.GetClipFrame(animationName, 0)
+                ?? throw new InvalidDataException(
+                    "The selected character's front idle animation has no first frame.");
         }
 
         public void PaintGameField(Canvas canvas, IGameField currentField)
@@ -951,8 +977,13 @@ namespace OOPGames
                     new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
                 skillTreePage.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                 skillTreePage.Children.Add(_progressionMenuRenderer.CreateSkillTree(
-                    field, () => canvas.Tag = null,
-                    Math.Max(0, width - 48), Math.Max(0, height - 48)));
+                    field, () =>
+                    {
+                        _progressionMenuRenderer.CaptureSkillTreeViewport();
+                        canvas.Tag = null;
+                    },
+                    Math.Max(0, width - 48), Math.Max(0, height - 48),
+                    GetSelectedCharacterFrontIdleFrame()));
                 Button backButton = CreateMenuButton("Back",
                     () =>
                     {
@@ -1360,6 +1391,8 @@ namespace OOPGames
                 _selectedAnimationProfile = profile;
                 _playerAnimator = null;
                 _playerAnimatorProfile = null;
+                _startNodeCharacterAnimator = null;
+                _startNodeCharacterAnimatorProfile = null;
                 _mirrorImageAnimators.Clear();
                 _mirrorImageAnimatorProfile = null;
             }

@@ -4,7 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace OOPGames
@@ -16,6 +21,13 @@ namespace OOPGames
         // where it was left.
         private readonly Dictionary<string, double> _scrollOffsets =
             new Dictionary<string, double>(StringComparer.Ordinal);
+        private double _skillTreeZoom = 0.65;
+        private double _skillTreeHorizontalOffset;
+        private double _skillTreeVerticalOffset;
+        private bool _hasSkillTreeViewport;
+        private ScrollViewer _skillTreePreviewScrollViewer;
+        private bool _isPanningSkillTree;
+        private MouseButton _skillTreePanButton;
 
         // Menu click sound for windows outside the game canvas (skill point question).
         public Action PlayMenuClick { get; set; }
@@ -23,10 +35,26 @@ namespace OOPGames
             new SolidColorBrush(Color.FromRgb(225, 233, 241));
         private const double ButtonHeight = 36;
         private const double SplitRowWidth = 300;
+        private const double MinimumSkillTreeZoom = 0.3;
+        private const double MaximumSkillTreeZoom = 2.5;
         private const string MaxedOutLabel = "Maximale Stufe erreicht";
 
+        internal void CaptureSkillTreeViewport()
+        {
+            if (_skillTreePreviewScrollViewer == null)
+            {
+                return;
+            }
+            _skillTreeHorizontalOffset =
+                _skillTreePreviewScrollViewer.HorizontalOffset;
+            _skillTreeVerticalOffset =
+                _skillTreePreviewScrollViewer.VerticalOffset;
+            _hasSkillTreeViewport = true;
+        }
+
         public UIElement CreateSkillTree(
-            ArenaField field, Action refresh, double availableWidth, double availableHeight)
+            ArenaField field, Action refresh, double availableWidth,
+            double availableHeight, BitmapSource startNodeSprite)
         {
             ArenaProgression progression = field.Progression;
             StackPanel content = CreateContent(
@@ -38,7 +66,7 @@ namespace OOPGames
                     + "  |  1 Punkt je 5 Kills. Spielerfähigkeiten sind unabhängig von Waffen.");
             content.Children.Add(CreateSkillTreePreview(
                 field, refresh, availableWidth,
-                Math.Max(360, availableHeight - 140)));
+                Math.Max(360, availableHeight - 140), startNodeSprite));
 
             TreeView tree = new TreeView
             {
@@ -59,14 +87,16 @@ namespace OOPGames
             };
             AddPlayerStatUpgrade(
                 stats, field, ArenaProgression.MaximumHealth,
-                "Maximale Gesundheit",
+                ArenaSkillTreeRepository.GetPlayerStatName(
+                    ArenaProgression.MaximumHealth),
                 "Erhöht die maximale Gesundheit um "
                     + ArenaProgression.HealthIncreasePerRank + ".",
                 field.Player.MaxHitPoints,
                 ArenaProgression.HealthIncreasePerRank, refresh);
             AddPlayerStatUpgrade(
                 stats, field, ArenaProgression.MaximumSpeed,
-                "Maximale Geschwindigkeit",
+                ArenaSkillTreeRepository.GetPlayerStatName(
+                    ArenaProgression.MaximumSpeed),
                 "Erhöht die Bewegungsgeschwindigkeit um "
                     + ArenaProgression.SpeedIncreasePerRank + ".",
                 field.Player.MaxSpeed,
@@ -138,7 +168,8 @@ namespace OOPGames
 
         private UIElement CreateSkillTreePreview(
             ArenaField field, Action refresh,
-            double availableWidth, double availableHeight)
+            double availableWidth, double availableHeight,
+            BitmapSource startNodeSprite)
         {
             ArenaSkillTreeDocument tree = field.Progression.SkillTree;
             double boardWidth = Math.Max(1024,
@@ -157,10 +188,19 @@ namespace OOPGames
             };
             ArenaSkillTreeVisuals.DrawConnections(
                 board, tree,
-                connection => field.Progression.GetSkillRank(
-                    connection.ToSkillId) > 0
+                connection =>
+                {
+                    ArenaSkillTreeNode target = tree.Nodes.First(
+                        node => ArenaSkillTreeRepository.GetNodeId(node)
+                            == connection.ToSkillId);
+                    return !target.IsFork
+                        && field.Progression.GetSkillRank(target.SkillId)
+                            > field.Progression.GetSkillNodeRankStart(
+                                ArenaSkillTreeRepository.GetNodeId(target))
                         ? Brushes.MediumSeaGreen
-                        : Brushes.DeepSkyBlue);
+                        : Brushes.DeepSkyBlue;
+                },
+                forksAsMarkers: true);
 
             IReadOnlyList<ArenaSkillInfo> skills =
                 ArenaSkillTreeRepository.GetImplementedSkills();
@@ -168,23 +208,28 @@ namespace OOPGames
             {
                 if (node.IsFork)
                 {
-                    Border forkTile = ArenaSkillTreeVisuals.CreateForkTile(
-                        node.ForceDecision);
-                    forkTile.ToolTip =
-                        ArenaSkillTreeRepository.GetForkNodeInfo(
-                            node.ForceDecision).Description;
-                    Canvas.SetLeft(forkTile, node.X);
-                    Canvas.SetTop(forkTile, node.Y);
-                    board.Children.Add(forkTile);
+                    FrameworkElement forkMarker =
+                        ArenaSkillTreeVisuals.CreateForkMarkerVisual(
+                            node.ForceDecision,
+                            node.ForceDecision
+                                && field.Progression.HasChosenForcedForkBranch(
+                                    ArenaSkillTreeRepository.GetNodeId(node)),
+                            field.Progression.GetForkInputsRemaining(
+                                ArenaSkillTreeRepository.GetNodeId(node)));
+                    Canvas.SetLeft(forkMarker,
+                        node.X + (ArenaSkillTreeVisuals.NodeWidth
+                            - forkMarker.Width) / 2);
+                    Canvas.SetTop(forkMarker,
+                        node.Y + (ArenaSkillTreeVisuals.NodeHeight
+                            - forkMarker.Height) / 2);
+                    board.Children.Add(forkMarker);
                     continue;
                 }
 
                 if (ArenaSkillTreeRepository.IsStartNode(node.SkillId))
                 {
-                    Border startTile = ArenaSkillTreeVisuals.CreateNodeTile(
-                        ArenaSkillTreeRepository.StartNodeInfo.Name,
-                        "Baumstart",
-                        ArenaSkillTreeTileState.Start);
+                    Border startTile =
+                        ArenaSkillTreeVisuals.CreateStartNodeTile(startNodeSprite);
                     startTile.ToolTip =
                         ArenaSkillTreeRepository.StartNodeInfo.Description;
                     Canvas.SetLeft(startTile, node.X);
@@ -201,7 +246,14 @@ namespace OOPGames
                         "The selected skill tree contains an unknown skill.");
                 }
 
+                string nodeId = ArenaSkillTreeRepository.GetNodeId(node);
                 int rank = field.Progression.GetSkillRank(node.SkillId);
+                int rankStart =
+                    field.Progression.GetSkillNodeRankStart(nodeId);
+                int rankStages =
+                    field.Progression.GetSkillNodeRankStages(nodeId);
+                int rankLimit = rankStart + rankStages;
+                bool nodeUnlocked = rank > rankStart;
                 bool isStat = node.SkillId == ArenaProgression.MaximumHealth
                     || node.SkillId == ArenaProgression.MaximumSpeed;
                 int maximumRank = isStat
@@ -212,24 +264,35 @@ namespace OOPGames
                     : PlayerAbilityCatalog.GetDefinition(node.SkillId)
                         .GetNextRankCost(rank);
                 bool hasPrerequisites =
-                    field.Progression.HasSkillPrerequisites(node.SkillId);
-                bool isMaxed = rank >= maximumRank;
+                    field.Progression.HasSkillNodePrerequisites(nodeId);
+                bool isMaxed = rank >= Math.Min(maximumRank, rankLimit);
+                bool waitingForEarlierRanks = rank < rankStart;
                 bool canPurchase = isStat
-                    ? field.Progression.CanUpgradePlayerStat(node.SkillId)
-                    : field.Progression.CanUpgradeSkill(node.SkillId);
+                    ? field.Progression.CanUpgradePlayerStatNode(nodeId)
+                    : field.Progression.CanUpgradeSkillNode(nodeId);
 
                 string subtitle = isMaxed
-                    ? "Rang " + rank + "/" + maximumRank + " · Maximal"
+                    ? "Rang " + rank + "/" + maximumRank + " · Stufen "
+                        + (rankStart + 1) + "–" + rankLimit
+                    : waitingForEarlierRanks
+                        ? "Wartet auf vorherige Stufen · Rang " + rank + "/"
+                            + maximumRank
+                    : !hasPrerequisites
+                        ? "Gesperrt · " + nextCost + " Punkte"
+                    : !canPurchase
+                        ? "Nicht genug Skillpunkte · " + nextCost + " Punkte"
                     : rank > 0
                         ? "Rang " + rank + "/" + maximumRank
+                            + " · Stufen " + (rankStart + 1) + "–" + rankLimit
                             + " · " + nextCost + " Punkte"
-                        : hasPrerequisites
-                            ? "Freischaltbar · " + nextCost + " Punkte"
-                            : "Gesperrt · " + nextCost + " Punkte";
-                ArenaSkillTreeTileState tileState = rank > 0
+                        : "Freischaltbar · Stufen " + (rankStart + 1)
+                            + "–" + rankLimit + " · " + nextCost + " Punkte";
+                ArenaSkillTreeTileState tileState = isMaxed
                     ? ArenaSkillTreeTileState.Unlocked
-                    : hasPrerequisites
-                        ? ArenaSkillTreeTileState.Available
+                    : canPurchase
+                        ? nodeUnlocked
+                            ? ArenaSkillTreeTileState.Unlocked
+                            : ArenaSkillTreeTileState.Available
                         : ArenaSkillTreeTileState.Locked;
 
                 Button nodeButton = new Button
@@ -252,11 +315,11 @@ namespace OOPGames
                 {
                     if (isStat)
                     {
-                        field.TryUpgradePlayerStat(node.SkillId);
+                        field.Progression.TryUpgradePlayerStatNode(nodeId);
                     }
                     else
                     {
-                        field.Progression.TryUpgradeSkill(node.SkillId);
+                        field.Progression.TryUpgradeSkillNode(nodeId);
                     }
                     refresh();
                 };
@@ -265,18 +328,223 @@ namespace OOPGames
                 board.Children.Add(nodeButton);
             }
 
+            if (!_hasSkillTreeViewport)
+            {
+                _skillTreeZoom = Math.Max(
+                    0.65, Math.Min(1, availableWidth / boardWidth));
+            }
+            board.LayoutTransform = new ScaleTransform(
+                _skillTreeZoom, _skillTreeZoom);
+            ScrollViewer previewScroll = new ScrollViewer
+            {
+                Content = board,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                CanContentScroll = false,
+                PanningMode = PanningMode.None,
+                Background = new SolidColorBrush(Color.FromRgb(13, 19, 27))
+            };
+            _skillTreePreviewScrollViewer = previewScroll;
+            previewScroll.PreviewMouseWheel += (sender, args) =>
+                ZoomSkillTreeAtPointer(
+                    previewScroll, board, args);
+            previewScroll.PreviewMouseDown += (sender, args) =>
+                BeginSkillTreePan(previewScroll, args);
+            previewScroll.PreviewMouseMove += (sender, args) =>
+                ContinueSkillTreePan(previewScroll, args);
+            previewScroll.PreviewMouseUp += (sender, args) =>
+                EndSkillTreePan(previewScroll, args);
+            previewScroll.LostMouseCapture += (sender, args) =>
+                ResetSkillTreePan(previewScroll);
+            previewScroll.ScrollChanged += (sender, args) =>
+            {
+                if (_hasSkillTreeViewport)
+                {
+                    _skillTreeHorizontalOffset = previewScroll.HorizontalOffset;
+                    _skillTreeVerticalOffset = previewScroll.VerticalOffset;
+                }
+            };
+            previewScroll.Loaded += (sender, args) =>
+                previewScroll.Dispatcher.BeginInvoke(
+                    DispatcherPriority.Loaded,
+                    new Action(() =>
+                    {
+                        if (_hasSkillTreeViewport)
+                        {
+                            previewScroll.ScrollToHorizontalOffset(
+                                _skillTreeHorizontalOffset);
+                            previewScroll.ScrollToVerticalOffset(
+                                _skillTreeVerticalOffset);
+                        }
+                        else
+                        {
+                            previewScroll.ScrollToHorizontalOffset(Math.Max(
+                                0, (previewScroll.ExtentWidth
+                                    - previewScroll.ViewportWidth) / 2));
+                            previewScroll.ScrollToVerticalOffset(Math.Max(
+                                0, (previewScroll.ExtentHeight
+                                    - previewScroll.ViewportHeight) / 2));
+                            _hasSkillTreeViewport = true;
+                        }
+                    }));
+
+            Grid preview = new Grid
+            {
+                Background = new SolidColorBrush(Color.FromRgb(13, 19, 27)),
+                ClipToBounds = true
+            };
+            preview.Children.Add(previewScroll);
+            Border navigationHint = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(210, 8, 13, 19)),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(7, 4, 7, 4),
+                Margin = new Thickness(8),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                IsHitTestVisible = false,
+                Child = new TextBlock
+                {
+                    Text = "Mausrad: scrollen · Shift+Mausrad: zoomen · Ziehen/Mausradklick: verschieben",
+                    Foreground = Brushes.White,
+                    FontSize = 11
+                }
+            };
+            preview.Children.Add(navigationHint);
+
             return new Border
             {
                 Width = availableWidth,
                 Height = availableHeight,
                 BorderBrush = new SolidColorBrush(Color.FromRgb(77, 94, 113)),
                 BorderThickness = new Thickness(1),
-                Child = new Viewbox
-                {
-                    Stretch = Stretch.Uniform,
-                    Child = board
-                }
+                Child = preview
             };
+        }
+
+        private void ZoomSkillTreeAtPointer(
+            ScrollViewer scrollViewer, Canvas board, MouseWheelEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Shift) == 0)
+            {
+                return;
+            }
+            double oldZoom = _skillTreeZoom;
+            double zoomFactor = e.Delta > 0 ? 1.1 : 1 / 1.1;
+            double newZoom = Math.Max(
+                MinimumSkillTreeZoom,
+                Math.Min(MaximumSkillTreeZoom, oldZoom * zoomFactor));
+            if (Math.Abs(newZoom - oldZoom) < 0.0001)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            Point pointer = e.GetPosition(scrollViewer);
+            double contentX = (scrollViewer.HorizontalOffset + pointer.X) / oldZoom;
+            double contentY = (scrollViewer.VerticalOffset + pointer.Y) / oldZoom;
+            _skillTreeZoom = newZoom;
+            board.LayoutTransform = new ScaleTransform(newZoom, newZoom);
+            scrollViewer.Dispatcher.BeginInvoke(
+                DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    scrollViewer.ScrollToHorizontalOffset(
+                        contentX * newZoom - pointer.X);
+                    scrollViewer.ScrollToVerticalOffset(
+                        contentY * newZoom - pointer.Y);
+                }));
+            e.Handled = true;
+        }
+
+        private void BeginSkillTreePan(
+            ScrollViewer scrollViewer, MouseButtonEventArgs e)
+        {
+            bool isMiddleClick = e.ChangedButton == MouseButton.Middle;
+            bool isLeftDrag = e.ChangedButton == MouseButton.Left
+                && !IsInsideSkillTreeControl(e.OriginalSource as DependencyObject);
+            if ((!isMiddleClick && !isLeftDrag) || _isPanningSkillTree)
+            {
+                return;
+            }
+
+            _isPanningSkillTree = true;
+            _skillTreePanButton = e.ChangedButton;
+            _skillTreePanStart = e.GetPosition(scrollViewer);
+            _skillTreePanStartHorizontalOffset = scrollViewer.HorizontalOffset;
+            _skillTreePanStartVerticalOffset = scrollViewer.VerticalOffset;
+            scrollViewer.Cursor = Cursors.SizeAll;
+            scrollViewer.CaptureMouse();
+            e.Handled = true;
+        }
+
+        private Point _skillTreePanStart;
+        private double _skillTreePanStartHorizontalOffset;
+        private double _skillTreePanStartVerticalOffset;
+
+        private void ContinueSkillTreePan(
+            ScrollViewer scrollViewer, MouseEventArgs e)
+        {
+            if (!_isPanningSkillTree)
+            {
+                return;
+            }
+            bool buttonStillPressed = _skillTreePanButton == MouseButton.Middle
+                ? e.MiddleButton == MouseButtonState.Pressed
+                : e.LeftButton == MouseButtonState.Pressed;
+            if (!buttonStillPressed)
+            {
+                ResetSkillTreePan(scrollViewer);
+                return;
+            }
+
+            Point current = e.GetPosition(scrollViewer);
+            scrollViewer.ScrollToHorizontalOffset(
+                _skillTreePanStartHorizontalOffset
+                    - (current.X - _skillTreePanStart.X));
+            scrollViewer.ScrollToVerticalOffset(
+                _skillTreePanStartVerticalOffset
+                    - (current.Y - _skillTreePanStart.Y));
+            e.Handled = true;
+        }
+
+        private void EndSkillTreePan(
+            ScrollViewer scrollViewer, MouseButtonEventArgs e)
+        {
+            if (_isPanningSkillTree && e.ChangedButton == _skillTreePanButton)
+            {
+                ResetSkillTreePan(scrollViewer);
+                e.Handled = true;
+            }
+        }
+
+        private void ResetSkillTreePan(ScrollViewer scrollViewer)
+        {
+            if (!_isPanningSkillTree)
+            {
+                return;
+            }
+            _isPanningSkillTree = false;
+            scrollViewer.Cursor = null;
+            if (scrollViewer.IsMouseCaptured)
+            {
+                scrollViewer.ReleaseMouseCapture();
+            }
+        }
+
+        private static bool IsInsideSkillTreeControl(DependencyObject source)
+        {
+            while (source != null)
+            {
+                if (source is ButtonBase || source is ScrollBar || source is Thumb)
+                {
+                    return true;
+                }
+                source = source is Visual || source is Visual3D
+                    ? VisualTreeHelper.GetParent(source)
+                    : LogicalTreeHelper.GetParent(source);
+            }
+            return false;
         }
 
         public UIElement CreateWeaponUpgrades(ArenaField field, Action refresh)

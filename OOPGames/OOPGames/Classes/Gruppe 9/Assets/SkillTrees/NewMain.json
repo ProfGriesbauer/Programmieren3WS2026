@@ -1,0 +1,175 @@
+{
+  "Name": "NewMain",
+  "Nodes": [
+    {
+      "SkillId": "__tree_start__",
+      "NodeId": "__tree_start__",
+      "RankStages": 0,
+      "X": 1932,
+      "Y": 1464,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "maximum-health",
+      "NodeId": "__tree_skill_node_bf8ae12ad92d4244a4934a2a51adccc4",
+      "RankStages": 1,
+      "X": 2240.4,
+      "Y": 1463.9183333333333,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "__tree_fork_ef307bfb517e4d578103e73371b2ed96",
+      "NodeId": "__tree_fork_ef307bfb517e4d578103e73371b2ed96",
+      "RankStages": 0,
+      "X": 2556.6870683818556,
+      "Y": 1467.1183333333333,
+      "IsFork": true,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "healing-pulse",
+      "NodeId": "__tree_skill_node_9b5a8aed4fe74e8caa724bffbc239703",
+      "RankStages": 5,
+      "X": 2846.2870683818555,
+      "Y": 1297.5183333333334,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "__tree_fork_08fb2732bc61417faab162f63ed07513",
+      "NodeId": "__tree_fork_08fb2732bc61417faab162f63ed07513",
+      "RankStages": 0,
+      "X": 3120.2965470548415,
+      "Y": 1457.5183333333334,
+      "IsFork": true,
+      "ForceDecision": false,
+      "RequiredInputs": 2
+    },
+    {
+      "SkillId": "maximum-health",
+      "NodeId": "__tree_skill_node_12d1596efa0a410ebb4b7bf655f007b0",
+      "RankStages": 2,
+      "X": 3428.808937034529,
+      "Y": 1458.3183333333334,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "maximum-health",
+      "NodeId": "__tree_skill_node_9e8566fac59d4697979a51098a10a2da",
+      "RankStages": 2,
+      "X": 2849.840216655382,
+      "Y": 1632.7183333333332,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "power-blast",
+      "NodeId": "__tree_skill_node_e1669540d69b48c695f7c432835d8fb2",
+      "RankStages": 5,
+      "X": 1924.3888964116454,
+      "Y": 1188.88,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "maximum-speed",
+      "NodeId": "__tree_skill_node_794700bb56d0407b84118dde33c507ee",
+      "RankStages": 5,
+      "X": 1933.9888964116453,
+      "Y": 1705.68,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "__tree_fork_12617219d6f04342b4724a7a6aad2589",
+      "NodeId": "__tree_fork_12617219d6f04342b4724a7a6aad2589",
+      "RankStages": 0,
+      "X": 1519.4431956668932,
+      "Y": 1472.5566666666666,
+      "IsFork": true,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "slow-motion",
+      "NodeId": "__tree_skill_node_a0a3ef18f271406c911e5739d3466512",
+      "RankStages": 5,
+      "X": 1253.043195666893,
+      "Y": 1323.7566666666667,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    },
+    {
+      "SkillId": "mirror-image",
+      "NodeId": "__tree_skill_node_864114fc7bd348e1abb2f92f27933b06",
+      "RankStages": 4,
+      "X": 1246.6431956668932,
+      "Y": 1669.3566666666666,
+      "IsFork": false,
+      "ForceDecision": false,
+      "RequiredInputs": 0
+    }
+  ],
+  "Connections": [
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "__tree_skill_node_bf8ae12ad92d4244a4934a2a51adccc4"
+    },
+    {
+      "FromSkillId": "__tree_skill_node_bf8ae12ad92d4244a4934a2a51adccc4",
+      "ToSkillId": "__tree_fork_ef307bfb517e4d578103e73371b2ed96"
+    },
+    {
+      "FromSkillId": "__tree_fork_ef307bfb517e4d578103e73371b2ed96",
+      "ToSkillId": "__tree_skill_node_9b5a8aed4fe74e8caa724bffbc239703"
+    },
+    {
+      "FromSkillId": "__tree_fork_ef307bfb517e4d578103e73371b2ed96",
+      "ToSkillId": "__tree_skill_node_9e8566fac59d4697979a51098a10a2da"
+    },
+    {
+      "FromSkillId": "__tree_skill_node_9b5a8aed4fe74e8caa724bffbc239703",
+      "ToSkillId": "__tree_fork_08fb2732bc61417faab162f63ed07513"
+    },
+    {
+      "FromSkillId": "__tree_skill_node_9e8566fac59d4697979a51098a10a2da",
+      "ToSkillId": "__tree_fork_08fb2732bc61417faab162f63ed07513"
+    },
+    {
+      "FromSkillId": "__tree_fork_08fb2732bc61417faab162f63ed07513",
+      "ToSkillId": "__tree_skill_node_12d1596efa0a410ebb4b7bf655f007b0"
+    },
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "__tree_skill_node_e1669540d69b48c695f7c432835d8fb2"
+    },
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "__tree_skill_node_794700bb56d0407b84118dde33c507ee"
+    },
+    {
+      "FromSkillId": "__tree_start__",
+      "ToSkillId": "__tree_fork_12617219d6f04342b4724a7a6aad2589"
+    },
+    {
+      "FromSkillId": "__tree_fork_12617219d6f04342b4724a7a6aad2589",
+      "ToSkillId": "__tree_skill_node_a0a3ef18f271406c911e5739d3466512"
+    },
+    {
+      "FromSkillId": "__tree_fork_12617219d6f04342b4724a7a6aad2589",
+      "ToSkillId": "__tree_skill_node_864114fc7bd348e1abb2f92f27933b06"
+    }
+  ]
+}
