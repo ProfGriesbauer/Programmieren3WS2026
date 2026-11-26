@@ -246,7 +246,7 @@ namespace OOPGames
         {
             double textWidth = Math.Max(120, width - 20 * scale);
             double fontSize = Math.Max(8, Math.Min(
-                15 * scale, textWidth / 48));
+                11 * scale, textWidth / 50));
             TextBlock controls = new TextBlock
             {
                 Text = "PLAYER 1:  W = GAS    S = BREMSE       " +
