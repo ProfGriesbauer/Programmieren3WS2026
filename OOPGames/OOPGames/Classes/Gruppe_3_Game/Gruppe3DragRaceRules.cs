@@ -43,13 +43,13 @@ namespace OOPGames
         {
             ClearField();
             _countdownStarted = DateTime.UtcNow;
-            _field.CountdownText = "PLAYER 1: AUTO AUSWAEHLEN";
+            _field.CountdownText = "PLAYER 1: AUTO AUSWÄHLEN";
         }
 
         public void ClearField()
         {
             _field.IsRaceStarted = false;
-            _field.CountdownText = "PLAYER 1: AUTO AUSWAEHLEN";
+            _field.CountdownText = "PLAYER 1: AUTO AUSWÄHLEN";
             _field.Winner = 0;
             _field.CarSelectionComplete = false;
             _field.SelectionFeedbackText = null;
@@ -86,7 +86,7 @@ namespace OOPGames
                 SetSelectionFeedback(raceMove.PlayerNumber, raceMove.CarIndex);
                 if (raceMove.PlayerNumber == 1)
                 {
-                    _field.CountdownText = "PLAYER 2: AUTO AUSWAEHLEN";
+                    _field.CountdownText = "PLAYER 2: AUTO AUSWÄHLEN";
                 }
 
                 return;
@@ -253,7 +253,7 @@ namespace OOPGames
         {
             _field.SelectionFeedbackText =
                 "PLAYER " + playerNumber + ": AUTO " + (carIndex + 1) +
-                " GEWAEHLT!";
+                " GEWÄHLT!";
             _field.SelectionFeedbackUntil = DateTime.UtcNow.AddSeconds(Gruppe3DragRaceConstants.SelectionFeedbackDurationSeconds);
         }
 

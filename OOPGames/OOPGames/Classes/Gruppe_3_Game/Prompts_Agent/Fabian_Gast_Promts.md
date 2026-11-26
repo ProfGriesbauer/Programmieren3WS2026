@@ -578,3 +578,39 @@
 - **Datum:** 2026-11-25
 - **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
 - **Ergebnisvermerk:** Auslagerung weiterer physikalischer Konstanten (Deceleration-Werte wie Bremsen, Ausrollen, Downshift und RPM-Schritte) in die zentrale `Gruppe3DragRaceConstants.cs` und Aktualisierung der `Fabian_Gast_Promts.md`.
+
+## Prompt 56
+
+**Wortlaut**
+> Kannst du bitte das promt.md vollständig aktualisieren, also alles was zwischen Prompt 50 und 51 noch fehlt
+
+- **Datum:** 2026-11-25
+- **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
+- **Ergebnisvermerk:** Aktualisierung der `Fabian_Gast_Promts.md` um Prompt 51 bis 55
+
+## Prompt 57
+
+**Wortlaut**
+> Kannst du machen, dass die Reaktionszeit nach dem Rennen angezeigt wird, aktuell steht nur 0ms dran
+
+- **Datum:** 2026-11-25
+- **Werkzeug/Modell:** GPT 6 Luna (Copilot Fusion)
+- **Ergebnisvermerk:** Reaktionszeiten angepasst
+
+## Prompt 58
+
+**Wortlaut**
+> Mess doch einfach die zeit zwischen start und dem ersten gangwechsel
+
+- **Datum:** 2026-11-26
+- **Werkzeug/Modell:** Google Gemini 3.5 Flash-Lite
+- **Ergebnisvermerk:** Reaktionszeit wird jetzt zwischen Rennstart und Gangwechsel gemessen
+
+## Prompt 59
+
+**Wortlaut**
+> Ich habe jetzt eine Font eingefügt. Kannst du die gleiche font in weiß überall leicht versetzt drüberlegen
+
+- **Datum:** 2026-11-26
+- **Werkzeug/Modell:** GPT 6 Luna (Copilot Fusion)
+- **Ergebnisvermerk:** Alle Spieltexte leicht versetzt mit weißer Kopie überlagert

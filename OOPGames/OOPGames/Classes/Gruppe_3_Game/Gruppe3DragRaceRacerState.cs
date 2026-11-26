@@ -19,6 +19,7 @@ namespace OOPGames
         private DateTime _downshiftUntil;
         private double _downshiftLimit;
 
+        private DateTime _raceStartedAt;
         public double Distance { get; private set; }
         public double Speed { get { return _speed; } }
         public int Gear { get; private set; }
@@ -83,6 +84,7 @@ namespace OOPGames
 
         public void OnRaceStarted(DateTime raceStartedAt)
         {
+            _raceStartedAt = raceStartedAt;
             if (IsComputer)
             {
                 Gear = 0;
@@ -91,10 +93,6 @@ namespace OOPGames
             else
             {
                 Gear = Math.Max(1, Gear);
-                if (IsHuman && Accelerating)
-                {
-                    ReactionTimeMs = 0;
-                }
             }
         }
 
@@ -163,19 +161,15 @@ namespace OOPGames
                     AiController.GetRaceCommand(
                         now, Gear, Rpm, CarIndex, out launchedNow);
                 ApplyCommand(aiCommand, now);
-                if (launchedNow)
+                if (launchedNow && !ReactionTimeMs.HasValue)
                 {
-                    ReactionTimeMs = (now - raceStartedAt).TotalMilliseconds;
+                    ReactionTimeMs = (now - _raceStartedAt).TotalMilliseconds;
                 }
             }
 
             if (IsHuman)
             {
                 ApplyCommand(KeyboardInput.ReadCommand(PlayerNumber), now);
-                if (Accelerating && !ReactionTimeMs.HasValue)
-                {
-                    ReactionTimeMs = (now - raceStartedAt).TotalMilliseconds;
-                }
             }
         }
 
@@ -231,6 +225,10 @@ namespace OOPGames
             Cars car = Gruppe3DragRaceCars.Get(CarIndex);
             if (command.ShiftUp)
             {
+                if (!ReactionTimeMs.HasValue && _raceStartedAt != default(DateTime))
+                {
+                    ReactionTimeMs = (now - _raceStartedAt).TotalMilliseconds;
+                }
                 Gear = Math.Min(car.GearEnds.Count, Gear + 1);
             }
 

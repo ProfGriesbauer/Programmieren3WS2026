@@ -116,7 +116,7 @@ namespace OOPGames
                     Text = showSelectionFeedback
                         ? field.SelectionFeedbackText
                         : field.CountdownText,
-                    Foreground = Brushes.White,
+                    Foreground = Brushes.Black,
                     FontSize = 32 * scale,
                     FontWeight = FontWeights.Bold,
                     TextAlignment = TextAlignment.Center,
@@ -185,7 +185,7 @@ namespace OOPGames
                 Text = showSelectionFeedback
                     ? field.SelectionFeedbackText
                     : field.CountdownText,
-                Foreground = Brushes.White,
+                Foreground = Brushes.Black,
                 FontSize = 30 * scale,
                 FontWeight = FontWeights.Bold,
                 FontFamily = GameFont
@@ -253,7 +253,7 @@ namespace OOPGames
                     "PLAYER 2:  NUMPAD 8 / ↑ = GAS    NUMPAD 5 / ↓ = BREMSE\n" +
                     "SCHALTEN:  P1  Q = HOCH  E = RUNTER       " +
                     "P2  NUMPAD 7 / Bild↑ = HOCH  NUMPAD 9 / Bild↓ = RUNTER",
-                Foreground = Brushes.White,
+                Foreground = Brushes.Black,
                 FontSize = fontSize,
                 FontWeight = FontWeights.Bold,
                 TextAlignment = TextAlignment.Center,
@@ -294,7 +294,7 @@ namespace OOPGames
             TextBlock heading = new TextBlock
             {
                 Text = "RENNERGEBNIS",
-                Foreground = Brushes.White,
+                Foreground = Brushes.Black,
                 FontFamily = GameFont,
                 FontSize = 20 * scale,
                 FontWeight = FontWeights.Bold,
@@ -347,7 +347,7 @@ namespace OOPGames
                 Text = player + "\nZEIT: " + time +
                     "\nENDGESCHW.: " + speed +
                     "\nREAKTION: " + reaction,
-                Foreground = Brushes.White,
+                Foreground = Brushes.Black,
                 FontFamily = GameFont,
                 FontSize = fontSize,
                 FontWeight = FontWeights.Bold,
@@ -388,6 +388,31 @@ namespace OOPGames
             Canvas.SetLeft(text, left);
             Canvas.SetTop(text, top);
             canvas.Children.Add(text);
+
+            TextBlock whiteOverlay = new TextBlock
+            {
+                Text = text.Text,
+                FontFamily = text.FontFamily,
+                FontSize = text.FontSize,
+                FontStretch = text.FontStretch,
+                FontStyle = text.FontStyle,
+                FontWeight = text.FontWeight,
+                Foreground = Brushes.White,
+                TextAlignment = text.TextAlignment,
+                TextWrapping = text.TextWrapping,
+                TextTrimming = text.TextTrimming,
+                LineHeight = text.LineHeight,
+                Width = text.Width,
+                Height = text.Height,
+                MaxWidth = text.MaxWidth,
+                MaxHeight = text.MaxHeight,
+                Padding = text.Padding,
+                FlowDirection = text.FlowDirection,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(whiteOverlay, left - 5);
+            Canvas.SetTop(whiteOverlay, top - 5);
+            canvas.Children.Add(whiteOverlay);
         }
 
         private static void PaintRaceProgress(
@@ -851,7 +876,7 @@ namespace OOPGames
             }
 
             string fontPath = System.IO.Path.Combine(
-                assetDirectory, "Font", "BACKTO19.TTF");
+                assetDirectory, "Font", "SF Pixelate Bold.ttf");
             if (!File.Exists(fontPath))
             {
                 throw new FileNotFoundException(
@@ -865,7 +890,7 @@ namespace OOPGames
                 {
                     if (string.Equals(
                         familyName,
-                        "Back to 1982",
+                        "SF Pixelate",
                         StringComparison.OrdinalIgnoreCase))
                     {
                         return family;
@@ -874,7 +899,7 @@ namespace OOPGames
             }
 
             throw new InvalidDataException(
-                "The font file does not contain the Back to 1982 family.");
+                "The font file does not contain the SF Pixelate family.");
         }
 
         private static void AddFallbackCar(
